@@ -1,7 +1,7 @@
 from typing import Dict, Tuple
 
 import discord
-from redbot.core import commands
+from redbot.core import commands, Config
 
 
 class MinecraftRoleSync(commands.Cog):
@@ -9,6 +9,10 @@ class MinecraftRoleSync(commands.Cog):
         self.bot = bot
         self.minecraft_roles = {}
         self.role_mappings = {}
+        self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique integer
+
+    async def initialize(self):
+        await self.config.init()
 
     @commands.group()
     async def mcrolesync(self, ctx):
@@ -27,7 +31,7 @@ class MinecraftRoleSync(commands.Cog):
         self.role_mappings[discord_server_id][discord_role_id] = (minecraft_server, minecraft_role)
 
         # Save the mapping to the configuration file
-        await self.bot.config.guild(ctx.guild).role_mappings.set(self.role_mappings)
+        await self.config.guild(ctx.guild).role_mappings.set(self.role_mappings)
 
         await ctx.send(f"Added mapping: {discord_role.name} -> {minecraft_server}:{minecraft_role}")
 
@@ -60,7 +64,7 @@ class MinecraftRoleSync(commands.Cog):
         """Set up the role mappings for all servers"""
 
         # Load the role mappings from the configuration file
-        self.role_mappings = await self.bot.config.guild(ctx.guild).role_mappings()
+        self.role_mappings = await self.config.guild(ctx.guild).role_mappings()
 
         # Set up the Minecraft roles for all servers
         for minecraft_server, minecraft_roles in (await self.bot.db.all_roles()).items():
