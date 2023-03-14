@@ -1,84 +1,56 @@
-from typing import Dict, Tuple
-
 import discord
-from redbot.core import commands, Config
+from redbot.core import commands
+import requests
+import json
 
-
-class MinecraftRoleSync(commands.Cog):
+class MinecraftCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.minecraft_roles = {}
-        self.role_mappings = {}
-        self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique integer
 
-    async def initialize(self):
-        await self.config.init()
-
-    @commands.group()
-    async def mcrolesync(self, ctx):
-        """Group command for managing Minecraft role sync"""
-
-    @mcrolesync.command(name="add_mapping")
-    async def add_mapping(self, ctx, discord_role: discord.Role, minecraft_server: str, minecraft_role: str):
-        """Add a new mapping between a Discord role and a Minecraft group"""
-
-        # Get the ID of the Discord server and role
-        discord_server_id = str(ctx.guild.id)
-        discord_role_id = str(discord_role.id)
-
-        # Create a new mapping between the Discord role and the Minecraft group
-        self.role_mappings.setdefault(discord_server_id, {})
-        self.role_mappings[discord_server_id][discord_role_id] = (minecraft_server, minecraft_role)
-
-        # Save the mapping to the configuration file
-        await self.config.guild(ctx.guild).role_mappings.set(self.role_mappings)
-
-        await ctx.send(f"Added mapping: {discord_role.name} -> {minecraft_server}:{minecraft_role}")
-
-    @mcrolesync.command(name="list_mappings")
-    async def list_mappings(self, ctx):
-        """List all mappings between Discord roles and Minecraft groups"""
-
-        # Get the ID of the Discord server
-        discord_server_id = str(ctx.guild.id)
-
-        if discord_server_id not in self.role_mappings:
-            await ctx.send("There are no role mappings for this server.")
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_role("Minecraft Admin")
+    async def sync(self, ctx):
+        # Get Minecraft server information from config
+        minecraft_info = await self.bot.db.guild(ctx.guild).minecraft_info()
+        if minecraft_info is None:
+            await ctx.send("Minecraft server information not configured for this server.")
             return
 
-        # Create a list of mappings for this server
-        mappings = []
-        for discord_role_id, (minecraft_server, minecraft_role) in self.role_mappings[discord_server_id].items():
-            discord_role = ctx.guild.get_role(int(discord_role_id))
-            mappings.append(f"{discord_role.name} -> {minecraft_server}:{minecraft_role}")
+        # Get Minecraft player UUID based on Discord ID
+        discord_id = str(ctx.author.id)
+        response = requests.get(f'https://api.mojang.com/users/profiles/minecraft/{discord_id}')
+        if response.status_code != 200:
+            await ctx.send("Failed to get Minecraft UUID.")
+            return
+        uuid = response.json()["id"]
 
-        # Send the list of mappings as a message
-        if len(mappings) > 0:
-            message = "\n".join(mappings)
-            await ctx.send(message)
-        else:
-            await ctx.send("There are no role mappings for this server.")
+        # Get LuckPerms permissions for the player
+        response = requests.get(f'{minecraft_info["luckperms_url"]}/user/{uuid}/permissions')
+        if response.status_code != 200:
+            await ctx.send("Failed to get LuckPerms permissions.")
+            return
+        permissions = response.json()
 
-    @mcrolesync.command(name="setup")
-    async def setup(self, ctx):
-        """Set up the role mappings for all servers"""
+        # Sync roles based on permissions
+        for role in ctx.guild.roles:
+            if role.name in permissions:
+                await ctx.author.add_roles(role)
+            else:
+                await ctx.author.remove_roles(role)
 
-        # Load the role mappings from the configuration file
-        self.role_mappings = await self.config.guild(ctx.guild).role_mappings()
+        await ctx.send("Synced roles with LuckPerms permissions.")
 
-        # Set up the Minecraft roles for all servers
-        for minecraft_server, minecraft_roles in (await self.bot.db.all_roles()).items():
-            for discord_role, minecraft_group in minecraft_roles.items():
-                self.minecraft_roles[f"{minecraft_server}:{minecraft_group}"] = discord_role
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_role("Minecraft Admin")
+    async def set_minecraft_info(self, ctx, server_address: str, luckperms_url: str):
+        # Save Minecraft server information to config
+        await self.bot.db.guild(ctx.guild).minecraft_info.set({
+            "server_address": server_address,
+            "luckperms_url": luckperms_url
+        })
+        await ctx.send("Minecraft server information saved.")
 
-        # Set up the role mappings for all servers
-        for discord_server_id, mappings in self.role_mappings.items():
-            for discord_role_id, (minecraft_server, minecraft_role) in mappings.items():
-                discord_role = await ctx.guild.fetch_role(int(discord_role_id))
-                self.minecraft_roles.setdefault(f"{minecraft_server}:{minecraft_role}", set())
-                self.minecraft_roles[f"{minecraft_server}:{minecraft_role}"].add(discord_role)
-
-        await ctx.send("Role mappings set up successfully!")
-
-    async def update_minecraft_role(self, member, role):
-        minecraft_username = member.display_name
+def setup(bot):
+    bot.add_cog(MinecraftCog(bot))
