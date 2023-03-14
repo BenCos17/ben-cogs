@@ -1,3 +1,4 @@
+import discord
 from redbot.core import commands
 from PIL import Image, ImageDraw, ImageFilter
 import random
