@@ -56,4 +56,5 @@ class WeirdImages(commands.Cog):
         await ctx.send(file=discord.File('weird.png'))
 
     @commands.command()
-    @commands.cooldown(1
+@commands.cooldown(1, 15, commands.BucketType.user)
+
