@@ -13,8 +13,7 @@ Pillow
 
 To install the WeirdImages cog, use the following command in your Red Discord bot instance:
 
-csharp
-Copy code
+
 [p]cog install weirdimages
 Commands
 weird
