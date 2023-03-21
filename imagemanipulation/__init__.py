@@ -1,4 +1,4 @@
-from .imagemanipulation  import \ImageManipulation
+from .imagemanipulation  import ImageManipulation
 
 
 def setup(bot):
