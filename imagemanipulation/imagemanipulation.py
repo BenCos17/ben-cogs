@@ -1,5 +1,6 @@
+import io
 import discord
-from discord.ext import commands
+from redbot.core import commands
 from PIL import Image, ImageFilter, ImageDraw
 
 class ImageManipulation(commands.Cog):
@@ -45,3 +46,37 @@ class ImageManipulation(commands.Cog):
             img.save(img_buffer, format='PNG')
             img_buffer.seek(0)
             await ctx.send(file=discord.File(img_buffer, filename='circled.png'))
+
+    @commands.command()
+    async def grayscale(self, ctx):
+        """Converts an attached image to grayscale."""
+        if not ctx.message.attachments:
+            await ctx.send("Please attach an image to convert to grayscale.")
+            return
+
+        # Download the image and convert to grayscale
+        img = await ctx.message.attachments[0].read()
+        img = Image.open(io.BytesIO(img)).convert('L')
+
+        # Save and send the grayscale image
+        with io.BytesIO() as img_buffer:
+            img.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
+            await ctx.send(file=discord.File(img_buffer, filename='grayscale.png'))
+
+    @commands.command()
+    async def flip(self, ctx):
+        """Flips an attached image horizontally."""
+        if not ctx.message.attachments:
+            await ctx.send("Please attach an image to flip.")
+            return
+
+        # Download the image and flip horizontally
+        img = await ctx.message.attachments[0].read()
+        img = Image.open(io.BytesIO(img)).transpose(Image.FLIP_LEFT_RIGHT)
+
+        # Save and send the flipped image
+        with io.BytesIO() as img_buffer:
+            img.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
+            await ctx.send(file=discord.File(img_buffer, filename='flipped.png'))
