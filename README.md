@@ -26,6 +26,16 @@ Usage: [p]weird [size]
 size: the size of the image (default: 500)
 Cooldown: 15 seconds
 
+***imagemanipulation:***
+ This cog provides the following commands:
+  [p]blur: Applies a Gaussian blur to an attached image.
+  [p]circle: Draws a circle on an attached image.
+  [p]grayscale: Converts an attached image to grayscale.
+  [p]flip: Flips an attached image horizontally.
+
+
+
+
 cursed
 Combines two images in a cursed way and sends the result to the chat.
 
@@ -36,6 +46,7 @@ Arguments:
 image1: the URL or attachment of the first image
 image2: the URL or attachment of the second image
 Cooldown: 15 seconds
+
 
 
 
