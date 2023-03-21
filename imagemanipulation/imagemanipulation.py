@@ -65,7 +65,7 @@ class ImageManipulation(commands.Cog):
             await ctx.send(file=discord.File(img_buffer, filename='grayscale.png'))
 
     @commands.command()
-    async def flip(self, ctx):
+    async def rotate(self, ctx):
         """Flips an attached image horizontally."""
         if not ctx.message.attachments:
             await ctx.send("Please attach an image to flip.")
