@@ -28,10 +28,15 @@ Cooldown: 15 seconds
 
 ***imagemanipulation:***
  This cog provides the following commands:
+ 
   [p]blur: Applies a Gaussian blur to an attached image.
+  
   [p]circle: Draws a circle on an attached image.
+  
   [p]grayscale: Converts an attached image to grayscale.
+  
   [p]flip: Flips an attached image horizontally.
+  
 
 
 
