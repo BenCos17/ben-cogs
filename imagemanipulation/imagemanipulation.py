@@ -7,8 +7,8 @@ class ImageManipulation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-@commands.command()
-async def blur(self, ctx, radius: int = 5, user_id: int = None):
+  @commands.command()
+  async def blur(self, ctx, radius: int = 5, user_id: int = None):
     """Applies a Gaussian blur to an attached image, a mentioned user's avatar, or a user's avatar using their ID."""
     if ctx.message.mentions or ctx.message.attachments or user_id:
         # Apply blur based on the first available source (mention, attachment, or user ID)
@@ -37,8 +37,8 @@ async def blur(self, ctx, radius: int = 5, user_id: int = None):
 
 
 
-@commands.command()
-async def circle(self, ctx):
+  @commands.command()
+  async def circle(self, ctx):
     """Draws a circle on an attached image."""
     if not ctx.message.attachments and not ctx.message.mentions:
         await ctx.send("Please attach an image to draw the circle.")
@@ -66,8 +66,8 @@ async def circle(self, ctx):
         img_buffer.seek(0)
         await ctx.send(file=discord.File(img_buffer, filename='circled.png'))
 
-@commands.command()
-async def grayscale(self, ctx):
+  @commands.command()
+  async def grayscale(self, ctx):
     """Converts an attached image to grayscale."""
     if not ctx.message.attachments and not ctx.message.mentions:
         await ctx.send("Please attach an image to convert to grayscale.")
@@ -90,8 +90,8 @@ async def grayscale(self, ctx):
         img_buffer.seek(0)
         await ctx.send(file=discord.File(img_buffer, filename='grayscale.png'))
 
-@commands.command()
-async def rotate(self, ctx):
+  @commands.command()
+  async def rotate(self, ctx):
     """Flips an attached image horizontally."""
     if not ctx.message.attachments and not ctx.message.mentions:
         await ctx.send("Please attach an image to flip.")
