@@ -67,8 +67,8 @@ async def circle(self, ctx):
         await ctx.send(file=discord.File(img_buffer, filename='circled.png'))
 
 
-    @commands.command()
-    async def grayscale(self, ctx):
+@commands.command()
+async def grayscale(self, ctx):
     """Converts an attached image to grayscale."""
     if not ctx.message.attachments and not ctx.message.mentions:
         await ctx.send("Please attach an image to convert to grayscale.")
@@ -90,6 +90,7 @@ async def circle(self, ctx):
         img.save(img_buffer, format='PNG')
         img_buffer.seek(0)
         await ctx.send(file=discord.File(img_buffer, filename='grayscale.png'))
+
 
     @commands.command()
     async def rotate(self, ctx):
