@@ -92,8 +92,8 @@ async def grayscale(self, ctx):
         await ctx.send(file=discord.File(img_buffer, filename='grayscale.png'))
 
 
-    @commands.command()
-    async def rotate(self, ctx):
+@commands.command()
+async def rotate(self, ctx):
     """Flips an attached image horizontally."""
     if not ctx.message.attachments and not ctx.message.mentions:
         await ctx.send("Please attach an image to flip.")
@@ -115,4 +115,5 @@ async def grayscale(self, ctx):
         img.save(img_buffer, format='PNG')
         img_buffer.seek(0)
         await ctx.send(file=discord.File(img_buffer, filename='flipped.png'))
+
 
