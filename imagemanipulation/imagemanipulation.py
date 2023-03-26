@@ -5,11 +5,21 @@ from redbot.core import commands
 from PIL import Image, ImageFilter, ImageDraw
 import aiohttp
 
-async def get_image(img_url: str):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(img_url) as resp:
-            img_bytes = await resp.content.read()
-    return img_bytes
+async def get_image(img_url):
+    if img_url.startswith("<@") and img_url.endswith(">"):
+        # User mention
+        user_id = int(img_url[2:-1])
+        user = await bot.fetch_user(user_id)
+        return str(user.avatar_url)
+    elif img_url.isdigit():
+        # User ID
+        user_id = int(img_url)
+        user = await bot.fetch_user(user_id)
+        return str(user.avatar_url)
+    else:
+        # URL
+        return img_url
+
 
 
 
