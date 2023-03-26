@@ -14,7 +14,7 @@ async def get_image(img_url):
     elif img_url.isdigit():
         # User ID
         user_id = int(img_url)
-        user = await bot.fetch_user(user_id)
+        user = await self.bot.fetch_user(user_id)
         return str(user.avatar_url)
     else:
         # URL
