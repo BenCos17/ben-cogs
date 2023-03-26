@@ -50,28 +50,9 @@ class ImageManipulation(commands.Cog):
                 await ctx.send(file=discord.File(img_buffer, filename='blurred.png'))
         else:
             await ctx.send("Please attach an image, mention a user, or provide a user ID to apply the blur.")
-
-    @commands.command()
-async def circle(self, ctx, url: typing.Optional[str] = None):
-    if url is None and len(ctx.message.attachments) > 0:
-        img_url = ctx.message.attachments[0].url
-    elif url is not None:
-        img_url = url
-    else:
-        return await ctx.send("Please provide an image URL or upload an image as an attachment.")
-
-    img_bytes = await get_image(img_url)
-    img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
-    mask = Image.new("L", img.size, 0)
-    draw = ImageDraw.Draw(mask) 
-    draw.ellipse((0, 0) + img.size, fill=255)
-    masked_img = Image.composite(img, Image.new("RGBA", img.size, (255, 255, 255, 0)), mask)
-
-    with io.BytesIO() as output:
-        masked_img.save(output, format="PNG")
-        output.seek(0)
-        file = discord.File(output, filename="circle.png")
-        await ctx.send(file=file)
+            
+            
+            
             
 @commands.command()
 async def circle(self, ctx, user: typing.Union[int, discord.User] = None):
@@ -100,6 +81,9 @@ async def circle(self, ctx, user: typing.Union[int, discord.User] = None):
             await ctx.send(file=discord.File(img_buffer, filename='circled.png'))
     else:
         await ctx.send("Please attach an image, mention a user, or provide a user ID to draw a circle.")
+        
+        
+        
 
 @commands.command()
 async def grayscale(self, ctx, user: typing.Union[int, discord.User] = None):
