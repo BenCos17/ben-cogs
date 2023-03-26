@@ -38,57 +38,79 @@ async def blur(self, ctx, radius: int = 5, user_id: int = None):
 
 
     @commands.command()
-    async def circle(self, ctx):
-        """Draws a circle on an attached image."""
-        if not ctx.message.attachments:
-            await ctx.send("Please attach an image to draw the circle.")
-            return
+async def circle(self, ctx):
+    """Draws a circle on an attached image."""
+    if not ctx.message.attachments and not ctx.message.mentions:
+        await ctx.send("Please attach an image to draw the circle.")
+        return
 
-        # Download the image and draw a circle
-        img = await ctx.message.attachments[0].read()
-        img = Image.open(io.BytesIO(img)).convert('RGBA')
-        img_circle = Image.new('RGBA', img.size, (255, 255, 255, 0))
-        draw = ImageDraw.Draw(img_circle)
-        draw.ellipse((0, 0, img.size[0], img.size[1]), fill=(255, 255, 255, 128))
-        img_circle.putalpha(128)
+    # Check if an image attachment was provided, otherwise try to grab the user's avatar
+    if ctx.message.attachments:
+        img_url = ctx.message.attachments[0].url
+    else:
+        user_id = ctx.message.mentions[0].id
+        img_url = str(ctx.bot.get_user(user_id).avatar_url_as(format='png'))
 
-        # Composite the circle onto the original image and send it
-        img.paste(img_circle, mask=img_circle)
-        with io.BytesIO() as img_buffer:
-            img.save(img_buffer, format='PNG')
-            img_buffer.seek(0)
-            await ctx.send(file=discord.File(img_buffer, filename='circled.png'))
+    # Download the image and draw a circle
+    img = await get_image(img_url)
+    img = img.convert('RGBA')
+    img_circle = Image.new('RGBA', img.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(img_circle)
+    draw.ellipse((0, 0, img.size[0], img.size[1]), fill=(255, 255, 255, 128))
+    img_circle.putalpha(128)
 
-    @commands.command()
-    async def grayscale(self, ctx):
-        """Converts an attached image to grayscale."""
-        if not ctx.message.attachments:
-            await ctx.send("Please attach an image to convert to grayscale.")
-            return
+    # Composite the circle onto the original image and send it
+    img.paste(img_circle, mask=img_circle)
+    with io.BytesIO() as img_buffer:
+        img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        await ctx.send(file=discord.File(img_buffer, filename='circled.png'))
 
-        # Download the image and convert to grayscale
-        img = await ctx.message.attachments[0].read()
-        img = Image.open(io.BytesIO(img)).convert('L')
+@commands.command()
+async def grayscale(self, ctx):
+    """Converts an attached image to grayscale."""
+    if not ctx.message.attachments and not ctx.message.mentions:
+        await ctx.send("Please attach an image to convert to grayscale.")
+        return
 
-        # Save and send the grayscale image
-        with io.BytesIO() as img_buffer:
-            img.save(img_buffer, format='PNG')
-            img_buffer.seek(0)
-            await ctx.send(file=discord.File(img_buffer, filename='grayscale.png'))
+    # Check if an image attachment was provided, otherwise try to grab the user's avatar
+    if ctx.message.attachments:
+        img_url = ctx.message.attachments[0].url
+    else:
+        user_id = ctx.message.mentions[0].id
+        img_url = str(ctx.bot.get_user(user_id).avatar_url_as(format='png'))
 
-    @commands.command()
-    async def rotate(self, ctx):
-        """Flips an attached image horizontally."""
-        if not ctx.message.attachments:
-            await ctx.send("Please attach an image to flip.")
-            return
+    # Download the image and convert to grayscale
+    img = await get_image(img_url)
+    img = img.convert('L')
 
-        # Download the image and flip horizontally
-        img = await ctx.message.attachments[0].read()
-        img = Image.open(io.BytesIO(img)).transpose(Image.FLIP_LEFT_RIGHT)
+    # Save and send the grayscale image
+    with io.BytesIO() as img_buffer:
+        img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        await ctx.send(file=discord.File(img_buffer, filename='grayscale.png'))
 
-        # Save and send the flipped image
-        with io.BytesIO() as img_buffer:
-            img.save(img_buffer, format='PNG')
-            img_buffer.seek(0)
-            await ctx.send(file=discord.File(img_buffer, filename='flipped.png'))
+@commands.command()
+async def rotate(self, ctx):
+    """Flips an attached image horizontally."""
+    if not ctx.message.attachments and not ctx.message.mentions:
+        await ctx.send("Please attach an image to flip.")
+        return
+
+    # Check if an image attachment was provided, otherwise try to grab the user's avatar
+    if ctx.message.attachments:
+        img_url = ctx.message.attachments[0].url
+    else:
+        user_id = ctx.message.mentions[0].id
+        img_url = str(ctx.bot.get_user(user_id).avatar_url_as(format='png'))
+
+    # Download the image and flip horizontally
+    img = await get_image(img_url)
+    img = img.transpose(Image.FLIP_LEFT_RIGHT)
+
+    # Save and send the flipped image
+    with io.BytesIO() as img_buffer:
+        img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        await ctx.send(file=discord.File(img_buffer, filename='flipped.png'))
+
