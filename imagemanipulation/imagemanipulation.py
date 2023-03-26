@@ -4,7 +4,7 @@ import typing
 from redbot.core import commands
 from PIL import Image, ImageFilter, ImageDraw
 
-@commands.Cog
+
 class ImageManipulation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
