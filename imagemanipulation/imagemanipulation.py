@@ -3,6 +3,8 @@ import discord
 import typing
 from redbot.core import commands
 from PIL import Image, ImageFilter, ImageDraw
+import aiohttp
+
 
 
 class ImageManipulation(commands.Cog):
