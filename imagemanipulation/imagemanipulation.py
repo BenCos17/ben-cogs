@@ -37,8 +37,8 @@ class ImageManipulation(commands.Cog):
 
 
 
-    @commands.command()
-    async def circle(self, ctx):
+@commands.command()
+async def circle(self, ctx):
     """Draws a circle on an attached image."""
     if not ctx.message.attachments and not ctx.message.mentions:
         await ctx.send("Please attach an image to draw the circle.")
@@ -65,6 +65,7 @@ class ImageManipulation(commands.Cog):
         img.save(img_buffer, format='PNG')
         img_buffer.seek(0)
         await ctx.send(file=discord.File(img_buffer, filename='circled.png'))
+
 
     @commands.command()
     async def grayscale(self, ctx):
