@@ -5,6 +5,12 @@ from redbot.core import commands
 from PIL import Image, ImageFilter, ImageDraw
 import aiohttp
 
+async def get_image(img_url: str):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(img_url) as resp:
+            img_bytes = await resp.content.read()
+    return img_bytes
+
 
 
 class ImageManipulation(commands.Cog):
