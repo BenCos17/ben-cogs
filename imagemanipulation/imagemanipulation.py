@@ -10,32 +10,31 @@ class ImageManipulation(commands.Cog):
    @commands.command()
 async def blur(self, ctx, radius: int = 5, user_id: int = None):
     """Applies a Gaussian blur to an attached image, a mentioned user's avatar, or a user's avatar using their ID."""
-    if ctx.message.attachments:
-        # Apply blur to attached image
-        img = await ctx.message.attachments[0].read()
-        img = Image.open(io.BytesIO(img)).convert('RGB')
-    elif ctx.message.mentions:
-        # Apply blur to mentioned user's avatar
-        user = ctx.message.mentions[0]
-        avatar_url = user.avatar_url_as(format='png', size=1024)
-        img = await avatar_url.read()
-        img = Image.open(io.BytesIO(img)).convert('RGB')
-    elif user_id:
-        # Apply blur to user's avatar using ID
-        user = await self.bot.fetch_user(user_id)
-        avatar_url = user.avatar_url_as(format='png', size=1024)
-        img = await avatar_url.read()
-        img = Image.open(io.BytesIO(img)).convert('RGB')
+    if ctx.message.mentions or ctx.message.attachments or user_id:
+        # Apply blur based on the first available source (mention, attachment, or user ID)
+        if ctx.message.mentions:
+            user = ctx.message.mentions[0]
+            avatar_url = user.avatar_url_as(format='png', size=1024)
+            img = await avatar_url.read()
+            img = Image.open(io.BytesIO(img)).convert('RGB')
+        elif ctx.message.attachments:
+            img = await ctx.message.attachments[0].read()
+            img = Image.open(io.BytesIO(img)).convert('RGB')
+        else:
+            user = await self.bot.fetch_user(user_id)
+            avatar_url = user.avatar_url_as(format='png', size=1024)
+            img = await avatar_url.read()
+            img = Image.open(io.BytesIO(img)).convert('RGB')
+        
+        # Apply blur and send the result
+        img_blur = img.filter(ImageFilter.GaussianBlur(radius=radius))
+        with io.BytesIO() as img_buffer:
+            img_blur.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
+            await ctx.send(file=discord.File(img_buffer, filename='blurred.png'))
     else:
         await ctx.send("Please attach an image, mention a user, or provide a user ID to apply the blur.")
-        return
 
-    # Apply blur and send the result
-    img_blur = img.filter(ImageFilter.GaussianBlur(radius=radius))
-    with io.BytesIO() as img_buffer:
-        img_blur.save(img_buffer, format='PNG')
-        img_buffer.seek(0)
-        await ctx.send(file=discord.File(img_buffer, filename='blurred.png'))
 
 
     @commands.command()
