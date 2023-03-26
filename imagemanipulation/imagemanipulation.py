@@ -11,7 +11,7 @@ class ImageManipulation(commands.Cog):
 @commands.command()
 async def blur(self, ctx, radius: int = 5, user: typing.Union[int, discord.User] = None):
     """Applies a Gaussian blur to an attached image, a mentioned user's avatar, or a user's avatar using their ID."""
-    if ctx.message.attachments or user:
+    if ctx.message.attachments or user is not None:
         # Apply blur based on the first available source (attachment or user ID/mention)
         if ctx.message.attachments:
             img = await ctx.message.attachments[0].read()
@@ -30,7 +30,8 @@ async def blur(self, ctx, radius: int = 5, user: typing.Union[int, discord.User]
             img_buffer.seek(0)
             await ctx.send(file=discord.File(img_buffer, filename='blurred.png'))
     else:
-        await ctx.send("Please attach an image, mention a user, or provide a user ID to apply the blur.") 
+        await ctx.send("Please attach an image, mention a user, or provide a user ID to apply the blur.")
+
 
 
 
