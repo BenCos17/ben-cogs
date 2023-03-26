@@ -1,5 +1,6 @@
 import io
 import discord
+import typing
 from redbot.core import commands
 from PIL import Image, ImageFilter, ImageDraw
 
