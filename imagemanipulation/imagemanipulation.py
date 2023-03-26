@@ -7,7 +7,7 @@ class ImageManipulation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-   @commands.command()
+@commands.command()
 async def blur(self, ctx, radius: int = 5, user_id: int = None):
     """Applies a Gaussian blur to an attached image, a mentioned user's avatar, or a user's avatar using their ID."""
     if ctx.message.mentions or ctx.message.attachments or user_id:
@@ -37,7 +37,7 @@ async def blur(self, ctx, radius: int = 5, user_id: int = None):
 
 
 
-    @commands.command()
+@commands.command()
 async def circle(self, ctx):
     """Draws a circle on an attached image."""
     if not ctx.message.attachments and not ctx.message.mentions:
