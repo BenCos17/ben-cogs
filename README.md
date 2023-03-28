@@ -1,3 +1,37 @@
+***Flight***
+The Flight cog provides a game that simulates flying through different levels with different obstacles. The user must choose an aircraft and then navigate through each level, avoiding the obstacles, in order to complete the game.
+
+*Commands*
+[p]start
+Begins the game. This command resets the game state, allowing the user to choose a new aircraft and start at level 1.
+
+[p]aircraft
+Allows the user to choose their aircraft. This command presents the user with a list of aircraft to choose from, and then sets the chosen aircraft as the user's aircraft for the rest of the game.
+
+[p]help
+Shows a list of available commands for the Flight cog.
+
+[p]left
+Move the aircraft to the left.
+
+[p]right
+Move the aircraft to the right.
+
+[p]up
+Move the aircraft up.
+
+[p]down
+Move the aircraft down.
+
+Game State
+The Flight cog maintains several pieces of game state, including the user's chosen aircraft, the current level, the user's score, and the obstacles for each level.
+
+The obstacles for each level are stored as a list of lists, where each sub-list contains the obstacles for that level. The obstacles are randomly generated for each level using the list of obstacles for that level.
+
+
+
+
+
 WeirdImages:
 
 A Red Discord bot cog for generating and manipulating weird images.
