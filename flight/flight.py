@@ -2,7 +2,7 @@ import discord
 from redbot.core import commands
 import random
 
-class RedFlight(commands.Cog):
+class Flight(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.aircraft = None
@@ -12,7 +12,7 @@ class RedFlight(commands.Cog):
 
     @commands.command(name='start')
     async def start_game(self, ctx):
-        await ctx.send("Welcome to Red Flight! Choose your aircraft using !aircraft.")
+        await ctx.send("Welcome to the Flight game! Choose your aircraft using [p]aircraft.")
         self.aircraft = None
         self.level = None
         self.score = 0
@@ -65,10 +65,10 @@ class RedFlight(commands.Cog):
     @commands.command(name='help')
     async def help_command(self, ctx):
         message = "Red Flight Command List:\n"
-        message += "!start - Begin the game\n"
-        message += "!aircraft - Choose your aircraft\n"
-        message += "!help - Show the command list\n"
+        message += "[p]start - Begin the game\n"
+        message += "[p]aircraft - Choose your aircraft\n"
+        message += "[p]help - Show the command list\n"
         await ctx.send(message)
 
 def setup(bot):
-    bot.add_cog(RedFlight(bot))
+    bot.add_cog(Flight(bot))
