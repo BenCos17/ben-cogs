@@ -9,6 +9,9 @@ class Flight(commands.Cog):
         self.level = None
         self.score = 0
         self.obstacles = []
+        self.altitude = 10000
+        self.speed = 500
+        self.fuel = 100
 
     @commands.command(name='start')
     async def start_game(self, ctx):
@@ -16,6 +19,9 @@ class Flight(commands.Cog):
         self.aircraft = None
         self.level = None
         self.score = 0
+        self.altitude = 10000
+        self.speed = 500
+        self.fuel = 100
 
     @commands.command(name='aircraft')
     async def choose_aircraft(self, ctx):
@@ -33,7 +39,7 @@ class Flight(commands.Cog):
             self.aircraft = aircraft_options[int(user_choice.content) - 1]
             await ctx.send(f"You have chosen the {self.aircraft} aircraft.")
         except:
-            await ctx.send("You did not choose an aircraft in time. Please try again with !aircraft.")
+            await ctx.send("You did not choose an aircraft in time. Please try again with [p]aircraft.")
             return
 
         # Generate obstacles for each level
@@ -60,7 +66,7 @@ class Flight(commands.Cog):
             self.level += 1
             await self.start_level(ctx)
         else:
-            await ctx.send("You have completed all available levels. Final score: {self.score}")
+            await ctx.send(f"You have completed all available levels. Final score: {self.score}")
 
     @commands.command(name='flighthelp')
     async def help_command(self, ctx):
@@ -68,7 +74,63 @@ class Flight(commands.Cog):
         message += "[p]start - Begin the game\n"
         message += "[p]aircraft - Choose your aircraft\n"
         message += "[p]help - Show the command list\n"
+        message += "[p]takeoff - Takeoff the aircraft\n"
+        message += "[p]landing - Land the aircraft\n"
+        message += "[p]up - Increase altitude\n"
+        message += "[p]down - Decrease altitude\n"
+        message += "[p]speedup - Increase speed\n"
+        message += "[p]slowdown - Decrease speed\n"
         await ctx.send(message)
 
-def setup(bot):
-    bot.add_cog(Flight(bot))
+    @async def move(self, ctx):
+        message = f"The {self.aircraft} is flying. What is your next move?\n"
+        message += "1. Go up\n"
+        message += "2. Go down\n"
+        message += "3. Go left\n"
+        message += "4. Go right\n"
+        message += "5. Quit game\n"
+        await ctx.send(message)
+
+        def check(m):
+            return m.author == ctx.author and m.content.isdigit() and 1 <= int(m.content) <= 5
+
+        try:
+            user_choice = await self.bot.wait_for('message', check=check, timeout=30.0)
+            if int(user_choice.content) == 5:
+                await ctx.send("Game over. Thanks for playing!")
+                return
+            await self.check_move(user_choice.content, ctx)
+        except:
+            await ctx.send("You did not make a move in time. Please try again.")
+            await self.move(ctx)
+
+    async def check_move(self, user_choice, ctx):
+        obstacle = random.choice(self.obstacles[self.level - 1])
+        if user_choice == "1":
+            await ctx.send(f"The {self.aircraft} is going up!")
+            if obstacle == "Birds":
+                await ctx.send("You hit a flock of birds! Game over.")
+                return
+            await self.end_level(ctx)
+        elif user_choice == "2":
+            await ctx.send(f"The {self.aircraft} is going down!")
+            if obstacle == "Turbulence":
+                await ctx.send("You hit a patch of turbulence! Game over.")
+                return
+            await self.end_level(ctx)
+        elif user_choice == "3":
+            await ctx.send(f"The {self.aircraft} is going left!")
+            if obstacle == "Storm clouds":
+                await ctx.send("You flew into a storm cloud! Game over.")
+                return
+            await self.end_level(ctx)
+        elif user_choice == "4":
+            await ctx.send(f"The {self.aircraft} is going right!")
+            if obstacle == "Ice":
+                await ctx.send("You flew into a patch of ice! Game over.")
+                return
+            await self.end_level(ctx)
+        else:
+            await ctx.send("Invalid move. Please try again.")
+            await self.move(ctx)
+
