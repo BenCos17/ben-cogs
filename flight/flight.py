@@ -62,7 +62,7 @@ class Flight(commands.Cog):
         else:
             await ctx.send("You have completed all available levels. Final score: {self.score}")
 
-    @commands.command(name='help')
+    @commands.command(name='flighthelp')
     async def help_command(self, ctx):
         message = "Red Flight Command List:\n"
         message += "[p]start - Begin the game\n"
