@@ -82,7 +82,7 @@ class Flight(commands.Cog):
         message += "[p]slowdown - Decrease speed\n"
         await ctx.send(message)
 
-    @async def move(self, ctx):
+    async def move(self, ctx):
         message = f"The {self.aircraft} is flying. What is your next move?\n"
         message += "1. Go up\n"
         message += "2. Go down\n"
