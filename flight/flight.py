@@ -104,13 +104,17 @@ class Flight(commands.Cog):
             await ctx.send("You did not make a move in time. Please try again.")
             await self.move(ctx)
 
-    async def move(self, ctx):
+async def move(self, ctx):
     message = f"The {self.aircraft} is flying. What is your next move?\n"
     message += "1. Go up\n"
     message += "2. Go down\n"
     message += "3. Go left\n"
     message += "4. Go right\n"
-    message += "5. Quit game\n"
+    message += "5. Speed up\n"
+    message += "6. Slow down\n"
+    message += "7. Look around\n"
+    message += "8. Land the aircraft\n"
+    message += "9. Quit the game\n"
     await ctx.send(message)
 
     def check(m):
