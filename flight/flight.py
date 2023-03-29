@@ -104,6 +104,28 @@ class Flight(commands.Cog):
             await ctx.send("You did not make a move in time. Please try again.")
             await self.move(ctx)
 
+    async def move(self, ctx):
+    message = f"The {self.aircraft} is flying. What is your next move?\n"
+    message += "1. Go up\n"
+    message += "2. Go down\n"
+    message += "3. Go left\n"
+    message += "4. Go right\n"
+    message += "5. Quit game\n"
+    await ctx.send(message)
+
+    def check(m):
+        return m.author == ctx.author and m.content.isdigit() and 1 <= int(m.content) <= 5
+
+    try:
+        user_choice = await self.bot.wait_for('message', check=check, timeout=30.0)
+        if int(user_choice.content) == 5:
+            await ctx.send("Game over. Thanks for playing!")
+            return
+        await self.check_move(user_choice.content, ctx)
+    except:
+        await ctx.send("You did not make a move in time. Please try again.")
+        await self.move(ctx)
+
     async def check_move(self, user_choice, ctx):
         obstacle = random.choice(self.obstacles[self.level - 1])
         if user_choice == "1":
