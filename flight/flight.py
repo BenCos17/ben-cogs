@@ -155,4 +155,39 @@ class Flight(commands.Cog):
         else:
             await ctx.send("Invalid move. Please try again.")
             await self.move(ctx)
+           @commands.command(name='takeoff')
+async def takeoff(self, ctx):
+    await ctx.send("The aircraft is taking off!")
+    await self.move(ctx)
+
+@commands.command(name='landing')
+async def landing(self, ctx):
+    await ctx.send("The aircraft is landing!")
+    self.altitude = 0
+    await self.end_level(ctx)
+
+@commands.command(name='up')
+async def go_up(self, ctx):
+    await ctx.send(f"The {self.aircraft} is going up!")
+    self.altitude += 1000
+    await self.move(ctx)
+
+@commands.command(name='down')
+async def go_down(self, ctx):
+    await ctx.send(f"The {self.aircraft} is going down!")
+    self.altitude -= 1000
+    await self.move(ctx)
+
+@commands.command(name='speedup')
+async def speed_up(self, ctx):
+    await ctx.send(f"The {self.aircraft} is speeding up!")
+    self.speed += 100
+    await self.move(ctx)
+
+@commands.command(name='slowdown')
+async def speed_down(self, ctx):
+    await ctx.send(f"The {self.aircraft} is slowing down!")
+    self.speed -= 100
+    await self.move(ctx)
+
 
