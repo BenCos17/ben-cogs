@@ -164,7 +164,8 @@ async def move(self, ctx):
         else:
             await ctx.send("Invalid move. Please try again.")
             await self.move(ctx)
-           @commands.command(name='takeoff')
+            
+@commands.command(name='takeoff')
 async def takeoff(self, ctx):
     await ctx.send("The aircraft is taking off!")
     await self.move(ctx)
