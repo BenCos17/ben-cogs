@@ -82,27 +82,32 @@ class Flight(commands.Cog):
         message += "[p]slowdown - Decrease speed\n"
         await ctx.send(message)
 
-    async def move(self, ctx):
-        message = f"The {self.aircraft} is flying. What is your next move?\n"
-        message += "1. Go up\n"
-        message += "2. Go down\n"
-        message += "3. Go left\n"
-        message += "4. Go right\n"
-        message += "5. Quit game\n"
-        await ctx.send(message)
+async def move(self, ctx):
+    message = f"The {self.aircraft} is flying. What is your next move?\n"
+    message += "1. Go up\n"
+    message += "2. Go down\n"
+    message += "3. Go left\n"
+    message += "4. Go right\n"
+    message += "5. Speed up\n"
+    message += "6. Slow down\n"
+    message += "7. Look around\n"
+    message += "8. Land the aircraft\n"
+    message += "9. Quit the game\n"
+    await ctx.send(message)
 
-        def check(m):
-            return m.author == ctx.author and m.content.isdigit() and 1 <= int(m.content) <= 5
+    def check(m):
+        return m.author == ctx.author and m.content.isdigit() and 1 <= int(m.content) <= 5
 
-        try:
-            user_choice = await self.bot.wait_for('message', check=check, timeout=30.0)
-            if int(user_choice.content) == 5:
-                await ctx.send("Game over. Thanks for playing!")
-                return
-            await self.check_move(user_choice.content, ctx)
-        except:
-            await ctx.send("You did not make a move in time. Please try again.")
-            await self.move(ctx)
+    try:
+        user_choice = await self.bot.wait_for('message', check=check, timeout=30.0)
+        if int(user_choice.content) == 5:
+            await ctx.send("Game over. Thanks for playing!")
+            return
+        await self.check_move(user_choice.content, ctx)
+    except:
+        await ctx.send("You did not make a move in time. Please try again.")
+        await self.move(ctx)
+
 
 async def move(self, ctx):
     message = f"The {self.aircraft} is flying. What is your next move?\n"
