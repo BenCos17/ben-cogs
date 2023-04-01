@@ -13,8 +13,12 @@ class ServerImageCog(commands.Cog):
             try:
                 async with session.get(url) as resp:
                     image_bytes = await resp.read()
-                await ctx.guild.edit(icon=image_bytes)
-                await ctx.send('Server icon has been updated!')
+                    content_type = resp.headers.get('content-type')
+                    if content_type in ['image/png', 'image/webp']:
+                        await ctx.guild.edit(icon=image_bytes)
+                        await ctx.send('Server icon has been updated!')
+                    else:
+                        await ctx.send('Error: Invalid image file format. Only PNG and WEBP files are supported.')
             except Exception as e:
                 await ctx.send(f'Error: {str(e)}')
 
