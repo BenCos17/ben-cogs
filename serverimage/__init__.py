@@ -1,4 +1,4 @@
-from .serverimage import ServerImage
+from .serverimage import ServerImageCog
 
 def setup(bot):
-    bot.add_cog(ServerImage(bot))
+    bot.add_cog(ServerImageCog(bot))
