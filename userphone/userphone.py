@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 class UserPhone(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.calling_users = set()
+        self.calling_users = {}
         self.call_history = []
-        self.active_calls = {}
+        self.call_messages = {}
 
     @commands.command()
     async def call(self, ctx):
@@ -25,11 +25,11 @@ class UserPhone(commands.Cog):
         user_id = random.choice(candidates)
         user_obj = await self.bot.fetch_user(user_id)
         if user_obj:
+            self.calling_users[ctx.author.id] = user_obj.id
+            self.calling_users[user_obj.id] = ctx.author.id
+            self.call_messages[ctx.author.id] = []
+            self.call_messages[user_obj.id] = []
             await ctx.send(f"{ctx.author.name} is calling {user_obj.name}...")
-            self.calling_users.add(ctx.author.id)
-            self.calling_users.add(user_obj.id)
-            self.active_calls[ctx.author.id] = user_obj.id
-            self.active_calls[user_obj.id] = ctx.author.id
         else:
             await ctx.send("Sorry, the chosen user cannot be reached at this time.")
         return
@@ -40,28 +40,15 @@ class UserPhone(commands.Cog):
             await ctx.send("You're not on a call right now!")
             return
 
-        user_id = self.active_calls[ctx.author.id]
+        user_id = self.calling_users[ctx.author.id]
         user_obj = await self.bot.fetch_user(user_id)
 
-        self.calling_users.remove(ctx.author.id)
-        self.calling_users.remove(user_id)
-        self.active_calls.pop(ctx.author.id)
-        self.active_calls.pop(user_id)
-        await ctx.send(f"You hung up the call with {user_obj.name}.")
+        del self.calling_users[ctx.author.id]
+        del self.calling_users[user_id]
+        del self.call_messages[ctx.author.id]
+        del self.call_messages[user_id]
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
-            return
-        if message.author.id in self.active_calls:
-            recipient_id = self.active_calls[message.author.id]
-            recipient = await self.bot.fetch_user(recipient_id)
-            if recipient:
-                await recipient.send(f"{message.author.name}: {message.content}")
-            else:
-                await message.author.send("Sorry, the recipient cannot be reached at this time.")
-        elif message.content == "!endcall":
-            await self.hangup(message)
+        await ctx.send(f"You hung up the call with {user_obj.name}.")
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
@@ -69,23 +56,21 @@ class UserPhone(commands.Cog):
             self.call_history.append((ctx.author.id, datetime.now()))
             self.call_history = [(u, t) for u, t in self.call_history if datetime.now() - t <= timedelta(seconds=5)]
 
-        elif ctx.command.name == "hangup":
-            if ctx.author.id in self.active_calls:
-                await self.hangup(ctx)
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author.id in self.calling_users:
+            other_user_id = self.calling_users[message.author.id]
+            other_user_obj = await self.bot.fetch_user(other_user_id)
+            if other_user_obj:
+                if message.author.id in self.call_messages:
+                    self.call_messages[message.author.id].append(message)
+                if other_user_id in self.call_messages:
+                    self.call_messages[other_user_id].append(message)
+                channel = self.bot.get_channel(message.channel.id)
+                if channel:
+                    await channel.send(f"{message.author.name} (on call with {other_user_obj.name}): {message.content}")
+            else:
+                await message.channel.send("Sorry, the other user cannot be reached at this time.")
 
-    async def timeout_call(self, user_id):
-        user_obj = await self.bot.fetch_user(user_id)
-        self.calling_users.remove(user_id)
-        await user_obj.send("Sorry, the call has timed out due to inactivity.")
-
-    async def start_timeout(self, user_id):
-        await discord.utils.sleep_until(datetime.now() + timedelta(seconds=30))
-        if user_id in self.calling_users:
-            await self.timeout_call(user_id)
-    
-    @commands.command()
-    async def endcall(self, ctx):
-        if ctx.author.id in self.active_calls:
-            await self.hangup(ctx)
-
-   
+def setup(bot):
+    bot.add_cog(UserPhone(bot))
