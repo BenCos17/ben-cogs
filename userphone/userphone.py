@@ -69,6 +69,7 @@ class UserPhone(commands.Cog):
                 channel = self.bot.get_channel(message.channel.id)
                 if channel:
                     await channel.send(f"{message.author.name} (on call with {other_user_obj.name}): {message.content}")
+                    await message.delete()  # Delete the original message sent by the user on the call
             else:
                 await message.channel.send("Sorry, the other user cannot be reached at this time.")
 
