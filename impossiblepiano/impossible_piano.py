@@ -43,7 +43,7 @@ class ImpossiblePiano(commands.Cog):
         return pitch
 
 @commands.command()
-async def piano(self, ctx):
+ async def piano(self, ctx):
     length = 20
     melody = self.generate_melody(length)
     midi_data = self.melody_to_midi(melody)
