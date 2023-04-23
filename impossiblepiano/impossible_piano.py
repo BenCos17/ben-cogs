@@ -42,15 +42,26 @@ class ImpossiblePiano(commands.Cog):
         pitch = notes[note_name] + (12 * (octave - 4))
         return pitch
 
-    @commands.command()
-    async def impossible_piano(self, ctx):
-        length = 20
-        melody = self.generate_melody(length)
-        midi_data = self.melody_to_midi(melody)
-        with open("impossible_piano.mid", "wb") as output_file:
-            midi_data.writeFile(output_file)
-        voice_client = ctx.voice_client
-        if not voice_client:
+@commands.command()
+async def piano(self, ctx):
+    length = 20
+    melody = self.generate_melody(length)
+    midi_data = self.melody_to_midi(melody)
+    with open("impossible_piano.mid", "wb") as output_file:
+        midi_data.writeFile(output_file)
+
+    voice_client = ctx.voice_client
+    if not voice_client:
+        if ctx.author.voice:
             voice_client = await ctx.author.voice.channel.connect()
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("impossible_piano.mid"))
-        voice_client.play(source)
+        else:
+            await ctx.send("You must be in a voice channel to use this command.")
+            return
+
+    if voice_client.is_playing():
+        voice_client.stop()
+
+    source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("impossible_piano.mid"))
+    voice_client.play(source)
+    await ctx.send("Playing impossible piano song.")
+
