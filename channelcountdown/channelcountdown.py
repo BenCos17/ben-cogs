@@ -24,12 +24,12 @@ class ChannelCountdown(commands.Cog):
         Example usage: [p]setcountdown MyChannel 31:05:2023 18:00
         """
         try:
-            countdown_date = datetime.datetime.strptime(date, "%d-%m-%Y %H:%M")
+            countdown_date = datetime.datetime.strptime(date, "%d:%m:%Y %H:%M")
         except ValueError:
             return await ctx.send("Invalid date format. Please use the format: DD:MM:YYYY HH:MM")
 
         guild_config = await self.config.guild(ctx.guild).countdowns()
-        guild_config[channel.name] = countdown_date.strftime("%Y-%m-%d %H:%M")
+        guild_config[channel.name] = countdown_date.strftime("%d:%m:%Y %H:%M")
         await self.config.guild(ctx.guild).countdowns.set(guild_config)
         await ctx.send(f"Countdown set for {channel.mention} to {countdown_date.strftime('%d-%m-%Y %H:%M')}")
 
@@ -38,7 +38,7 @@ class ChannelCountdown(commands.Cog):
             for guild in self.bot.guilds:
                 guild_config = await self.config.guild(guild).countdowns()
                 for name, date_str in guild_config.items():
-                    countdown_date = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+                    countdown_date = datetime.datetime.strptime(date_str, "%d:%m:%Y %H:%M")
                     remaining_time = countdown_date - datetime.datetime.now()
 
                     if remaining_time.total_seconds() <= 0:
