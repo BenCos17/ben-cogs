@@ -1,4 +1,4 @@
-from redbot.core import commands, tasks,config
+from redbot.core import commands, Config
 import discord
 import asyncio
 import datetime
@@ -13,7 +13,11 @@ class ChannelCountdown(commands.Cog):
         self.config.register_guild(**default_config)
         self.rate_limit = commands.CooldownMapping.from_cooldown(2, 5.0, commands.BucketType.guild)
 
-    # ...
+        self.update_channel_names.start()
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        await self.update_channel_names()
 
     @tasks.loop(seconds=60)
     async def update_channel_names(self):
