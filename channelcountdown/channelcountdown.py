@@ -1,4 +1,4 @@
-from redbot.core import commands, Config
+from redbot.core import commands, Config, tasks
 import discord
 import asyncio
 import datetime
@@ -58,4 +58,7 @@ class ChannelCountdown(commands.Cog):
             else:
                 raise e
 
-    # ...
+
+
+def setup(bot):
+    bot.add_cog(ChannelCountdown(bot))
