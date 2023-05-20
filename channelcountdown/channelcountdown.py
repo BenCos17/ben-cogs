@@ -3,7 +3,7 @@ import discord
 import asyncio
 import datetime
 
-class Countdown(commands.Cog):
+class ChannelCountdown(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)  # Use a unique identifier for your cog
