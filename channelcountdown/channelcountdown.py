@@ -24,7 +24,7 @@ class ChannelCountdown(commands.Cog):
         Example usage: [p]setcountdown MyChannel 31:05:2023 18:00
         """
         try:
-            countdown_date = datetime.datetime.strptime(date, "%d:%m:%Y %H:%M")
+            countdown_date = datetime.datetime.strptime(date, "%d-%m-%Y %H:%M")
         except ValueError:
             return await ctx.send("Invalid date format. Please use the format: DD:MM:YYYY HH:MM")
 
