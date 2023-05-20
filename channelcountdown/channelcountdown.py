@@ -16,6 +16,7 @@ class ChannelCountdown(commands.Cog):
         self.bot.loop.create_task(self.update_channel_names())
 
     @commands.command()
+    @commands.has_permissions(manage_channels=True)  # Add the necessary permission check here
     async def setcountdown(self, ctx, channel: discord.VoiceChannel, date: commands.clean_content):
         """
         Set a countdown for a voice channel.
