@@ -33,10 +33,45 @@ class ChannelCountdown(commands.Cog):
         await ctx.send(f"Countdown set for {channel.mention} to {countdown_date.strftime('%d-%m-%Y %H:%M')}")
 
     async def update_channel_names(self):
-        # ... rest of the code
+        while not self.bot.is_closed():
+            for guild in self.bot.guilds:
+                guild_config = await self.config.guild(guild).countdowns()
+                for name, date_str in guild_config.items():
+                    countdown_date = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+                    remaining_time = countdown_date - datetime.datetime.now()
+
+                    if remaining_time.total_seconds() <= 0:
+                        continue
+
+                    days = remaining_time.days
+                    hours, remainder = divmod(remaining_time.seconds, 3600)
+                    minutes, _ = divmod(remainder, 60)
+                    countdown_name = f"Countdown: {days}d {hours}h {minutes}m"
+
+                    for channel in guild.voice_channels:
+                        if channel.name == name:
+                            await self.rename_channel(channel, countdown_name)
+                            break
+                    else:
+                        # If the voice channel doesn't exist, you can create it here if needed
+                        pass
+
+            await asyncio.sleep(60)  # Sleep for 60 seconds before updating again
 
     async def rename_channel(self, channel, new_name):
-        # ... rest of the code
+        bucket = self.rate_limit.get_bucket(channel)
+        retry_after = bucket.update_rate_limit()
+        if retry_after:
+            await asyncio.sleep(retry_after)
+
+        try:
+            await channel.edit(name=new_name)
+        except discord.HTTPException as e:
+            if e.code == 50013:
+                # Handle "Missing Permissions" error
+                pass
+            else:
+                raise e
 
 def setup(bot):
     bot.add_cog(ChannelCountdown(bot))
