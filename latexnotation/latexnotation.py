@@ -18,7 +18,17 @@ class LaTeXNotation(commands.Cog):
                 await message.channel.send(latex_message)
 
     def convert_to_latex(self, message_content):
-        # Conversion logic here
+        # Check if the message contains a mathematical expression
+        if sympy.sympify(message_content, evaluate=False):
+            try:
+                # Use sympy to convert the expression to LaTeX notation
+                expr = sympy.sympify(message_content, evaluate=False)
+                latex_content = sympy.latex(expr)
+                return latex_content
+            except:
+                pass
+
+        return message_content
 
     @commands.command()
     async def latexon(self, ctx):
@@ -36,4 +46,3 @@ class LaTeXNotation(commands.Cog):
 
 def setup(bot):
     bot.add_cog(LaTeXNotation(bot))
-#
