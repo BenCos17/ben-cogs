@@ -1,4 +1,4 @@
-from .lastping import LastPing
+from .lastping import LastPingCog
 
 def setup(bot):
-    bot.add_cog(LastPing(bot))
+    bot.add_cog(LastPingCog(bot))
