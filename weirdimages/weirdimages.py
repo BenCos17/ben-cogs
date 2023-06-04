@@ -77,10 +77,10 @@ class WeirdImages(commands.Cog):
         await ctx.send(response)
 
     @commands.command()
-    async def command2(self, ctx):
+    async def servername(self, ctx):
         # Sample functionality for command2
         guild_name = ctx.guild.name
-        response = f"This is command 2 in the server {guild_name}."
+        response = f"the server name is {guild_name}."
         await ctx.send(response)
 
 # Your other existing commands can be added here as well

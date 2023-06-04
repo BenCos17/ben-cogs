@@ -12,7 +12,8 @@ class LastPingCog(commands.Cog):
         messages.reverse()
 
         for message in messages:
-            if user.mention in message.content:
+            mentions = message.mentions
+            if user in mentions or discord.utils.get(mentions, id=ctx.guild.id) or discord.utils.get(mentions, id=ctx.guild.default_role.id):
                 await ctx.send(f"The last ping from {user.mention} was in message: {message.jump_url}")
                 return
 
