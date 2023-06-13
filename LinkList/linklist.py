@@ -9,7 +9,7 @@ class LinkList(commands.Cog):
         self.config.register_global(**default_global)
 
     @commands.command()
-    async def listlinks(self, ctx, link_name: str):
+    async def listlink(self, ctx, link_name: str):
         link_links = await self.config.link_links()
         if link_name not in link_links:
             await ctx.send(f"Invalid link name '{link_name}'. Use !addlink to add a new Nitro link.")
@@ -23,7 +23,7 @@ class LinkList(commands.Cog):
         await ctx.send(f"Added new link '{link_name}': {link_url}")
 
     @commands.command()
-    async def listnitro(self, ctx):
+    async def listlinks(self, ctx):
         link_links = await self.config.link_links()
         if not link_links:
             await ctx.send("There are no links configured.")
