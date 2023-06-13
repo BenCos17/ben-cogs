@@ -58,7 +58,7 @@ class LinkList(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def updatenitro(self, ctx, link_name: str, link_url: str):
+    async def updatelinks(self, ctx, link_name: str, link_url: str):
         link_links = await self.config.link_links()
         if link_name not in link_links:
             await ctx.send(f"Invalid link name '{link_name}'. Use `!addlink` to add a new link.")
