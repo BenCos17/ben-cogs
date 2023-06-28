@@ -33,7 +33,7 @@ class BotInfoEmbed(commands.Cog):
     @commands.is_owner()
     async def get_support_server_tos(self, ctx):
         """Get the current terms of service link for the support server"""
-        embed = discord.Embed(title="Useful Links for JoultsBot", color=discord.Color.green())
+        embed = discord.Embed(title="Useful Links for jarvis", color=discord.Color.green())
         if self.support_server_tos and "tos" not in self.hidden_links:
             embed.add_field(name="Terms of Service", value=self.support_server_tos, inline=False)
         if self.privacy_policy and "privacy" not in self.hidden_links:
@@ -41,9 +41,9 @@ class BotInfoEmbed(commands.Cog):
         if self.support_server and "support" not in self.hidden_links:
             embed.add_field(name="Support Server", value=self.support_server, inline=False)
         if self.bot_invite and "invite" not in self.hidden_links:
-            embed.add_field(name="Invite JoultsBot", value=self.bot_invite, inline=False)
+            embed.add_field(name="Invite jarvis", value=self.bot_invite, inline=False)
         if self.vote_link and "vote" not in self.hidden_links:
-            embed.add_field(name="Vote for JoultsBot", value=self.vote_link, inline=False)
+            embed.add_field(name="Vote for jarvis", value=self.vote_link, inline=False)
         if self.support_link and "supportme" not in self.hidden_links:
             embed.add_field(name="Support Me!", value=self.support_link, inline=False)
         await ctx.send(embed=embed)
