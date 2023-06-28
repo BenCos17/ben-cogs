@@ -12,16 +12,18 @@ class BotInfoEmbed(commands.Cog):
             "bot_invite": "",
             "vote_link": "",
             "support_link": "",
-            "hidden_links": []  # List of hidden links
+            "hidden_links": [],  # List of hidden links
+            "link_emojis": {}  # Dictionary to store link emojis
         }
         self.config.register_guild(**default_settings)
     
     @commands.command()
     @commands.is_owner()
-    async def set_bot_name(self, ctx, bot_name: str):
-        """Set the name of the bot"""
-        await self.config.guild(ctx.guild).bot_name.set(bot_name)
-        await ctx.send(f"The bot name has been set to '{bot_name}'.")
+    async def set_link_emoji(self, ctx, link_name: str, emoji: str):
+        """Set the emoji for a specific link"""
+        link_name = link_name.lower()
+        await self.config.guild(ctx.guild).link_emojis.set_raw(link_name, value=emoji)
+        await ctx.send(f"The emoji for '{link_name.capitalize()}' link has been set to '{emoji}'.")
     
     @commands.command()
     async def get_support_server_tos(self, ctx):
@@ -29,17 +31,41 @@ class BotInfoEmbed(commands.Cog):
         bot_name = self.bot.user.name
         embed = discord.Embed(title=f"Useful Links for {bot_name}", color=discord.Color.green())
         if self.support_server_tos and "tos" not in self.hidden_links:
-            embed.add_field(name="Terms of Service", value=self.support_server_tos, inline=False)
+            emoji = await self.config.guild(ctx.guild).link_emojis.get_raw("tos")
+            if emoji:
+                embed.add_field(name="Terms of Service", value=f"{emoji} [Link]({self.support_server_tos})", inline=False)
+            else:
+                embed.add_field(name="Terms of Service", value=f"[Link]({self.support_server_tos})", inline=False)
         if self.privacy_policy and "privacy" not in self.hidden_links:
-            embed.add_field(name="Privacy Policy", value=self.privacy_policy, inline=False)
+            emoji = await self.config.guild(ctx.guild).link_emojis.get_raw("privacy")
+            if emoji:
+                embed.add_field(name="Privacy Policy", value=f"{emoji} [Link]({self.privacy_policy})", inline=False)
+            else:
+                embed.add_field(name="Privacy Policy", value=f"[Link]({self.privacy_policy})", inline=False)
         if self.support_server and "support" not in self.hidden_links:
-            embed.add_field(name="Support Server", value=self.support_server, inline=False)
+            emoji = await self.config.guild(ctx.guild).link_emojis.get_raw("support")
+            if emoji:
+                embed.add_field(name="Support Server", value=f"{emoji} [Link]({self.support_server})", inline=False)
+            else:
+                embed.add_field(name="Support Server", value=f"[Link]({self.support_server})", inline=False)
         if self.bot_invite and "invite" not in self.hidden_links:
-            embed.add_field(name=f"Invite {bot_name}", value=self.bot_invite, inline=False)
+            emoji = await self.config.guild(ctx.guild).link_emojis.get_raw("invite")
+            if emoji:
+                embed.add_field(name=f"Invite {bot_name}", value=f"{emoji} [Link]({self.bot_invite})", inline=False)
+            else:
+                embed.add_field(name=f"Invite {bot_name}", value=f"[Link]({self.bot_invite})", inline=False)
         if self.vote_link and "vote" not in self.hidden_links:
-            embed.add_field(name=f"Vote for {bot_name}", value=self.vote_link, inline=False)
+            emoji = await self.config.guild(ctx.guild).link_emojis.get_raw("vote")
+            if emoji:
+                embed.add_field(name=f"Vote for {bot_name}", value=f"{emoji} [Link]({self.vote_link})", inline=False)
+            else:
+                embed.add_field(name=f"Vote for {bot_name}", value=f"[Link]({self.vote_link})", inline=False)
         if self.support_link and "supportme" not in self.hidden_links:
-            embed.add_field(name="Support Me!", value=self.support_link, inline=False)
+            emoji = await self.config.guild(ctx.guild).link_emojis.get_raw("supportme")
+            if emoji:
+                embed.add_field(name="Support Me!", value=f"{emoji} [Link]({self.support_link})", inline=False)
+            else:
+                embed.add_field(name="Support Me!", value=f"[Link]({self.support_link})", inline=False)
         await ctx.send(embed=embed)
 
     # Add commands to set other links
