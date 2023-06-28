@@ -1,6 +1,6 @@
 from redbot.core import commands
 
-class BotSettings(commands.Cog):
+class BotInfoEmbed(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.support_server_tos = ""
@@ -72,4 +72,4 @@ class BotSettings(commands.Cog):
             await ctx.send(f"{link_name.capitalize()} link is already shown or not hidden.")
     
 def setup(bot):
-    bot.add_cog(BotSettings(bot))
+    bot.add_cog(BotInfoEmbed(bot))
