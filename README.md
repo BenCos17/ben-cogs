@@ -111,4 +111,38 @@ To generate a weird image with size 800, use the following command:
 To combine two images in a cursed way, use the following command:
 
 [p]cursed https://example.com/image1.png https://example.com/image2.png
-I hope this helps! Let me know if you have any questions or need further assistance.
+
+
+
+
+BotInfoEmbed Cog
+The BotInfoEmbed cog provides commands to manage and display useful links in an embed.
+
+Commands
+[p]set_bot_name <bot_name>
+Description: Sets the name of the bot.
+Required Permissions: Bot Owner
+Parameters:
+bot_name (string): The desired name of the bot.
+[p]get_support_server_tos
+Description: Retrieves the current terms of service link for the support server and displays them in an embed.
+Required Permissions: None
+[p]set_link_emoji <link_name> <emoji>
+Description: Sets the emoji for a specific link.
+Required Permissions: Bot Owner
+Parameters:
+link_name (string): The name of the link to set the emoji for.
+emoji (string): The emoji to set for the link.
+[p]hide_link <link_name>
+Description: Hides a specific link from the list of displayed links in the embed.
+Required Permissions: Bot Owner
+Parameters:
+link_name (string): The name of the link to hide.
+[p]show_link <link_name>
+Description: Shows a specific link in the list of displayed links in the embed.
+Required Permissions: Bot Owner
+Parameters:
+link_name (string): The name of the link to show.
+Replace [p] with the prefix used for your bot.
+
+Please note that you'll need to customize the documentation according to your specific bot's command prefix and any modifications made to the command names or descriptions.
