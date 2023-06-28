@@ -1,4 +1,5 @@
 from redbot.core import commands
+import discord
 
 class BotInfoEmbed(commands.Cog):
     def __init__(self, bot):
