@@ -99,5 +99,9 @@ class BotInfoEmbed(commands.Cog):
         await self.bot.user.edit(username=new_name)
         await ctx.send(f"The bot name has been set to '{new_name}'.")
     
+    async def cog_command_error(self, ctx, error):
+        if isinstance(error, commands.CommandInvokeError):
+            await ctx.send("An error occurred while executing the command.")
+    
 def setup(bot):
     bot.add_cog(BotInfoEmbed(bot))
