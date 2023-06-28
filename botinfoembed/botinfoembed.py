@@ -67,4 +67,3 @@ class BotSettings(commands.Cog):
     
 def setup(bot):
     bot.add_cog(BotSettings(bot))
-#test
