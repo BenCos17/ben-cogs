@@ -91,6 +91,13 @@ class BotInfoEmbed(commands.Cog):
             await ctx.send(f"{link_name.capitalize()} link has been shown.")
         else:
             await ctx.send(f"{link_name.capitalize()} link is already shown or not hidden.")
+
+    @commands.command()
+    @commands.is_owner()
+    async def set_bot_name(self, ctx, new_name: str):
+        """Set the name of the bot"""
+        await self.bot.user.edit(username=new_name)
+        await ctx.send(f"The bot name has been set to '{new_name}'.")
     
 def setup(bot):
-    bot.add_cog(BotSettings(bot))
+    bot.add_cog(BotInfoEmbed(bot))
