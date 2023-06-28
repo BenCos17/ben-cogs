@@ -1,39 +1,32 @@
-from redbot.core import commands
-import discord
+from redbot.core import commands, Config
 
-class BotInfoEmbed(commands.Cog):
+class BotSettings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.support_server_tos = ""
-        self.privacy_policy = ""
-        self.support_server = ""
-        self.bot_invite = ""
-        self.vote_link = ""
-        self.support_link = ""
-        self.hidden_links = []  # List of hidden links
-    
-    async def red_get_data_for_user(self, *, user_id):
-        # This is required by Red-DiscordBot to save data for the user.
-        # Return a dictionary of data you want to save for the user.
-        return {}
-    
-    async def red_delete_data_for_user(self, *, requester, user_id):
-        # This is required by Red-DiscordBot to delete saved data for the user.
-        # Implement this if you need to save data for the user.
-        pass
-    
-    @commands.is_owner()
-    @commands.command()
-    async def set_support_server_tos(self, ctx, tos_link: str):
-        """Set the terms of service link for the support server"""
-        self.support_server_tos = tos_link
-        await ctx.send("Support server terms of service link has been set.")
+        self.config = Config.get_conf(self, identifier=1234567890)  # Use a unique identifier for your cog
+        default_settings = {
+            "support_server_tos": "",
+            "privacy_policy": "",
+            "support_server": "",
+            "bot_invite": "",
+            "vote_link": "",
+            "support_link": "",
+            "hidden_links": []  # List of hidden links
+        }
+        self.config.register_guild(**default_settings)
     
     @commands.command()
     @commands.is_owner()
+    async def set_bot_name(self, ctx, bot_name: str):
+        """Set the name of the bot"""
+        await self.config.guild(ctx.guild).bot_name.set(bot_name)
+        await ctx.send(f"The bot name has been set to '{bot_name}'.")
+    
+    @commands.command()
     async def get_support_server_tos(self, ctx):
         """Get the current terms of service link for the support server"""
-        embed = discord.Embed(title="Useful Links for jarvis", color=discord.Color.green())
+        bot_name = self.bot.user.name
+        embed = discord.Embed(title=f"Useful Links for {bot_name}", color=discord.Color.green())
         if self.support_server_tos and "tos" not in self.hidden_links:
             embed.add_field(name="Terms of Service", value=self.support_server_tos, inline=False)
         if self.privacy_policy and "privacy" not in self.hidden_links:
@@ -41,13 +34,13 @@ class BotInfoEmbed(commands.Cog):
         if self.support_server and "support" not in self.hidden_links:
             embed.add_field(name="Support Server", value=self.support_server, inline=False)
         if self.bot_invite and "invite" not in self.hidden_links:
-            embed.add_field(name="Invite jarvis", value=self.bot_invite, inline=False)
+            embed.add_field(name=f"Invite {bot_name}", value=self.bot_invite, inline=False)
         if self.vote_link and "vote" not in self.hidden_links:
-            embed.add_field(name="Vote for jarvis", value=self.vote_link, inline=False)
+            embed.add_field(name=f"Vote for {bot_name}", value=self.vote_link, inline=False)
         if self.support_link and "supportme" not in self.hidden_links:
             embed.add_field(name="Support Me!", value=self.support_link, inline=False)
         await ctx.send(embed=embed)
-    
+
     # Add commands to set other links
     
     @commands.is_owner()
@@ -73,4 +66,5 @@ class BotInfoEmbed(commands.Cog):
             await ctx.send(f"{link_name.capitalize()} link is already shown or not hidden.")
     
 def setup(bot):
-    bot.add_cog(BotInfoEmbed(bot))
+    bot.add_cog(BotSettings(bot))
+#test
