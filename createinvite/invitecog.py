@@ -6,6 +6,7 @@ class InviteCog(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    @commands.has_permissions(administrator=True)
     async def createinvite(self, ctx):
         invite = await ctx.channel.create_invite(max_uses=1, unique=True)
         await ctx.send(f"Invite created: {invite.url}")
