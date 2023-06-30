@@ -5,7 +5,7 @@ import random
 import os
 import requests
 
-class RoastCog(commands.Cog):
+class  Roast(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.roasts = self.load_roasts()
@@ -113,6 +113,6 @@ class RoastCog(commands.Cog):
         self.save_roasts()
 
 def setup(bot):
-    roast_cog = RoastCog(bot)
+    roast_cog =  Roast(bot)
     roast_cog.download_roasts_from_github()  # Download roasts.json on cog setup
     bot.add_cog(roast_cog)
