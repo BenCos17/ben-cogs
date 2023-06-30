@@ -5,7 +5,7 @@ import random
 import os
 import requests
 
-class RoastCog(commands.Cog):
+class Roast(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.roasts = self.load_roasts()
