@@ -7,7 +7,7 @@ import discord
 class Roast(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique identifier
+        self.config = Config.get_conf(self, identifier=492089091320446976)  # Replace with a unique identifier
         self.config.register_guild(
             insults=[]
         )
