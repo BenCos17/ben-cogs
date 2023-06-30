@@ -1,7 +1,8 @@
-import random
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core import Config
+import random
+import discord
 
 class Roast(commands.Cog):
     def __init__(self, bot: Red):
