@@ -11,9 +11,7 @@ class InviteCog(commands.Cog):
         if not channel:
             channel = ctx.channel
         else:
-            if channel.startswith("<#") and channel.endswith(">"):
-                channel = channel[2:-1]
-            channel = discord.utils.get(ctx.guild.channels, id=int(channel))
+            channel = discord.utils.get(ctx.guild.channels, name=channel)
         if not channel:
             await ctx.send("Invalid channel name.")
             return
