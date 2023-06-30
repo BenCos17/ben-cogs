@@ -1,5 +1,5 @@
-from .roast import RoastCog
+from .roast import Roast
 
 def setup(bot):
-    cog = RoastCog(bot)
+    cog = Roast(bot)
     bot.add_cog(cog)
