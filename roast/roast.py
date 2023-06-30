@@ -18,7 +18,7 @@ class Roast(commands.Cog):
         pass
 
     @roastset.command(name="addinsult")
-    @commands.has_permissions(kick_members=True)  # Lock command to users with "Kick Members" permission or above
+    @commands.has_permissions(MANAGE_CHANNELS =True)  # Lock command to users with "MANAGE_CHANNELS " permission or above
     async def add_insult(self, ctx, *, insult: str):
         """Add an insult to the list"""
         async with self.config.guild(ctx.guild).insults() as insults:
