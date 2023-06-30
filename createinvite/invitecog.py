@@ -7,7 +7,7 @@ class InviteCog(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def createinvite(self, ctx, max_uses=1, unique=True, channel=None, reuse_existing=True):
+    async def createinvite(self, ctx, max_uses=1, unique="true", channel=None, reuse_existing="true"):
         if not channel:
             channel = ctx.channel
         else:
@@ -21,6 +21,9 @@ class InviteCog(commands.Cog):
         if max_uses < 0 or max_uses > 100:
             await ctx.send("The maximum uses must be between 0 and 100.")
             return
+
+        unique = self.convert_to_bool(unique)
+        reuse_existing = self.convert_to_bool(reuse_existing)
 
         if reuse_existing:
             existing_invite = await self.find_existing_invite(channel)
@@ -41,6 +44,14 @@ class InviteCog(commands.Cog):
             if invite.inviter == self.bot.user:
                 return invite
         return None
+
+    def convert_to_bool(self, value):
+        if value.lower() in ["true", "yes", "on", "1"]:
+            return True
+        elif value.lower() in ["false", "no", "off", "0"]:
+            return False
+        else:
+            raise commands.BadArgument("Invalid boolean value.")
 
 def setup(bot):
     cog = InviteCog(bot)
