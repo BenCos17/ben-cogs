@@ -1,4 +1,4 @@
-from .roast  import Roast
+from .roast import Roast
 
 
 def setup(bot):
