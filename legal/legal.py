@@ -1,6 +1,6 @@
 from redbot.core import commands
 
-class CourtSimulator(commands.Cog):
+class Legal(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.roles = {
