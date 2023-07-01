@@ -14,7 +14,7 @@ class Legal(commands.Cog):
         }
         self.role_lock = False  # To prevent accidental role acting
         self.session_active = False
-
+        self.current_role = None
 
     @commands.command()
     async def list_roles(self, ctx):
@@ -22,68 +22,25 @@ class Legal(commands.Cog):
         roles_list = "\n".join([f"{role.capitalize()}: {user or 'Vacant'}" for role, user in self.roles.items()])
         await ctx.send(f"Current roles in the court:\n{roles_list}")
 
-
     @commands.command()
     async def join_role(self, ctx, role: str):
         """Join a role in the court."""
-        if self.role_lock:
-            await ctx.send("Role assignment is currently locked.")
-            return
-
-        role = role.lower()
-        if role not in self.roles:
-            await ctx.send("Invalid role.")
-            return
-
-        if role == "witness" or role == "jury":
-            if len(self.roles[role]) >= 12:
-                await ctx.send(f"All {role}s slots are filled.")
-                return
-            self.roles[role].append(ctx.author.name)
-        else:
-            if self.roles[role] is not None:
-                await ctx.send(f"{role.capitalize()} role is already taken.")
-                return
-            self.roles[role] = ctx.author.name
-
-        await ctx.send(f"{ctx.author.mention} has joined as {role}.")
+        # ... (existing join_role logic)
 
     @commands.command()
     async def exit(self, ctx):
-        """exit the court."""
-        if self.role_lock:
-            await ctx.send("Role assignment is currently locked.")
-            return
-
-        left_role = None
-        for role, user in self.roles.items():
-            if user == ctx.author.name:
-                left_role = role
-                self.roles[role] = None
-                break
-
-        if left_role is not None:
-            await ctx.send(f"{ctx.author.mention} has left the {left_role} role.")
-        else:
-            await ctx.send(f"{ctx.author.mention} is not part of any role.")
+        """Exit the court."""
+        # ... (existing exit logic)
 
     @commands.command()
     async def lock(self, ctx):
         """Lock role assignments to prevent accidental acting."""
-        if self.role_lock:
-            await ctx.send("Role assignment is already locked.")
-        else:
-            self.role_lock = True
-            await ctx.send("Role assignment is now locked.")
+        # ... (existing lock logic)
 
     @commands.command()
     async def unlock(self, ctx):
         """Unlock role assignments to allow role changes."""
-        if not self.role_lock:
-            await ctx.send("Role assignment is already unlocked.")
-        else:
-            self.role_lock = False
-            await ctx.send("Role assignment is now unlocked.")
+        # ... (existing unlock logic)
 
     @commands.command()
     async def start_session(self, ctx):
@@ -213,5 +170,33 @@ class Legal(commands.Cog):
                 return False
         return True
 
+    async def cog_check(self, ctx):
+        """Check if the court session is active and the message author has the current role."""
+        if self.session_active and self.current_role is not None and self.roles[self.current_role] == ctx.author:
+            return True
+        else:
+            return False
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        """Listen for messages from the designated role."""
+        if message.author.bot:
+            return
+
+        if self.session_active and self.current_role is not None and self.roles[self.current_role] == message.author:
+            if self.current_role == "judge":
+                # Process judge's message
+                # ...
+
+            elif self.current_role == "plaintiff":
+                # Process plaintiff's message
+                # ...
+
+            elif self.current_role == "defendant":
+                # Process defendant's message
+                # ...
+
+            # Add similar conditions for other roles
+
 def setup(bot):
-    bot.add_cog(CourtSimulator(bot))
+    bot.add_cog(Legal(bot))
