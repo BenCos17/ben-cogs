@@ -27,11 +27,8 @@ class Legal(commands.Cog):
 
         # Opening statements
         await ctx.send("The trial is now in session.")
-        await ctx.send(f"{self.get_role_mention('Judge')}, please present the opening statement.")
-        await self.await_user_response(ctx)
-
-        await ctx.send(f"{self.get_role_mention('Prosecution')}, please present the opening statement.")
-        await self.await_user_response(ctx)
+        await self.perform_action(ctx, 'Judge', "present the opening statement")
+        await self.perform_action(ctx, 'Prosecution', "present the opening statement")
 
         # Witness testimonies
         await ctx.send(f"{self.get_role_mention('Prosecution')}, please call your first witness.")
@@ -91,6 +88,15 @@ class Legal(commands.Cog):
         except asyncio.TimeoutError:
             await ctx.send("Timeout: No response received. Ending trial simulation.")
             raise commands.CommandError("Simulation timeout.")
+
+    async def perform_action(self, ctx, role_name, action):
+        user_id = next((k for k, v in self.players.items() if v == role_name), None)
+        if user_id:
+            user = ctx.guild.get_member(user_id)
+            await ctx.send(f"{user.mention}, please {action}.")
+            await self.await_user_response(ctx)
+        else:
+            await ctx.send(f"Sorry, the role '{role_name}' is not assigned to any user.")
 
     def get_role_mention(self, role_name):
         role_id = next((k for k, v in self.players.items() if v == role_name), None)
