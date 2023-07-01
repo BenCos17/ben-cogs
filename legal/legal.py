@@ -19,9 +19,20 @@ class Legal(commands.Cog):
 
     @commands.command()
     async def list_roles(self, ctx):
-        """List all roles in the court."""
-        roles_list = "\n".join([f"{role.capitalize()}: {user or 'Vacant'}" for role, user in self.roles.items()])
-        await ctx.send(f"Current roles in the court:\n{roles_list}")
+        """List all roles in the court and their assignments."""
+        roles_list = []
+        for role, user in self.roles.items():
+            role_name = role.capitalize()
+            if user:
+                user_name = user.name
+            else:
+                user_name = "Vacant (No user assigned)"
+
+            roles_list.append(f"{role_name}: {user_name}")
+
+        roles_text = "\n".join(roles_list)
+        await ctx.send(f"Current roles in the court:\n{roles_text}")
+
 
     @commands.command()
     async def join_role(self, ctx, role: str):
