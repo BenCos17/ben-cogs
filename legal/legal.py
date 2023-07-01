@@ -178,11 +178,11 @@ class Legal(commands.Cog):
             return False
 
     @commands.Cog.listener()
-async def on_message(self, message):
-    if message.author == self.current_role and self.session_active:
-        if self.current_role == "judge":
+    async def on_message(self, message):
+        if message.author == self.current_role and self.session_active:
+            if self.current_role == "judge":
             # Process judge's message
-            pass
+                pass
         elif self.current_role == "plaintiff":
             # Process plaintiff's message
             pass
@@ -201,7 +201,11 @@ async def on_message(self, message):
         elif self.current_role == "jury":
             # Process jury's message
             pass
-    await self.bot.process_commands(message)
+        await self.bot.process_commands(message)
+
+            # Process jury's message
+        pass
+
 
 
 def setup(bot):
