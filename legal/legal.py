@@ -1,6 +1,7 @@
 from redbot.core import commands
 import discord
 import asyncio
+import random
 
 class Legal(commands.Cog):
     def __init__(self, bot):
@@ -74,20 +75,10 @@ class Legal(commands.Cog):
         for role in role_names:
             self.players[role] = "AI"
 
-        # Prompt users to choose the role they want to control
-        for role in role_names:
-            await ctx.send(f"{ctx.author.mention}, do you want to control the role: {role}? (yes/no)")
-            response = await self.await_user_response(ctx)
-            if response.content.lower() == "yes":
-                self.players[role] = ctx.author.id
-
         # Display the chosen roles
         await ctx.send("The chosen roles are:")
         for role, user in self.players.items():
-            if user == "AI":
-                await ctx.send(f"{role}: AI-controlled")
-            else:
-                await ctx.send(f"{ctx.guild.get_member(user).mention}: {role}")
+            await ctx.send(f"{role}: {user}")
 
         # Opening statements
         await ctx.send("The trial is now in session.")
@@ -127,7 +118,10 @@ class Legal(commands.Cog):
 
         await ctx.send("Thank you for participating in the AI-controlled legal trial simulation.")
 
-    # Rest of the code...
+    @commands.command()
+    async def cancel_trial(self, ctx):
+        await ctx.send("The trial simulation has been canceled.")
+        self.players = {}  # Clear the player-role mappings
 
     async def await_user(self, ctx):
         try:
@@ -150,7 +144,8 @@ class Legal(commands.Cog):
             def check(m):
                 return m.author != self.bot.user and m.channel == ctx.channel
 
-            await self.bot.wait_for('message', check=check, timeout=300)
+            response = await self.bot.wait_for('message', check=check, timeout=300)
+            await ctx.send(response.content)  # Send the response to chat
         except asyncio.TimeoutError:
             await ctx.send("Timeout: No response received. Ending trial simulation.")
             raise commands.CommandError("Simulation timeout.")
@@ -175,6 +170,50 @@ class Legal(commands.Cog):
         role_id = next((k for k, v in self.players.items() if v == role_name), None)
         if role_id:
             return f"<@{role_id}>"
+        return ""
+
+    def generate_statement(self, statement_type):
+        statements = {
+            "opening_statement": [
+                "Ladies and gentlemen of the jury, esteemed judge, and respected members of the court,",
+                "Your Honor, honorable members of the jury, and distinguished opposing counsel,",
+                "May it please the court, ladies and gentlemen of the jury, and honorable judge,",
+                # Add more opening statements here...
+            ],
+            "witness_testimony": [
+                "I swear to tell the truth, the whole truth, and nothing but the truth.",
+                "Based on my observations and expertise in the field,",
+                "As an eyewitness to the incident,",
+                # Add more witness testimonies here...
+            ],
+            "cross_examination": [
+                "Objection, Your Honor! The question is leading the witness.",
+                "Please rephrase the question to allow the witness to answer without bias.",
+                "I request that the witness's previous statement be stricken from the record.",
+                # Add more cross-examination responses here...
+            ],
+            "evidence_presentation": [
+                "I would like to present Exhibit A as evidence.",
+                "This document clearly shows the defendant's involvement in the crime.",
+                "I have a video recording that captures the incident as it happened.",
+                # Add more evidence presentation responses here...
+            ],
+            "closing_argument": [
+                "Ladies and gentlemen of the jury, the evidence presented before you speaks for itself.",
+                "The defense's case lacks substantial evidence to support their claims.",
+                "In light of the facts presented, the only reasonable verdict is guilty.",
+                # Add more closing arguments here...
+            ],
+            "verdict": [
+                "After careful consideration of the evidence and testimonies, I hereby find the defendant guilty.",
+                "In light of the reasonable doubt presented, I find the defendant not guilty.",
+                "The jury has reached a unanimous decision of guilty.",
+                # Add more verdicts here...
+            ],
+        }
+
+        if statement_type in statements:
+            return random.choice(statements[statement_type])
         return ""
 
 def setup(bot):
