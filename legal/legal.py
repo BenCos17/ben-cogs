@@ -74,10 +74,20 @@ class Legal(commands.Cog):
         for role in role_names:
             self.players[role] = "AI"
 
+        # Prompt users to choose the role they want to control
+        for role in role_names:
+            await ctx.send(f"{ctx.author.mention}, do you want to control the role: {role}? (yes/no)")
+            response = await self.await_user_response(ctx)
+            if response.content.lower() == "yes":
+                self.players[role] = ctx.author.id
+
         # Display the chosen roles
         await ctx.send("The chosen roles are:")
         for role, user in self.players.items():
-            await ctx.send(f"{role}: {user}")
+            if user == "AI":
+                await ctx.send(f"{role}: AI-controlled")
+            else:
+                await ctx.send(f"{ctx.guild.get_member(user).mention}: {role}")
 
         # Opening statements
         await ctx.send("The trial is now in session.")
@@ -117,10 +127,7 @@ class Legal(commands.Cog):
 
         await ctx.send("Thank you for participating in the AI-controlled legal trial simulation.")
 
-    @commands.command()
-    async def cancel_trial(self, ctx):
-        await ctx.send("The trial simulation has been canceled.")
-        self.players = {}  # Clear the player-role mappings
+    # Rest of the code...
 
     async def await_user(self, ctx):
         try:
