@@ -23,7 +23,7 @@ class Legal(commands.Cog):
         # Display the chosen roles
         await ctx.send("The chosen roles are:")
         for user, role in self.players.items():
-            await ctx.send(f"{user.mention}: {role}")
+            await ctx.send(f"{ctx.guild.get_member(user).mention}: {role}")
 
         # Opening statements
         await ctx.send("The trial is now in session.")
