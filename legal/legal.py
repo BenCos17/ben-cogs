@@ -1,7 +1,7 @@
 from redbot.core import commands
 
 class Legal(commands.Cog):
-    
+
     def __init__(self, bot):
         self.bot = bot
         self.roles = {
@@ -17,7 +17,6 @@ class Legal(commands.Cog):
         self.session_active = False
         self.current_role = None
 
-
     @commands.command()
     async def list_roles(self, ctx):
         """List all roles in the court."""
@@ -31,50 +30,56 @@ class Legal(commands.Cog):
             await ctx.send("You cannot join a role while a court session is in progress.")
             return
 
-        role = role.lower()
-        if role not in self.roles:
-            await ctx.send("Invalid role. Available roles are: judge, plaintiff, defendant, prosecutor, defense, witness, jury.")
+        if self.role_lock:
+            await ctx.send("Role assignments are currently locked.")
             return
 
-        if self.roles[role]:
-            await ctx.send("That role is already taken.")
+        role = role.lower()
+        if role not in self.roles:
+            await ctx.send("Invalid role. Available roles: judge, plaintiff, defendant, prosecutor, defense, witness, jury")
+            return
+
+        if self.roles[role] is not None:
+            await ctx.send(f"The {role} role is already occupied.")
             return
 
         self.roles[role] = ctx.author
-        await ctx.send(f"{ctx.author.mention} has joined the {role} role.")
+        await ctx.send(f"You have joined the {role} role.")
 
     @commands.command()
     async def exit(self, ctx):
         """Exit the court."""
         if self.session_active:
-            await ctx.send("You cannot exit while a court session is in progress.")
+            await ctx.send("You cannot exit the court while a court session is in progress.")
             return
 
         for role, user in self.roles.items():
             if user == ctx.author:
                 self.roles[role] = None
-                await ctx.send(f"{ctx.author.mention} has exited the {role} role.")
+                await ctx.send(f"You have exited the {role} role.")
                 return
 
-        await ctx.send(f"{ctx.author.mention} is not part of any role.")
+        await ctx.send("You are not currently assigned to any role.")
 
     @commands.command()
     async def lock(self, ctx):
         """Lock role assignments to prevent accidental acting."""
-        if self.role_lock:
-            await ctx.send("The roles are already locked.")
-        else:
-            self.role_lock = True
-            await ctx.send("Role assignments have been locked.")
+        if self.session_active:
+            await ctx.send("You cannot lock role assignments while a court session is in progress.")
+            return
+
+        self.role_lock = True
+        await ctx.send("Role assignments are now locked.")
 
     @commands.command()
     async def unlock(self, ctx):
         """Unlock role assignments to allow role changes."""
-        if not self.role_lock:
-            await ctx.send("The roles are already unlocked.")
-        else:
-            self.role_lock = False
-            await ctx.send("Role assignments have been unlocked.")
+        if self.session_active:
+            await ctx.send("You cannot unlock role assignments while a court session is in progress.")
+            return
+
+        self.role_lock = False
+        await ctx.send("Role assignments are now unlocked.")
 
     @commands.command()
     async def start_session(self, ctx):
