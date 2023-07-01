@@ -172,31 +172,34 @@ class Legal(commands.Cog):
                 return False
         return True
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author == self.current_role and self.session_active:
-            if self.current_role == "judge":
-                # Process judge's message
-                pass
-            elif self.current_role == "plaintiff":
-                # Process plaintiff's message
-                pass
-            elif self.current_role == "defendant":
-                # Process defendant's message
-                pass
-            elif self.current_role == "prosecutor":
-                # Process prosecutor's message
-                pass
-            elif self.current_role == "defense":
-                # Process defense's message
-                pass
-            elif self.current_role == "witness":
-                # Process witness's message
-                pass
-            elif self.current_role == "jury":
-                # Process jury's message
-                pass
+@commands.Cog.listener()
+async def on_message(self, message):
+    if self.session_active and message.author == self.current_role:
+        if self.current_role == self.roles["judge"]:
+            # Process judge's message
+            pass
+        elif self.current_role == self.roles["plaintiff"]:
+            # Process plaintiff's message
+            pass
+        elif self.current_role == self.roles["defendant"]:
+            # Process defendant's message
+            pass
+        elif self.current_role == self.roles["prosecutor"]:
+            # Process prosecutor's message
+            pass
+        elif self.current_role == self.roles["defense"]:
+            # Process defense's message
+            pass
+        elif message.author in self.roles["witness"]:
+            # Process witness's message
+            pass
+        elif message.author in self.roles["jury"]:
+            # Process jury's message
+            pass
+
+    if not message.content.startswith(self.bot.command_prefix):
         await self.bot.process_commands(message)
+
 
 
 def setup(bot):
