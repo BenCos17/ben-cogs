@@ -15,13 +15,15 @@ class Legal(commands.Cog):
         role_names = ["Judge", "Prosecution", "Defense", "Witness", "Jury"]
 
         # Prompt users to choose their roles
-        for i in range(len(role_names)):
-            await ctx.send(f"{ctx.author.mention}, please choose your desired role: {role_names}")
-            role = await self.await_user_role(ctx, role_names)
-            self.players[ctx.author.id] = role
+        for role in role_names:
+            await ctx.send(f"Please choose a user for the role: {role}")
+            user = await self.await_user(ctx)
+            self.players[user.id] = role
 
-            role_names.remove(role)
-            await ctx.send(f"{ctx.author.mention}, you have chosen the role: {role}")
+        # Display the chosen roles
+        await ctx.send("The chosen roles are:")
+        for user, role in self.players.items():
+            await ctx.send(f"{user.mention}: {role}")
 
         # Opening statements
         await ctx.send("The trial is now in session.")
@@ -64,17 +66,18 @@ class Legal(commands.Cog):
 
         await ctx.send("Thank you for participating in the legal trial simulation.")
 
-    async def await_user_role(self, ctx, role_names):
+    async def await_user(self, ctx):
         try:
             def check(m):
                 return (
-                    m.author == ctx.author
+                    m.author != self.bot.user
                     and m.channel == ctx.channel
-                    and m.content in role_names
+                    and m.mentions  # Ensure the message mentions at least one user
                 )
 
             msg = await self.bot.wait_for('message', check=check, timeout=300)
-            return msg.content
+            user_mention = msg.mentions[0]  # Get the first mentioned user
+            return user_mention
         except asyncio.TimeoutError:
             await ctx.send("Timeout: No response received. Ending trial simulation.")
             raise commands.CommandError("Simulation timeout.")
