@@ -181,32 +181,27 @@ class Legal(commands.Cog):
     async def on_message(self, message):
         if message.author == self.current_role and self.session_active:
             if self.current_role == "judge":
-            # Process judge's message
+                # Process judge's message
                 pass
-        elif self.current_role == "plaintiff":
-            # Process plaintiff's message
-            pass
-        elif self.current_role == "defendant":
-            # Process defendant's message
-            pass
-        elif self.current_role == "prosecutor":
-            # Process prosecutor's message
-            pass
-        elif self.current_role == "defense":
-            # Process defense's message
-            pass
-        elif self.current_role == "witness":
-            # Process witness's message
-            pass
-        elif self.current_role == "jury":
-            # Process jury's message
-            pass
+            elif self.current_role == "plaintiff":
+                # Process plaintiff's message
+                pass
+            elif self.current_role == "defendant":
+                # Process defendant's message
+                pass
+            elif self.current_role == "prosecutor":
+                # Process prosecutor's message
+                pass
+            elif self.current_role == "defense":
+                # Process defense's message
+                pass
+            elif self.current_role == "witness":
+                # Process witness's message
+                pass
+            elif self.current_role == "jury":
+                # Process jury's message
+                pass
         await self.bot.process_commands(message)
-
-            # Process jury's message
-            
-
-
 
 def setup(bot):
     bot.add_cog(Legal(bot))
