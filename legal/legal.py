@@ -41,8 +41,8 @@ class Legal(commands.Cog):
         await ctx.send(f"{ctx.author.mention} has joined as {role}.")
 
     @commands.command()
-    async def leave(self, ctx):
-        """Leave the court."""
+    async def exit(self, ctx):
+        """exit the court."""
         if self.role_lock:
             await ctx.send("Role assignment is currently locked.")
             return
