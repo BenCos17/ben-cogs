@@ -26,22 +26,60 @@ class Legal(commands.Cog):
     @commands.command()
     async def join_role(self, ctx, role: str):
         """Join a role in the court."""
-        # ... (existing join_role logic)
+        if self.session_active:
+            await ctx.send("You cannot join a role while a court session is in progress.")
+            return
+
+        if self.role_lock:
+            await ctx.send("Role assignments are currently locked.")
+            return
+
+        role = role.lower()
+        if role not in self.roles:
+            await ctx.send("Invalid role. Available roles: judge, plaintiff, defendant, prosecutor, defense, witness, jury")
+            return
+
+        if self.roles[role] is not None:
+            await ctx.send(f"The {role} role is already occupied.")
+            return
+
+        self.roles[role] = ctx.author
+        await ctx.send(f"You have joined the {role} role.")
 
     @commands.command()
     async def exit(self, ctx):
         """Exit the court."""
-        # ... (existing exit logic)
+        if self.session_active:
+            await ctx.send("You cannot exit the court while a court session is in progress.")
+            return
+
+        for role, user in self.roles.items():
+            if user == ctx.author:
+                self.roles[role] = None
+                await ctx.send(f"You have exited the {role} role.")
+                return
+
+        await ctx.send("You are not currently assigned to any role.")
 
     @commands.command()
     async def lock(self, ctx):
         """Lock role assignments to prevent accidental acting."""
-        # ... (existing lock logic)
+        if self.session_active:
+            await ctx.send("You cannot lock role assignments while a court session is in progress.")
+            return
+
+        self.role_lock = True
+        await ctx.send("Role assignments are now locked.")
 
     @commands.command()
     async def unlock(self, ctx):
         """Unlock role assignments to allow role changes."""
-        # ... (existing unlock logic)
+        if self.session_active:
+            await ctx.send("You cannot unlock role assignments while a court session is in progress.")
+            return
+
+        self.role_lock = False
+        await ctx.send("Role assignments are now unlocked.")
 
     @commands.command()
     async def start_session(self, ctx):
@@ -88,37 +126,37 @@ class Legal(commands.Cog):
 
         await ctx.send("Opening statements begin.")
 
-        await ctx.send(f"{judge} presiding over the court, please make your opening statement.")
+        await ctx.send(f"{judge.mention} presiding over the court, please make your opening statement.")
 
         def check_role(member, role_name):
             return self.roles[role_name] == member
 
         await self.bot.wait_for("message", check=lambda m: check_role(m.author, "judge"))
 
-        await ctx.send(f"{plaintiff}, please present your case.")
+        await ctx.send(f"{plaintiff.mention}, please present your case.")
 
-        await ctx.send(f"{plaintiff}, please state your arguments.")
+        await ctx.send(f"{plaintiff.mention}, please state your arguments.")
 
         def check_role_or_witness(member):
             return self.roles["plaintiff"] == member or member in self.roles["witness"]
 
         await self.bot.wait_for("message", check=lambda m: check_role_or_witness(m.author))
 
-        await ctx.send(f"{defendant}, your response.")
+        await ctx.send(f"{defendant.mention}, your response.")
 
         def check_role_or_witness(member):
             return self.roles["defendant"] == member or member in self.roles["witness"]
 
         await self.bot.wait_for("message", check=lambda m: check_role_or_witness(m.author))
 
-        await ctx.send(f"{prosecutor}, please present your arguments.")
+        await ctx.send(f"{prosecutor.mention}, please present your arguments.")
 
         def check_role_or_witness(member):
             return self.roles["prosecutor"] == member or member in self.roles["witness"]
 
         await self.bot.wait_for("message", check=lambda m: check_role_or_witness(m.author))
 
-        await ctx.send(f"{defense}, your counterarguments.")
+        await ctx.send(f"{defense.mention}, your counterarguments.")
 
         def check_role_or_witness(member):
             return self.roles["defense"] == member or member in self.roles["witness"]
@@ -128,7 +166,7 @@ class Legal(commands.Cog):
         await ctx.send("The witnesses will now be called to testify.")
 
         for witness in witnesses:
-            await ctx.send(f"{witness}, please present your testimony.")
+            await ctx.send(f"{witness.mention}, please present your testimony.")
 
             def check_witness(member):
                 return member == witness
@@ -147,7 +185,7 @@ class Legal(commands.Cog):
         guilty_votes = 0
         not_guilty_votes = 0
         for jury_member in jury:
-            await ctx.send(f"{jury_member}, please vote guilty or not guilty.")
+            await ctx.send(f"{jury_member.mention}, please vote guilty or not guilty.")
 
             def check_jury_vote(member):
                 return member == jury_member and member.content.lower() in ["guilty", "not guilty"]
