@@ -63,6 +63,65 @@ class Legal(commands.Cog):
 
         await ctx.send("Thank you for participating in the legal trial simulation.")
 
+    @commands.command()
+    async def trial_ai(self, ctx):
+        await ctx.send("Welcome to the AI-controlled legal trial simulation!")
+
+        # Define the names of the different roles
+        role_names = ["Judge", "Prosecution", "Defense", "Witness", "Jury"]
+
+        # Assign roles to AI-controlled players
+        for role in role_names:
+            self.players[role] = "AI"
+
+        # Display the chosen roles
+        await ctx.send("The chosen roles are:")
+        for role, user in self.players.items():
+            await ctx.send(f"{role}: {user}")
+
+        # Opening statements
+        await ctx.send("The trial is now in session.")
+        await self.perform_action(ctx, 'Judge', "present the opening statement")
+        await self.perform_action(ctx, 'Prosecution', "present the opening statement")
+
+        # Witness testimonies
+        await ctx.send("The AI-controlled prosecution calls its first witness.")
+        await self.await_user_response(ctx)
+
+        await ctx.send("The AI-controlled defense may cross-examine the witness.")
+        await self.await_user_response(ctx)
+
+        await ctx.send("The AI-controlled defense calls its first witness.")
+        await self.await_user_response(ctx)
+
+        await ctx.send("The AI-controlled prosecution may cross-examine the witness.")
+        await self.await_user_response(ctx)
+
+        # Presentation of evidence
+        await ctx.send("The AI-controlled prosecution presents its evidence.")
+        await self.await_user_response(ctx)
+
+        await ctx.send("The AI-controlled defense presents its evidence.")
+        await self.await_user_response(ctx)
+
+        # Closing arguments
+        await ctx.send("The AI-controlled prosecution presents its closing argument.")
+        await self.await_user_response(ctx)
+
+        await ctx.send("The AI-controlled defense presents its closing argument.")
+        await self.await_user_response(ctx)
+
+        # Verdict
+        await ctx.send("The AI-controlled judge delivers the verdict.")
+        await self.await_user_response(ctx)
+
+        await ctx.send("Thank you for participating in the AI-controlled legal trial simulation.")
+
+    @commands.command()
+    async def cancel_trial(self, ctx):
+        await ctx.send("The trial simulation has been canceled.")
+        self.players = {}  # Clear the player-role mappings
+
     async def await_user(self, ctx):
         try:
             def check(m):
@@ -90,13 +149,20 @@ class Legal(commands.Cog):
             raise commands.CommandError("Simulation timeout.")
 
     async def perform_action(self, ctx, role_name, action):
-        user_id = next((k for k, v in self.players.items() if v == role_name), None)
-        if user_id:
-            user = ctx.guild.get_member(user_id)
-            await ctx.send(f"{user.mention}, please {action}.")
-            await self.await_user_response(ctx)
+        if role_name in self.players:
+            if self.players[role_name] == "AI":
+                await ctx.send(f"The AI-controlled {role_name} will now {action}.")
+                await asyncio.sleep(2)  # Simulating AI response time
+            else:
+                user_id = next((k for k, v in self.players.items() if v == role_name), None)
+                if user_id:
+                    user = ctx.guild.get_member(user_id)
+                    await ctx.send(f"{user.mention}, please {action}.")
+                    await self.await_user_response(ctx)
+                else:
+                    await ctx.send(f"Sorry, the role '{role_name}' is not assigned to any user.")
         else:
-            await ctx.send(f"Sorry, the role '{role_name}' is not assigned to any user.")
+            await ctx.send(f"Sorry, the role '{role_name}' is not available in this trial.")
 
     def get_role_mention(self, role_name):
         role_id = next((k for k, v in self.players.items() if v == role_name), None)
