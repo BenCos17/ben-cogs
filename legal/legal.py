@@ -24,7 +24,7 @@ class Legal(commands.Cog):
 
 
     @commands.command()
-    async def join(self, ctx, role: str):
+    async def join_role(self, ctx, role: str):
         """Join a role in the court."""
         if self.role_lock:
             await ctx.send("Role assignment is currently locked.")
