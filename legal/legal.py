@@ -27,18 +27,22 @@ class Legal(commands.Cog):
     @commands.command()
     async def join_role(self, ctx, role: str):
         """Join a role in the court."""
+        # ... (existing join_role logic)
 
     @commands.command()
     async def exit(self, ctx):
         """Exit the court."""
+        # ... (existing exit logic)
 
     @commands.command()
     async def lock(self, ctx):
         """Lock role assignments to prevent accidental acting."""
+        # ... (existing lock logic)
 
     @commands.command()
     async def unlock(self, ctx):
         """Unlock role assignments to allow role changes."""
+        # ... (existing unlock logic)
 
     @commands.command()
     async def start_session(self, ctx):
