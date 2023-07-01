@@ -15,6 +15,14 @@ class Legal(commands.Cog):
         self.role_lock = False  # To prevent accidental role acting
         self.session_active = False
 
+
+    @commands.command()
+    async def list_roles(self, ctx):
+        """List all roles in the court."""
+        roles_list = "\n".join([f"{role.capitalize()}: {user or 'Vacant'}" for role, user in self.roles.items()])
+        await ctx.send(f"Current roles in the court:\n{roles_list}")
+
+
     @commands.command()
     async def join(self, ctx, role: str):
         """Join a role in the court."""
