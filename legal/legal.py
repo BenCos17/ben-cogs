@@ -204,7 +204,7 @@ class Legal(commands.Cog):
         await self.bot.process_commands(message)
 
             # Process jury's message
-        pass
+            
 
 
 
