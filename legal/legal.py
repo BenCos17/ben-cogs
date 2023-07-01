@@ -1,7 +1,7 @@
 from redbot.core import commands
 
 class Legal(commands.Cog):
-    
+
     def __init__(self, bot):
         self.bot = bot
         self.roles = {
@@ -16,7 +16,6 @@ class Legal(commands.Cog):
         self.role_lock = False  # To prevent accidental role acting
         self.session_active = False
         self.current_role = None
-
 
     @commands.command()
     async def list_roles(self, ctx):
@@ -172,34 +171,33 @@ class Legal(commands.Cog):
                 return False
         return True
 
-@commands.Cog.listener()
-async def on_message(self, message):
-    if self.session_active and message.author == self.current_role:
-        if self.current_role == self.roles["judge"]:
-            # Process judge's message
-            pass
-        elif self.current_role == self.roles["plaintiff"]:
-            # Process plaintiff's message
-            pass
-        elif self.current_role == self.roles["defendant"]:
-            # Process defendant's message
-            pass
-        elif self.current_role == self.roles["prosecutor"]:
-            # Process prosecutor's message
-            pass
-        elif self.current_role == self.roles["defense"]:
-            # Process defense's message
-            pass
-        elif message.author in self.roles["witness"]:
-            # Process witness's message
-            pass
-        elif message.author in self.roles["jury"]:
-            # Process jury's message
-            pass
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if self.session_active and message.author == self.current_role:
+            if self.current_role == self.roles["judge"]:
+                # Process judge's message
+                pass
+            elif self.current_role == self.roles["plaintiff"]:
+                # Process plaintiff's message
+                pass
+            elif self.current_role == self.roles["defendant"]:
+                # Process defendant's message
+                pass
+            elif self.current_role == self.roles["prosecutor"]:
+                # Process prosecutor's message
+                pass
+            elif self.current_role == self.roles["defense"]:
+                # Process defense's message
+                pass
+            elif message.author in self.roles["witness"]:
+                # Process witness's message
+                pass
+            elif message.author in self.roles["jury"]:
+                # Process jury's message
+                pass
 
-    if not message.content.startswith(self.bot.command_prefix):
-        await self.bot.process_commands(message)
-
+        if not message.content.startswith(self.bot.command_prefix):
+            await self.bot.process_commands(message)
 
 
 def setup(bot):
