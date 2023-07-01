@@ -23,8 +23,9 @@ class Legal(commands.Cog):
 
         # Display the chosen roles
         await ctx.send("The chosen roles are:")
-        for user, role in self.players.items():
-            await ctx.send(f"{ctx.guild.get_member(user).mention}: {role}")
+        for user_id, role in self.players.items():
+            user = ctx.guild.get_member(user_id)
+            await ctx.send(f"{user.mention}: {role}")
 
         # Opening statements
         await ctx.send("The trial is now in session.")
@@ -98,16 +99,12 @@ class Legal(commands.Cog):
 
     async def perform_action(self, ctx, role_name, action):
         if role_name in self.players:
-            user_id = next((k for k, v in self.players.items() if v == role_name), None)
-            if user_id:
-                if ctx.author.id == user_id:  # Check if the user is assigned to the role
-                    user = ctx.guild.get_member(user_id)
-                    await ctx.send(f"{user.mention}, please {action}.")
-                    await self.await_user_response(ctx)
-                else:
-                    await ctx.send("You cannot act as another user's role.")
+            user_id = ctx.author.id
+            if user_id in self.players and self.players[user_id] == role_name:
+                await ctx.send(f"{ctx.author.mention}, please {action}.")
+                await self.await_user_response(ctx)
             else:
-                await ctx.send(f"Sorry, the role '{role_name}' is not assigned to any user.")
+                await ctx.send("You cannot act as another user's role.")
         else:
             await ctx.send(f"Sorry, the role '{role_name}' is not available in this trial.")
 
