@@ -18,8 +18,11 @@ class ServerCooldown(commands.Cog):
     async def setcooldown(self, ctx: commands.Context, command_name: str, cooldown_time: int):
         """
         Set the cooldown for a specific command on the server.
-        Usage: [p]setservercooldown <command_name> <cooldown_time>
+        Usage: [p]setcooldown <command_name> <cooldown_time>
         """
+        if not ctx.guild:
+            return
+
         if cooldown_time < 0:
             await ctx.send("Cooldown time cannot be negative.")
             return
@@ -32,22 +35,6 @@ class ServerCooldown(commands.Cog):
 
         await ctx.send(f"Cooldown for command '{command_name}' set to {cooldown_time} seconds.")
 
-    @commands.command()
-    @commands.guild_only()
-    async def servercooldown(self, ctx: commands.Context, command_name: str):
-        """
-        Get the current cooldown for a specific command on the server.
-        Usage: [p]servercooldown <command_name>
-        """
-        command_name = command_name.lower()
-        command_cooldowns = await self.config.guild(ctx.guild).command_cooldowns()
-
-        if command_name in command_cooldowns:
-            cooldown_time = command_cooldowns[command_name]
-            await ctx.send(f"Cooldown for command '{command_name}' is set to {cooldown_time} seconds.")
-        else:
-            await ctx.send(f"No cooldown set for command '{command_name}'.")
-
     @commands.Cog.listener()
     async def on_command(self, ctx: commands.Context):
         if ctx.guild:
@@ -56,8 +43,15 @@ class ServerCooldown(commands.Cog):
 
             if command_name in command_cooldowns:
                 cooldown_time = command_cooldowns[command_name]
+                bucket = ctx.command._buckets.get_bucket(ctx.message)
+                retry_after = bucket.update_rate_limit()
+
+                if retry_after:
+                    await ctx.send("You can only use this command once within the cooldown period.")
+                    return
+
                 await ctx.command.reset_cooldown(ctx)
-                ctx.command._buckets._cooldown = commands.Cooldown(rate=1, per=cooldown_time)
+                ctx.command._buckets._cooldown = commands.Cooldown(cooldown_time, cooldown_time, commands.BucketType.user)
 
 def setup(bot: Red):
     bot.add_cog(Cooldown(bot))
