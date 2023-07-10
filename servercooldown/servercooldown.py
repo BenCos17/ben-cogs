@@ -2,7 +2,7 @@ from redbot.core import commands
 from redbot.core import Config
 from redbot.core.bot import Red
 
-class Cooldown(commands.Cog):
+class ServerCooldown(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)  # Use a unique identifier
