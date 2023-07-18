@@ -15,8 +15,13 @@ class WordSearch(commands.Cog):
         word_to_search = 'your_word'
 
         # Check if the word is in the message content
-        if word_to_search in message.content.lower() and not message.content.startswith(ctx.prefix):
-            await message.channel.send(f"Found the word '{word_to_search}' in the message: {message.content}")
+        if word_to_search in message.content.lower() and not message.content.startswith(self.bot.command_prefix):
+            if message.author == self.bot.user:
+                bot_message = f"BOT: {message.content}"
+            else:
+                bot_message = message.content
+
+            await message.channel.send(f"Found the word '{word_to_search}' in the message: {bot_message}\nLink to the message: {message.jump_url}")
 
     @commands.command(name="wordsearch")
     async def word_search(self, ctx, word: str, limit: int = 100):
@@ -33,8 +38,13 @@ class WordSearch(commands.Cog):
                 break
         
         for message in messages:
-            if word.lower() in message.content.lower() and not message.content.startswith(ctx.prefix):
-                await ctx.send(f"Found the word '{word}' in a message: {message.content}")
+            if word.lower() in message.content.lower() and not message.content.startswith(self.bot.command_prefix):
+                if message.author == self.bot.user:
+                    bot_message = f"BOT: {message.content}"
+                else:
+                    bot_message = message.content
+
+                await ctx.send(f"Found the word '{word}' in a message: {bot_message}\nLink to the message: {message.jump_url}")
                 return
 
         await ctx.send(f"The word '{word}' was not found in the messages.")
