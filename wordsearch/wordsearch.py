@@ -18,18 +18,23 @@ class WordSearch(commands.Cog):
         if word_to_search in message.content.lower():
             await message.channel.send(f"Found the word '{word_to_search}' in the message: {message.content}")
 
-    @commands.command()
-    async def wordsearch(self, ctx, word: str, limit: int = 100):
-        # Check if the word is in the latest messages within the channel
+    @commands.command(name="wordsearch")
+    async def word_search(self, ctx, word: str, limit: int = 100):
+        messages = []
+        
+        # Search the latest messages within the channel
         async for message in ctx.channel.history(limit=limit):
-            if word.lower() in message.content.lower():
-                await ctx.send(f"Found the word '{word}' in the message: {message.content}")
-                return
-
+            messages.append(message)
+        
         # If the word wasn't found in recent messages, search historical messages in the channel
         async for message in ctx.channel.history(limit=None, oldest_first=True):
+            messages.append(message)
+            if len(messages) >= limit:
+                break
+        
+        for message in messages:
             if word.lower() in message.content.lower():
-                await ctx.send(f"Found the word '{word}' in a historical message: {message.content}")
+                await ctx.send(f"Found the word '{word}' in a message: {message.content}")
                 return
 
         await ctx.send(f"The word '{word}' was not found in the messages.")
