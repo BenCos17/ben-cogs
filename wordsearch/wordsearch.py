@@ -15,7 +15,7 @@ class WordSearch(commands.Cog):
         word_to_search = 'your_word'
 
         # Check if the word is in the message content
-        if word_to_search in message.content.lower() and not message.content.startswith(await self.bot.get_prefix(message)):
+        if word_to_search in message.content.lower() and not message.content.startswith(ctx.prefix):
             await message.channel.send(f"Found the word '{word_to_search}' in the message: {message.content}")
 
     @commands.command(name="wordsearch")
@@ -33,7 +33,7 @@ class WordSearch(commands.Cog):
                 break
         
         for message in messages:
-            if word.lower() in message.content.lower() and not message.content.startswith(await self.bot.get_prefix(message)):
+            if word.lower() in message.content.lower() and not message.content.startswith(ctx.prefix):
                 await ctx.send(f"Found the word '{word}' in a message: {message.content}")
                 return
 
