@@ -15,7 +15,7 @@ class WordSearch(commands.Cog):
         word_to_search = 'your_word'
 
         # Check if the word is in the message content
-        if word_to_search in message.content.lower() and not message.content.startswith(self.bot.command_prefix):
+        if word_to_search in message.content.lower() and not message.content.startswith(ctx.prefix):
             if message.author == self.bot.user:
                 bot_message = f"BOT: {message.content}"
             else:
@@ -38,7 +38,7 @@ class WordSearch(commands.Cog):
                 break
         
         for message in messages:
-            if word.lower() in message.content.lower() and not message.content.startswith(self.bot.command_prefix):
+            if word.lower() in message.content.lower() and not message.content.startswith(ctx.prefix):
                 if message.author == self.bot.user:
                     bot_message = f"BOT: {message.content}"
                 else:
