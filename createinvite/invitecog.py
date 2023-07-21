@@ -40,10 +40,9 @@ class InviteCog(commands.Cog):
 
     async def find_existing_invite(self, channel):
         invites = await channel.invites()
-        for invite in invites:
-            if invite.inviter == self.bot.user:
-                return invite
-        return None
+        return next(
+            (invite for invite in invites if invite.inviter == self.bot.user), None
+        )
 
     def convert_to_bool(self, value):
         if value.lower() in ["true", "yes", "on", "1"]:

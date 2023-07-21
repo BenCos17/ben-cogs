@@ -70,8 +70,7 @@ class Flight(commands.Cog):
 
     @commands.command(name='flighthelp')
     async def help_command(self, ctx):
-        message = "Red Flight Command List:\n"
-        message += "[p]start - Begin the game\n"
+        message = "Red Flight Command List:\n" + "[p]start - Begin the game\n"
         message += "[p]aircraft - Choose your aircraft\n"
         message += "[p]help - Show the command list\n"
         message += "[p]takeoff - Takeoff the aircraft\n"

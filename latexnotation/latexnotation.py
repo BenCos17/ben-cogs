@@ -23,8 +23,7 @@ class LaTeXNotation(commands.Cog):
             try:
                 # Use sympy to convert the expression to LaTeX notation
                 expr = sympy.sympify(message_content, evaluate=False)
-                latex_content = sympy.latex(expr)
-                return latex_content
+                return sympy.latex(expr)
             except:
                 pass
 

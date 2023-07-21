@@ -58,20 +58,20 @@ class UserPhone(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author.id in self.calling_users:
-            other_user_id = self.calling_users[message.author.id]
-            other_user_obj = await self.bot.fetch_user(other_user_id)
-            if other_user_obj:
-                if message.author.id in self.call_messages:
-                    self.call_messages[message.author.id].append(message)
-                if other_user_id in self.call_messages:
-                    self.call_messages[other_user_id].append(message)
-                channel = self.bot.get_channel(message.channel.id)
-                if channel:
-                    await channel.send(f"{message.author.name} (on call with {other_user_obj.name}): {message.content}")
-                    await message.delete()  # Delete the original message sent by the user on the call
-            else:
-                await message.channel.send("Sorry, the other user cannot be reached at this time.")
+        if message.author.id not in self.calling_users:
+            return
+        other_user_id = self.calling_users[message.author.id]
+        other_user_obj = await self.bot.fetch_user(other_user_id)
+        if other_user_obj:
+            if message.author.id in self.call_messages:
+                self.call_messages[message.author.id].append(message)
+            if other_user_id in self.call_messages:
+                self.call_messages[other_user_id].append(message)
+            if channel := self.bot.get_channel(message.channel.id):
+                await channel.send(f"{message.author.name} (on call with {other_user_obj.name}): {message.content}")
+                await message.delete()  # Delete the original message sent by the user on the call
+        else:
+            await message.channel.send("Sorry, the other user cannot be reached at this time.")
 
 def setup(bot):
     bot.add_cog(UserPhone(bot))

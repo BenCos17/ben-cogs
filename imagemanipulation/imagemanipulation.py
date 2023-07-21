@@ -34,14 +34,12 @@ class ImageManipulation(commands.Cog):
             # Apply blur based on the first available source (attachment or user ID/mention)
             if ctx.message.attachments:
                 img = await ctx.message.attachments[0].read()
-                img = Image.open(io.BytesIO(img)).convert('RGB')
             else:
                 if isinstance(user, int):
                     user = await self.bot.fetch_user(user)
                 avatar_url = user.avatar_url_as(format='png', size=1024)
                 img = await avatar_url.read()
-                img = Image.open(io.BytesIO(img)).convert('RGB')
-            
+            img = Image.open(io.BytesIO(img)).convert('RGB')
             # Apply blur and send the result
             img_blur = img.filter(ImageFilter.GaussianBlur(radius=radius))
             with io.BytesIO() as img_buffer:

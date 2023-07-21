@@ -44,9 +44,7 @@ class ServerCooldown(commands.Cog):
             if command_name in command_cooldowns:
                 cooldown_time = command_cooldowns[command_name]
                 bucket = ctx.command._buckets.get_bucket(ctx.message)
-                retry_after = bucket.update_rate_limit()
-
-                if retry_after:
+                if retry_after := bucket.update_rate_limit():
                     await ctx.send("You can only use this command once within the cooldown period.")
                     return
 

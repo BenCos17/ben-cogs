@@ -23,11 +23,7 @@ class Legal(commands.Cog):
         roles_list = []
         for role, user in self.roles.items():
             role_name = role.capitalize()
-            if user:
-                user_name = user.name
-            else:
-                user_name = "Vacant (No user assigned)"
-
+            user_name = user.name if user else "Vacant (No user assigned)"
             roles_list.append(f"{role_name}: {user_name}")
 
         roles_text = "\n".join(roles_list)
@@ -215,36 +211,13 @@ class Legal(commands.Cog):
 
     def _check_roles_filled(self):
         """Check if all roles are filled."""
-        for role, user in self.roles.items():
-            if role != "witness" and role != "jury" and user is None:
-                return False
-        return True
+        return not any(
+            role != "witness" and role != "jury" and user is None
+            for role, user in self.roles.items()
+        )
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if self.session_active and message.author == self.current_role:
-            if self.current_role == self.roles["judge"]:
-                # Process judge's message
-                pass
-            elif self.current_role == self.roles["plaintiff"]:
-                # Process plaintiff's message
-                pass
-            elif self.current_role == self.roles["defendant"]:
-                # Process defendant's message
-                pass
-            elif self.current_role == self.roles["prosecutor"]:
-                # Process prosecutor's message
-                pass
-            elif self.current_role == self.roles["defense"]:
-                # Process defense's message
-                pass
-            elif message.author in self.roles["witness"]:
-                # Process witness's message
-                pass
-            elif message.author in self.roles["jury"]:
-                # Process jury's message
-                pass
-
         if not message.content.startswith(self.bot.command_prefix):
             await self.bot.process_commands(message)
 

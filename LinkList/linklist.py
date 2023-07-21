@@ -12,9 +12,7 @@ class LinkList(commands.Cog):
 
     async def cog_check(self, ctx):
         # Allow bot owners to use global link commands
-        if await self.bot.is_owner(ctx.author):
-            return True
-        return False
+        return bool(await self.bot.is_owner(ctx.author))
 
     @commands.command()
     async def listlink(self, ctx, link_name: str):
@@ -43,9 +41,7 @@ class LinkList(commands.Cog):
     async def listlinks(self, ctx):
         guild_link_links = await self.config.guild(ctx.guild).link_links()
         global_link_links = await self.config.global_links()
-        if not guild_link_links and not global_link_links:
-            await ctx.send("There are no links configured.")
-        else:
+        if guild_link_links or global_link_links:
             embed = discord.Embed(title="Available Links", color=discord.Color.blue())
             if guild_link_links:
                 for name, link in guild_link_links.items():
@@ -54,6 +50,9 @@ class LinkList(commands.Cog):
                 for name, link in global_link_links.items():
                     embed.add_field(name=name, value=link["url"], inline=False)
             await ctx.send(embed=embed)
+
+        else:
+            await ctx.send("There are no links configured.")
 
     @commands.command()
     @commands.guild_only()

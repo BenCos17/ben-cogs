@@ -53,25 +53,17 @@ class ChannelCountdown(commands.Cog):
                         if channel.name == name:
                             await self.rename_channel(channel, countdown_name)
                             break
-                    else:
-                        # If the voice channel doesn't exist, you can create it here if needed
-                        pass
-
             await asyncio.sleep(60)  # Sleep for 60 seconds before updating again
 
     async def rename_channel(self, channel, new_name):
         bucket = self.rate_limit.get_bucket(channel)
-        retry_after = bucket.update_rate_limit()
-        if retry_after:
+        if retry_after := bucket.update_rate_limit():
             await asyncio.sleep(retry_after)
 
         try:
             await channel.edit(name=new_name)
         except discord.HTTPException as e:
-            if e.code == 50013:
-                # Handle "Missing Permissions" error
-                pass
-            else:
+            if e.code != 50013:
                 raise e
 
 def setup(bot):

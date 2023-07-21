@@ -18,12 +18,11 @@ class ImpossiblePiano(commands.Cog):
         notes = {"C": 60, "C#": 61, "D": 62, "D#": 63, "E": 64, "F": 65, "F#": 66, "G": 67, "G#": 68, "A": 69, "A#": 70, "B": 71}
         octave = int(note[-1])
         note_name = note[:-1]
-        pitch = notes[note_name] + (12 * (octave - 4))
-        return pitch
+        return notes[note_name] + (12 * (octave - 4))
 
     def generate_melody(self, length):
         melody = []
-        for i in range(length):
+        for _ in range(length):
             note = self.get_random_note()
             duration = random.uniform(0.1, 0.5)
             melody.append((note, duration))
