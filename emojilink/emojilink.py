@@ -111,11 +111,10 @@ class EmojiLink(commands.Cog):
         for emoji in emojis:
             if isinstance(emoji, discord.PartialEmoji):
                 emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
+                all_emojis.append((str(emoji), emoji_url))
             elif isinstance(emoji, str):
-                emoji_url = None  # Unicode emojis don't have a direct image link
-            else:
-                continue
-            all_emojis.append((str(emoji), emoji_url))
+                # Unicode emojis don't have a direct image link
+                all_emojis.append((emoji, None))
         return all_emojis
 
 def setup(bot: Red):
