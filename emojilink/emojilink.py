@@ -20,11 +20,14 @@ class EmojiLink(commands.Cog):
             if not emoji.is_custom_emoji():
                 raise commands.BadArgument("Please provide a custom Discord emoji.")
 
+            # Convert the emoji to its string representation
+            emoji_str = str(emoji)
+
             # Construct the emoji link
             emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
             
             # Send the emoji and the emoji link
-            await ctx.send(f"Emoji: {emoji}\nEmoji link: {emoji_url}")
+            await ctx.send(f"Emoji: {emoji_str}\nEmoji link: {emoji_url}")
         except commands.BadArgument as e:
             await ctx.send(str(e))
 
@@ -33,7 +36,7 @@ class EmojiLink(commands.Cog):
         """
         List all custom emojis in the server along with their names and links.
         """
-        emojis = [f"{emoji.name}: {emoji}" for emoji in ctx.guild.emojis]
+        emojis = [f"{str(emoji)}: [Link]({emoji.url})" for emoji in ctx.guild.emojis]
         if emojis:
             await ctx.send("\n".join(emojis))
         else:
@@ -51,7 +54,10 @@ class EmojiLink(commands.Cog):
             if not emoji.is_custom_emoji():
                 raise commands.BadArgument("Please provide a custom Discord emoji.")
 
-            emoji_info = f"Name: {emoji.name}\nID: {emoji.id}\nCreation Date: {emoji.created_at}"
+            # Convert the emoji to its string representation
+            emoji_str = str(emoji)
+
+            emoji_info = f"Emoji: {emoji_str}\nName: {emoji.name}\nID: {emoji.id}\nCreation Date: {emoji.created_at}"
             await ctx.send(emoji_info)
         except commands.BadArgument as e:
             await ctx.send(str(e))
@@ -64,9 +70,11 @@ class EmojiLink(commands.Cog):
         emojis = ctx.guild.emojis
         if emojis:
             random_emoji = random.choice(emojis)
+            # Convert the emoji to its string representation
+            random_emoji_str = str(random_emoji)
             emoji_url = f"https://cdn.discordapp.com/emojis/{random_emoji.id}.{random_emoji.animated and 'gif' or 'png'}"
             # Send the emoji and the emoji link
-            await ctx.send(f"Random Emoji: {random_emoji}\nEmoji link: {emoji_url}")
+            await ctx.send(f"Random Emoji: {random_emoji_str}\nEmoji link: {emoji_url}")
         else:
             await ctx.send("No custom emojis found in this server.")
 
@@ -78,7 +86,7 @@ class EmojiLink(commands.Cog):
         Parameters:
         - keyword: The search keyword.
         """
-        matching_emojis = [f"{emoji.name}: {emoji}" for emoji in ctx.guild.emojis if keyword.lower() in emoji.name.lower()]
+        matching_emojis = [f"{str(emoji)}: [Link]({emoji.url})" for emoji in ctx.guild.emojis if keyword.lower() in emoji.name.lower()]
         if matching_emojis:
             await ctx.send("\n".join(matching_emojis))
         else:
