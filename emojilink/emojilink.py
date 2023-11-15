@@ -8,59 +8,57 @@ class EmojiLink(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def getemojilink(self, ctx: commands.Context, emoji: discord.PartialEmoji):
+    async def getemojilink(self, ctx: commands.Context, emoji: commands.Union[discord.PartialEmoji, str]):
         """
         Get the link for a Discord emoji.
 
         Parameters:
-        - emoji: The Discord emoji.
+        - emoji: The Discord emoji (custom emoji or Unicode emoji).
         """
-        try:
-            # Check if the provided emoji is a custom emoji
-            if not emoji.is_custom_emoji():
-                raise commands.BadArgument("Please provide a custom Discord emoji.")
-
-            # Convert the emoji to its string representation
+        # Determine if the provided emoji is a custom emoji or a Unicode emoji
+        if isinstance(emoji, discord.PartialEmoji):
             emoji_str = str(emoji)
-
-            # Construct the emoji link
             emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
-            
-            # Send the emoji and the emoji link
-            await ctx.send(f"Emoji: {emoji_str}\nEmoji link: {emoji_url}")
-        except commands.BadArgument as e:
-            await ctx.send(str(e))
+        elif isinstance(emoji, str):
+            emoji_str = emoji
+            emoji_url = f"https://cdn.discordapp.com/emojis/{emoji}.png"
+        else:
+            raise commands.BadArgument("Invalid emoji provided.")
+
+        # Send the emoji and the emoji link
+        await ctx.send(f"Emoji: {emoji_str}\nEmoji link: {emoji_url}")
 
     @commands.command()
     async def listemojis(self, ctx: commands.Context):
         """
         List all custom emojis in the server along with their names and links.
         """
-        emojis = [f"{str(emoji)}: [Link]({emoji.url})" for emoji in ctx.guild.emojis]
+        emojis = [f"{emoji}: [Link]({emoji_url})" for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis)]
         if emojis:
             await ctx.send("\n".join(emojis))
         else:
             await ctx.send("No custom emojis found in this server.")
 
     @commands.command()
-    async def emojiinfo(self, ctx: commands.Context, emoji: discord.PartialEmoji):
+    async def emojiinfo(self, ctx: commands.Context, emoji: commands.Union[discord.PartialEmoji, str]):
         """
         Get information about a specific custom emoji, including its name, ID, and creation date.
 
         Parameters:
-        - emoji: The Discord emoji.
+        - emoji: The Discord emoji (custom emoji or Unicode emoji).
         """
-        try:
-            if not emoji.is_custom_emoji():
-                raise commands.BadArgument("Please provide a custom Discord emoji.")
-
-            # Convert the emoji to its string representation
+        # Determine if the provided emoji is a custom emoji or a Unicode emoji
+        if isinstance(emoji, discord.PartialEmoji):
             emoji_str = str(emoji)
+            emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
+        elif isinstance(emoji, str):
+            emoji_str = emoji
+            emoji_url = f"https://cdn.discordapp.com/emojis/{emoji}.png"
+        else:
+            raise commands.BadArgument("Invalid emoji provided.")
 
-            emoji_info = f"Emoji: {emoji_str}\nName: {emoji.name}\nID: {emoji.id}\nCreation Date: {emoji.created_at}"
-            await ctx.send(emoji_info)
-        except commands.BadArgument as e:
-            await ctx.send(str(e))
+        emoji_info = f"Emoji: {emoji_str}\nName: {emoji.name}\nID: {emoji.id}\nCreation Date: {emoji.created_at}\nEmoji link: {emoji_url}"
+        await ctx.send(emoji_info)
 
     @commands.command()
     async def randomemoji(self, ctx: commands.Context):
@@ -70,11 +68,9 @@ class EmojiLink(commands.Cog):
         emojis = ctx.guild.emojis
         if emojis:
             random_emoji = random.choice(emojis)
-            # Convert the emoji to its string representation
-            random_emoji_str = str(random_emoji)
             emoji_url = f"https://cdn.discordapp.com/emojis/{random_emoji.id}.{random_emoji.animated and 'gif' or 'png'}"
             # Send the emoji and the emoji link
-            await ctx.send(f"Random Emoji: {random_emoji_str}\nEmoji link: {emoji_url}")
+            await ctx.send(f"Random Emoji: {random_emoji}\nEmoji link: {emoji_url}")
         else:
             await ctx.send("No custom emojis found in this server.")
 
@@ -86,11 +82,26 @@ class EmojiLink(commands.Cog):
         Parameters:
         - keyword: The search keyword.
         """
-        matching_emojis = [f"{str(emoji)}: [Link]({emoji.url})" for emoji in ctx.guild.emojis if keyword.lower() in emoji.name.lower()]
+        matching_emojis = [f"{emoji}: [Link]({emoji_url})" for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis) if keyword.lower() in emoji.lower()]
         if matching_emojis:
             await ctx.send("\n".join(matching_emojis))
         else:
             await ctx.send(f"No custom emojis found matching the keyword '{keyword}'.")
+
+    def get_all_emojis(self, emojis):
+        """
+        Helper function to extract all emojis and their URLs from a list of emojis.
+        """
+        all_emojis = []
+        for emoji in emojis:
+            if isinstance(emoji, discord.PartialEmoji):
+                emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
+            elif isinstance(emoji, str):
+                emoji_url = f"https://cdn.discordapp.com/emojis/{emoji}.png"
+            else:
+                continue
+            all_emojis.append((str(emoji), emoji_url))
+        return all_emojis
 
 def setup(bot: Red):
     bot.add_cog(EmojiLink(bot))
