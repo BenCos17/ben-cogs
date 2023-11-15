@@ -22,12 +22,14 @@ class EmojiLink(commands.Cog):
             emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
         elif isinstance(emoji, str):
             emoji_str = emoji
-            emoji_url = f"https://cdn.discordapp.com/emojis/{emoji}.png"
+            # Generate a link using Emojipedia (replace '+' with the Unicode emoji)
+            emoji_url = f"https://emojipedia.org/{'+'.join(emoji.encode('unicode-escape').decode('utf-8').split())}/"
         else:
             raise commands.BadArgument("Invalid emoji provided.")
 
         # Send the emoji and the emoji link
-        await ctx.send(f"Emoji: {emoji_str}\nEmoji link: {emoji_url}")
+        await ctx.send(f"Emoji: {emoji_str}")
+        await ctx.send(f"Emoji link: {emoji_url}")
 
     @commands.command()
     async def listemojis(self, ctx: commands.Context):
@@ -57,7 +59,7 @@ class EmojiLink(commands.Cog):
             emoji_created_at = emoji.created_at
         elif isinstance(emoji, str):
             emoji_str = emoji
-            emoji_url = f"https://cdn.discordapp.com/emojis/{emoji}.png"
+            emoji_url = None  # Unicode emojis don't have a direct image link
             emoji_name = None  # Unicode emojis don't have a name
             emoji_id = None  # Unicode emojis don't have an ID
             emoji_created_at = None  # Unicode emojis don't have a creation date
@@ -65,11 +67,12 @@ class EmojiLink(commands.Cog):
             raise commands.BadArgument("Invalid emoji provided.")
 
         if emoji_name is not None:
-            emoji_info = f"Emoji: {emoji_str}\nName: {emoji_name}\nID: {emoji_id}\nCreation Date: {emoji_created_at}\nEmoji link: {emoji_url}"
+            await ctx.send(f"Emoji: {emoji_str}\nName: {emoji_name}\nID: {emoji_id}\nCreation Date: {emoji_created_at}")
         else:
-            emoji_info = f"Emoji: {emoji_str}\nEmoji link: {emoji_url}"
+            await ctx.send(f"Emoji: {emoji_str}")
 
-        await ctx.send(emoji_info)
+        if emoji_url:
+            await ctx.send(f"Emoji link: {emoji_url}")
 
     @commands.command()
     async def randomemoji(self, ctx: commands.Context):
@@ -81,7 +84,8 @@ class EmojiLink(commands.Cog):
             random_emoji = random.choice(emojis)
             emoji_url = f"https://cdn.discordapp.com/emojis/{random_emoji.id}.{random_emoji.animated and 'gif' or 'png'}"
             # Send the emoji and the emoji link
-            await ctx.send(f"Random Emoji: {random_emoji}\nEmoji link: {emoji_url}")
+            await ctx.send(f"Random Emoji: {random_emoji}")
+            await ctx.send(f"Emoji link: {emoji_url}")
         else:
             await ctx.send("No custom emojis found in this server.")
 
@@ -108,7 +112,7 @@ class EmojiLink(commands.Cog):
             if isinstance(emoji, discord.PartialEmoji):
                 emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
             elif isinstance(emoji, str):
-                emoji_url = f"https://cdn.discordapp.com/emojis/{emoji}.png"
+                emoji_url = None  # Unicode emojis don't have a direct image link
             else:
                 continue
             all_emojis.append((str(emoji), emoji_url))
