@@ -52,13 +52,23 @@ class EmojiLink(commands.Cog):
         if isinstance(emoji, discord.PartialEmoji):
             emoji_str = str(emoji)
             emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
+            emoji_name = emoji.name
+            emoji_id = emoji.id
+            emoji_created_at = emoji.created_at
         elif isinstance(emoji, str):
             emoji_str = emoji
             emoji_url = f"https://cdn.discordapp.com/emojis/{emoji}.png"
+            emoji_name = None  # Unicode emojis don't have a name
+            emoji_id = None  # Unicode emojis don't have an ID
+            emoji_created_at = None  # Unicode emojis don't have a creation date
         else:
             raise commands.BadArgument("Invalid emoji provided.")
 
-        emoji_info = f"Emoji: {emoji_str}\nName: {emoji.name}\nID: {emoji.id}\nCreation Date: {emoji.created_at}\nEmoji link: {emoji_url}"
+        if emoji_name is not None:
+            emoji_info = f"Emoji: {emoji_str}\nName: {emoji_name}\nID: {emoji_id}\nCreation Date: {emoji_created_at}\nEmoji link: {emoji_url}"
+        else:
+            emoji_info = f"Emoji: {emoji_str}\nEmoji link: {emoji_url}"
+
         await ctx.send(emoji_info)
 
     @commands.command()
