@@ -1,7 +1,7 @@
 import discord
 from redbot.core import commands
 from redbot.core.bot import Red
-from discord.ext import menus
+from discord.ext.commands import MenuPages, ListPageSource
 
 class EmojiListMenu(menus.ListPageSource):
     def __init__(self, data):
