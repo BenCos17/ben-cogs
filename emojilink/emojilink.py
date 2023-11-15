@@ -1,7 +1,7 @@
 import discord
 from redbot.core import commands
 from redbot.core.bot import Red
-from typing import Optional
+import random
 
 class EmojiLink(commands.Cog):
     def __init__(self, bot: Red):
@@ -63,7 +63,7 @@ class EmojiLink(commands.Cog):
         """
         emojis = ctx.guild.emojis
         if emojis:
-            random_emoji = self.bot.utils().random.choice(emojis)
+            random_emoji = random.choice(emojis)
             emoji_url = f"https://cdn.discordapp.com/emojis/{random_emoji.id}.{random_emoji.animated and 'gif' or 'png'}"
             await ctx.send(f"Random Emoji link: {emoji_url}")
         else:
