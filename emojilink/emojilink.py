@@ -1,20 +1,7 @@
 import discord
 from redbot.core import commands
 from redbot.core.bot import Red
-from discord.ext.commands import MenuPages, ListPageSource
-
-class EmojiListMenu(ListPageSource):
-    def __init__(self, data):
-        super().__init__(data, per_page=10)
-
-    async def format_page(self, menu, entries):
-        offset = menu.current_page * self.per_page
-        embed = discord.Embed(
-            title=f"Custom Emojis - Page {menu.current_page + 1}/{self.get_max_pages()}",
-            description="\n".join(entries)
-        )
-        embed.set_footer(text=f"Total Emojis: {len(self.entries)} | Use reactions to navigate.")
-        return embed
+from typing import Optional
 
 class EmojiLink(commands.Cog):
     def __init__(self, bot: Red):
@@ -48,8 +35,7 @@ class EmojiLink(commands.Cog):
         """
         emojis = [f"{emoji.name}: [Link]({emoji.url})" for emoji in ctx.guild.emojis]
         if emojis:
-            emoji_menu = MenuPages(source=EmojiListMenu(emojis), delete_message_after=True)
-            await emoji_menu.start(ctx)
+            await ctx.send("\n".join(emojis))
         else:
             await ctx.send("No custom emojis found in this server.")
 
