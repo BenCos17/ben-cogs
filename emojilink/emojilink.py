@@ -2,13 +2,14 @@ import discord
 from redbot.core import commands
 from redbot.core.bot import Red
 import random
+import typing
 
 class EmojiLink(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
 
     @commands.command()
-    async def getemojilink(self, ctx: commands.Context, emoji: commands.Union[discord.PartialEmoji, str]):
+    async def getemojilink(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
         """
         Get the link for a Discord emoji.
 
@@ -40,7 +41,7 @@ class EmojiLink(commands.Cog):
             await ctx.send("No custom emojis found in this server.")
 
     @commands.command()
-    async def emojiinfo(self, ctx: commands.Context, emoji: commands.Union[discord.PartialEmoji, str]):
+    async def emojiinfo(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
         """
         Get information about a specific custom emoji, including its name, ID, and creation date.
 
