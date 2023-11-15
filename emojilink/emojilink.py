@@ -3,7 +3,7 @@ from redbot.core import commands
 from redbot.core.bot import Red
 from discord.ext.commands import MenuPages, ListPageSource
 
-class EmojiListMenu(menus.ListPageSource):
+class EmojiListMenu(ListPageSource):
     def __init__(self, data):
         super().__init__(data, per_page=10)
 
@@ -48,7 +48,7 @@ class EmojiLink(commands.Cog):
         """
         emojis = [f"{emoji.name}: [Link]({emoji.url})" for emoji in ctx.guild.emojis]
         if emojis:
-            emoji_menu = menus.MenuPages(source=EmojiListMenu(emojis), delete_message_after=True)
+            emoji_menu = MenuPages(source=EmojiListMenu(emojis), delete_message_after=True)
             await emoji_menu.start(ctx)
         else:
             await ctx.send("No custom emojis found in this server.")
