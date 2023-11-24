@@ -1,10 +1,13 @@
-from redbot.core import commands
+from redbot.core import commands, data_manager
 import discord
 
 class Court(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.cases = {}
+        self.cases = data_manager.cog_data(self)
+
+    def save_cases(self):
+        data_manager.save_cog_data(self)
 
     @commands.command()
     async def create_case(self, ctx, case_name):
@@ -17,6 +20,7 @@ class Court(commands.Cog):
                 'evidence': [],
                 'proceedings': [],
             }
+            self.save_cases()  # Save data after modification
             await ctx.send(f"Case '{case_name}' created!")
         else:
             await ctx.send("Case already exists!")
@@ -27,6 +31,7 @@ class Court(commands.Cog):
         if case_name in self.cases:
             if role_name in self.cases[case_name]:
                 self.cases[case_name][role_name] = member
+                self.save_cases()  # Save data after modification
                 await ctx.send(f"{member.mention} assigned as {role_name}.")
             else:
                 await ctx.send("Invalid role!")
@@ -38,6 +43,7 @@ class Court(commands.Cog):
         case_name = ctx.channel.name
         if case_name in self.cases:
             self.cases[case_name]['witnesses'].append(witness)
+            self.save_cases()  # Save data after modification
             await ctx.send(f"{witness.mention} added as a witness.")
         else:
             await ctx.send("Case does not exist!")
@@ -47,6 +53,7 @@ class Court(commands.Cog):
         case_name = ctx.channel.name
         if case_name in self.cases:
             self.cases[case_name]['evidence'].append(evidence)
+            self.save_cases()  # Save data after modification
             await ctx.send("Evidence added to the case.")
         else:
             await ctx.send("Case does not exist!")
@@ -72,7 +79,20 @@ class Court(commands.Cog):
         case_name = ctx.channel.name
         if case_name in self.cases:
             self.cases[case_name]['proceedings'].append("Case proceedings started.")
+            self.save_cases()  # Save data after modification
             await ctx.send("Proceedings started.")
+        else:
+            await ctx.send("Case does not exist!")
+
+    # Add other commands similarly...
+
+    @commands.command()
+    async def adjourn_case(self, ctx):
+        case_name = ctx.channel.name
+        if case_name in self.cases:
+            self.cases[case_name]['proceedings'].append("Case adjourned.")
+            self.save_cases()  # Save data after modification
+            await ctx.send("Case adjourned.")
         else:
             await ctx.send("Case does not exist!")
 
@@ -87,6 +107,7 @@ class Court(commands.Cog):
                     break
             if role:
                 self.cases[case_name]['proceedings'].append(f"{role} says: {statement}")
+                self.save_cases()  # Save data after modification
                 await ctx.send("Statement added to proceedings.")
             else:
                 await ctx.send("You are not associated with this case!")
@@ -98,39 +119,18 @@ class Court(commands.Cog):
         case_name = ctx.channel.name
         if case_name in self.cases:
             self.cases[case_name]['verdict'] = verdict
+            self.save_cases()  # Save data after modification
             await ctx.send(f"Verdict '{verdict}' rendered for the case.")
         else:
             await ctx.send("Case does not exist!")
 
-    @commands.command()
-    async def show_verdict(self, ctx):
-        case_name = ctx.channel.name
-        if case_name in self.cases and 'verdict' in self.cases[case_name]:
-            verdict = self.cases[case_name]['verdict']
-            await ctx.send(f"Verdict for the case: {verdict}")
-        else:
-            await ctx.send("Verdict not available or case does not exist!")
+    # More commands...
 
-    @commands.command()
-    async def cross_examine(self, ctx, *, member: discord.Member):
-        case_name = ctx.channel.name
-        if case_name in self.cases:
-            if member in self.cases[case_name]['witnesses']:
-                # Perform cross-examination logic here
-                await ctx.send(f"Cross-examining {member.mention}...")
-            else:
-                await ctx.send(f"{member.mention} is not a witness in this case.")
-        else:
-            await ctx.send("Case does not exist!")
+    def cog_unload(self):
+        self.save_cases()  # Save data when the cog is unloaded
 
-    @commands.command()
-    async def adjourn_case(self, ctx):
-        case_name = ctx.channel.name
-        if case_name in self.cases:
-            self.cases[case_name]['proceedings'].append("Case adjourned.")
-            await ctx.send("Case adjourned.")
-        else:
-            await ctx.send("Case does not exist!")
+    def save_cases(self):
+        data_manager.save_cog_data(self)
 
 def setup(bot):
     bot.add_cog(Court(bot))
