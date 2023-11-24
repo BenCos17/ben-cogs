@@ -1,4 +1,4 @@
-from redbot.core import commands, CogDataManager
+from redbot.core import commands, data_manager
 import discord
 
 class Court(commands.Cog):
@@ -74,6 +74,8 @@ class Court(commands.Cog):
         else:
             await ctx.send("Case does not exist!")
 
+    # Add other commands similarly...
+
     @commands.command()
     async def start_proceedings(self, ctx):
         case_name = ctx.channel.name
@@ -83,8 +85,6 @@ class Court(commands.Cog):
             await ctx.send("Proceedings started.")
         else:
             await ctx.send("Case does not exist!")
-
-    # Add other commands similarly...
 
     @commands.command()
     async def adjourn_case(self, ctx):
@@ -124,7 +124,6 @@ class Court(commands.Cog):
         else:
             await ctx.send("Case does not exist!")
 
-    # More commands...
 
     def cog_unload(self):
         self.save_cases()  # Save data when the cog is unloaded
