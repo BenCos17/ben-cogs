@@ -1,4 +1,4 @@
-from redbot.core import commands, data_manager
+from redbot.core import commands, CogDataManager
 import discord
 
 class Court(commands.Cog):
