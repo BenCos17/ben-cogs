@@ -1,5 +1,6 @@
-from .itad_cog import ITADCog
+from redbot.core.bot import Red
 
-def setup(bot):
-    cog = ITADCog(bot)
-    bot.add_cog(cog)
+from .itad_cog  import ITADCog
+
+async def setup(bot)
+    await bot.add_cog(ITADCog(bot))
