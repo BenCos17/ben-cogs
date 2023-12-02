@@ -5,6 +5,7 @@ class ITADCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.api_key = None
+        self.user_agent = "Default Bot Name"  # Default user agent name
 
     @commands.command()
     @commands.is_owner()
@@ -22,6 +23,13 @@ class ITADCog(commands.Cog):
             await ctx.send("No API key has been set.")
 
     @commands.command()
+    @commands.is_owner()
+    async def set_user_agent(self, ctx, *, user_agent: str):
+        """Set the bot's User-Agent string (Bot Owner Only)"""
+        self.user_agent = user_agent
+        await ctx.send("User-Agent has been set.")
+
+    @commands.command()
     async def deal(self, ctx, *, game_name: str):
         """Get deal information for a game from IsThereAnyDeal.com"""
         if not self.api_key:
@@ -29,7 +37,7 @@ class ITADCog(commands.Cog):
             return
 
         headers = {
-            'User-Agent': 'Your Discord Bot Name',
+            'User-Agent': self.user_agent,
             'X-IsThereAnyDeal-Key': self.api_key
         }
 
