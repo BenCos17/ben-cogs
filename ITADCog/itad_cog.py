@@ -1,5 +1,5 @@
 from redbot.core import commands
-import requests
+import aiohttp
 
 class ITADCog(commands.Cog):
     def __init__(self, bot):
@@ -33,22 +33,23 @@ class ITADCog(commands.Cog):
             'X-IsThereAnyDeal-Key': self.api_key
         }
 
-        encoded_game_name = requests.utils.quote(game_name)
-        api_url = f'https://api.isthereanydeal.com/v02/game/plain/?key={encoded_game_name}'
+        async with aiohttp.ClientSession() as session:
+            encoded_game_name = aiohttp.helpers.quote(game_name)
+            api_url = f'https://api.isthereanydeal.com/v02/game/plain/?key={encoded_game_name}'
 
-        try:
-            response = requests.get(api_url, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                if data['data']:
-                    game_info = data['data']
-                    await ctx.send(f"Game: {game_info['title']} - Cheapest price: {game_info['price']}")
-                else:
-                    await ctx.send("No deals found for that game.")
-            else:
-                await ctx.send("Failed to fetch data from the API.")
-        except Exception as e:
-            await ctx.send(f"An error occurred: {str(e)}")
+            try:
+                async with session.get(api_url, headers=headers) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data['data']:
+                            game_info = data['data']
+                            await ctx.send(f"Game: {game_info['title']} - Cheapest price: {game_info['price']}")
+                        else:
+                            await ctx.send("No deals found for that game.")
+                    else:
+                        await ctx.send("Failed to fetch data from the API.")
+            except Exception as e:
+                await ctx.send(f"An error occurred: {str(e)}")
 
 
 def setup(bot):
