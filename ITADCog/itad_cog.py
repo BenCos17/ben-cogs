@@ -1,4 +1,3 @@
-import discord
 from redbot.core import commands
 import requests
 
@@ -7,7 +6,7 @@ class ITADCog(commands.Cog):
         self.bot = bot
         self.api_key = None
 
-    @commands.command(hidden=True)
+    @commands.command()
     @commands.is_owner()
     async def set_api_key(self, ctx, api_key: str):
         """Set the IsThereAnyDeal API key (Bot Owner Only)"""
@@ -23,7 +22,7 @@ class ITADCog(commands.Cog):
             await ctx.send("No API key has been set.")
 
     @commands.command()
-    async def deal(self, ctx, game_name: str):
+    async def deal(self, ctx, *, game_name: str):
         """Get deal information for a game from IsThereAnyDeal.com"""
         if not self.api_key:
             await ctx.send("Please set the API key first using !set_api_key [api_key]")
