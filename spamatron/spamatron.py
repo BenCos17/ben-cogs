@@ -11,7 +11,7 @@ class Spamatron(commands.Cog):
     async def spam(self, ctx, channel: discord.TextChannel, *, message: str):
         """Spam a message in a channel a specified number of times."""
         try:
-            channel_mention, amount = message.rsplit(maxsplit=1)
+            channel_mention, amount = message.split(maxsplit=1)
             amount = int(amount)
         except ValueError:
             await ctx.send("Please provide the command in the format: `spam #channel message amount`")
