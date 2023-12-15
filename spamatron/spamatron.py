@@ -8,7 +8,7 @@ class Spam(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def spam(self, ctx, channel: discord.TextChannelConverter, *, args):
+    async def spam(self, ctx, channel: discord.TextChannel, *, args):
         """Spam a message in a channel a specified number of times."""
         try:
             channel_mention, message, amount = args.split(maxsplit=2)
