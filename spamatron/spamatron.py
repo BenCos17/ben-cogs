@@ -8,10 +8,10 @@ class Spamatron(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def spam(self, ctx, channel: discord.TextChannel, *, args):
+    async def spam(self, ctx, channel: discord.TextChannel, *, message: str):
         """Spam a message in a channel a specified number of times."""
         try:
-            channel_mention, message, amount = args.split(maxsplit=2)
+            channel_mention, amount = message.rsplit(maxsplit=1)
             amount = int(amount)
         except ValueError:
             await ctx.send("Please provide the command in the format: `spam #channel message amount`")
@@ -30,4 +30,4 @@ class Spamatron(commands.Cog):
             await target_channel.send(message)
 
 def setup(bot):
-    bot.add_cog(Spam(bot))
+    bot.add_cog(Spamatron(bot))
