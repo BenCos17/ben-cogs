@@ -14,6 +14,18 @@ class Application(commands.Cog):
         }
         self.config.register_guild(**default_guild_settings)
 
+
+    @commands.command()
+    async def add_question(self, ctx, role: discord.Role, *, question: str):
+        """Add a question for a specific role."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            if role.id not in questions:
+                questions[role.id] = []
+            questions[role.id].append(question)
+            await self.config.guild(ctx.guild).questions.set(questions)
+        await ctx.send("Question added for the role.")
+
+
     @commands.command()
     @commands.guild_only()
     async def set_application_channel(self, ctx, channel: discord.TextChannel):
@@ -21,17 +33,6 @@ class Application(commands.Cog):
         await self.config.guild(ctx.guild).application_channel.set(channel.id)
         await ctx.send(f"Application channel set to {channel.mention}.")
 
-    @commands.command()
-    async def add_question(self, ctx, role: discord.Role, *, question: str):
-        """Add a question for a specific role."""
-        async with self.config.guild(ctx.guild).questions() as questions:
-            if not questions:
-                questions = {}
-            if role.id not in questions:
-                questions[role.id] = []
-            questions[role.id].append(question)
-            await self.config.guild(ctx.guild).questions.set(questions)
-        await ctx.send("Question added for the role.")
 
     @commands.command()
     async def list_roles(self, ctx):
