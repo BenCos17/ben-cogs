@@ -32,15 +32,25 @@ class Application(commands.Cog):
             questions[role.id].append(question)
         await ctx.send("Question added for the role.")
 
-    @commands.command()
-    async def list_roles(self, ctx):
-        """List roles available for application."""
-        roles_with_questions = await self.config.guild(ctx.guild).questions()
-        if not roles_with_questions:
-            return await ctx.send("No roles set for applications.")
-        
-        role_list = "\n".join([f"{ctx.guild.get_role(role_id).name}" for role_id in roles_with_questions])
-        await ctx.send(f"Roles available for application:\n{role_list}\n\nUse `apply <role_name>` to apply for a role.")
+@commands.command()
+async def list_roles(self, ctx):
+    """List roles available for application."""
+    roles_with_questions = await self.config.guild(ctx.guild).questions()
+    if not roles_with_questions:
+        return await ctx.send("No roles set for applications.")
+
+    role_list = []
+    for role_id in roles_with_questions:
+        role = ctx.guild.get_role(role_id)
+        if role:
+            role_list.append(role.name)
+    if role_list:
+        roles_text = "\n".join(role_list)
+        await ctx.send(f"Roles available for application:\n{roles_text}\n\nUse `apply <role_name>` to apply for a role.")
+    else:
+        await ctx.send("No roles found.")
+
+
 
     @commands.command()
     async def apply(self, ctx, *, role_name: str):
