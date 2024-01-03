@@ -60,23 +60,21 @@ class Application(commands.Cog):
         """Review a member's application."""
         questions = await self.config.guild(ctx.guild).questions()
         responses = self.applications.get(member.id)
-        if not questions or not responses:
-            return await ctx.send("No questions or responses found for this member.")
-
-        # Create an embed to display questions and responses
-        embed = Embed(title="Application Review", color=discord.Color.blue())
-        for question in questions:
-            response = responses.get(question, "No response")
-            embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
-
         application_channel_id = await self.config.guild(ctx.guild).application_channel()
+
+        if not questions or not responses or not application_channel_id:
+            return await ctx.send("No questions, responses, or application channel found for this member.")
+
         application_channel = self.bot.get_channel(application_channel_id)
         if application_channel:
+            embed = Embed(title="Application Review", color=discord.Color.blue())
+            for question in questions:
+                response = responses.get(question, "No response")
+                embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
             await application_channel.send(embed=embed)
-            # You can add reactions, further instructions for moderators here
             await ctx.send("Application sent to review channel.")
         else:
-            await ctx.send("Application channel not found. Please set the channel.")
+            await ctx.send("Application channel not found. Please set the channel using set_application_channel.")
 
 def setup(bot):
     bot.add_cog(Application(bot))
