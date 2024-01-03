@@ -68,9 +68,11 @@ class Application(commands.Cog):
                 await user.send("Time's up. Please try again later.")
                 return
 
-        if role.id not in self.applications:
-            self.applications[role.id] = {}
-        self.applications[role.id][user.id] = responses  # Store responses for review per role
+        applications = await self.config.guild(ctx.guild).applications()
+        if role.id not in applications:
+            applications[role.id] = {}
+        applications[role.id][user.id] = responses  # Store responses for review per role
+        await self.config.guild(ctx.guild).applications.set(applications)
         await ctx.send("Application submitted. Thank you!")
 
     @commands.command()
@@ -80,12 +82,12 @@ class Application(commands.Cog):
         if not role:
             return await ctx.send("Role not found.")
 
-        applications = self.applications.get(role.id)
-        if not applications or member.id not in applications:
+        applications = await self.config.guild(ctx.guild).applications()
+        if role.id not in applications or member.id not in applications[role.id]:
             return await ctx.send("No application found for this member and role.")
 
         questions = await self.config.guild(ctx.guild).questions()
-        responses = applications[member.id]
+        responses = applications[role.id][member.id]
 
         application_channel_id = await self.config.guild(ctx.guild).application_channel()
         application_channel = self.bot.get_channel(application_channel_id)
