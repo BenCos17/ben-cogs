@@ -18,12 +18,17 @@ class Application(commands.Cog):
     @commands.command()
     async def add_question(self, ctx, role: discord.Role, *, question: str):
         """Add a question for a specific role."""
-        async with self.config.guild(ctx.guild).questions() as questions:
-            if role.id not in questions:
-                questions[role.id] = []
-            questions[role.id].append(question)
-            await self.config.guild(ctx.guild).questions.set(questions)
+        guild_questions = await self.config.guild(ctx.guild).questions()
+        if not isinstance(guild_questions, dict):
+            guild_questions = {}
+
+        if role.id not in guild_questions:
+            guild_questions[role.id] = []
+
+        guild_questions[role.id].append(question)
+        await self.config.guild(ctx.guild).questions.set(guild_questions)
         await ctx.send("Question added for the role.")
+
 
 
     @commands.command()
