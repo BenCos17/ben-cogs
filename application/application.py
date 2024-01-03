@@ -10,11 +10,9 @@ class Application(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique identifier
         default_guild_settings = {
             "application_channel": None,
-            "questions": {},  # Dictionary to store questions per role
-            "applications": {}  # Dictionary to store user applications per role
+            "questions": {}  # Dictionary to store questions per role
         }
         self.config.register_guild(**default_guild_settings)
-
 
     @commands.command()
     @commands.guild_only()
@@ -40,7 +38,7 @@ class Application(commands.Cog):
             return await ctx.send("No roles set for applications.")
         
         role_list = []
-        for role_id in roles_with_questions:
+        for role_id, role_questions in roles_with_questions.items():
             role = ctx.guild.get_role(role_id)
             if role:
                 role_list.append(role.name)
