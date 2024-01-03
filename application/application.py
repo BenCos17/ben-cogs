@@ -23,7 +23,6 @@ class Application(commands.Cog):
         await ctx.send(f"Application channel set to {channel.mention}.")
 
     @commands.command()
-    @commands.guild_only()
     async def add_question(self, ctx, role: discord.Role, *, question: str):
         """Add a question for a specific role."""
         async with self.config.guild(ctx.guild).questions() as questions:
