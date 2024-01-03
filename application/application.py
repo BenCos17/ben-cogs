@@ -10,10 +10,10 @@ class Application(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique identifier
         default_guild_settings = {
             "application_channel": None,
-            "questions": []  # List to store questions set by mods
+            "questions": {},  # Dictionary to store questions per role
+            "applications": {}  # Dictionary to store user applications per role
         }
         self.config.register_guild(**default_guild_settings)
-        self.applications = {}  # Dictionary to store user applications
 
     @commands.command()
     @commands.guild_only()
@@ -24,22 +24,38 @@ class Application(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def add_question(self, ctx, *, question: str):
-        """Add a question to the application."""
+    async def add_question(self, ctx, role: discord.Role, *, question: str):
+        """Add a question for a specific role."""
         async with self.config.guild(ctx.guild).questions() as questions:
-            questions.append(question)
-        await ctx.send("Question added to the application.")
+            if role.id not in questions:
+                questions[role.id] = []
+            questions[role.id].append(question)
+        await ctx.send("Question added for the role.")
 
     @commands.command()
-    async def apply(self, ctx):
-        """Apply for a role by answering the application questions."""
+    async def list_roles(self, ctx):
+        """List roles available for application."""
+        roles_with_questions = await self.config.guild(ctx.guild).questions()
+        if not roles_with_questions:
+            return await ctx.send("No roles set for applications.")
+        
+        role_list = "\n".join([f"{ctx.guild.get_role(role_id).name}" for role_id in roles_with_questions])
+        await ctx.send(f"Roles available for application:\n{role_list}\n\nUse `apply <role_name>` to apply for a role.")
+
+    @commands.command()
+    async def apply(self, ctx, *, role_name: str):
+        """Apply for a specific role."""
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        if not role:
+            return await ctx.send("Role not found.")
+
         questions = await self.config.guild(ctx.guild).questions()
-        if not questions:
-            return await ctx.send("No questions set for the application.")
+        if role.id not in questions:
+            return await ctx.send("No questions set for this role.")
 
         user = ctx.author
         responses = {}
-        for question in questions:
+        for question in questions[role.id]:
             await user.send(f"Question: {question}\nPlease respond in this DM.")
             try:
                 response = await self.bot.wait_for(
@@ -52,29 +68,38 @@ class Application(commands.Cog):
                 await user.send("Time's up. Please try again later.")
                 return
 
-        self.applications[user.id] = responses  # Store responses for review
+        if role.id not in self.applications:
+            self.applications[role.id] = {}
+        self.applications[role.id][user.id] = responses  # Store responses for review per role
         await ctx.send("Application submitted. Thank you!")
 
     @commands.command()
-    async def review_application(self, ctx, member: discord.Member):
-        """Review a member's application."""
+    async def review_application(self, ctx, role_name: str, member: discord.Member):
+        """Review a member's application for a specific role."""
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        if not role:
+            return await ctx.send("Role not found.")
+
+        applications = self.applications.get(role.id)
+        if not applications or member.id not in applications:
+            return await ctx.send("No application found for this member and role.")
+
         questions = await self.config.guild(ctx.guild).questions()
-        responses = self.applications.get(member.id)
+        responses = applications[member.id]
+
         application_channel_id = await self.config.guild(ctx.guild).application_channel()
-
-        if not questions or not responses or not application_channel_id:
-            return await ctx.send("No questions, responses, or application channel found for this member.")
-
         application_channel = self.bot.get_channel(application_channel_id)
-        if application_channel:
-            embed = Embed(title="Application Review", color=discord.Color.blue())
-            for question in questions:
-                response = responses.get(question, "No response")
-                embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
-            await application_channel.send(embed=embed)
-            await ctx.send("Application sent to review channel.")
-        else:
-            await ctx.send("Application channel not found. Please set the channel using set_application_channel.")
+
+        if not questions or not responses or not application_channel:
+            return await ctx.send("Missing data required to review the application.")
+
+        embed = Embed(title=f"Application Review for {role.name}", color=discord.Color.blue())
+        for question in questions[role.id]:
+            response = responses.get(question, "No response")
+            embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
+        
+        await application_channel.send(embed=embed)
+        await ctx.send("Application sent to review channel.")
 
 def setup(bot):
     bot.add_cog(Application(bot))
