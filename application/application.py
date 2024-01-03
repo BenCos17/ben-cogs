@@ -1,18 +1,19 @@
 import discord
 from redbot.core import commands, Config
+from discord import Embed
 
 class Application(commands.Cog):
-    """Cog for handling role applications."""
+    """Cog for handling applications."""
 
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique identifier
         default_guild_settings = {
             "application_channel": None,
-            "approval_emoji": "✅",
-            "denial_emoji": "❌"
+            "questions": []  # List to store questions set by mods
         }
         self.config.register_guild(**default_guild_settings)
+        self.applications = {}  # Dictionary to store user applications
 
     @commands.command()
     @commands.guild_only()
@@ -23,44 +24,59 @@ class Application(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def set_approval_emoji(self, ctx, emoji: str):
-        """Set the approval emoji."""
-        await self.config.guild(ctx.guild).approval_emoji.set(emoji)
-        await ctx.send(f"Approval emoji set to {emoji}.")
+    async def add_question(self, ctx, *, question: str):
+        """Add a question to the application."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            questions.append(question)
+        await ctx.send("Question added to the application.")
 
     @commands.command()
-    @commands.guild_only()
-    async def set_denial_emoji(self, ctx, emoji: str):
-        """Set the denial emoji."""
-        await self.config.guild(ctx.guild).denial_emoji.set(emoji)
-        await ctx.send(f"Denial emoji set to {emoji}.")
+    async def apply(self, ctx):
+        """Apply for a role by answering the application questions."""
+        questions = await self.config.guild(ctx.guild).questions()
+        if not questions:
+            return await ctx.send("No questions set for the application.")
+
+        user = ctx.author
+        responses = {}
+        for question in questions:
+            await user.send(f"Question: {question}\nPlease respond in this DM.")
+            try:
+                response = await self.bot.wait_for(
+                    "message",
+                    check=lambda m: m.author == user and m.channel.type == discord.ChannelType.private,
+                    timeout=300  # Adjust timeout as needed
+                )
+                responses[question] = response.content
+            except asyncio.TimeoutError:
+                await user.send("Time's up. Please try again later.")
+                return
+
+        self.applications[user.id] = responses  # Store responses for review
+        await ctx.send("Application submitted. Thank you!")
 
     @commands.command()
-    async def apply(self, ctx, role: discord.Role):
-        """Apply for a role."""
+    async def review_application(self, ctx, member: discord.Member):
+        """Review a member's application."""
+        questions = await self.config.guild(ctx.guild).questions()
+        responses = self.applications.get(member.id)
+        if not questions or not responses:
+            return await ctx.send("No questions or responses found for this member.")
+
+        # Create an embed to display questions and responses
+        embed = Embed(title="Application Review", color=discord.Color.blue())
+        for question in questions:
+            response = responses.get(question, "No response")
+            embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
+
         application_channel_id = await self.config.guild(ctx.guild).application_channel()
-        if not application_channel_id:
-            return await ctx.send("Application channel is not set.")
-
         application_channel = self.bot.get_channel(application_channel_id)
-        if not application_channel:
-            return await ctx.send("Application channel not found.")
-
-        application_message = await application_channel.send(
-            f"Role Application from {ctx.author.mention} for {role.name}. React to approve or deny."
-        )
-        approval_emoji = await self.config.guild(ctx.guild).approval_emoji()
-        denial_emoji = await self.config.guild(ctx.guild).denial_emoji()
-        await application_message.add_reaction(approval_emoji)
-        await application_message.add_reaction(denial_emoji)
-
-        # Store information about the application message somewhere for future reference
-        # You might want to use a database or a dictionary to track applications
-
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
-        """Handle reaction events for role application approval/denial."""
-        # Similar logic as before for handling reactions...
+        if application_channel:
+            await application_channel.send(embed=embed)
+            # You can add reactions, further instructions for moderators here
+            await ctx.send("Application sent to review channel.")
+        else:
+            await ctx.send("Application channel not found. Please set the channel.")
 
 def setup(bot):
-    bot.add_cog(RoleApplication(bot))
+    bot.add_cog(Application(bot))
