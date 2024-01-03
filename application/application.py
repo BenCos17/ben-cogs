@@ -109,5 +109,27 @@ class Application(commands.Cog):
         await application_channel.send(embed=embed)
         await ctx.send("Application sent to review channel.")
 
+    @commands.command()
+    async def remove_question(self, ctx, role: discord.Role, *, question: str):
+        """Remove a question for a specific role."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            if role.id not in questions:
+                return await ctx.send("No questions set for this role.")
+            if question in questions[role.id]:
+                questions[role.id].remove(question)
+                await ctx.send("Question removed for the role.")
+            else:
+                await ctx.send("Question not found for this role.")
+
+    @commands.command()
+    async def clear_questions(self, ctx, role: discord.Role):
+        """Clear all questions for a specific role."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            if role.id in questions:
+                del questions[role.id]
+                await ctx.send("Questions cleared for the role.")
+            else:
+                await ctx.send("No questions set for this role.")
+
 def setup(bot):
     bot.add_cog(Application(bot))
