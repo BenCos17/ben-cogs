@@ -5,15 +5,15 @@ from discord import Embed
 class Application(commands.Cog):
     """Cog for handling applications."""
 
-def __init__(self, bot):
-    self.bot = bot
-    self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique identifier
-    default_guild_settings = {
-        "application_channel": None,
-        "questions": {},  # Dictionary to store questions per role
-        "applications": {}  # Dictionary to store user applications per role
-    }
-    self.config.register_guild(**default_guild_settings)
+    def __init__(self, bot):
+        self.bot = bot
+        self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique identifier
+        default_guild_settings = {
+            "application_channel": None,
+            "questions": {},  # Dictionary to store questions per role
+            "applications": {}  # Dictionary to store user applications per role
+        }
+        self.config.register_guild(**default_guild_settings)
 
 
     @commands.command()
