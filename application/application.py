@@ -34,7 +34,7 @@ class Application(commands.Cog):
     async def list_roles(self, ctx):
         """List roles available for application."""
         roles_with_questions = await self.config.guild(ctx.guild).questions()
-        if not roles_with_questions:
+        if not roles_with_questions or not isinstance(roles_with_questions, dict):
             return await ctx.send("No roles set for applications.")
         
         role_list = []
