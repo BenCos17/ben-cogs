@@ -2,6 +2,7 @@ import discord
 from redbot.core import commands
 import random
 from midiutil import MIDIFile
+import os
 
 class ImpossiblePiano(commands.Cog):
     def __init__(self, bot):
@@ -42,7 +43,7 @@ class ImpossiblePiano(commands.Cog):
             time += duration
         return midi
 
-   @commands.command()
+    @commands.command()
     async def piano(self, ctx):
         length = 20
         melody = self.generate_melody(length)
