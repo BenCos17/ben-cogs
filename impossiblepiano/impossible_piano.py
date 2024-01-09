@@ -42,25 +42,40 @@ class ImpossiblePiano(commands.Cog):
             time += duration
         return midi
 
-    @commands.command()
+   @commands.command()
     async def piano(self, ctx):
         length = 20
         melody = self.generate_melody(length)
         midi_data = self.melody_to_midi(melody)
-        with open("impossible_piano.mid", "wb") as output_file:
+        midi_filename = "impossible_piano.mid"  # Define the MIDI file name
+        
+        # Save the MIDI file temporarily
+        with open(midi_filename, "wb") as output_file:
             midi_data.writeFile(output_file)
 
-        voice_client = ctx.voice_client
-        if not voice_client:
-            if ctx.author.voice:
-                voice_client = await ctx.author.voice.channel.connect()
-            else:
-                await ctx.send("You must be in a voice channel to use this command.")
-                return
+        # Check if the user is in a voice channel
+        if ctx.author.voice:
+            voice_channel = ctx.author.voice.channel
+            voice_client = ctx.voice_client or await voice_channel.connect()
 
-        if voice_client.is_playing():
-            voice_client.stop()
+            # Send the MIDI file as an attachment
+            with open(midi_filename, "rb") as file:
+                midi_attachment = discord.File(file, filename=midi_filename)
+                await ctx.send("Here's your impossible piano song!", file=midi_attachment)
 
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("impossible_piano.mid"))
-        voice_client.play(source)
-        await ctx.send("Playing impossible piano song.")
+            # Play the MIDI in the user's voice channel
+            if voice_client.is_playing():
+                voice_client.stop()
+
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(midi_filename))
+            voice_client.play(source)
+            await ctx.send("Playing impossible piano song.")
+        else:
+            await ctx.send("You must be in a voice channel to use this command.")
+
+        # Clean up the temporary MIDI file
+        os.remove(midi_filename)
+
+# This part remains unchanged
+def setup(bot):
+    bot.add_cog(ImpossiblePiano(bot))
