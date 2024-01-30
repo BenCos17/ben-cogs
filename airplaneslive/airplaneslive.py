@@ -11,55 +11,64 @@ class Airplaneslive(commands.Cog):
     async def aircraft_by_hex(self, ctx, hex_id):
         url = f"{self.api_url}/hex/{hex_id}"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     @commands.command(name='aircraft_by_callsign')
     async def aircraft_by_callsign(self, ctx, callsign):
         url = f"{self.api_url}/callsign/{callsign}"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     @commands.command(name='aircraft_by_reg')
     async def aircraft_by_reg(self, ctx, registration):
         url = f"{self.api_url}/reg/{registration}"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     @commands.command(name='aircraft_by_type')
     async def aircraft_by_type(self, ctx, aircraft_type):
         url = f"{self.api_url}/type/{aircraft_type}"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     @commands.command(name='aircraft_by_squawk')
     async def aircraft_by_squawk(self, ctx, squawk_value):
         url = f"{self.api_url}/squawk/{squawk_value}"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     @commands.command(name='military_aircraft')
     async def military_aircraft(self, ctx):
         url = f"{self.api_url}/mil"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     @commands.command(name='ladd_aircraft')
     async def ladd_aircraft(self, ctx):
         url = f"{self.api_url}/ladd"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     @commands.command(name='pia_aircraft')
     async def pia_aircraft(self, ctx):
         url = f"{self.api_url}/pia"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     @commands.command(name='aircraft_within_radius')
     async def aircraft_within_radius(self, ctx, lat, lon, radius):
         url = f"{self.api_url}/point/{lat}/{lon}/{radius}"
         response = self._make_request(url)
-        await ctx.send(response)
+        formatted_response = self._format_response(response)
+        await ctx.send(formatted_response)
 
     def _make_request(self, url):
         try:
@@ -71,5 +80,30 @@ class Airplaneslive(commands.Cog):
         except Exception as e:
             return f"Error making request: {e}"
 
+    def _format_response(self, response):
+        if 'ac' in response:
+            aircraft_data = response['ac'][0]
+            formatted_data = (
+                f"**Flight:** {aircraft_data['flight'].strip()}\n"
+                f"**Type:** {aircraft_data['desc']} ({aircraft_data['t']})\n"
+                f"**Altitude:** {aircraft_data['alt_baro']} feet\n"
+                f"**Ground Speed:** {aircraft_data['gs']} knots\n"
+                f"**Heading:** {aircraft_data['true_heading']} degrees\n"
+                f"**Latitude:** {aircraft_data['lat']}\n"
+                f"**Longitude:** {aircraft_data['lon']}\n"
+                f"**Squawk:** {aircraft_data['squawk']}\n"
+                f"**Emergency:** {aircraft_data['emergency']}\n"
+                f"**Operator:** {aircraft_data['ownOp']}\n"
+                f"**Year:** {aircraft_data['year']}\n"
+                f"**Category:** {aircraft_data['category']}\n"
+                f"**Aircraft Type:** {aircraft_data['t']}\n"
+                f"**Speed:** {aircraft_data['gs']} knots\n"
+                f"**Altitude Rate:** {aircraft_data['baro_rate']} feet/minute\n"
+                f"**Vertical Rate:** {aircraft_data['geom_rate']} feet/minute"
+            )
+            return formatted_data
+        else:
+            return "No aircraft found with the specified callsign."
+
 def setup(bot):
-    bot.add_cog(AirplanesCog(bot))
+    bot.add_cog(Airplaneslive(bot))
