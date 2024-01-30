@@ -81,30 +81,29 @@ class Airplaneslive(commands.Cog):
             return f"Error making request: {e}"
 
     def _format_response(self, response):
-    if 'ac' in response and response['ac']:
-        aircraft_data = response['ac'][0]
-        formatted_data = (
-            f"**Flight:** {aircraft_data['flight'].strip()}\n"
-            f"**Type:** {aircraft_data['desc']} ({aircraft_data['t']})\n"
-            f"**Altitude:** {aircraft_data.get('alt_baro', 'N/A')} feet\n"
-            f"**Ground Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
-            f"**Heading:** {aircraft_data.get('true_heading', 'N/A')} degrees\n"
-            f"**Latitude:** {aircraft_data.get('lat', 'N/A')}\n"
-            f"**Longitude:** {aircraft_data.get('lon', 'N/A')}\n"
-            f"**Squawk:** {aircraft_data.get('squawk', 'N/A')}\n"
-            f"**Emergency:** {aircraft_data.get('emergency', 'N/A')}\n"
-            f"**Operator:** {aircraft_data.get('ownOp', 'N/A')}\n"
-            f"**Year:** {aircraft_data.get('year', 'N/A')}\n"
-            f"**Category:** {aircraft_data.get('category', 'N/A')}\n"
-            f"**Aircraft Type:** {aircraft_data.get('t', 'N/A')}\n"
-            f"**Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
-            f"**Altitude Rate:** {aircraft_data.get('baro_rate', 'N/A')} feet/minute\n"
-            f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute"
-        )
-        return formatted_data
-    else:
-        return "No aircraft found with the specified callsign."
-
+        if 'ac' in response and response['ac']:
+            aircraft_data = response['ac'][0]
+            formatted_data = (
+                f"**Flight:** {aircraft_data['flight'].strip()}\n"
+                f"**Type:** {aircraft_data['desc']} ({aircraft_data['t']})\n"
+                f"**Altitude:** {aircraft_data.get('alt_baro', 'N/A')} feet\n"
+                f"**Ground Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
+                f"**Heading:** {aircraft_data.get('true_heading', 'N/A')} degrees\n"
+                f"**Latitude:** {aircraft_data.get('lat', 'N/A')}\n"
+                f"**Longitude:** {aircraft_data.get('lon', 'N/A')}\n"
+                f"**Squawk:** {aircraft_data.get('squawk', 'N/A')}\n"
+                f"**Emergency:** {aircraft_data.get('emergency', 'N/A')}\n"
+                f"**Operator:** {aircraft_data.get('ownOp', 'N/A')}\n"
+                f"**Year:** {aircraft_data.get('year', 'N/A')}\n"
+                f"**Category:** {aircraft_data.get('category', 'N/A')}\n"
+                f"**Aircraft Type:** {aircraft_data.get('t', 'N/A')}\n"
+                f"**Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
+                f"**Altitude Rate:** {aircraft_data.get('baro_rate', 'N/A')} feet/minute\n"
+                f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute"
+            )
+            return formatted_data
+        else:
+            return "No aircraft found with the specified callsign."
 
 def setup(bot):
     bot.add_cog(Airplaneslive(bot))
