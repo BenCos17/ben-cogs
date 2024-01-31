@@ -1,11 +1,6 @@
 import discord
 from redbot.core import commands
-import httpx
-<<<<<<< HEAD
-
-EMBED_COLOR = 0x3498db
-
-
+import
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
