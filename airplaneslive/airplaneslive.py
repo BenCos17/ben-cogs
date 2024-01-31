@@ -6,69 +6,112 @@ class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.api_url = "https://api.airplanes.live/v2"
+        self.max_requests_per_user = 10  # Set a default value; bot owner can change it
 
-    @commands.command(name='aircraft_by_hex')
+    @commands.command(name='aircraft_by_hex', help='Get information about an aircraft by its hexadecimal identifier.')
     async def aircraft_by_hex(self, ctx, hex_id):
         url = f"{self.api_url}/hex/{hex_id}"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='aircraft_by_callsign')
+    @commands.command(name='aircraft_by_callsign', help='Get information about an aircraft by its callsign.')
     async def aircraft_by_callsign(self, ctx, callsign):
         url = f"{self.api_url}/callsign/{callsign}"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='aircraft_by_reg')
+    @commands.command(name='aircraft_by_reg', help='Get information about an aircraft by its registration.')
     async def aircraft_by_reg(self, ctx, registration):
         url = f"{self.api_url}/reg/{registration}"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='aircraft_by_type')
+    @commands.command(name='aircraft_by_type', help='Get information about aircraft by its type.')
     async def aircraft_by_type(self, ctx, aircraft_type):
         url = f"{self.api_url}/type/{aircraft_type}"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='aircraft_by_squawk')
+    @commands.command(name='aircraft_by_squawk', help='Get information about an aircraft by its squawk code.')
     async def aircraft_by_squawk(self, ctx, squawk_value):
         url = f"{self.api_url}/squawk/{squawk_value}"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='military_aircraft')
+    @commands.command(name='military_aircraft', help='Get information about military aircraft.')
     async def military_aircraft(self, ctx):
         url = f"{self.api_url}/mil"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='Military Aircraft Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving military aircraft information.")
 
-    @commands.command(name='ladd_aircraft')
+    @commands.command(name='ladd_aircraft', help='Get information about aircraft in LADD (Latin America).')
     async def ladd_aircraft(self, ctx):
         url = f"{self.api_url}/ladd"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='LADD Aircraft Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving LADD aircraft information.")
 
-    @commands.command(name='pia_aircraft')
+    @commands.command(name='pia_aircraft', help='Get information about PIA (Pakistan International Airlines) aircraft.')
     async def pia_aircraft(self, ctx):
         url = f"{self.api_url}/pia"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='PIA Aircraft Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving PIA aircraft information.")
 
-    @commands.command(name='aircraft_within_radius')
+    @commands.command(name='aircraft_within_radius', help='Get information about aircraft within a specified radius.')
     async def aircraft_within_radius(self, ctx, lat, lon, radius):
         url = f"{self.api_url}/point/{lat}/{lon}/{radius}"
         response = self._make_request(url)
-        formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        if response:
+            formatted_response = self._format_response(response)
+            embed = discord.Embed(title='Aircraft Within Radius Information', description=formatted_response, color=0x3498db)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Error retrieving aircraft information within the specified radius.")
+
+    @commands.command(name='set_max_requests', help='Set the maximum number of requests the bot can make to the API.')
+    @commands.is_owner()
+    async def set_max_requests(self, ctx, max_requests: int):
+        self.max_requests_per_user = max_requests
+        await ctx.send(f"Maximum requests per user set to {max_requests}.")
 
     def _make_request(self, url):
         try:
@@ -76,9 +119,9 @@ class Airplaneslive(commands.Cog):
             if response.status_code == 200:
                 return response.json()
             else:
-                return f"Error: {response.status_code} - {response.text}"
+                return None  # Return None to indicate an error
         except Exception as e:
-            return f"Error making request: {e}"
+            return None
 
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
