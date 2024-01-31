@@ -74,7 +74,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving military aircraft information.")
 
-    @commands.command(name='ladd_aircraft', help='Get information about aircraft in LADD (Latin America).')
+    @commands.command(name='ladd_aircraft', help='Get information about aircraft in LADD ().')
     async def ladd_aircraft(self, ctx):
         url = f"{self.api_url}/ladd"
         response = self._make_request(url)
