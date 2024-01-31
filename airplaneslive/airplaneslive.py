@@ -85,7 +85,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving LADD aircraft information.")
 
-    @commands.command(name='pia_aircraft', help='Get information about PIA (Pakistan International Airlines) aircraft.')
+    @commands.command(name='pia_aircraft', help='Get information about PIA (')
     async def pia_aircraft(self, ctx):
         url = f"{self.api_url}/pia"
         response = self._make_request(url)
