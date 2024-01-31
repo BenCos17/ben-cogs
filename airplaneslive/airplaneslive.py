@@ -1,6 +1,6 @@
 import discord
 from redbot.core import commands
-import requests
+import httpx
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
