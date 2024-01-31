@@ -1,8 +1,11 @@
 import discord
 from redbot.core import commands
 import httpx
+<<<<<<< HEAD
 
 EMBED_COLOR = 0x3498db
+=======
+>>>>>>> f1e936610cb823586dcd8a6455f7fbf1fa0e814f
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
