@@ -1,11 +1,13 @@
 import discord
 from redbot.core import commands
 import httpx
+
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.api_url = "https://api.airplanes.live/v2"
         self.max_requests_per_user = 10
+        self.EMBED_COLOR = 0x3498db  # You can choose your preferred color code here
 
     @commands.command(name='aircraft_by_hex', help='Get information about an aircraft by its hexadecimal identifier.')
     async def aircraft_by_hex(self, ctx, hex_id):
