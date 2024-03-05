@@ -1,3 +1,4 @@
+![408946146_3341083339524374_3489105941082931383_n](https://github.com/BenCos17/ben-cogs/assets/52817096/ab5bf0ae-8ef7-4b42-a022-1c45126d2b20)
 ***Flight***
 The Flight cog provides a game that simulates flying through different levels with different obstacles. The user must choose an aircraft and then navigate through each level, avoiding the obstacles, in order to complete the game.
 
