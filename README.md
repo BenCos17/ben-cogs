@@ -1,4 +1,3 @@
-![408946146_3341083339524374_3489105941082931383_n](https://github.com/BenCos17/ben-cogs/assets/52817096/ab5bf0ae-8ef7-4b42-a022-1c45126d2b20)
 ***Flight***
 The Flight cog provides a game that simulates flying through different levels with different obstacles. The user must choose an aircraft and then navigate through each level, avoiding the obstacles, in order to complete the game.
 
@@ -146,4 +145,5 @@ Parameters:
 link_name (string): The name of the link to show.
 Replace [p] with the prefix used for your bot.
 
-Please note that you'll need to customize the documentation according to your specific bot's command prefix and any modifications made to the command names or descriptions.
+Please note that you'll need to customize the documentation according to your specific bot's command prefix and any modifications made to the command
+![408946146_3341083339524374_3489105941082931383_n](https://github.com/BenCos17/ben-cogs/assets/52817096/ab5bf0ae-8ef7-4b42-a022-1c45126d2b20)![408946146_3341083339524374_3489105941082931383_n](https://github.com/BenCos17/ben-cogs/assets/52817096/ab5bf0ae-8ef7-4b42-a022-1c45126d2b20)
