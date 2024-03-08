@@ -6,7 +6,7 @@ import asyncio
 class TalkNotifier(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config = Config.get_conf(self, identifier=492089091320446976)
         default_global = {"notification_message": "{author} said: {content}", "target_users": [], "cooldown": 10}
         self.config.register_global(**default_global)
         self.cooldowns = {}
