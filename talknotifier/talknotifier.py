@@ -18,15 +18,10 @@ class TalkNotifier(commands.Cog):
         user_id = str(message.author.id)
 
         # Retrieve the custom notification message for the user
-        notification_message = await self.config.member_from_id(message.author.id).get_raw("notification_message", default=None)
+        notification_message = await self.config.member_from_id(message.author).notification_message()
 
-        if notification_message is not None:
-            msg_content = notification_message.format(author=message.author.display_name, content=message.content)
-            await channel.send(msg_content)
-        else:
-            default_message = await self.config.default_notification_message()
-            msg_content = default_message.format(author=message.author.display_name, content=message.content)
-            await channel.send(msg_content)
+        msg_content = notification_message.format(author=message.author.display_name, content=message.content)
+        await channel.send(msg_content)
 
     @commands.command()
     @commands.guild_only()
@@ -51,14 +46,6 @@ class TalkNotifier(commands.Cog):
         # Set default notification message
         await self.config.default_notification_message.set(message)
         await ctx.send("Default notification message has been set successfully.")
-    
-    @commands.command()
-    @commands.guild_only()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def setusernotificationmessage(self, ctx, user: discord.Member, *, message: str):
-        # Set notification message for a specific user
-        await self.config.member(user).notification_message.set(message)
-        await ctx.send(f"Notification message for {user.display_name} has been set successfully.")
 
 def setup(bot):
     bot.add_cog(TalkNotifier(bot))
