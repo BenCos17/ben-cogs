@@ -29,13 +29,10 @@ class Airplaneslive(commands.Cog):
                     return url
                 else:
                     return None
-<<<<<<< HEAD
         except Exception as e:
             print(f"Error fetching aircraft image: {e}")
             return None
-=======
         except
->>>>>>> parent of fcf2c7b (Revert "maybe image will work now 🤔")
 
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
