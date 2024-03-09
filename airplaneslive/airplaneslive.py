@@ -20,16 +20,11 @@ class Airplaneslive(commands.Cog):
                 return None
 
     async def _get_aircraft_image(self, registration):
-        try:
-            async with httpx.AsyncClient() as client:
-                # Example URL to fetch image
-                url = f"https://www.planespotters.net/photos/small/{registration}.jpg"
-                response = await client.get(url)
-                if response.status_code == 200:
-                    return url
-                else:
-                    return None
-        except
+        # Code to fetch aircraft image from planespotters.net
+        # Example:
+        # image_url = "https://www.planespotters.net/photo/123456/airline-aircraft-registration"
+        # return image_url
+        pass
 
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
