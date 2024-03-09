@@ -28,17 +28,14 @@ class Airplaneslive(commands.Cog):
 
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
-        await ctx.send(formatted_response)
+        embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
         if 'ac' in response and response['ac']:
             registration = response['ac'][0].get('reg', '')
-            await self._send_aircraft_image(ctx, registration)
-
-    async def _send_aircraft_image(self, ctx, registration):
-        image_url = await self._get_aircraft_image(registration)
-        if image_url:
-            embed = discord.Embed(title='Aircraft Image', color=self.EMBED_COLOR)
-            embed.set_image(url=image_url)
-            await ctx.send(embed=embed)
+            image_url = await self._get_aircraft_image(registration)
+            if image_url:
+                embed.set_image(url=image_url)
+        embed.set_footer(text="Powered by airplanes.live")
+        await ctx.send(embed=embed)
 
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
@@ -65,7 +62,12 @@ class Airplaneslive(commands.Cog):
         else:
             return "No aircraft found with the specified callsign."
 
-    @commands.command(name='aircraft_by_hex', help='Get information about an aircraft by its hexadecimal identifier.')
+    @commands.group(name='aircraft', help='Get information about aircraft.')
+    async def aircraft_group(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send('Invalid aircraft command passed.')
+
+    @aircraft_group.command(name='hex', help='Get information about an aircraft by its hexadecimal identifier.')
     async def aircraft_by_hex(self, ctx, hex_id):
         url = f"{self.api_url}/hex/{hex_id}"
         response = await self._make_request(url)
@@ -74,7 +76,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='aircraft_by_callsign', help='Get information about an aircraft by its callsign.')
+    @aircraft_group.command(name='callsign', help='Get information about an aircraft by its callsign.')
     async def aircraft_by_callsign(self, ctx, callsign):
         url = f"{self.api_url}/callsign/{callsign}"
         response = await self._make_request(url)
@@ -83,7 +85,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='aircraft_by_reg', help='Get information about an aircraft by its registration.')
+    @aircraft_group.command(name='reg', help='Get information about an aircraft by its registration.')
     async def aircraft_by_reg(self, ctx, registration):
         url = f"{self.api_url}/reg/{registration}"
         response = await self._make_request(url)
@@ -92,7 +94,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='aircraft_by_type', help='Get information about aircraft by its type.')
+    @aircraft_group.command(name='type', help='Get information about aircraft by its type.')
     async def aircraft_by_type(self, ctx, aircraft_type):
         url = f"{self.api_url}/type/{aircraft_type}"
         response = await self._make_request(url)
@@ -101,7 +103,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='aircraft_by_squawk', help='Get information about an aircraft by its squawk code.')
+    @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
     async def aircraft_by_squawk(self, ctx, squawk_value):
         url = f"{self.api_url}/squawk/{squawk_value}"
         response = await self._make_request(url)
