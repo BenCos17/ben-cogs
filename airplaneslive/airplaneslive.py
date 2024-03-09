@@ -32,8 +32,9 @@ class Airplaneslive(commands.Cog):
         except Exception as e:
             print(f"Error fetching aircraft image: {e}")
             return None
-        except
-
+        except httpx.RequestError as e:
+            print(f"Error fetching aircraft image: {e}")
+            return None
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
         embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
