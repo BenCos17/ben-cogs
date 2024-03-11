@@ -136,7 +136,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving LADD aircraft information.")
 
-    @commands.command(name='pia_aircraft')
+    @aircraft_group.command(name='pia', help='Privacy ICAO Address.')
     async def pia_aircraft(self, ctx):
         url = f"{self.api_url}/pia"
         response = await self._make_request(url)
@@ -145,7 +145,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving PIA aircraft information.")
 
-    @commands.command(name='aircraft_within_radius', help='Get information about aircraft within a specified radius.')
+    @aircraft_group.command(name='radius', help='Get information about aircraft within a specified radius.')
     async def aircraft_within_radius(self, ctx, lat, lon, radius):
         url = f"{self.api_url}/point/{lat}/{lon}/{radius}"
         response = await self._make_request(url)
