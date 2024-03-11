@@ -18,20 +18,7 @@ class Airplaneslive(commands.Cog):
             except httpx.RequestError as e:
                 print(f"Error making request: {e}")
                 return None
-
-    async def_get_aircraft_image(self,registration):
-        try:
-            async with httpx.AsyncClient() as client:
-                # Example URL to fetch image
-                url = f"https://www.planespotters.net/photos/small/{registration}.jpg"
-                response = await client.get(url)
-                if response.status_code == 200:
-                    return url
-                else:
-                    return None
-        except Exception as e:
-            print(f"Error fetching aircraft image: {e}")
-            return None           
+                
 
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
@@ -41,7 +28,7 @@ class Airplaneslive(commands.Cog):
             image_url = await self._get_aircraft_image(registration)
             if image_url:
                 embed.set_image(url=image_url)
-        embed.set_footer(text="Powered by airplanes.live :airplane: ")
+        embed.set_footer(text="Powered by airplanes.live")
         await ctx.send(embed=embed)
 
     def _format_response(self, response):
@@ -119,7 +106,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='miltary_aircraft')
+    @commands.command(name='military_aircraft')
     async def military_aircraft(self, ctx):
         url = f"{self.api_url}/mil"
         response = await self._make_request(url)
