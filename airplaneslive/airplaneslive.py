@@ -154,6 +154,20 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information within the specified radius.")
 
+import json
+
+@commands.command(name='aircraft_to_json', help='Get aircraft information in JSON format.')
+async def aircraft_to_json(self, ctx, aircraft_type):
+    url = f"{self.api_url}/type/{aircraft_type}"
+    response = await self._make_request(url)
+    if response:
+        aircraft_info = self._format_response(response)
+        json_data = json.dumps(aircraft_info, indent=4)
+        await ctx.send(f"```json\n{json_data}\n```")
+    else:
+        await ctx.send("Error retrieving aircraft information.")
+
+
     @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
     @commands.is_owner()
     async def set_max_requests(self, ctx, max_requests: int):
