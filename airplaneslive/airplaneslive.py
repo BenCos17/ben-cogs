@@ -28,7 +28,7 @@ class Airplaneslive(commands.Cog):
             image_url = await self._get_aircraft_image(registration)
             if image_url:
                 embed.set_image(url=image_url)
-        embed.set_footer(text="Powered by airplanes.live")
+        embed.set_footer(text="Powered by airplanes.live :airplane: ")
         await ctx.send(embed=embed)
 
     def _format_response(self, response):
@@ -106,7 +106,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @aircraft_group.command(name='miltary')
+    @commands.command(name='miltary_aircraft')
     async def military_aircraft(self, ctx):
         url = f"{self.api_url}/mil"
         response = await self._make_request(url)
