@@ -43,7 +43,7 @@ class Airplaneslive(commands.Cog):
             image_url = await self._get_aircraft_image(registration)
             if image_url:
                 embed.set_image(url=image_url)
-        embed.set_footer(text="Powered by airplanes.live")
+        embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
 
     def _format_response(self, response):
