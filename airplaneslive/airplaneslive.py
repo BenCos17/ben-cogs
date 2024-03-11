@@ -23,13 +23,10 @@ class Airplaneslive(commands.Cog):
         try:
             async with httpx.AsyncClient() as client:
                 url = f"https://www.planespotters.net/photos/small/{registration}.jpg"
-                print("Fetching image URL:", url)  # Print the URL being fetched
                 response = await client.get(url)
                 if response.status_code == 200:
-                    print("Image URL found:", url)  # Print the found image URL
                     return url
                 else:
-                    print(f"Failed to fetch image for registration {registration}. Status code: {response.status_code}")
                     return None
         except Exception as e:
             print(f"Error fetching aircraft image: {e}")
@@ -42,7 +39,7 @@ class Airplaneslive(commands.Cog):
             registration = response['ac'][0].get('reg', '')
             image_url = await self._get_aircraft_image(registration)
             if image_url:
-                embed.set_image(url=image_url)  # Set the image URL in the embed
+                embed.set_image(url=image_url)
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
 
