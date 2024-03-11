@@ -118,7 +118,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @commands.command(name='military_aircraft')
+    @aircraft_group.command(name='military', help= 'military aircraft')
     async def military_aircraft(self, ctx):
         url = f"{self.api_url}/mil"
         response = await self._make_request(url)
@@ -127,7 +127,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving military aircraft information.")
 
-    @commands.command(name='ladd_aircraft')
+    @aircraft_group.command(name='ladd_aircraft', help='Limiting Aircraft Data Displayed (LADD)')
     async def ladd_aircraft(self, ctx):
         url = f"{self.api_url}/ladd"
         response = await self._make_request(url)
@@ -154,7 +154,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information within the specified radius.")
 
-    @commands.command(name='set_max_requests', help='Set the maximum number of requests the bot can make to the API.')
+    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
     @commands.is_owner()
     async def set_max_requests(self, ctx, max_requests: int):
         self.max_requests_per_user = max_requests
