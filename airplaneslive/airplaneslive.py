@@ -47,10 +47,12 @@ class Airplaneslive(commands.Cog):
         if 'ac' in response and response['ac']:
             registration = response['ac'][0].get('reg', '')
             image_url = await self._get_aircraft_image(registration)
+            print("Image URL:", image_url)  # Print image URL for debugging
             if image_url:
                 embed.set_image(url=image_url)  # Set image of the embed
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
+
 
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
