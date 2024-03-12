@@ -26,14 +26,19 @@ class Airplaneslive(commands.Cog):
                 response = await client.get(url)
                 if response.status_code == 200:
                     data = response.json()
-                    if data.get('photos'):
-                        photo = data['photos'][0]
+                    if 'error' in data:
+                        print(f"Error fetching aircraft image: {data['error']}")
+                        return None
+                    photos = data.get('photos', [])
+                    if photos:
+                        photo = photos[0]
                         thumbnail = photo.get('thumbnail', {}).get('src')
                         return thumbnail
                 return None
         except Exception as e:
             print(f"Error fetching aircraft image: {e}")
             return None
+
 
 
     async def _send_aircraft_info(self, ctx, response):
