@@ -40,9 +40,6 @@ class Airplaneslive(commands.Cog):
             print(f"Error fetching aircraft image: {e}")
             return None
 
-
-
-
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
         embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
@@ -54,6 +51,7 @@ class Airplaneslive(commands.Cog):
                 embed.set_image(url=image_url)  # Set image of the embed
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
+
 
 
     def _format_response(self, response):
