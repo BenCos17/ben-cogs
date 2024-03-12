@@ -42,7 +42,7 @@ class Airplaneslive(commands.Cog):
             registration = response['ac'][0].get('reg', '')
             image_url = await self._get_aircraft_image(registration)
             if image_url:
-                embed.set_image(url=image_url)  # Set image of the embed
+                embed.set_image(url=_get_aircraft_image)  # Set image of the embed
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
 
