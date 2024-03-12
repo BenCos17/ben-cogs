@@ -22,7 +22,8 @@ class Airplaneslive(commands.Cog):
     async def _get_aircraft_image(self, registration):
         try:
             async with httpx.AsyncClient() as client:
-                url = f"https://api.planespotters.net/pub/photos/reg/{registration}"
+                url = f"https://api.planespotters.net/pub/photos/hex/{registration}"
+                
                 response = await client.get(url)
                 if response.status_code == 200:
                     data = response.json()
@@ -42,7 +43,7 @@ class Airplaneslive(commands.Cog):
             registration = response['ac'][0].get('reg', '')
             image_url = await self._get_aircraft_image(registration)
             if image_url:
-                embed.set_image(url=_get_aircraft_image)  # Set image of the embed
+                embed.set_image(url=image_url)  # Set image of the embed
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
 
