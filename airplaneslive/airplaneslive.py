@@ -22,8 +22,7 @@ class Airplaneslive(commands.Cog):
     async def _get_aircraft_image(self, registration):
         try:
             async with httpx.AsyncClient() as client:
-                url = f"https://api.planespotters.net/pub/photos/hex/{registration}"
-                
+                url = f"https://api.planespotters.net/pub/photos/hex/{registration}/0"
                 response = await client.get(url)
                 if response.status_code == 200:
                     data = response.json()
@@ -35,6 +34,7 @@ class Airplaneslive(commands.Cog):
         except Exception as e:
             print(f"Error fetching aircraft image: {e}")
             return None
+
 
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
