@@ -46,6 +46,10 @@ class Airplaneslive(commands.Cog):
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
 
+    # Rest of the code remains unchanged
+    # ...
+
+
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
