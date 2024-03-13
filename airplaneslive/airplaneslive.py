@@ -19,26 +19,7 @@ class Airplaneslive(commands.Cog):
                 print(f"Error making request: {e}")
                 return None
 
-    async def _get_aircraft_image(self, registration):
-        try:
-            async with httpx.AsyncClient() as client:
-                url = f"https://api.planespotters.net/pub/photos/reg/{registration}/photos/0"
-                print("Image API URL:", url)  # Debugging print
-                response = await client.get(url)
-                if response.status_code == 200:
-                    data = response.json()
-                    if 'error' in data:
-                        print(f"Error fetching aircraft image: {data['error']}")
-                        return None
-                    photos = data.get('photos', [])
-                    if photos:
-                        photo = photos[0]
-                        thumbnail = photo.get('thumbnail', {}).get('src')
-                        return thumbnail
-                return None
-        except Exception as e:
-            print(f"Error fetching aircraft image: {e}")
-            return None
+
 
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
@@ -46,9 +27,6 @@ class Airplaneslive(commands.Cog):
         if 'ac' in response and response['ac']:
             registration = response['ac'][0].get('reg', '')
             image_url = await self._get_aircraft_image(registration)
-            print("Image URL:", image_url)  # Print image URL for debugging
-            if image_url:
-                embed.set_image(url=image_url)  # Set image of the embed
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
 
