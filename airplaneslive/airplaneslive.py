@@ -19,7 +19,7 @@ class Airplaneslive(commands.Cog):
                 print(f"Error making request: {e}")
                 return None
 
-    async def _get_aircraft_image(self, registration):
+    await self._send_aircraft_info(ctx, response, registration)
         try:
             async with httpx.AsyncClient() as client:
                 url = f"https://api.planespotters.net/pub/photos/reg/{registration}/photos/0"
@@ -40,7 +40,7 @@ class Airplaneslive(commands.Cog):
             print(f"Error fetching aircraft image: {e}")
             return None
 
-    async def _send_aircraft_info(self, ctx, response):
+    async def _send_aircraft_info(self, ctx, response, registration):
         formatted_response = self._format_response(response)
         embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
         if 'ac' in response and response['ac']:
