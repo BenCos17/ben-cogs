@@ -21,6 +21,10 @@ class Airplaneslive(commands.Cog):
 
     async def _get_aircraft_image(self, registration):
         try:
+            if not registration:
+                print("Empty registration value")
+                return None
+        
             async with httpx.AsyncClient() as client:
                 url = f"https://api.planespotters.net/pub/photos/reg/{registration}/photos/0"
                 print("Image API URL:", url)  # Debugging print
