@@ -179,6 +179,3 @@ class Airplaneslive(commands.Cog):
     async def set_max_requests(self, ctx, max_requests: int):
         self.max_requests_per_user = max_requests
         await ctx.send(f"Maximum requests per user set to {max_requests}.")
-
-def setup(bot):
-    bot.add_cog(Airplaneslive(bot))
