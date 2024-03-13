@@ -26,7 +26,7 @@ class Airplaneslive(commands.Cog):
                 return None
         
             async with httpx.AsyncClient() as client:
-                url = f"https://api.planespotters.net/pub/photos/reg/{registration}"
+                url = f"https://api.planespotters.net/pub/photos/hex/{registration}"
                 print("Image API URL:", url)  # Debugging print
                 response = await client.get(url)
                 if response.status_code == 200:
