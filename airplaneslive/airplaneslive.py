@@ -48,7 +48,7 @@ class Airplaneslive(commands.Cog):
             image_url = await self._get_aircraft_image(registration)
             print("Image URL:", image_url)  # Print image URL for debugging
             if image_url:
-                embed.set_image(url=https://www.planespotters.net/photo/1284674/ln-one-bristow-norway-as-sikorsky-s-92a)  # Set image of the embed
+                embed.set_image(url=image_url)  # Set image of the embed
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
 
