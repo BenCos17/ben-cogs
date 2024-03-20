@@ -19,38 +19,7 @@ class Airplaneslive(commands.Cog):
                 print(f"Error making request: {e}")
                 return None
 
-    async def _get_aircraft_image(self, registration):
-        try:
-            if not registration:
-                print("Empty registration value")
-                return None
-        
-            async with httpx.AsyncClient() as client:
-                url = f"https://api.planespotters.net/pub/photos/hex/{registration}"
-                print("Image API URL:", url)  # Debugging print
-                response = await client.get(url)
-                if response.status_code == 200:
-                    data = response.json()
-                    photos = data.get('photos', [])
-                    if photos:
-                        photo = photos[0]
-                        thumbnail = photo.get('thumbnail', {}).get('src')
-                        if thumbnail:
-                            # Unescape the URL (remove backslashes)
-                            thumbnail = thumbnail.replace('\\', '')
-                            return thumbnail
-                        else:
-                            print("No thumbnail URL found in the response")
-                            return None
-                    else:
-                        print("No photos found in the response")
-                        return None
-                else:
-                    print(f"Error fetching aircraft image: HTTP status code {response.status_code}")
-                    return None
-        except Exception as e:
-            print(f"Error fetching aircraft image: {e}")
-            return None
+
 
 
     async def _send_aircraft_info(self, ctx, response):
@@ -149,7 +118,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving military aircraft information.")
 
-    @aircraft_group.command(name='ladd_aircraft', help='Limiting Aircraft Data Displayed (LADD)')
+    @aircraft_group.command(name='ladd', help='Limiting Aircraft Data Displayed (LADD)')
     async def ladd_aircraft(self, ctx):
         url = f"{self.api_url}/ladd"
         response = await self._make_request(url)
