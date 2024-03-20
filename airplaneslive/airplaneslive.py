@@ -56,7 +56,8 @@ class Airplaneslive(commands.Cog):
                 f"**Aircraft Type:** {aircraft_data.get('t', 'N/A')}\n"
                 f"**Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
                 f"**Altitude Rate:** {aircraft_data.get('baro_rate', 'N/A')} feet/minute\n"
-                f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute"
+                f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute\n"
+                f"**Image URL:** {await self._get_photo_url(aircraft_data.get('hex', ''))}"  # Added line
             )
             return formatted_data
         else:
