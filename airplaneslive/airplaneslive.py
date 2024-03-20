@@ -2,10 +2,13 @@ import discord
 from redbot.core import commands
 import httpx
 import json
+import requests
+
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.api_url = "https://api.airplanes.live/v2"
+        self.airplaneslive_api_url = "https://api.airplanes.live/v2"
+        self.planespotters_api_url = "https://api.planespotters.net/pub/photos/hex/"
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color.blue()  # Replace with your preferred color
 
@@ -19,20 +22,15 @@ class Airplaneslive(commands.Cog):
                 print(f"Error making request: {e}")
                 return None
 
-
-
-
-async def _send_aircraft_info(self, ctx, response):
-    formatted_response = self._format_response(response)
-    embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
-    if 'ac' in response and response['ac']:
-        registration = response['ac'][0].get('reg', '')
+    async def _send_aircraft_info(self, ctx, response):
+        formatted_response = self._format_response(response)
+        hex_id = response['ac'][0].get('hex', '')  # Extract hex ID
+        image_url, photographer = self._get_photo_by_hex(hex_id)
+        embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
         if image_url:
-            embed.set_footer(text="Powered by airplanes.live ✈️")
-    await ctx.send(embed=embed)
-
-
-
+            embed.set_image(url=image_url)
+            embed.set_footer(text=f"Photograph by {photographer} | Powered by Planespotters.net ✈️")
+        await ctx.send(embed=embed)
 
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
@@ -58,6 +56,17 @@ async def _send_aircraft_info(self, ctx, response):
             return formatted_data
         else:
             return "No aircraft found with the specified callsign."
+
+    async def _get_photo_by_hex(self, hex_id):
+        try:
+            response = requests.get(self.planespotters_api_url + hex_id)
+            json_data = response.json()
+            photo = json_data['photos'][0]
+            url = photo['thumbnail_large']['src']
+            photographer = photo['photographer']
+            return url, photographer
+        except (KeyError, IndexError):
+            return None, None
 
     @commands.group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
