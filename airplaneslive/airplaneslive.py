@@ -30,7 +30,7 @@ class Airplaneslive(commands.Cog):
         if image_url:
             embed.set_image(url=image_url)
             embed.set_footer(text=f"Photograph by {photographer} | Powered by Planespotters.net and airplanes.live ✈️")
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed) 
 
 
 
