@@ -24,13 +24,20 @@ class Airplaneslive(commands.Cog):
 
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
-        hex_id = response['ac'][0].get('hex', '')  # Extract hex ID
-        image_url, photographer = await self._get_photo_by_hex(hex_id)
-        embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
-        if image_url:
-            embed.set_image(url=image_url)
-        embed.set_footer(text=f"Photograph by {photographer} | Powered by Planespotters.net and airplanes.live ✈️")
-        await ctx.send(embed=embed)
+        
+        if 'ac' in response and response['ac']:
+            hex_id = response['ac'][0].get('hex', '')
+            image_url, photographer = await self._get_photo_by_hex(hex_id)
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
+            
+            if image_url:
+                embed.set_image(url=image_url)
+                embed.set_footer(text=f"Photograph by {photographer} | Powered by Planespotters.net and airplanes.live ✈️")
+            
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("No aircraft information available.")
+
 
 
     async def _get_photo_by_hex(self, hex_id):
