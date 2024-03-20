@@ -7,7 +7,7 @@ import requests
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.airplaneslive_api_url = "https://api.airplanes.live/v2"
+        self.api_url = "https://api.airplanes.live/v2"
         self.planespotters_api_url = "https://api.planespotters.net/pub/photos/hex/"
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color.blue()  # Replace with your preferred color
