@@ -29,7 +29,7 @@ class Airplaneslive(commands.Cog):
         embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
         if image_url:
           #  embed.set_image(url=image_url)
-            embed.set_footer(text=f"Photograph by {photographer} | Powered by Planespotters.net and airplanes.live ✈️ \n{image_url}")
+            embed.set_footer(text=f"Powered by airplanes.live✈️")
         await ctx.send(embed=embed)
 
     def _format_response(self, response):
