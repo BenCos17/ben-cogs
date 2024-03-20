@@ -8,7 +8,6 @@ class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.api_url = "https://api.airplanes.live/v2"
-        self.planespotters_api_url = "https://api.planespotters.net/pub/photos/hex/"
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color.blue()  # Replace with your preferred color
 
@@ -25,17 +24,34 @@ class Airplaneslive(commands.Cog):
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
         hex_id = response['ac'][0].get('hex', '')  # Extract hex ID
-        image_url, photographer = await self._get_photo_by_hex(hex_id)  # Await added here
+        image_url, photographer = await self._get_photo_by_hex(hex_id)
         embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
         if image_url:
             embed.set_image(url=image_url)
-            embed.set_footer(text=f"Photograph by {photographer} | Powered by Planespotters.net and airplanes.live ✈️\n{image_url}")
-        else:
-            embed.set_footer(text=f"Powered by Planespotters.net and airplanes.live ✈️")
-
-        # Sending the embed
+            embed.set_footer(text=f"Photograph by {photographer} | Powered by Planespotters.net and airplanes.live ✈️")
         await ctx.send(embed=embed)
 
+    async def _get_photo_by_hex(self, hex_id):
+        response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
+        json_out = response.json()
+        try:
+            photo = json_out['photos'][0]
+            url = photo['thumbnail_large']['src']
+            photographer = photo['photographer']
+        except (KeyError, IndexError):
+            url = ""
+            photographer = "No photograph available"
+        return url, photographer
+
+    async def _get_photo_url(self, hex_id):
+        response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
+        json_out = response.json()
+        try:
+            photo = json_out['photos'][0]
+            url = photo['thumbnail_large']['src']
+        except (KeyError, IndexError):
+            url = ""
+        return url
 
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
@@ -57,12 +73,12 @@ class Airplaneslive(commands.Cog):
                 f"**Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
                 f"**Altitude Rate:** {aircraft_data.get('baro_rate', 'N/A')} feet/minute\n"
                 f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute\n"
-                f"**Image URL:** { self._get_image_url(aircraft_data.get('hex', ''))}"  # Added line
-                
-                )
+                f"**Image URL:** {await self._get_photo_url(aircraft_data.get('hex', ''))}"  # Added line
+            )
             return formatted_data
         else:
             return "No aircraft found with the specified callsign."
+
 
     async def _get_photo_by_hex(self, hex_id):
         try:
