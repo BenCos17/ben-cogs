@@ -33,7 +33,6 @@ async def _send_aircraft_info(self, ctx, response):
 
 
 
-        await ctx.send(embed=embed)
 
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
