@@ -34,26 +34,26 @@ class Airplaneslive(commands.Cog):
 
 
     async def _get_photo_by_hex(self, hex_id):
-        response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
-        json_out = response.json()
         try:
+            response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
+            json_out = response.json()
             photo = json_out['photos'][0]
             url = photo['thumbnail_large']['src']
             photographer = photo['photographer']
+            return url, photographer
         except (KeyError, IndexError):
-            url = ""
-            photographer = "No photograph available"
-        return url, photographer
+            return "", "No photograph available"
 
     async def _get_photo_url(self, hex_id):
-        response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
-        json_out = response.json()
         try:
+            response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
+            json_out = response.json()
             photo = json_out['photos'][0]
             url = photo['thumbnail_large']['src']
+            return url
         except (KeyError, IndexError):
-            url = ""
-        return url
+            return ""
+
 
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
