@@ -27,7 +27,7 @@ class Airplaneslive(commands.Cog):
         embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
         if 'ac' in response and response['ac']:
             registration = response['ac'][0].get('reg', '')
-            if image_url:
+             if image_url:
         embed.set_footer(text="Powered by airplanes.live ✈️")
         await ctx.send(embed=embed)
 
