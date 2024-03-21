@@ -32,7 +32,15 @@ class Airplaneslive(commands.Cog):
             embed.set_footer(text=f"Photograph by {photographer} | Powered by Planespotters.net and airplanes.live ✈️")
         await ctx.send(embed=embed)
 
-
+        # Create link buttons
+        feed_button = Button(label="Feed", style=discord.ButtonStyle.link, url="https://airplanes.live/get-started/")
+        tracking_button = Button(label="Tracking Site", style=discord.ButtonStyle.link, url="https://globe.airplanes.live/")
+        
+        # Create action row
+        action_row = discord.ui.ActionRow(feed_button, tracking_button)
+        
+        # Send embed with buttons
+        await ctx.send(embed=embed, components=[action_row])
 
 
     async def _get_photo_by_hex(self, hex_id):
