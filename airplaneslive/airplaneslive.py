@@ -49,7 +49,7 @@ class Airplaneslive(commands.Cog):
 
 
 
-     def _format_response(self, response):
+    async def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
             formatted_data = (
@@ -69,7 +69,7 @@ class Airplaneslive(commands.Cog):
                 f"**Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
                 f"**Altitude Rate:** {aircraft_data.get('baro_rate', 'N/A')} feet/minute\n"
                 f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute\n"
-                f"**Image URL:** { self._get_photo_by_hex(aircraft_data.get('hex', ''))}"  # Added line
+                f"**Image URL:** {await self._get_photo_by_hex(aircraft_data.get('hex', ''))}"  # Added line
             )
             return formatted_data
         else:
