@@ -50,11 +50,13 @@ class Airplaneslive(commands.Cog):
         try:
             response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
             json_out = response.json()
-            photo = json_out['photos'][0]
-            url = photo['thumbnail_large']['src']
-            return url
-        except (KeyError, IndexError):
-            return ""
+            if 'photos' in json_out and json_out['photos']:
+                photo = json_out['photos'][0]
+                url = photo.get('thumbnail_large', {}).get('src', '')
+                return url
+        except (KeyError, IndexError, httpx.RequestError):
+            pass
+        return None
 
 
     def _format_response(self, response):
