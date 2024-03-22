@@ -84,16 +84,7 @@ class Airplaneslive(commands.Cog):
             return "No aircraft found with the specified callsign."
 
 
-    async def _get_photo_by_hex(self, hex_id):
-        try:
-            response = requests.get(self.planespotters_api_url + hex_id)
-            json_data = response.json()
-            photo = json_data['photos'][0]
-            url = photo['thumbnail_large']['src']
-            photographer = photo['photographer']
-            return url, photographer
-        except (KeyError, IndexError):
-            return None, None
+
 
     @commands.group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
