@@ -35,28 +35,31 @@ class Airplaneslive(commands.Cog):
 
 
 
-    async def _get_photo_by_hex(self, hex_id):
-        try:
-            response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
-            json_out = response.json()
-            photo = json_out['photos'][0]
-            url = photo['thumbnail_large']['src']
-            photographer = photo['photographer']
-            return url, photographer
-        except (KeyError, IndexError):
-            return "", "No photograph available"
+    async def _send_aircraft_info(self, ctx, response):
+        formatted_response = self._format_response(response)
+        hex_id = response['photos'][0].get('hex', '')  # Extract hex ID
+        image_url, photographer = await self._get_photo_by_hex(hex_id)
+        embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
+        if image_url:
+            embed.set_image(url=image_url)
+            embed.set_footer(text=f"Powered by Planespotters.net and airplanes.live ✈️")
+        await ctx.send(embed=embed)
 
-    async def _get_photo_url(self, hex_id):
-        try:
-            response = await httpx.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
-            json_out = response.json()
-            if 'photos' in json_out and json_out['photos']:
-                photo = json_out['photos'][0]
-                url = photo.get('thumbnail_large', {}).get('src', '')
-                return url
-        except (KeyError, IndexError, httpx.RequestError):
-            pass
-        return None
+    async def _get_photo_by_hex(self, hex_id):
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
+                if response.status_code == 200:
+                    json_out = response.json()
+                    if 'photos' in json_out and json_out['photos']:
+                        photo = json_out['photos'][0]
+                        url = photo.get('thumbnail_large', {}).get('src', '')
+                        photographer = photo.get('photographer', '')
+                        return url, photographer
+            except (KeyError, IndexError, httpx.RequestError):
+                pass
+        return None, None
+
 
 
     def _format_response(self, response):
