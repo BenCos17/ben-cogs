@@ -49,7 +49,7 @@ class Airplaneslive(commands.Cog):
 
 
 
-    def _format_response(self, response):
+    async def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
             formatted_data = (
