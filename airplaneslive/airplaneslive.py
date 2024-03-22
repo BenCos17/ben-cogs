@@ -32,19 +32,6 @@ class Airplaneslive(commands.Cog):
             embed.set_footer(text=f"Powered by Planespotters.net and airplanes.live ✈️")
         await ctx.send(embed=embed)
 
-
-
-
-    async def _send_aircraft_info(self, ctx, response):
-        formatted_response = self._format_response(response)
-        hex_id = response['photos'][0].get('hex', '')  # Extract hex ID
-        image_url, photographer = await self._get_photo_by_hex(hex_id)
-        embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
-        if image_url:
-            embed.set_image(url=image_url)
-            embed.set_footer(text=f"Powered by Planespotters.net and airplanes.live ✈️")
-        await ctx.send(embed=embed)
-
     async def _get_photo_by_hex(self, hex_id):
         async with httpx.AsyncClient() as client:
             try:
