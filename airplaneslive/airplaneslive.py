@@ -3,6 +3,7 @@ from redbot.core import commands
 import httpx
 import json
 import requests
+import aiohttp
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
@@ -173,9 +174,6 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
             
-            
-            
-            
                     #sets max api requests from airplanes.live and allows user to change it if they own the bot 
     @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
     @commands.is_owner()
@@ -183,3 +181,28 @@ class Airplaneslive(commands.Cog):
         self.max_requests_per_user = max_requests
         await ctx.send(f"Maximum requests per user set to {max_requests}.")
 
+    @commands.command()
+    async def airplaneslivestats(self, ctx):
+        """Get stats for Airplanes.live."""
+        url = "https://api.airplanes.live/stats"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    data = await response.json()
+            
+            if "beast" in data and "mlat" in data and "other" in data and "aircraft" in data:
+                beast_stats = data["beast"]
+                mlat_stats = data["mlat"]
+                other_stats = data["other"]
+                aircraft_stats = data["aircraft"]
+                
+                await ctx.send("airplaneslive Stats:")
+                await ctx.send(f"Beast: {beast_stats}")
+                await ctx.send(f"MLAT: {mlat_stats}")
+                await ctx.send(f"Other: {other_stats}")
+                await ctx.send(f"Aircraft: {aircraft_stats}")
+            else:
+                await ctx.send("Incomplete data received from API.")
+        except aiohttp.ClientError as e:
+            await ctx.send(f"Error fetching data: {e}")
