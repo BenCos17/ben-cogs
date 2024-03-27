@@ -12,7 +12,6 @@ To use the Airplaneslive cog, follow these steps:
 [p]repo add ben-cogs https://github.com/BenCos17/ben-cogs
 
 
-csharp
 
     [p]load airplaneslive
 
