@@ -197,11 +197,13 @@ class Airplaneslive(commands.Cog):
                 other_stats = data["other"]
                 aircraft_stats = data["aircraft"]
                 
-                await ctx.send("airplaneslive Stats:")
-                await ctx.send(f"Beast: {beast_stats}")
-                await ctx.send(f"MLAT: {mlat_stats}")
-                await ctx.send(f"Other: {other_stats}")
-                await ctx.send(f"Aircraft: {aircraft_stats}")
+                message = (f"airplanes.live Stats:\n"
+                            f"Beast: {beast_stats}\n"
+                            f"MLAT: {mlat_stats}\n"
+                            f"Other: {other_stats}\n"
+                            f"Aircraft: {aircraft_stats}")
+                
+                await ctx.send(message)
             else:
                 await ctx.send("Incomplete data received from API.")
         except aiohttp.ClientError as e:
