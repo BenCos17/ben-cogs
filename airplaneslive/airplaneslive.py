@@ -163,8 +163,8 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information within the specified radius.")
 
-    @commands.command(name='aircraft_to_json', help='Get aircraft information in JSON format.')
-    async def aircraft_to_json(self, ctx, aircraft_type):
+    @aircraft_group.command(name='json', help='Get aircraft information in JSON format.')
+    async def json(self, ctx, aircraft_type):
         url = f"{self.api_url}/type/{aircraft_type}"
         response = await self._make_request(url)
         if response:
