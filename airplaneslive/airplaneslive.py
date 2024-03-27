@@ -10,7 +10,7 @@ class Airplaneslive(commands.Cog):
         self.api_url = "https://api.airplanes.live/v2"
         self.planespotters_api_url = "https://api.planespotters.net/pub/photos"
         self.max_requests_per_user = 10
-        self.EMBED_COLOR = discord.Color.blue()  # Replace with your preferred color
+        self.EMBED_COLOR = discord.Color.blue()  #sets emded color to blue 
 
     async def _make_request(self, url):
         async with httpx.AsyncClient() as client:
@@ -24,7 +24,7 @@ class Airplaneslive(commands.Cog):
 
     async def _send_aircraft_info(self, ctx, response):
         formatted_response = self._format_response(response)
-        hex_id = response['ac'][0].get('hex', '')  # Extract hex ID
+        hex_id = response['ac'][0].get('hex', '')  # Extracts hex ID from command 
         image_url, photographer = await self._get_photo_by_hex(hex_id)
         embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
         if image_url:
@@ -35,7 +35,7 @@ class Airplaneslive(commands.Cog):
     async def _get_photo_by_hex(self, hex_id):
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
+                response = await client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')     #image method for planespotters.net embed images
                 if response.status_code == 200:
                     json_out = response.json()
                     if 'photos' in json_out and json_out['photos']:
@@ -48,7 +48,7 @@ class Airplaneslive(commands.Cog):
         return None, None
 
 
-
+                                            #formats the response from command ran
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
@@ -59,8 +59,6 @@ class Airplaneslive(commands.Cog):
                 f"**Ground Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
                 f"**Heading:** {aircraft_data.get('true_heading', 'N/A')} degrees\n"
                 f"**Position:** {aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}\n"  # Combine latitude and longitude
-              #  f"**Latitude:** {aircraft_data.get('lat', 'N/A')}\n"
-              #  f"**Longitude:** {aircraft_data.get('lon', 'N/A')}\n"
                 f"**Squawk:** {aircraft_data.get('squawk', 'N/A')}\n"
                 f"**Emergency:** {aircraft_data.get('emergency', 'N/A')}\n"
                 f"**Operator:** {aircraft_data.get('ownOp', 'N/A')}\n"
@@ -70,7 +68,6 @@ class Airplaneslive(commands.Cog):
                 f"**Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
                 f"**Altitude Rate:** {aircraft_data.get('baro_rate', 'N/A')} feet/minute\n"
                 f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute\n"
-             #   f"**Image URL:** {self._get_photo_by_hex(aircraft_data.get('hex', ''))}"  # Added line
             )
             return formatted_data
         else:
@@ -175,7 +172,11 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"```json\n{json_data}\n```")
         else:
             await ctx.send("Error retrieving aircraft information.")
-
+            
+            
+            
+            
+                    #sets max api requests from airplanes.live and allows user to change it if they own the bot 
     @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
     @commands.is_owner()
     async def set_max_requests(self, ctx, max_requests: int):
