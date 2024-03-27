@@ -181,8 +181,8 @@ class Airplaneslive(commands.Cog):
         self.max_requests_per_user = max_requests
         await ctx.send(f"Maximum requests per user set to {max_requests}.")
 
-    @commands.command()
-    async def airplaneslivestats(self, ctx):
+    @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
+    async def stats(self, ctx):
         """Get stats for Airplanes.live."""
         url = "https://api.airplanes.live/stats"
         
