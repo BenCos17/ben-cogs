@@ -58,7 +58,8 @@ class Airplaneslive(commands.Cog):
                 f"**Altitude:** {aircraft_data.get('alt_baro', 'N/A')} feet\n"
                 f"**Ground Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
                 f"**Heading:** {aircraft_data.get('true_heading', 'N/A')} degrees\n"
-                f"**Latitude:** {aircraft_data.get('lat', 'N/A')}\n", {aircraft_data.get('lon', 'N/A')}\n"
+                f"**Position:** {aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}\n"  # Combine latitude and longitude
+              #  f"**Latitude:** {aircraft_data.get('lat', 'N/A')}\n"
               #  f"**Longitude:** {aircraft_data.get('lon', 'N/A')}\n"
                 f"**Squawk:** {aircraft_data.get('squawk', 'N/A')}\n"
                 f"**Emergency:** {aircraft_data.get('emergency', 'N/A')}\n"
