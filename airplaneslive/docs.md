@@ -6,15 +6,12 @@ Installation
 
 To use the Airplaneslive cog, follow these steps:
 
-    Add the Repository: Use the [p]repo add command to add the ben-cogs repository. Replace <repository_url> with the repository URL:
+    
 
-    csharp
 
 [p]repo add ben-cogs https://github.com/BenCos17/ben-cogs
 
-Load the Cog: Use the [p]load command to load the airplaneslive cog:
 
-csharp
 
     [p]load airplaneslive
 
