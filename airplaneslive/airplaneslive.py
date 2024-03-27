@@ -185,25 +185,26 @@ class Airplaneslive(commands.Cog):
     async def stats(self, ctx):
         """Get stats for Airplanes.live."""
         url = "https://api.airplanes.live/stats"
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     data = await response.json()
-            
+
             if "beast" in data and "mlat" in data and "other" in data and "aircraft" in data:
                 beast_stats = data["beast"]
                 mlat_stats = data["mlat"]
                 other_stats = data["other"]
                 aircraft_stats = data["aircraft"]
-                
-                message = (f"airplanes.live Stats:\n"
-                            f"Beast: {beast_stats}\n"
-                            f"MLAT: {mlat_stats}\n"
-                            f"Other: {other_stats}\n"
-                            f"Aircraft: {aircraft_stats}")
-                
-                await ctx.send(message)
+
+                embed = discord.Embed(title="airplanes.live Stats", color=0x00ff00)
+                embed.set_thumbnail(url="https://airplanes.live/img/airplanes-live-logo.png")
+                embed.add_field(name="Beast", value=beast_stats, inline=False)
+                embed.add_field(name="MLAT", value=mlat_stats, inline=False)
+                embed.add_field(name="Other", value=other_stats, inline=False)
+                embed.add_field(name="Aircraft", value=aircraft_stats, inline=False)
+
+                await ctx.send(embed=embed)
             else:
                 await ctx.send("Incomplete data received from API.")
         except aiohttp.ClientError as e:
