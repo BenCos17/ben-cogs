@@ -24,14 +24,17 @@ class Airplaneslive(commands.Cog):
                 return None
 
     async def _send_aircraft_info(self, ctx, response):
-        formatted_response = self._format_response(response)
-        hex_id = response['ac'][0].get('hex', '')  # Extracts hex ID from command 
-        image_url, photographer = await self._get_photo_by_hex(hex_id)
-        embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
-        if image_url:
-            embed.set_image(url=image_url)
-            embed.set_footer(text=f"Powered by Planespotters.net and airplanes.live ✈️")
-        await ctx.send(embed=embed)
+        if 'ac' in response and response['ac']:  # Check if 'ac' key exists and is not empty
+            formatted_response = self._format_response(response)
+            hex_id = response['ac'][0].get('hex', '')  # Extracts hex ID from command
+            image_url, photographer = await self._get_photo_by_hex(hex_id)
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
+            if image_url:
+                embed.set_image(url=image_url)
+                embed.set_footer(text=f"Powered by Planespotters.net and airplanes.live ✈️")
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("No aircraft information found or the response format is incorrect.")
 
     async def _get_photo_by_hex(self, hex_id):
         async with httpx.AsyncClient() as client:
