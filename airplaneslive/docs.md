@@ -44,7 +44,7 @@ d. type
 
     Description: Get information about aircraft by its type.
     Usage: [p]aircraft type <aircraft_type>
-    Example: [p]aircraft type Boeing 747
+    Example: [p]aircraft type B737
 
 e. squawk
 
