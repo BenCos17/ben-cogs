@@ -20,7 +20,8 @@ Commands
 
     Description: This command group provides subcommands to retrieve information about aircraft based on different parameters.
 
-Subcommands:
+Subcommands:    
+
 a. hex
 
     Description: Get information about an aircraft by its hexadecimal identifier.
