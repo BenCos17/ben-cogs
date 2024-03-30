@@ -1,6 +1,7 @@
-import discord
 from redbot.core import commands
+import discord
 import sympy
+
 
 class LaTeXNotation(commands.Cog):
     def __init__(self, bot):
@@ -13,11 +14,11 @@ class LaTeXNotation(commands.Cog):
             return
 
         if message.channel.id in self.enabled_channels:
-            latex_message = self.convert_to_latex(message.content)
+            latex_message = await self.convert_to_latex(message.content)
             if latex_message != message.content:
                 await message.channel.send(latex_message)
 
-    def convert_to_latex(self, message_content):
+    async def convert_to_latex(self, message_content):
         # Check if the message contains a mathematical expression
         if sympy.sympify(message_content, evaluate=False):
             try:
@@ -44,4 +45,10 @@ class LaTeXNotation(commands.Cog):
         self.enabled_channels.remove(channel_id)
         await ctx.send("LaTeX notation conversion disabled.")
 
+    def cog_unload(self):
+        for channel_id in self.enabled_channels:
+            self.enabled_channels.remove(channel_id)
 
+
+def setup(bot):
+    bot.add_cog(LaTeXNotation(bot))
