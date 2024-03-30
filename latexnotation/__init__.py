@@ -1,7 +1,7 @@
 from redbot.core.bot import Red
 
-from .latexnotation import LaTeXNotation
+from .latexnotation import latexnotation
 
 
 async def setup(bot: Red):
-    bot.add_cog(LaTeXNotation(bot))
+    bot.add_cog(LatexNotation(bot))
