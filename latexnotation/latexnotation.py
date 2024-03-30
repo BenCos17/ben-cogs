@@ -44,5 +44,4 @@ class LaTeXNotation(commands.Cog):
         self.enabled_channels.remove(channel_id)
         await ctx.send("LaTeX notation conversion disabled.")
 
-def setup(bot):
-    bot.add_cog(LaTeXNotation(bot))
+
