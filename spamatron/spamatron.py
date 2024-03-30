@@ -44,5 +44,3 @@ class Spamatron(commands.Cog):
 
         await ctx.send(f"Successfully sent `{amount}` messages to {target_channel.mention}.")
 
-def setup(bot):
-    bot.add_cog(Spamatron(bot))
