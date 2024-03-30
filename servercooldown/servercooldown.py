@@ -5,7 +5,7 @@ from redbot.core.bot import Red
 class ServerCooldown(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)  # Use a unique identifier
+        self.config = Config.get_conf(self, identifier=492089091320446976)  # Use a unique identifier
 
         default_guild_settings = {
             "command_cooldowns": {}
