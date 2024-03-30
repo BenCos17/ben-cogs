@@ -10,7 +10,7 @@ To use the `EmojiLink` cog, follow these steps:
 
 1. Add the repository containing the cog to your Red-DiscordBot instance:
    
-[p]repo add ben-cogs [<repository_url>](https://github.com/BenCos17/ben-cogs/)
+[p]repo add ben-cogs https://github.com/BenCos17/ben-cogs/
 
 markdown
 
