@@ -1,6 +1,6 @@
 from redbot.core.bot import Red
 
-from .latexnotation import latexnotation
+from .latexnotation import LatexNotation
 
 
 async def setup(bot: Red):
