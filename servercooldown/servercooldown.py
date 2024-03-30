@@ -53,5 +53,4 @@ class ServerCooldown(commands.Cog):
                 await ctx.command.reset_cooldown(ctx)
                 ctx.command._buckets._cooldown = commands.Cooldown(cooldown_time, cooldown_time, commands.BucketType.user)
 
-def setup(bot: Red):
-    bot.add_cog(Cooldown(bot))
+
