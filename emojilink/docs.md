@@ -10,22 +10,21 @@ To use the `EmojiLink` cog, follow these steps:
 
 1. Add the repository containing the cog to your Red-DiscordBot instance:
    
-
-[p]repo add <repository_name> <repository_url>
+[p]repo add ben-cogs [<repository_url>](https://github.com/BenCos17/ben-cogs/)
 
 markdown
 
 
-Replace `[p]` with your bot's prefix, `<repository_name>` with the desired name for the repository, and `<repository_url>` with the URL of the GitHub repository containing the `EmojiLink` cog.
+Replace `[p]` with your bot's prefix
 
 2. Install the `EmojiLink` cog:
 
-[p]cog install <repository_name> emojilink
+[p]cog install ben-cogs emojilink
 
 markdown
 
 
-Replace `[p]` with your bot's prefix and `<repository_name>` with the name of the repository added in step 1.
+Replace `[p]` with your bot's prefix  
 
 3. Load the `EmojiLink` cog:
 
