@@ -1,56 +1,71 @@
-markdown
+# EmojiLink Cog Documentation
 
-# EmojiLink Cog
+## Overview
 
 The `EmojiLink` cog provides commands to interact with emojis on Discord, including getting emoji links, listing emojis, getting information about specific emojis, and searching for emojis.
 
 ## Installation
 
-To use this cog, you can easily install it using Red-DiscordBot's downloader. Here's how:
+To use the `EmojiLink` cog, follow these steps:
 
-```python
-[p]repo add EmojiLinkCog https://github.com/your-username/your-repo
-[p]cog install EmojiLinkCog emojilink
+1. Add the repository containing the cog to your Red-DiscordBot instance:
+   
+
+[p]repo add <repository_name> <repository_url>
+
+markdown
+
+
+Replace `[p]` with your bot's prefix, `<repository_name>` with the desired name for the repository, and `<repository_url>` with the URL of the GitHub repository containing the `EmojiLink` cog.
+
+2. Install the `EmojiLink` cog:
+
+[p]cog install <repository_name> emojilink
+
+markdown
+
+
+Replace `[p]` with your bot's prefix and `<repository_name>` with the name of the repository added in step 1.
+
+3. Load the `EmojiLink` cog:
+
 [p]load emojilink
 
-Replace [p] with your bot's prefix and https://github.com/your-username/your-repo with the URL of your GitHub repository where the cog file (emojilink.py) is located.
-Commands
-getemojilink
+markdown
 
-Get the link for a Discord emoji.
 
-Parameters:
+Replace `[p]` with your bot's prefix.
 
-    emoji: The Discord emoji (custom emoji or Unicode emoji).
+## Commands
 
-listemojis
+The `EmojiLink` cog provides the following commands:
 
-List all custom emojis in the server along with their names and links.
-emojiinfo
+1. **getemojilink**
+- Get the link for a Discord emoji.
+- **Parameters:**
+  - `emoji`: The Discord emoji (custom emoji or Unicode emoji).
 
-Get information about a specific custom emoji, including its name, ID, and creation date.
+2. **listemojis**
+- List all custom emojis in the server along with their names and links.
 
-Parameters:
+3. **emojiinfo**
+- Get information about a specific custom emoji, including its name, ID, and creation date.
+- **Parameters:**
+  - `emoji`: The Discord emoji (custom emoji or Unicode emoji).
 
-    emoji: The Discord emoji (custom emoji or Unicode emoji).
+4. **randomemoji**
+- Get a link for a random custom emoji in the server.
 
-randomemoji
+5. **emojisearch**
+- Search for custom emojis based on their names or keywords.
+- **Parameters:**
+  - `keyword`: The search keyword.
 
-Get a link for a random custom emoji in the server.
-emojisearch
+## Usage
 
-Search for custom emojis based on their names or keywords.
+Once the cog is installed and loaded, you can use the commands provided by the `EmojiLink` cog to interact with emojis on your Discord server.
 
-Parameters:
-
-    keyword: The search keyword.
-
-Usage
-
-Once the cog is installed and loaded, you can use the commands listed above to interact with emojis on your Discord server.
-Example
-
-python
+## Example
 
 [p]getemojilink :smile:
 [p]listemojis
