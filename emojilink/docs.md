@@ -4,6 +4,8 @@
 
 The `EmojiLink` cog provides commands to interact with emojis on Discord, including getting emoji links, listing emojis, getting information about specific emojis, and searching for emojis.
 
+This cog is coded to be used with Discord bot using the Red-DiscordBot framework and running on the 3.5.x version of redbot.
+
 ## Installation
 
 To use the `EmojiLink` cog, follow these steps:

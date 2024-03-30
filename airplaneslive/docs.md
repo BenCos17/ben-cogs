@@ -1,7 +1,12 @@
 Airplaneslive Cog Documentation
+
 Overview
 
-The Airplaneslive cog provides commands to retrieve information about aircraft using the airplanes.live API and Planespotters.net API. This cog is designed to be integrated into a Discord bot using the Red-DiscordBot framework.
+The Airplaneslive cog provides commands to retrieve information about aircraft using the airplanes.live API and Planespotters.net API. 
+This cog is coded to be used with Discord bot using the Red-DiscordBot framework and running on the 3.5.x version of redbot.
+
+thank you to the airplanes.live server (https://discord.gg/adsb) and also many people in the redbot server (https://discord.gg/red) who helped me out with this cogs and also my cogs in general 
+
 Installation
 
 To use the Airplaneslive cog, follow these steps:
@@ -76,14 +81,15 @@ i. radius
     Usage: [p]aircraft radius <lat> <lon> <radius>
     Example: [p]aircraft radius 51.5074 -0.1278 50
 
-2. aircraft_to_json
+j. aircraft_to_json
 
     Description: Get aircraft information in JSON format.
     Usage: [p]aircraft_to_json <aircraft_type>
     Example: [p]aircraft_to_json Boeing 737
 
-3. set_max_requests
+k. set_max_requests   
+(bot owner only command) 
 
-    Description: Set the maximum number of requests the bot can make to the API. (Restricted to bot owner)
+    Description: Set the maximum number of requests the bot can make to the airplanes.live api. (Restricted to bot owner)
     Usage: [p]set_max_requests <max_requests>
     Example: [p]set_max_requests 20
