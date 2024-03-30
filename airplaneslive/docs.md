@@ -2,7 +2,10 @@ Airplaneslive Cog Documentation
 
 Overview
 
-The Airplaneslive cog provides commands to retrieve information about aircraft using the airplanes.live API and Planespotters.net API. This cog is coded to be used  with Discord bot using the Red-DiscordBot framework and running on the 3.5.x version of the code.
+The Airplaneslive cog provides commands to retrieve information about aircraft using the airplanes.live API and Planespotters.net API. 
+This cog is coded to be used with Discord bot using the Red-DiscordBot framework and running on the 3.5.x version of redbot.
+
+thank you to the airplanes.live server (https://discord.gg/adsb) and also many people in the redbot server (https://discord.gg/red) who helped me out with this cogs and also my cogs in general 
 
 Installation
 
