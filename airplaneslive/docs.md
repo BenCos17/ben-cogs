@@ -81,13 +81,13 @@ i. radius
     Usage: [p]aircraft radius <lat> <lon> <radius>
     Example: [p]aircraft radius 51.5074 -0.1278 50
 
-2. aircraft_to_json
+j. aircraft_to_json
 
     Description: Get aircraft information in JSON format.
     Usage: [p]aircraft_to_json <aircraft_type>
     Example: [p]aircraft_to_json Boeing 737
 
-3. set_max_requests
+k. set_max_requests
 
     Description: Set the maximum number of requests the bot can make to the API. (Restricted to bot owner)
     Usage: [p]set_max_requests <max_requests>
