@@ -6,5 +6,6 @@
     "description": "Imgen cog.",
     "tags": ["emoji", "emojis"],
     "end_user_data_statement": "This cog does not store any End User Data.",
-    "type": "COG"
+    "type": "COG",
     "hidden" : true
+}
