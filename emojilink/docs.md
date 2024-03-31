@@ -67,7 +67,7 @@ Once the cog is installed and loaded, you can use the commands provided by the `
 
 ```
 [p]getemojilink :smile:
-[p]listemojis
+[p]listemojis    (currently broken...)
 [p]emojiinfo :thumbsup:
 [p]randomemoji
 [p]emojisearch heart
