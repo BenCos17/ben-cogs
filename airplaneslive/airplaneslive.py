@@ -4,7 +4,11 @@ import httpx
 import json
 import requests
 import aiohttp
+from redbot.core.i18n import Translator, cog_i18n
 
+_ = Translator("Airplaneslive", __file__)
+
+@cog_i18n(_)
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -24,22 +28,22 @@ class Airplaneslive(commands.Cog):
                 return None
 
     async def _send_aircraft_info(self, ctx, response):
-        if 'ac' in response and response['ac']:  # Check if 'ac' key exists and is not empty
+        if 'ac' in response and response['ac']:  
             formatted_response = self._format_response(response)
-            hex_id = response['ac'][0].get('hex', '')  # Extracts hex ID from command
+            hex_id = response['ac'][0].get('hex', '')  
             image_url, photographer = await self._get_photo_by_hex(hex_id)
-            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
+            embed = discord.Embed(title=_('Aircraft Information'), description=formatted_response, color=self.EMBED_COLOR)
             if image_url:
                 embed.set_image(url=image_url)
-                embed.set_footer(text=f"Powered by Planespotters.net and airplanes.live ✈️")
+                embed.set_footer(text=_("Powered by Planespotters.net and airplanes.live ✈️"))
             await ctx.send(embed=embed)
         else:
-            await ctx.send("No aircraft information found or the response format is incorrect.")
+            await ctx.send(_("No aircraft information found or the response format is incorrect."))
 
     async def _get_photo_by_hex(self, hex_id):
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')     #image method for planespotters.net embed images
+                response = await client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
                 if response.status_code == 200:
                     json_out = response.json()
                     if 'photos' in json_out and json_out['photos']:
@@ -51,8 +55,6 @@ class Airplaneslive(commands.Cog):
                 pass
         return None, None
 
-
-                                            #formats the response from command ran
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
@@ -62,7 +64,7 @@ class Airplaneslive(commands.Cog):
                 f"**Altitude:** {aircraft_data.get('alt_baro', 'N/A')} feet\n"
                 f"**Ground Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
                 f"**Heading:** {aircraft_data.get('true_heading', 'N/A')} degrees\n"
-                f"**Position:** {aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}\n"  # Combine latitude and longitude
+                f"**Position:** {aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}\n"  
                 f"**Squawk:** {aircraft_data.get('squawk', 'N/A')}\n"
                 f"**Emergency:** {aircraft_data.get('emergency', 'N/A')}\n"
                 f"**Operator:** {aircraft_data.get('ownOp', 'N/A')}\n"
@@ -75,15 +77,12 @@ class Airplaneslive(commands.Cog):
             )
             return formatted_data
         else:
-            return "No aircraft found with the specified callsign."
-
-
-
+            return _("No aircraft found with the specified callsign.")
 
     @commands.group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send('Invalid aircraft command passed.')
+            await ctx.send(_('Invalid aircraft command passed.'))
 
     @aircraft_group.command(name='hex', help='Get information about an aircraft by its hexadecimal identifier.')
     async def aircraft_by_hex(self, ctx, hex_id):
@@ -92,7 +91,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information.")
+            await ctx.send(_("Error retrieving aircraft information."))
 
     @aircraft_group.command(name='callsign', help='Get information about an aircraft by its callsign.')
     async def aircraft_by_callsign(self, ctx, callsign):
@@ -101,7 +100,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("No aircraft found with the specified callsign.")
+            await ctx.send(_("No aircraft found with the specified callsign."))
 
     @aircraft_group.command(name='reg', help='Get information about an aircraft by its registration.')
     async def aircraft_by_reg(self, ctx, registration):
@@ -110,7 +109,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information.")
+            await ctx.send(_("Error retrieving aircraft information."))
 
     @aircraft_group.command(name='type', help='Get information about aircraft by its type.')
     async def aircraft_by_type(self, ctx, aircraft_type):
@@ -119,7 +118,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information.")
+            await ctx.send(_("Error retrieving aircraft information."))
 
     @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
     async def aircraft_by_squawk(self, ctx, squawk_value):
@@ -128,7 +127,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information.")
+            await ctx.send(_("Error retrieving aircraft information."))
 
     @aircraft_group.command(name='military', help= 'military aircraft')
     async def military_aircraft(self, ctx):
@@ -137,7 +136,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving military aircraft information.")
+            await ctx.send(_("Error retrieving military aircraft information."))
 
     @aircraft_group.command(name='ladd', help='Limiting Aircraft Data Displayed (LADD)')
     async def ladd_aircraft(self, ctx):
@@ -146,7 +145,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving LADD aircraft information.")
+            await ctx.send(_("Error retrieving LADD aircraft information."))
 
     @aircraft_group.command(name='pia', help='Privacy ICAO Address.')
     async def pia_aircraft(self, ctx):
@@ -155,7 +154,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving PIA aircraft information.")
+            await ctx.send(_("Error retrieving PIA aircraft information."))
 
     @aircraft_group.command(name='radius', help='Get information about aircraft within a specified radius.')
     async def aircraft_within_radius(self, ctx, lat, lon, radius):
@@ -164,7 +163,7 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information within the specified radius.")
+            await ctx.send(_("Error retrieving aircraft information within the specified radius."))
 
     @aircraft_group.command(name='json', help='Get aircraft information in JSON format.')
     async def json(self, ctx, aircraft_type):
@@ -175,14 +174,13 @@ class Airplaneslive(commands.Cog):
             json_data = json.dumps(aircraft_info, indent=4)
             await ctx.send(f"```json\n{json_data}\n```")
         else:
-            await ctx.send("Error retrieving aircraft information.")
+            await ctx.send(_("Error retrieving aircraft information."))
             
-                    #sets max api requests from airplanes.live and allows user to change it if they own the bot 
     @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
     @commands.is_owner()
     async def set_max_requests(self, ctx, max_requests: int):
         self.max_requests_per_user = max_requests
-        await ctx.send(f"Maximum requests per user set to {max_requests}.")
+        await ctx.send(f"{_('Maximum requests per user set to')} {max_requests}.")
 
     @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
     async def stats(self, ctx):
@@ -200,15 +198,16 @@ class Airplaneslive(commands.Cog):
                 other_stats = data["other"]
                 aircraft_stats = data["aircraft"]
 
-                embed = discord.Embed(title="airplanes.live Stats", color=0x00ff00)
+                embed = discord.Embed(title=_("airplanes.live Stats"), color=0x00ff00)
                 embed.set_thumbnail(url="https://airplanes.live/img/airplanes-live-logo.png")
-                embed.add_field(name="Beast", value=beast_stats, inline=False)
-                embed.add_field(name="MLAT", value=mlat_stats, inline=False)
-                embed.add_field(name="Other", value=other_stats, inline=False)
-                embed.add_field(name="Aircraft", value=aircraft_stats, inline=False)
+                embed.add_field(name=_("Beast"), value=beast_stats, inline=False)
+                embed.add_field(name=_("MLAT"), value=mlat_stats, inline=False)
+                embed.add_field(name=_("Other"), value=other_stats, inline=False)
+                embed.add_field(name=_("Aircraft"), value=aircraft_stats, inline=False)
 
                 await ctx.send(embed=embed)
             else:
-                await ctx.send("Incomplete data received from API.")
+                await ctx.send(_("Incomplete data received from API."))
         except aiohttp.ClientError as e:
-            await ctx.send(f"Error fetching data: {e}")
+            await ctx.send(_("Error fetching data: {e}"))
+
