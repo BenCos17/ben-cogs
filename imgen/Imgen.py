@@ -15,7 +15,7 @@ class Imgen(commands.Cog):
     async def memes(self, ctx, top_text: str, bottom_text: str, color: str = None, font: str = None):
         """Generate a meme with top and bottom text"""
         async with aiohttp.ClientSession() as session:
-            async with session.get('https://imgen.red/api/meme', params={'top_text': top_text, 'bottom_text': bottom_text, 'color': color, 'font': font}) as response:
+            async with session.get('https://imgen.red/api/meme_v2', params={'top_text': top_text, 'bottom_text': bottom_text, 'color': color, 'font': font}) as response:
                 if response.status == 200:
                     meme_url = await response.text()
                     await ctx.send(meme_url)
