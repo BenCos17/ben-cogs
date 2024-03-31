@@ -21,7 +21,7 @@ To use the Airplaneslive cog, follow these steps:
     [p]load airplaneslive
 
 Commands
-1. aircraft_group
+1. aircraft
 
     Description: This command group provides subcommands to retrieve information about aircraft based on different parameters.
 
