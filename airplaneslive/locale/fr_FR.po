@@ -1,0 +1,8 @@
+msgid "Invalid aircraft command passed."
+msgstr "Commande d'aéronef invalide."
+
+msgid "Aircraft Information"
+msgstr "Informations sur l'aéronef"
+
+msgid "Powered by Planespotters.net and airplanes.live ✈️"
+msgstr "Propulsé par Planespotters.net et airplanes.live ✈️"

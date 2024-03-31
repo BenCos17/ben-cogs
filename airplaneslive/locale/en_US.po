@@ -1,0 +1,14 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_US\n"
+
+msgid "Invalid aircraft command passed."
+msgstr "Invalid aircraft command passed."
+
+msgid "Aircraft Information"
+msgstr "Aircraft Information"
+
+msgid "Powered by Planespotters.net and airplanes.live ✈️"
+msgstr "Powered by Planespotters.net and airplanes.live ✈️"
+
