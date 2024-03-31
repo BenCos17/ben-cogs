@@ -70,7 +70,7 @@ Once the cog is installed and loaded, you can use the commands provided by the `
 [p]listemojis    (currently broken...)
 [p]emojiinfo :thumbsup:
 [p]randomemoji
-[p]emojisearch heart
+[p]emojisearch heart (currently broken...)
 ```
 Replace `[p]` with your bot's prefix.
 ```
