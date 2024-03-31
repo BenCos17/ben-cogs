@@ -4,7 +4,7 @@
     "name": "ben-cogs.",
     "short": "some random cogs I made for my own use and decided to make public.",
     "description": "airplanes tracking cog for the https://airplanes.live api .",
-    "tags": ["airplanes", "airplaneslive"],
+    "tags": ["airplanes", "airplaneslive, aircraft"],
     "end_user_data_statement": "This cog does not store any End User Data.",
     "type": "COG"
 }
