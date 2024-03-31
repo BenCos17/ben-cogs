@@ -117,5 +117,3 @@ class EmojiLink(commands.Cog):
                 all_emojis.append((emoji, None))
         return all_emojis
 
-def setup(bot: Red):
-    bot.add_cog(EmojiLink(bot))
