@@ -7,7 +7,7 @@ class Imgen(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
+        self.config = Config.get_conf(self, identifier=492089091320446976, force_registration=True)
         default_global = {}
         self.config.register_global(**default_global)
 
