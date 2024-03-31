@@ -69,5 +69,4 @@ class TalkNotifier(commands.Cog):
                 return True
         return False
 
-def setup(bot):
-    bot.add_cog(TalkNotifier(bot))
+
