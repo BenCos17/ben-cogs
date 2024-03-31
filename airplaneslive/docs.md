@@ -7,6 +7,8 @@ This cog is coded to be used with Discord bot using the Red-DiscordBot framework
 
 thank you to the airplanes.live server (https://discord.gg/adsb) and also many people in the redbot server (https://discord.gg/red) who helped me out with this cogs and also my cogs in general 
 
+(If you use this please consider setting up a feed to the site as would improve coverage for everyone.
+
 Installation
 
 To use the Airplaneslive cog, follow these steps:
