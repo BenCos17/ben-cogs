@@ -3,6 +3,9 @@
     "install_msg" : "thank for adding my repo /n feel free to message me on discord or create a github issue if you need support or help with anything.",
     "name" : "ben-cogs.",
     "short" : "some random cogs I made for my own use and decided to make public.",
-    "description" : "airplanes tracking cog for the https://airplanes.live api and some misc random ones I'm working on .",
-    "tags" : ["airplanes, airplaneslive,cooldown,spam."]
+    "description" : "commands to get emoji links and other info .",
+    "tags" : ["emoji, emojis."]
+
+    "end_user_data_statement": "This cog does not store any End User Data.",
+    "type": "COG"
 }

@@ -6,6 +6,6 @@
     "description" : "airplanes tracking cog for the https://airplanes.live api .",
     "tags" : ["airplanes, airplaneslive."]
 
-    "end_user_data_statement": "This cog does not store any End User Data.",
+    "end_user_data_statement": "This cog does stores user ids and also the custom message for the purposes of creating a custom message when a certainm user talks in a server.",
     "type": "COG"
 }
