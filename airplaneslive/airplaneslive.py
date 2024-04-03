@@ -1,8 +1,7 @@
 import discord
-from redbot.core import commands
+from redbot.core import commands, app_commands
 import httpx
 import json
-import requests
 import aiohttp
 
 class Airplaneslive(commands.Cog):
@@ -11,7 +10,7 @@ class Airplaneslive(commands.Cog):
         self.api_url = "https://api.airplanes.live/v2"
         self.planespotters_api_url = "https://api.planespotters.net/pub/photos"
         self.max_requests_per_user = 10
-        self.EMBED_COLOR = discord.Color.blue()  #sets emded color to blue 
+        self.EMBED_COLOR = discord.Color.blue()  # sets embed color to blue 
 
     async def _make_request(self, url):
         async with httpx.AsyncClient() as client:
@@ -51,8 +50,7 @@ class Airplaneslive(commands.Cog):
                 pass
         return None, None
 
-
-                                            #formats the response from command ran
+    # formats the response from command ran
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
@@ -76,9 +74,6 @@ class Airplaneslive(commands.Cog):
             return formatted_data
         else:
             return "No aircraft found with the specified callsign."
-
-
-
 
     @commands.group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
@@ -176,13 +171,6 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"```json\n{json_data}\n```")
         else:
             await ctx.send("Error retrieving aircraft information.")
-            
-                    #sets max api requests from airplanes.live and allows user to change it if they own the bot 
-    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
-    @commands.is_owner()
-    async def set_max_requests(self, ctx, max_requests: int):
-        self.max_requests_per_user = max_requests
-        await ctx.send(f"Maximum requests per user set to {max_requests}.")
 
     @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
     async def stats(self, ctx):
@@ -212,3 +200,10 @@ class Airplaneslive(commands.Cog):
                 await ctx.send("Incomplete data received from API.")
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
+
+    # Set the maximum number of requests the bot can make to the API.
+    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
+    @commands.is_owner()
+    async def set_max_requests(self, ctx, max_requests: int):
+        self.max_requests_per_user = max_requests
+        await ctx.send(f"Maximum requests per user set to {max_requests}.")
