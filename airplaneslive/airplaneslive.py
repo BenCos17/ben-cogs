@@ -83,7 +83,19 @@ class Airplaneslive(commands.Cog):
     @commands.group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send('Invalid aircraft command passed.')
+            # If no subcommand is provided, show help for the aircraft_group command
+            help_embed = discord.Embed(title="Aircraft Command Help", description="Get information about aircraft.", color=self.EMBED_COLOR)
+            help_embed.add_field(name="hex", value="Get information about an aircraft by its hexadecimal identifier.", inline=False)
+            help_embed.add_field(name="callsign", value="Get information about an aircraft by its callsign.", inline=False)
+            help_embed.add_field(name="reg", value="Get information about an aircraft by its registration.", inline=False)
+            help_embed.add_field(name="type", value="Get information about aircraft by its type.", inline=False)
+            help_embed.add_field(name="squawk", value="Get information about an aircraft by its squawk code.", inline=False)
+            help_embed.add_field(name="military", value="Get information about military aircraft.", inline=False)
+            help_embed.add_field(name="ladd", value="Limiting Aircraft Data Displayed (LADD).", inline=False)
+            help_embed.add_field(name="pia", value="Privacy ICAO Address.", inline=False)
+            help_embed.add_field(name="radius", value="Get information about aircraft within a specified radius.", inline=False)
+            help_embed.add_field(name="json", value="Get aircraft information in JSON format.", inline=False)
+            await ctx.send(embed=help_embed)
 
     @aircraft_group.command(name='hex', help='Get information about an aircraft by its hexadecimal identifier.')
     async def aircraft_by_hex(self, ctx, hex_id):
