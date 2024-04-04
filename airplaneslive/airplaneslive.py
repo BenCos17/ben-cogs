@@ -83,7 +83,7 @@ class Airplaneslive(commands.Cog):
     @commands.group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
         if ctx.invoked_subcommand is none:
-            return
+            return await ctx.send_help('aircraft')
         
 
 
