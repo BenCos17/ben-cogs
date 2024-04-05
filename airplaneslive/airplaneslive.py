@@ -80,10 +80,10 @@ class Airplaneslive(commands.Cog):
 
 
 
-    @commands.group(name='aircraft', help='Get information about aircraft.')
-    async def aircraft_group(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send('Invalid aircraft command passed.')
+#    @commands.group(name='aircraft', help='Get #information about aircraft.')
+#    async def aircraft_group(self, ctx):
+#        if ctx.invoked_subcommand is None:
+#            await ctx.send('Invalid aircraft #command passed.')
 
     @aircraft_group.command(name='hex', help='Get information about an aircraft by its hexadecimal identifier.')
     async def aircraft_by_hex(self, ctx, hex_id):
