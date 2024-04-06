@@ -1,9 +1,9 @@
 import discord
 from redbot.core import commands
-import httpx
-import json
-import requests
-#import aiohttp
+import httpx       #used for the actual lookup commands 
+import json        #used for json command
+import requests 
+import aiohttp     #used for stats command 
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
