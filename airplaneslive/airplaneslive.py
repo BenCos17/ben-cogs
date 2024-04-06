@@ -1,9 +1,9 @@
 import discord
 from redbot.core import commands
-#import httpx
+import httpx
 import json
 import requests
-import aiohttp
+#import aiohttp
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
