@@ -94,7 +94,7 @@ j. aircraft_to_json
 
 
 
-k.  Alert Command Usage
+k.  Alert Command Usage     {NB this is a WIP and not complete yet as it doesn't send messages just allows it to be added}
 
 The alert command in this bot allows you to set up alerts for specific aircraft and receive notifications when those aircraft are detected. Below is a guide on how to use the alert commands:
 
