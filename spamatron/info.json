@@ -5,6 +5,6 @@
     "short": "some random cogs I made for my own use and decided to make public.",
     "description": "spam command for admins in a server.",
     "tags": ["spam"],
-    "end_user_data_statement": "This cog does not store any end user data.",
+    "end_user_data_statement": "This cog stores message ids and content that is set with the commands in order to send the message.",
     "type": "COG"
 }
