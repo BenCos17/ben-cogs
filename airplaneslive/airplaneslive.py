@@ -219,7 +219,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"Error fetching data: {e}")
 
 
-#alerts stuff WIP
+#alerts stuff WIP not ready for use yet
 
     @aircraft_group.command(name='set_alert', help='Set up alerts for planes in a specific channel.')
     async def set_alert(self, ctx, hex_id: str, channel: discord.TextChannel):
