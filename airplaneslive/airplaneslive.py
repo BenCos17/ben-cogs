@@ -270,3 +270,15 @@ class Airplaneslive(commands.Cog):
             except Exception as e:
                 print(f"Error checking alerts: {e}")
                 await asyncio.sleep(self.alert_check_interval)
+
+
+
+    @aircraft_group.command(name='list_alerts', help='List all active alerts.')
+    async def list_alerts(self, ctx):
+        """List all active alerts."""
+        alerts = await self.config.alerts()
+        if alerts:
+            alert_list = "\n".join([f"Hex ID: {alert['hex_id']}, Channel: <#{alert['channel_id']}>" for alert in alerts])
+            await ctx.send(f"Active alerts:\n{alert_list}")
+        else:
+            await ctx.send("No active alerts found.")
