@@ -9,11 +9,14 @@ thank you to the airplanes.live server (https://discord.gg/adsb) and also many p
 
 (If you use this please consider setting up a feed to the site as would improve coverage for everyone.
 
+
+
 Installation
+
 
 To use the Airplaneslive cog, follow these steps:
 
-    
+# [p] is your prefix
 
 
 [p]repo add ben-cogs https://github.com/BenCos17/ben-cogs
@@ -99,7 +102,7 @@ The alert command in this bot allows you to set up alerts for specific aircraft 
 
    To set up an alert for a specific aircraft:
    ```
-   !aircraft set_alert [HEX_ID] #[CHANNEL]
+   [p]aircraft set_alert [HEX_ID] #[CHANNEL]
    ```
    Replace `[HEX_ID]` with the hexadecimal identifier of the aircraft and `#[CHANNEL]` with the channel where you want to receive alerts.
 
@@ -107,7 +110,7 @@ The alert command in this bot allows you to set up alerts for specific aircraft 
 
    To see a list of all active alerts:
    ```
-   !aircraft list_alerts
+   [p]aircraft list_alerts
    ```
    This command will display a list of all active alerts, showing the aircraft hex IDs and the channels where alerts are set to be sent.
 
@@ -115,7 +118,7 @@ The alert command in this bot allows you to set up alerts for specific aircraft 
 
    If you no longer want to receive alerts for a specific aircraft:
    ```
-   !aircraft remove_alert [HEX_ID]
+   [p]aircraft remove_alert [HEX_ID]
    ```
    Replace `[HEX_ID]` with the hexadecimal identifier of the aircraft for which you want to remove the alert.
 
