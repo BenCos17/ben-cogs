@@ -8,10 +8,15 @@ import aiohttp     #used for stats command
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config = Config.get_conf(self, identifier=492089091320446976)  
+        default_global = {
+            'alerts': []
+        }
+        self.config.register_global(**default_global)
         self.api_url = "https://api.airplanes.live/v2"
         self.planespotters_api_url = "https://api.planespotters.net/pub/photos"
         self.max_requests_per_user = 10
-        self.EMBED_COLOR = discord.Color.blue()  #sets emded color to blue 
+        self.EMBED_COLOR = discord.Color.blue()  #sets embed color to blue 
 
     async def _make_request(self, url):
         async with httpx.AsyncClient() as client:
