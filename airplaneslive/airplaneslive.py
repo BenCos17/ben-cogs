@@ -1,5 +1,5 @@
 import discord
-from redbot.core import commands Config
+from redbot.core import commands, Config
 import httpx       #used for the actual lookup commands 
 import json        #used for json command
 import requests 
