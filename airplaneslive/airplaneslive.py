@@ -274,7 +274,7 @@ class Airplaneslive(commands.Cog):
 
 #list all setup alerts in server
 
-    @aircraft_group.command(name='list_alerts', help='List all active alerts.')
+    @aircraft_group.command(name='listalerts', help='List all active alerts.')
     async def list_alerts(self, ctx):
         """List all active alerts."""
         alerts = await self.config.alerts()
