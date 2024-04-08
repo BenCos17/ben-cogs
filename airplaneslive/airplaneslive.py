@@ -218,6 +218,18 @@ class Airplaneslive(commands.Cog):
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
 
+
+
+
+
+
+
+
+
+
+
+#alert commands for aircrafts
+
     @aircraft_group.command(name='set_alert', help='Set up alerts for planes in a specific channel.')
     async def set_alert(self, ctx, hex_id: str, channel: discord.TextChannel):
         alerts = await self.config.alerts()
@@ -229,14 +241,7 @@ class Airplaneslive(commands.Cog):
         await self.config.alerts.set(alerts)
         await ctx.send(f"Alert for aircraft with hex ID {hex_id} set in channel {channel.mention}.")
 
-    @aircraft_group.command(name='list_alerts', help='List all active alerts.')
-    async def list_alerts(self, ctx):
-        alerts = await self.config.alerts()
-        if alerts:
-            alert_list = "\n".join([f"Hex ID: {alert['hex_id']}, Channel: <#{alert['channel_id']}>" for alert in alerts])
-            await ctx.send(f"Active alerts:\n{alert_list}")
-        else:
-            await ctx.send("No active alerts found.")
+
 
     @aircraft_group.command(name='remove_alert', help='Remove an active alert.')
     async def remove_alert(self, ctx, hex_id: str):
