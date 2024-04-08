@@ -272,6 +272,7 @@ class Airplaneslive(commands.Cog):
                 await asyncio.sleep(self.alert_check_interval)
 
 
+#list all setup alerts in server
 
     @aircraft_group.command(name='list_alerts', help='List all active alerts.')
     async def list_alerts(self, ctx):
