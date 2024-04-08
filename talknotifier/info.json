@@ -5,6 +5,6 @@
     "short": "some random cogs I made for my own use and decided to make public.",
     "description": "allows you to set a message to send whenever a user sends a message  .",
     "tags": ["talk", "notifier"],
-    "end_user_data_statement": "This cog stores user IDs and also the custom message for the purposes of creating a custom message when a certain user talks in a server. Please review the privacy policy for more details.",
+    "end_user_data_statement": "This cog stores user IDs and also the custom message for the purposes of creating a custom message when a certain user talks in a server.",
     "type": "COG"
 }
