@@ -89,7 +89,38 @@ j. aircraft_to_json
     Usage: [p]aircraft_to_json <aircraft_type>
     Example: [p]aircraft_to_json Boeing 737
 
-k. set_max_requests   
+
+
+k.  Alert Command Usage
+
+The alert command in this bot allows you to set up alerts for specific aircraft and receive notifications when those aircraft are detected. Below is a guide on how to use the alert commands:
+
+1. **Setting Up an Alert**
+
+   To set up an alert for a specific aircraft:
+   ```
+   !aircraft set_alert [HEX_ID] #[CHANNEL]
+   ```
+   Replace `[HEX_ID]` with the hexadecimal identifier of the aircraft and `#[CHANNEL]` with the channel where you want to receive alerts.
+
+2. **Listing Active Alerts**
+
+   To see a list of all active alerts:
+   ```
+   !aircraft list_alerts
+   ```
+   This command will display a list of all active alerts, showing the aircraft hex IDs and the channels where alerts are set to be sent.
+
+3. **Removing an Alert**
+
+   If you no longer want to receive alerts for a specific aircraft:
+   ```
+   !aircraft remove_alert [HEX_ID]
+   ```
+   Replace `[HEX_ID]` with the hexadecimal identifier of the aircraft for which you want to remove the alert.
+
+
+l. set_max_requests   
 (bot owner only command) 
 
     Description: Set the maximum number of requests the bot can make to the airplanes.live api. (Restricted to bot owner)
