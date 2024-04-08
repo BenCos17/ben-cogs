@@ -2,7 +2,6 @@ import discord
 from redbot.core import commands, Config
 import httpx       #used for the actual lookup commands 
 import json        #used for json command
-import requests 
 import aiohttp     #used for stats command 
 
 class Airplaneslive(commands.Cog):
@@ -17,6 +16,8 @@ class Airplaneslive(commands.Cog):
         self.planespotters_api_url = "https://api.planespotters.net/pub/photos"
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color.blue()  #sets embed color to blue 
+        self.alert_check_interval = 60
+        self.bot.loop.create_task(self.check_alerts())
 
     async def _make_request(self, url):
         async with httpx.AsyncClient() as client:
@@ -29,9 +30,9 @@ class Airplaneslive(commands.Cog):
                 return None
 
     async def _send_aircraft_info(self, ctx, response):
-        if 'ac' in response and response['ac']:  # Check if 'ac' key exists and is not empty
+        if 'ac' in response and response['ac']:                                            # Check if 'ac' key exists and is not empty
             formatted_response = self._format_response(response)
-            hex_id = response['ac'][0].get('hex', '')  # Extracts hex ID from command
+            hex_id = response['ac'][0].get('hex', '')                                      # Extracts hex ID from command
             image_url, photographer = await self._get_photo_by_hex(hex_id)
             embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
             if image_url:
@@ -56,8 +57,9 @@ class Airplaneslive(commands.Cog):
                 pass
         return None, None
 
-
                                             #formats the response from command ran
+
+
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
@@ -67,7 +69,7 @@ class Airplaneslive(commands.Cog):
                 f"**Altitude:** {aircraft_data.get('alt_baro', 'N/A')} feet\n"
                 f"**Ground Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
                 f"**Heading:** {aircraft_data.get('true_heading', 'N/A')} degrees\n"
-                f"**Position:** {aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}\n"  # Combine latitude and longitude
+                f"**Position:** {aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}\n"
                 f"**Squawk:** {aircraft_data.get('squawk', 'N/A')}\n"
                 f"**Emergency:** {aircraft_data.get('emergency', 'N/A')}\n"
                 f"**Operator:** {aircraft_data.get('ownOp', 'N/A')}\n"
@@ -81,9 +83,6 @@ class Airplaneslive(commands.Cog):
             return formatted_data
         else:
             return "No aircraft found with the specified callsign."
-
-
-
 
     @commands.group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
@@ -135,7 +134,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @aircraft_group.command(name='military', help= 'military aircraft')
+    @aircraft_group.command(name='military', help='Get information about military aircraft.')
     async def military_aircraft(self, ctx):
         url = f"{self.api_url}/mil"
         response = await self._make_request(url)
@@ -144,7 +143,7 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving military aircraft information.")
 
-    @aircraft_group.command(name='ladd', help='Limiting Aircraft Data Displayed (LADD)')
+    @aircraft_group.command(name='ladd', help='Limiting Aircraft Data Displayed (LADD).')
     async def ladd_aircraft(self, ctx):
         url = f"{self.api_url}/ladd"
         response = await self._make_request(url)
@@ -181,8 +180,10 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"```json\n{json_data}\n```")
         else:
             await ctx.send("Error retrieving aircraft information.")
-            
+
+
                     #sets max api requests from airplanes.live and allows user to change it if they own the bot 
+
     @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
     @commands.is_owner()
     async def set_max_requests(self, ctx, max_requests: int):
@@ -191,7 +192,6 @@ class Airplaneslive(commands.Cog):
 
     @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
     async def stats(self, ctx):
-        """Get stats for Airplanes.live."""
         url = "https://api.airplanes.live/stats"
 
         try:
@@ -218,12 +218,8 @@ class Airplaneslive(commands.Cog):
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
 
-
-#alerts stuff WIP not ready for use yet
-
     @aircraft_group.command(name='set_alert', help='Set up alerts for planes in a specific channel.')
     async def set_alert(self, ctx, hex_id: str, channel: discord.TextChannel):
-        """Set up alerts for planes in a specific channel."""
         alerts = await self.config.alerts()
         alert_data = {
             'hex_id': hex_id,
@@ -235,7 +231,6 @@ class Airplaneslive(commands.Cog):
 
     @aircraft_group.command(name='list_alerts', help='List all active alerts.')
     async def list_alerts(self, ctx):
-        """List all active alerts."""
         alerts = await self.config.alerts()
         if alerts:
             alert_list = "\n".join([f"Hex ID: {alert['hex_id']}, Channel: <#{alert['channel_id']}>" for alert in alerts])
@@ -245,7 +240,6 @@ class Airplaneslive(commands.Cog):
 
     @aircraft_group.command(name='remove_alert', help='Remove an active alert.')
     async def remove_alert(self, ctx, hex_id: str):
-        """Remove an active alert."""
         alerts = await self.config.alerts()
         for alert in alerts:
             if alert['hex_id'] == hex_id:
@@ -254,3 +248,25 @@ class Airplaneslive(commands.Cog):
                 await ctx.send(f"Alert for aircraft with hex ID {hex_id} removed successfully.")
                 return
         await ctx.send(f"No active alert found for aircraft with hex ID {hex_id}.")
+
+    async def check_alerts(self):
+        await self.bot.wait_until_ready()
+        while not self.bot.is_closed():
+            try:
+                live_data = await self._make_request(f"{self.api_url}/all")
+
+                if live_data and 'ac' in live_data:
+                    for aircraft in live_data['ac']:
+                        hex_id = aircraft.get('hex', '')
+                        alerts = await self.config.alerts()
+                        for alert in alerts:
+                            if alert['hex_id'] == hex_id:
+                                channel = self.bot.get_channel(alert['channel_id'])
+                                if channel:
+                                    formatted_response = self._format_response(aircraft)
+                                    await channel.send(f"Alert: Aircraft with hex ID {hex_id} detected.\n{formatted_response}")
+
+                await asyncio.sleep(self.alert_check_interval)
+            except Exception as e:
+                print(f"Error checking alerts: {e}")
+                await asyncio.sleep(self.alert_check_interval)
