@@ -212,3 +212,40 @@ class Airplaneslive(commands.Cog):
                 await ctx.send("Incomplete data received from API.")
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
+
+
+#alerts stuff WIP
+
+    @aircraft_group.command(name='set_alert', help='Set up alerts for planes in a specific channel.')
+    async def set_alert(self, ctx, hex_id: str, channel: discord.TextChannel):
+        """Set up alerts for planes in a specific channel."""
+        alerts = await self.config.alerts()
+        alert_data = {
+            'hex_id': hex_id,
+            'channel_id': channel.id
+        }
+        alerts.append(alert_data)
+        await self.config.alerts.set(alerts)
+        await ctx.send(f"Alert for aircraft with hex ID {hex_id} set in channel {channel.mention}.")
+
+    @aircraft_group.command(name='list_alerts', help='List all active alerts.')
+    async def list_alerts(self, ctx):
+        """List all active alerts."""
+        alerts = await self.config.alerts()
+        if alerts:
+            alert_list = "\n".join([f"Hex ID: {alert['hex_id']}, Channel: <#{alert['channel_id']}>" for alert in alerts])
+            await ctx.send(f"Active alerts:\n{alert_list}")
+        else:
+            await ctx.send("No active alerts found.")
+
+    @aircraft_group.command(name='remove_alert', help='Remove an active alert.')
+    async def remove_alert(self, ctx, hex_id: str):
+        """Remove an active alert."""
+        alerts = await self.config.alerts()
+        for alert in alerts:
+            if alert['hex_id'] == hex_id:
+                alerts.remove(alert)
+                await self.config.alerts.set(alerts)
+                await ctx.send(f"Alert for aircraft with hex ID {hex_id} removed successfully.")
+                return
+        await ctx.send(f"No active alert found for aircraft with hex ID {hex_id}.")
