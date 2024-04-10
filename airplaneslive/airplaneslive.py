@@ -230,7 +230,7 @@ class Airplaneslive(commands.Cog):
 
 #alert commands for aircrafts
 
-    @aircraft_group.command(name='set_alert', help='Set up alerts for planes in a specific channel.')
+#    @aircraft_group.command(name='set_alert', help='Set up alerts for planes in a specific channel.')
 #     async def set_alert(self, ctx, hex_id: str, channel: discord.TextChannel):
 #         alerts = await self.config.alerts()
 #         alert_data = {
