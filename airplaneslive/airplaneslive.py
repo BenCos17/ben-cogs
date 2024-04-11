@@ -1,23 +1,17 @@
 import discord
 from redbot.core import commands, Config
-import httpx       #used for the actual lookup commands 
-import json        #used for json command
-import aiohttp     #used for stats command 
+import httpx
+import json
+import aiohttp
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  
-        default_global = {
-            'alerts': []
-        }
-        self.config.register_global(**default_global)
         self.api_url = "https://api.airplanes.live/v2"
         self.planespotters_api_url = "https://api.planespotters.net/pub/photos"
         self.max_requests_per_user = 10
-        self.EMBED_COLOR = discord.Color.blue()  #sets embed color to blue 
-        self.alert_check_interval = 60
-        self.bot.loop.create_task(self.check_alerts())
+        self.EMBED_COLOR = discord.Color.blue() 
 
     async def _make_request(self, url):
         async with httpx.AsyncClient() as client:
@@ -30,9 +24,9 @@ class Airplaneslive(commands.Cog):
                 return None
 
     async def _send_aircraft_info(self, ctx, response):
-        if 'ac' in response and response['ac']:                                            # Check if 'ac' key exists and is not empty
+        if 'ac' in response and response['ac']:                                            
             formatted_response = self._format_response(response)
-            hex_id = response['ac'][0].get('hex', '')                                      # Extracts hex ID from command
+            hex_id = response['ac'][0].get('hex', '')                                      
             image_url, photographer = await self._get_photo_by_hex(hex_id)
             embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
             if image_url:
@@ -45,7 +39,7 @@ class Airplaneslive(commands.Cog):
     async def _get_photo_by_hex(self, hex_id):
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')     #image method for planespotters.net embed images
+                response = await client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
                 if response.status_code == 200:
                     json_out = response.json()
                     if 'photos' in json_out and json_out['photos']:
@@ -56,9 +50,6 @@ class Airplaneslive(commands.Cog):
             except (KeyError, IndexError, httpx.RequestError):
                 pass
         return None, None
-
-                                            #formats the response from command ran
-
 
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
@@ -180,9 +171,6 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"```json\n{json_data}\n```")
         else:
             await ctx.send("Error retrieving aircraft information.")
-
-
-                    #sets max api requests from airplanes.live and allows user to change it if they own the bot 
 
     @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
     @commands.is_owner()
