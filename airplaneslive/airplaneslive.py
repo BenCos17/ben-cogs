@@ -98,30 +98,110 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("No aircraft found with the specified callsign.")
 
-    # Add the new method to handle dashboard page requests
-    @dashboard_page(name=None)
-    async def aircraft_info_page(self, user: discord.User, **kwargs) -> dict:
-        # Here you can define the logic to handle requests to your cog's dashboard page
-        # Ensure to check user permissions and provide appropriate responses
-        return {"status": 0, "web-content": web_content, "title_content": "Aircraft Information"}
+    @aircraft_group.command(name='reg', help='Get information about an aircraft by its registration.')
+    async def aircraft_by_reg(self, ctx, registration):
+        url = f"{self.api_url}/reg/{registration}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
 
-# Define the web content for your dashboard page
-web_content = """
-{% extends "base-site.html" %}
+    @aircraft_group.command(name='type', help='Get information about aircraft by its type.')
+    async def aircraft_by_type(self, ctx, aircraft_type):
+        url = f"{self.api_url}/type/{aircraft_type}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
 
-{% block title %} Aircraft Information {% endblock title %}
+    @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
+    async def aircraft_by_squawk(self, ctx, squawk_value):
+        url = f"{self.api_url}/squawk/{squawk_value}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
 
-{% block content %}
-<h2>Aircraft Information</h2>
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-body">
-                <h3>{{ title_content }}</h3>
-                <!-- Here you can add HTML content to display aircraft information -->
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock content %}
-"""
+    @aircraft_group.command(name='military', help='Get information about military aircraft.')
+    async def military_aircraft(self, ctx):
+        url = f"{self.api_url}/mil"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving military aircraft information.")
+
+    @aircraft_group.command(name='ladd', help='Limiting Aircraft Data Displayed (LADD).')
+    async def ladd_aircraft(self, ctx):
+        url = f"{self.api_url}/ladd"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving LADD aircraft information.")
+
+    @aircraft_group.command(name='pia', help='Privacy ICAO Address.')
+    async def pia_aircraft(self, ctx):
+        url = f"{self.api_url}/pia"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving PIA aircraft information.")
+
+    @aircraft_group.command(name='radius', help='Get information about aircraft within a specified radius.')
+    async def aircraft_within_radius(self, ctx, lat, lon, radius):
+        url = f"{self.api_url}/point/{lat}/{lon}/{radius}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information within the specified radius.")
+
+    @aircraft_group.command(name='json', help='Get aircraft information in JSON format.')
+    async def json(self, ctx, aircraft_type):
+        url = f"{self.api_url}/type/{aircraft_type}"
+        response = await self._make_request(url)
+        if response:
+            aircraft_info = self._format_response(response)
+            json_data = json.dumps(aircraft_info, indent=4)
+            await ctx.send(f"```json\n{json_data}\n```")
+        else:
+            await ctx.send("Error retrieving aircraft information.")
+
+    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
+    @commands.is_owner()
+    async def set_max_requests(self, ctx, max_requests: int):
+        self.max_requests_per_user = max_requests
+        await ctx.send(f"Maximum requests per user set to {max_requests}.")
+
+    @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
+    async def stats(self, ctx):
+        url = "https://api.airplanes.live/stats"
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    data = await response.json()
+
+            if "beast" in data and "mlat" in data and "other" in data and "aircraft" in data:
+                beast_stats = data["beast"]
+                mlat_stats = data["mlat"]
+                other_stats = data["other"]
+                aircraft_stats = data["aircraft"]
+
+                embed = discord.Embed(title="airplanes.live Stats", color=0x00ff00)
+                embed.set_thumbnail(url="https://airplanes.live/img/airplanes-live-logo.png")
+                embed.add_field(name="Beast", value=beast_stats, inline=False)
+                embed.add_field(name="MLAT", value=mlat_stats, inline=False)
+                embed.add_field(name="Other", value=other_stats, inline=False)
+                embed.add_field(name="Aircraft", value=aircraft_stats, inline=False)
+
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send("Incomplete data received from API.")
+        except aiohttp.ClientError as e:
+            await ctx.send(f"Error fetching data: {e}")
