@@ -28,13 +28,16 @@ class Airplaneslive(commands.Cog):
             formatted_response = self._format_response(response)
             hex_id = response['ac'][0].get('hex', '')                                      
             image_url, photographer = await self._get_photo_by_hex(hex_id)
+            link = f"[View on airplanes.live](https://airplanes.live/flight/{hex_id})"  # Link to airplanes.live
+            formatted_response += f"\n\n{link}"  # Append the link to the end of the response
             embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
             if image_url:
                 embed.set_image(url=image_url)
-                embed.set_footer(text=f"Powered by Planespotters.net and airplanes.live ✈️")
+                embed.set_footer(text="Powered by Planespotters.net and airplanes.live ✈️")
             await ctx.send(embed=embed)
         else:
             await ctx.send("No aircraft information found or the response format is incorrect.")
+
 
     async def _get_photo_by_hex(self, hex_id):
         async with httpx.AsyncClient() as client:
