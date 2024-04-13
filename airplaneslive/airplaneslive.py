@@ -29,11 +29,11 @@ class Airplaneslive(commands.Cog):
             hex_id = response['ac'][0].get('hex', '')                                      
             image_url, photographer = await self._get_photo_by_hex(hex_id)
             link = f"[View on airplanes.live](https://globe.airplanes.live/?icao={hex_id})"  # Link to airplanes.live globe view
-            formatted_response += f"\n\n{link}"  # Append the link to the end of the response
             embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
             if image_url:
                 embed.set_image(url=image_url)
                 embed.set_footer(text="Powered by Planespotters.net and airplanes.live ✈️")
+            embed.add_field(name='\u200b', value=link)  
             await ctx.send(embed=embed)
         else:
             await ctx.send("No aircraft information found or the response format is incorrect. \n the plane may be not currently in use or the data is not available at the moment")
