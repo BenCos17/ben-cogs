@@ -28,7 +28,7 @@ class Airplaneslive(commands.Cog):
             formatted_response = self._format_response(response)
             hex_id = response['ac'][0].get('hex', '')                                      
             image_url, photographer = await self._get_photo_by_hex(hex_id)
-            link = f"[View on airplanes.live](https://airplanes.live/flight/{hex_id})"  # Link to airplanes.live
+            link = f"[View on airplanes.live](https://globe.airplanes.live/?icao={hex_id})"  # Link to airplanes.live globe view
             formatted_response += f"\n\n{link}"  # Append the link to the end of the response
             embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
             if image_url:
