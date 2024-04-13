@@ -36,7 +36,7 @@ class Airplaneslive(commands.Cog):
                 embed.set_footer(text="Powered by Planespotters.net and airplanes.live ✈️")
             await ctx.send(embed=embed)
         else:
-            await ctx.send("No aircraft information found or the response format is incorrect.")
+            await ctx.send("No aircraft information found or the response format is incorrect. \n the plane may be not currently in use or the data is not available at the moment")
 
 
     async def _get_photo_by_hex(self, hex_id):
