@@ -213,23 +213,28 @@ class Airplaneslive(commands.Cog):
 
 
 
-
     @commands.command(name='set_alert_channel', help='Set the channel to receive aircraft alerts and specify alert types.')
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
-    async def set_alert_channel(self, ctx, channel: discord.TextChannel, *alert_types: str):
-        allowed_alerts = ['squawk', 'type', 'hex', 'callsign']
-        selected_alerts = [alert for alert in alert_types if alert in allowed_alerts]
+    async def set_alert_channel(self, ctx, *args):
+        if len(args) % 2 != 0:
+            await ctx.send("Please provide squawk code and channel pairs.")
+            return
         
-        await self.config.guild(ctx.guild).alert_channel.set(channel.id)
-        await self.config.guild(ctx.guild).alert_types.set(selected_alerts)
+        alerts = {args[i]: args[i+1] for i in range(0, len(args), 2)}
         
-        if selected_alerts:
-            await ctx.send(f"Aircraft alerts for {', '.join(selected_alerts)} will now be sent to {channel.mention}.")
-        else:
-            await ctx.send(f"No valid alert types provided. Please choose from: {', '.join(allowed_alerts)}.")
+        for squawk, channel_mention in alerts.items():
+            if squawk.isdigit() and len(squawk) == 4:
+                channel_id = int(channel_mention.strip('<#').strip('>'))
+                await self.config.guild(ctx.guild).set_raw("alert_channels", value={squawk: channel_id})
+                await ctx.send(f"Alert for squawk {squawk} will now be sent to {channel_mention}.")
+            else:
+                await ctx.send(f"Invalid squawk code: {squawk}. Squawk code must be a 4-digit number.")
 
-    async def send_alert(self, alert_channel, message):
-        channel = self.bot.get_channel(alert_channel)
-        if channel:
-            await channel.send(message)
+    async def send_alert(self, squawk, message):
+        alert_channels = await self.config.guild(self.bot.guild).alert_channels()
+        channel_id = alert_channels.get(squawk)
+        if channel_id:
+            channel = self.bot.get_channel(channel_id)
+            if channel:
+                await channel.send(message)
