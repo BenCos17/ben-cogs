@@ -175,12 +175,6 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
-    @commands.is_owner()
-    async def set_max_requests(self, ctx, max_requests: int):
-        self.max_requests_per_user = max_requests
-        await ctx.send(f"Maximum requests per user set to {max_requests}.")
-
     @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
     async def stats(self, ctx):
         url = "https://api.airplanes.live/stats"
@@ -208,3 +202,51 @@ class Airplaneslive(commands.Cog):
                 await ctx.send("Incomplete data received from API.")
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
+
+    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
+    @commands.is_owner()
+    async def set_max_requests(self, ctx, max_requests: int):
+        self.max_requests_per_user = max_requests
+        await ctx.send(f"Maximum requests per user set to {max_requests}.")
+
+    @aircraft_group.command(name='alerts', help='Set alerts for specific squawk codes.')
+    @commands.guild_only()
+    async def set_alerts(self, ctx, squawk_code: str, channel: discord.TextChannel):
+        await self.config.guild(ctx.guild).alerts.set({squawk_code: channel.id})
+        await ctx.send(f"Alert set for squawk code {squawk_code}. Messages will be sent to {channel.mention}.")
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print("Bot is ready.")
+
+        # Check for alerts on bot startup
+        alerts = await self.config.all_guilds()
+        for guild_id, data in alerts.items():
+            guild = self.bot.get_guild(guild_id)
+            if guild:
+                for squawk_code, channel_id in data.get('alerts', {}).items():
+                    channel = guild.get_channel(channel_id)
+                    if channel:
+                        print(f"Alert found for squawk code {squawk_code} in {guild.name}. Messages will be sent to {channel.name}.")
+
+@commands.Cog.listener()
+async def on_message(self, message):
+    if not message.author.bot:
+        content = message.content
+        if content.isdigit() and len(content) == 4:  # Check if the message is a 4-digit number
+            squawk_code = int(content)
+            if squawk_code in self.alerts:
+                channel_id = self.alerts[squawk_code]
+                channel = self.bot.get_channel(channel_id)
+                if channel:
+                    url = f"{self.api_url}/squawk/{squawk_code}"
+                    response = await self._make_request(url)
+                    if response:
+                        await channel.send(f"Squawk alert: {squawk_code}\n\nAircraft information:\n{self._format_response(response)}")
+                    else:
+                        print("Error retrieving aircraft information for squawk code:", squawk_code)
+                else:
+                    print("Error: Channel not found for squawk alert:", squawk_code)
+            else:
+                print("No alert configured for squawk code:", squawk_code)
+
