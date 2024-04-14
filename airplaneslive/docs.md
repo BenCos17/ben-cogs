@@ -92,9 +92,3 @@ j. aircraft_to_json
     Usage: [p]aircraft_to_json <aircraft_type>
     Example: [p]aircraft_to_json Boeing 737
 
-k. set_max_requests   
-(bot owner only command) 
-
-    Description: Set the maximum number of requests the bot can make to the airplanes.live api. (Restricted to bot owner)
-    Usage: [p]set_max_requests <max_requests>
-    Example: [p]set_max_requests 20
