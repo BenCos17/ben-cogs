@@ -12,6 +12,7 @@ class Airplaneslive(commands.Cog):
         self.planespotters_api_url = "https://api.planespotters.net/pub/photos"
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color.blue() 
+        self.alert_channels = {}
 
     async def _make_request(self, url):
         async with httpx.AsyncClient() as client:
@@ -30,14 +31,13 @@ class Airplaneslive(commands.Cog):
             image_url, photographer = await self._get_photo_by_hex(hex_id)
             link = f"[View on airplanes.live](https://globe.airplanes.live/?icao={hex_id})"  # Link to airplanes.live globe view
             formatted_response += f"\n\n{link}"  # Append the link to the end of the response
-            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=discord.Color.blue())
             if image_url:
                 embed.set_image(url=image_url)
                 embed.set_footer(text="Powered by Planespotters.net and airplanes.live ✈️")
             await ctx.send(embed=embed)
         else:
             await ctx.send("No aircraft information found or the response format is incorrect. \n the plane may be not currently in use or the data is not available at the moment")
-
 
     async def _get_photo_by_hex(self, hex_id):
         async with httpx.AsyncClient() as client:
@@ -175,6 +175,12 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
+    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
+    @commands.is_owner()
+    async def set_max_requests(self, ctx, max_requests: int):
+        self.max_requests_per_user = max_requests
+        await ctx.send(f"Maximum requests per user set to {max_requests}.")
+
     @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
     async def stats(self, ctx):
         url = "https://api.airplanes.live/stats"
@@ -203,50 +209,29 @@ class Airplaneslive(commands.Cog):
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
 
-    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
-    @commands.is_owner()
-    async def set_max_requests(self, ctx, max_requests: int):
-        self.max_requests_per_user = max_requests
-        await ctx.send(f"Maximum requests per user set to {max_requests}.")
-
-    @aircraft_group.command(name='alerts', help='Set alerts for specific squawk codes.')
-    @commands.guild_only()
-    async def set_alerts(self, ctx, squawk_code: str, channel: discord.TextChannel):
-        await self.config.guild(ctx.guild).alerts.set({squawk_code: channel.id})
-        await ctx.send(f"Alert set for squawk code {squawk_code}. Messages will be sent to {channel.mention}.")
-
     @commands.Cog.listener()
     async def on_ready(self):
         print("Bot is ready.")
 
-        # Check for alerts on bot startup
-        alerts = await self.config.all_guilds()
-        for guild_id, data in alerts.items():
-            guild = self.bot.get_guild(guild_id)
-            if guild:
-                for squawk_code, channel_id in data.get('alerts', {}).items():
-                    channel = guild.get_channel(channel_id)
-                    if channel:
-                        print(f"Alert found for squawk code {squawk_code} in {guild.name}. Messages will be sent to {channel.name}.")
+    @commands.command(name='set_alert_channel', help='Set the channel to receive aircraft alerts.')
+    @commands.guild_only()
+    async def set_alert_channel(self, ctx, channel: discord.TextChannel):
+        self.alert_channels[ctx.guild.id] = channel.id
+        await ctx.send(f"Aircraft alerts channel set to {channel.mention}")
 
-@commands.Cog.listener()
-async def on_message(self, message):
-    if not message.author.bot:
-        content = message.content
-        if content.isdigit() and len(content) == 4:  # Check if the message is a 4-digit number
-            squawk_code = int(content)
-            if squawk_code in self.alerts:
-                channel_id = self.alerts[squawk_code]
-                channel = self.bot.get_channel(channel_id)
-                if channel:
-                    url = f"{self.api_url}/squawk/{squawk_code}"
-                    response = await self._make_request(url)
-                    if response:
-                        await channel.send(f"Squawk alert: {squawk_code}\n\nAircraft information:\n{self._format_response(response)}")
-                    else:
-                        print("Error retrieving aircraft information for squawk code:", squawk_code)
-                else:
-                    print("Error: Channel not found for squawk alert:", squawk_code)
+    async def send_alert(self, squawk_code, aircraft_info):
+        channel_id = self.alert_channels.get(aircraft_info['icao'], None)
+        if channel_id:
+            channel = self.bot.get_channel(channel_id)
+            if channel:
+                embed = discord.Embed(title='Aircraft Alert', color=discord.Color.red())
+                embed.add_field(name="Squawk Code", value=squawk_code)
+                embed.add_field(name="Aircraft Information", value=self._format_response(aircraft_info), inline=False)
+                await channel.send(embed=embed)
             else:
-                print("No alert configured for squawk code:", squawk_code)
+                print(f"Error: Channel with ID {channel_id} not found.")
+        else:
+            print(f"No alert channel set for guild with ID {aircraft_info['icao']}.")
 
+def setup(bot):
+    bot.add_cog(Airplaneslive(bot))
