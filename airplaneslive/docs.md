@@ -92,3 +92,10 @@ j. aircraft_to_json
     Usage: [p]aircraft_to_json <aircraft_type>
     Example: [p]aircraft_to_json Boeing 737
 
+j. set_alert_channel
+
+    Description: Get aircraft squawk alerts in a channel 
+    Usage: [p]j. set_alert_channel squawk_code #channel_name
+    Example: [p]set_alert_channel 7700 #aircraft_test
+
+
