@@ -9,10 +9,8 @@ class Airplaneslive(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.api_url = "https://api.airplanes.live/v2"
-        self.planespotters_api_url = "https://api.planespotters.net/pub/photos"
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color.blue() 
-        self.alert_channels = {}
 
     async def _make_request(self, url):
         async with httpx.AsyncClient() as client:
@@ -31,7 +29,7 @@ class Airplaneslive(commands.Cog):
             image_url, photographer = await self._get_photo_by_hex(hex_id)
             link = f"[View on airplanes.live](https://globe.airplanes.live/?icao={hex_id})"  # Link to airplanes.live globe view
             formatted_response += f"\n\n{link}"  # Append the link to the end of the response
-            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=discord.Color.blue())
+            embed = discord.Embed(title='Aircraft Information', description=formatted_response, color=self.EMBED_COLOR)
             if image_url:
                 embed.set_image(url=image_url)
                 embed.set_footer(text="Powered by Planespotters.net and airplanes.live ✈️")
@@ -175,11 +173,6 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information.")
 
-    @aircraft_group.command(name='api', help='Set the maximum number of requests the bot can make to the API.')
-    @commands.is_owner()
-    async def set_max_requests(self, ctx, max_requests: int):
-        self.max_requests_per_user = max_requests
-        await ctx.send(f"Maximum requests per user set to {max_requests}.")
 
     @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
     async def stats(self, ctx):
@@ -209,29 +202,34 @@ class Airplaneslive(commands.Cog):
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print("Bot is ready.")
 
-    @commands.command(name='set_alert_channel', help='Set the channel to receive aircraft alerts.')
+
+
+
+
+
+
+
+
+
+
+
+    @commands.command(name='set_alert_channel', help='Set the channel to receive aircraft alerts and specify alert types.')
     @commands.guild_only()
-    async def set_alert_channel(self, ctx, channel: discord.TextChannel):
-        self.alert_channels[ctx.guild.id] = channel.id
-        await ctx.send(f"Aircraft alerts channel set to {channel.mention}")
-
-    async def send_alert(self, squawk_code, aircraft_info):
-        channel_id = self.alert_channels.get(aircraft_info['icao'], None)
-        if channel_id:
-            channel = self.bot.get_channel(channel_id)
-            if channel:
-                embed = discord.Embed(title='Aircraft Alert', color=discord.Color.red())
-                embed.add_field(name="Squawk Code", value=squawk_code)
-                embed.add_field(name="Aircraft Information", value=self._format_response(aircraft_info), inline=False)
-                await channel.send(embed=embed)
-            else:
-                print(f"Error: Channel with ID {channel_id} not found.")
+    @commands.has_permissions(manage_channels=True)
+    async def set_alert_channel(self, ctx, channel: discord.TextChannel, *alert_types: str):
+        allowed_alerts = ['squawk', 'type', 'hex', 'callsign']
+        selected_alerts = [alert for alert in alert_types if alert in allowed_alerts]
+        
+        await self.config.guild(ctx.guild).alert_channel.set(channel.id)
+        await self.config.guild(ctx.guild).alert_types.set(selected_alerts)
+        
+        if selected_alerts:
+            await ctx.send(f"Aircraft alerts for {', '.join(selected_alerts)} will now be sent to {channel.mention}.")
         else:
-            print(f"No alert channel set for guild with ID {aircraft_info['icao']}.")
+            await ctx.send(f"No valid alert types provided. Please choose from: {', '.join(allowed_alerts)}.")
 
-def setup(bot):
-    bot.add_cog(Airplaneslive(bot))
+    async def send_alert(self, alert_channel, message):
+        channel = self.bot.get_channel(alert_channel)
+        if channel:
+            await channel.send(message)
