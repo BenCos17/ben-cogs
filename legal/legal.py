@@ -17,12 +17,12 @@ class Legal(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="courtorder")
-    async def court_order_command(self, ctx, *, target_name: str):
+    async def court_order_command(self, ctx, target_name: str, action: str, date: str, signature: str):
         """Generate a court order."""
         embed = discord.Embed(
             title="COURT ORDER",
             color=0xff0000,  # Red color
-            description=f"To: {target_name}\n\nYou are hereby ordered to [Specify action]\n\nDate: [Date]\n\nSignature: [Your signature]"
+            description=f"To: {target_name}\n\nYou are hereby ordered to {action}\n\nDate: {date}\n\nSignature: {signature}"
         )
 
         await ctx.send(embed=embed)
