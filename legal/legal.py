@@ -2,11 +2,9 @@ import discord
 from redbot.core import commands
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
-from io import BytesIO
 from reportlab.graphics import renderPDF
 from reportlab.graphics.shapes import Drawing
+from io import BytesIO
 
 class Legal(commands.Cog):
     def __init__(self, bot):
@@ -41,22 +39,18 @@ class Legal(commands.Cog):
         await ctx.send(file=discord.File(thumbnail_image, filename="court_order_thumbnail.png"))
 
     def generate_court_order_pdf(self, target_name, action, date, signature, pdf_path):
-        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
-        styles = getSampleStyleSheet()
-        content = []
-        content.append(Paragraph("COURT ORDER", styles["Title"]))
-        content.append(Paragraph(f"To: {target_name}", styles["Normal"]))
-        content.append(Paragraph(f"You are hereby ordered to {action}", styles["Normal"]))
-        content.append(Paragraph(f"Date: {date}", styles["Normal"]))
-        content.append(Paragraph(f"Signature: {signature}", styles["Normal"]))
-        doc.build(content)
+        c = canvas.Canvas(pdf_path, pagesize=letter)
+        c.drawString(100, 750, "COURT ORDER")
+        c.drawString(100, 730, f"To: {target_name}")
+        c.drawString(100, 710, f"You are hereby ordered to {action}")
+        c.drawString(100, 690, f"Date: {date}")
+        c.drawString(100, 670, f"Signature: {signature}")
+        c.save()
 
+    def generate_thumbnail_image(self, pdf_path):
+        thumbnail_image_path = BytesIO()
 
+        drawing = Drawing()
+        drawing.add(renderPDF.drawToFile(pdf_path, thumbnail_image_path))
 
-def generate_thumbnail_image(self, pdf_path):
-    thumbnail_image_path = BytesIO()
-
-    drawing = Drawing()
-    drawing.add(renderPDF.drawToFile(pdf_path, thumbnail_image_path))
-
-    return thumbnail_image_path.getvalue()
+        return thumbnail_image_path.getvalue()
