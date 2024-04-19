@@ -5,6 +5,8 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
+from reportlab.graphics import renderPDF
+from reportlab.graphics.shapes import Drawing
 
 class Legal(commands.Cog):
     def __init__(self, bot):
@@ -49,10 +51,12 @@ class Legal(commands.Cog):
         content.append(Paragraph(f"Signature: {signature}", styles["Normal"]))
         doc.build(content)
 
-    def generate_thumbnail_image(self, pdf_path):
-        thumbnail_image_path = BytesIO()
-        c = canvas.Canvas(thumbnail_image_path, pagesize=letter)
-        c.drawString(100, 750, "COURT ORDER")
-        c.save()
 
-        return thumbnail_image_path.getvalue()
+
+def generate_thumbnail_image(self, pdf_path):
+    thumbnail_image_path = BytesIO()
+
+    drawing = Drawing()
+    drawing.add(renderPDF.drawToFile(pdf_path, thumbnail_image_path))
+
+    return thumbnail_image_path.getvalue()
