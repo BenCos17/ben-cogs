@@ -2,7 +2,7 @@ import discord
 from redbot.core import commands
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from reportlab.graphics import renderPDF
+from reportlab.graphics import renderPDF, Drawing
 from io import BytesIO
 
 class Legal(commands.Cog):
