@@ -4,7 +4,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from wand.image import Image
 
-class LegalCog(commands.Cog):
+class Legal(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
