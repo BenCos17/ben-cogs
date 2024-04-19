@@ -49,7 +49,9 @@ class Legal(commands.Cog):
     def generate_thumbnail_image(self, pdf_path):
         thumbnail_image_path = BytesIO()
 
-        drawing = renderPDF.draw(pdf_path, None, None)
+        drawing = Drawing()
+        renderPDF.draw(drawing, 0, 0, pdf_path)
+
         drawing.save(thumbnail_image_path, format="PNG")
 
         return thumbnail_image_path.getvalue()
