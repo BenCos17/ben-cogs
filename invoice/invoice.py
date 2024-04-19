@@ -1,5 +1,6 @@
 import os
 import discord
+from redbot.core import commands
 import datetime
 import tempfile
 from reportlab.lib.pagesizes import letter
