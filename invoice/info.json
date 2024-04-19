@@ -7,4 +7,5 @@
     "tags": ["invoice"],
     "end_user_data_statement": "This cog stores data inputed through the invoice command in a json file in the cog data folder. This data is only used for the invoice command and is not shared with anyone, All data is stored in a temp folder and deleted after the command is ran ",
     "type": "COG"
+"hidden": true 
 }
