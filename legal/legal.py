@@ -1,5 +1,5 @@
 import discord
-from rebot.core import commands
+from redbot.core import commands
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from wand.image import Image
