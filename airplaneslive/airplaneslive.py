@@ -3,6 +3,7 @@ from redbot.core import commands, Config
 import httpx
 import json
 import aiohttp
+import re
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
@@ -162,9 +163,17 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information within the specified radius.")
 
-    @aircraft_group.command(name='json', help='Get aircraft information in JSON format.')
+    @aircraft_group.command(
+        name='json', 
+        help='Get aircraft information in JSON format.'
+    )
     async def json(self, ctx, aircraft_type):
-        url = f"{self.api_url}/type/{aircraft_type}"
+        # Check if the aircraft_type is a valid hexadecimal string
+        if re.match(r'^[0-9a-fA-F]+$', aircraft_type):
+            url = f"{self.api_url}/hex/{aircraft_type}"
+        else:
+            url = f"{self.api_url}/type/{aircraft_type}"
+        
         response = await self._make_request(url)
         if response:
             aircraft_info = self._format_response(response)
@@ -172,6 +181,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"```json\n{json_data}\n```")
         else:
             await ctx.send("Error retrieving aircraft information.")
+
 
 
     @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
