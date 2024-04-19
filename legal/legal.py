@@ -2,7 +2,9 @@ import discord
 from redbot.core import commands
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from wand.image import Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
 
 class Legal(commands.Cog):
     def __init__(self, bot):
@@ -26,28 +28,31 @@ class Legal(commands.Cog):
         pdf_path = "court_order.pdf"
         self.generate_court_order_pdf(target_name, action, date, signature, pdf_path)
 
-        # Convert PDF to image
-        pdf_image_path = "court_order_preview.png"
-        with Image(filename=pdf_path, resolution=300) as img:
-            img.compression_quality = 99
-            img.save(filename=pdf_image_path)
+        # Generate thumbnail image of the first page of the PDF
+        thumbnail_image = self.generate_thumbnail_image(pdf_path)
 
-        # Send the PDF and the image preview in the Discord message
+        # Send the PDF and the thumbnail image in the Discord message
         with open(pdf_path, "rb") as pdf_file:
             pdf_file_data = discord.File(pdf_file, filename="court_order.pdf")
             await ctx.send(file=pdf_file_data)
 
-        with open(pdf_image_path, "rb") as image_file:
-            image_file_data = discord.File(image_file, filename="court_order_preview.png")
-            await ctx.send(file=image_file_data)
+        await ctx.send(file=discord.File(thumbnail_image, filename="court_order_thumbnail.png"))
 
     def generate_court_order_pdf(self, target_name, action, date, signature, pdf_path):
-        c = canvas.Canvas(pdf_path, pagesize=letter)
+        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+        styles = getSampleStyleSheet()
+        content = []
+        content.append(Paragraph("COURT ORDER", styles["Title"]))
+        content.append(Paragraph(f"To: {target_name}", styles["Normal"]))
+        content.append(Paragraph(f"You are hereby ordered to {action}", styles["Normal"]))
+        content.append(Paragraph(f"Date: {date}", styles["Normal"]))
+        content.append(Paragraph(f"Signature: {signature}", styles["Normal"]))
+        doc.build(content)
+
+    def generate_thumbnail_image(self, pdf_path):
+        thumbnail_image_path = BytesIO()
+        c = canvas.Canvas(thumbnail_image_path, pagesize=letter)
         c.drawString(100, 750, "COURT ORDER")
-        c.drawString(100, 730, f"To: {target_name}")
-        c.drawString(100, 710, f"You are hereby ordered to {action}")
-        c.drawString(100, 690, f"Date: {date}")
-        c.drawString(100, 670, f"Signature: {signature}")
         c.save()
 
-
+        return thumbnail_image_path.getvalue()
