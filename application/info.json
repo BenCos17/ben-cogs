@@ -1,0 +1,10 @@
+{
+    "author": ["bencos18 (492089091320446976)"],
+    "install_msg": "thank for adding my repo\n feel free to message me on discord (bencos18) or create a github issue (https://github.com/BenCos17/ben-cogs) if you need support or help with anything.",
+    "name": "ben-cogs.",
+    "short": "some random cogs I made for my own use and decided to make public.",
+    "description": "random application cog I made for a server I'm in a while ago.",
+    "tags": ["application"],
+    "end_user_data_statement": "Application Channel: The ID of the text channel where applications are submitted. This is stored using application_channel setting. \n Questions: A dictionary that maps role IDs to a list of questions associated with that role. This is stored using the questions setting.\nApplications: A dictionary that maps role IDs to another dictionary, which maps member IDs to their application responses. This is stored using the applications setting.",
+    "type": "COG"
+}

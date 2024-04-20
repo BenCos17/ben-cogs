@@ -3,9 +3,9 @@
     "install_msg": "thank for adding my repo\n feel free to message me on discord or create a github issue if you need support or help with anything.",
     "name": "ben-cogs.",
     "short": "some random cogs I made for my own use and decided to make public.",
-    "description": "invoice cog .",
-    "tags": ["invoice"],
+    "description": "invoice cog I made written by bencos18, this cog is used to create invoices, This cog is still in development and may have bugs, please report any bugs to me on discord or github.",
+    "tags": [""],
     "end_user_data_statement": "This cog stores data inputed through the invoice command in a json file in the cog data folder. This data is only used for the invoice command and is not shared with anyone, All data is stored in a temp folder and deleted after the command is ran ",
-    "type": "COG"
-    "hidden": true 
+    "type": "COG",
+    "hidden": true
 }
