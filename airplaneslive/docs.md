@@ -86,16 +86,9 @@ i. radius
     Usage: [p]aircraft radius <lat> <lon> <radius>
     Example: [p]aircraft radius 51.5074 -0.1278 50
 
-j. aircraft_to_json
+j. json
 
     Description: Get aircraft information in JSON format.
     Usage: [p]aircraft_to_json <aircraft_type>
     Example: [p]aircraft_to_json Boeing 737
-
-j. set_alert_channel
-
-    Description: Get aircraft squawk alerts in a channel 
-    Usage: [p]j. set_alert_channel squawk_code #channel_name
-    Example: [p]set_alert_channel 7700 #aircraft_test
-
 
