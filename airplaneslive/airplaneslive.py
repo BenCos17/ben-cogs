@@ -170,12 +170,20 @@ class Airplaneslive(commands.Cog):
 
     @aircraft_group.command(
         name='json', 
-        help='Get aircraft information in JSON format.'
+        help='Get aircraft information in JSON format for various identifiers like hex, squawk, callsign, etc.'
     )
-    async def json(self, ctx, aircraft_type: str):
+    async def json(self, ctx, identifier: str):
         # Determine the type of aircraft identifier provided
-        identifier_type = "hex" if re.match(r'^[0-9a-fA-F]+$', aircraft_type) else "type"
-        url = f"{self.api_url}/{identifier_type}/{aircraft_type}"
+        if re.match(r'^[0-9a-fA-F]{6}$', identifier):
+            identifier_type = "hex"
+        elif re.match(r'^[0-9]{4}$', identifier):
+            identifier_type = "squawk"
+        elif re.match(r'^[A-Z0-9]{2,7}$', identifier, re.I):
+            identifier_type = "callsign"
+        else:
+            identifier_type = "type"
+        
+        url = f"{self.api_url}/{identifier_type}/{identifier}"
         
         try:
             response = await self._make_request(url)
