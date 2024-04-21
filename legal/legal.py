@@ -1,5 +1,6 @@
 import discord
 from redbot.core import commands
+import datetime  # Added for the timestamp in the court verdict embed
 
 class Legal(commands.Cog):
     def __init__(self, bot):
@@ -27,5 +28,19 @@ class Legal(commands.Cog):
 
         await ctx.send(embed=embed)
 
-def setup(bot):
-    bot.add_cog(LegalCog(bot))
+    @commands.command(name="courtverdict")
+    async def court_verdict_command(self, ctx, case_number: str, target_name: str, verdict: str, summary: str, date: str, judge_name: str, *charges: str):
+        """Generate a detailed and realistic court verdict."""
+        # Formatting the charges for display
+        formatted_charges = "\n".join([f"- {charge}" for charge in charges]) if charges else "No charges specified."
+
+        embed = discord.Embed(
+            title=f"Court Verdict for Case {case_number}",
+            color=0x0000ff,  # Blue color
+            description=f"**Defendant:** {target_name}\n\n**Verdict:** {verdict}\n\n**Summary of Verdict:**\n{summary}\n\n**Charges:**\n{formatted_charges}\n\n**Date of Verdict:** {date}\n\n**Presiding Judge:** {judge_name}",
+            timestamp=datetime.datetime.utcnow()
+        )
+        embed.set_footer(text="This is an official court document.")
+
+        await ctx.send(embed=embed)
+
