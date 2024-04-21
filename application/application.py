@@ -37,7 +37,8 @@ class Application(commands.Cog):
         questions = await self.config.guild(ctx.guild).questions()
         roles = [ctx.guild.get_role(int(role_id)).name for role_id in questions if ctx.guild.get_role(int(role_id))]
         if roles:
-            await ctx.send(f"Roles available for application:\n{'\n'.join(roles)}\n\nUse `apply <role_name>` to apply for a role.")
+            roles_list = '\n'.join(roles)
+            await ctx.send("Roles available for application:\n{}\n\nUse `apply <role_name>` to apply for a role.".format(roles_list))
         else:
             await ctx.send("No roles set for applications.")
 
