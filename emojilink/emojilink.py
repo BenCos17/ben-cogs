@@ -117,3 +117,27 @@ class EmojiLink(commands.Cog):
                 all_emojis.append((emoji, None))
         return all_emojis
 
+        @commands.command()
+        @commands.has_permissions(manage_emojis=True)
+        async def addemoji(self, ctx: commands.Context, name: str, url: str):
+            """
+            Adds a custom emoji to the server from a specified URL.
+
+            Parameters:
+            - name: The desired name for the new emoji.
+            - url: The direct URL of the image to be used as the emoji.
+            """
+            try:
+                async with ctx.typing():
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(url) as response:
+                            if response.status == 200:
+                                image_bytes = await response.read()
+                                created_emoji = await ctx.guild.create_custom_emoji(name=name, image=image_bytes)
+                                await ctx.send(f"Emoji '{name}' added successfully. {created_emoji}")
+                            else:
+                                await ctx.send("Could not retrieve the image from the provided URL.")
+            except discord.HTTPException as e:
+                await ctx.send(f"An error occurred while adding the emoji: {e}")
+            except aiohttp.ClientError as e:
+                await ctx.send(f"An error occurred while fetching the image: {e}")
