@@ -3,6 +3,7 @@ from redbot.core import commands
 from redbot.core.bot import Red
 import random
 import typing
+import aiohttp
 
 class EmojiLink(commands.Cog):
     def __init__(self, bot: Red):
