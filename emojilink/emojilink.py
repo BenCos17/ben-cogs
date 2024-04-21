@@ -9,8 +9,14 @@ class EmojiLink(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
 
-    @commands.command()
-    async def getemojilink(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
+    @commands.group(name="emojilink")
+    async def emojilink(self, ctx: commands.Context):
+        """Emoji related commands."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(str(ctx.command))
+
+    @emojilink.command(name="getlink")
+    async def get_emoji_link(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
         """
         Get the link for a Discord emoji.
 
@@ -32,8 +38,8 @@ class EmojiLink(commands.Cog):
         await ctx.send(f"Emoji: {emoji_str}")
         await ctx.send(f"Emoji link: {emoji_url}")
 
-    @commands.command()
-    async def listemojis(self, ctx: commands.Context):
+    @emojilink.command(name="list")
+    async def list_emojis(self, ctx: commands.Context):
         """
         List all custom emojis in the server along with their names and links.
         """
@@ -43,8 +49,8 @@ class EmojiLink(commands.Cog):
         else:
             await ctx.send("No custom emojis found in this server.")
 
-    @commands.command()
-    async def emojiinfo(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
+    @emojilink.command(name="info")
+    async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
         """
         Get information about a specific custom emoji, including its name, ID, and creation date.
 
@@ -75,8 +81,8 @@ class EmojiLink(commands.Cog):
         if emoji_url:
             await ctx.send(f"Emoji link: {emoji_url}")
 
-    @commands.command()
-    async def randomemoji(self, ctx: commands.Context):
+    @emojilink.command(name="random")
+    async def random_emoji(self, ctx: commands.Context):
         """
         Get a link for a random custom emoji in the server.
         """
@@ -90,8 +96,8 @@ class EmojiLink(commands.Cog):
         else:
             await ctx.send("No custom emojis found in this server.")
 
-    @commands.command()
-    async def emojisearch(self, ctx: commands.Context, keyword: str):
+    @emoji.command(name="search")
+    async def emoji_search(self, ctx: commands.Context, keyword: str):
         """
         Search for custom emojis based on their names or keywords.
 
@@ -118,9 +124,9 @@ class EmojiLink(commands.Cog):
                 all_emojis.append((emoji, None))
         return all_emojis
 
-    @commands.command()
+    @emoji.command(name="add", require_var_positional=True)
     @commands.has_permissions(manage_emojis=True)
-    async def addemoji(self, ctx: commands.Context, name: str, url: str):
+    async def add_emoji(self, ctx: commands.Context, name: str, url: str):
         """
         Add a custom emoji to the server from a given URL.
 
