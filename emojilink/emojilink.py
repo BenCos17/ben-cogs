@@ -48,7 +48,12 @@ class EmojiLink(commands.Cog):
             return
 
         emojis = [f"{emoji}: [Link](https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'})" for emoji in ctx.guild.emojis]
-        await ctx.send("\n".join(emojis))
+        # Check if the message length exceeds Discord's limit and split the message if necessary
+        if len("\n".join(emojis)) > 2000:
+            for chunk in [emojis[i:i+10] for i in range(0, len(emojis), 10)]:  # Splitting the list into chunks
+                await ctx.send("\n".join(chunk))
+        else:
+            await ctx.send("\n".join(emojis))
 
     @emojilink.command(name="info")
     async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
