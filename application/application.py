@@ -121,5 +121,3 @@ class Application(commands.Cog):
                 await ctx.send(f"Questions cleared for {role.name}.")
             else:
                 await ctx.send("No questions set for this role.")
-
-
