@@ -96,7 +96,7 @@ class EmojiLink(commands.Cog):
         else:
             await ctx.send("No custom emojis found in this server.")
 
-    @emoji.command(name="search")
+    @emojilink.command(name="search")
     async def emoji_search(self, ctx: commands.Context, keyword: str):
         """
         Search for custom emojis based on their names or keywords.
@@ -124,7 +124,7 @@ class EmojiLink(commands.Cog):
                 all_emojis.append((emoji, None))
         return all_emojis
 
-    @emoji.command(name="add", require_var_positional=True)
+    @emojilink.command(name="add", require_var_positional=True)
     @commands.has_permissions(manage_emojis=True)
     async def add_emoji(self, ctx: commands.Context, name: str, url: str):
         """
