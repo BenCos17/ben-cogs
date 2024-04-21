@@ -1,6 +1,5 @@
 import discord
 from redbot.core import commands, Config
-import httpx
 import json
 import aiohttp
 import re
@@ -14,17 +13,19 @@ class Airplaneslive(commands.Cog):
         self.EMBED_COLOR = discord.Color.blue() 
 
     async def cog_unload(self):
-        await self._http_client.aclose()
+        if hasattr(self, '_http_client'):
+            await self._http_client.close()
 
     async def _make_request(self, url):
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url)
+        if not hasattr(self, '_http_client'):
+            self._http_client = aiohttp.ClientSession()
+        try:
+            async with self._http_client.get(url) as response:
                 response.raise_for_status()
-                return response.json()
-            except httpx.RequestError as e:
-                print(f"Error making request: {e}")
-                return None
+                return await response.json()
+        except aiohttp.ClientError as e:
+            print(f"Error making request: {e}")
+            return None
 
     async def _send_aircraft_info(self, ctx, response):
         if 'ac' in response and response['ac']:                                            
@@ -42,18 +43,19 @@ class Airplaneslive(commands.Cog):
             await ctx.send("No aircraft information found or the response format is incorrect. \n the plane may be not currently in use or the data is not available at the moment")
 
     async def _get_photo_by_hex(self, hex_id):
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}')
-                if response.status_code == 200:
-                    json_out = response.json()
+        if not hasattr(self, '_http_client'):
+            self._http_client = aiohttp.ClientSession()
+        try:
+            async with self._http_client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}') as response:
+                if response.status == 200:
+                    json_out = await response.json()
                     if 'photos' in json_out and json_out['photos']:
                         photo = json_out['photos'][0]
                         url = photo.get('thumbnail_large', {}).get('src', '')
                         photographer = photo.get('photographer', '')
                         return url, photographer
-            except (KeyError, IndexError, httpx.RequestError):
-                pass
+        except (KeyError, IndexError, aiohttp.ClientError):
+            pass
         return None, None
 
     def _format_response(self, response):
@@ -192,9 +194,10 @@ class Airplaneslive(commands.Cog):
         url = "https://api.airplanes.live/stats"
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    data = await response.json()
+            if not hasattr(self, '_http_client'):
+                self._http_client = aiohttp.ClientSession()
+            async with self._http_client.get(url) as response:
+                data = await response.json()
 
             if "beast" in data and "mlat" in data and "other" in data and "aircraft" in data:
                 beast_stats = data["beast"]
