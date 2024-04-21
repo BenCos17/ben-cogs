@@ -170,18 +170,23 @@ class Airplaneslive(commands.Cog):
 
     @aircraft_group.command(
         name='json', 
-        help='Get aircraft information in JSON format for various identifiers like hex, squawk, callsign, etc.'
+        help='Get aircraft information in JSON format for various identifiers like hex, squawk, callsign, and type.'
     )
-    async def json(self, ctx, identifier: str):
-        # Determine the type of aircraft identifier provided
-        if re.match(r'^[0-9a-fA-F]{6}$', identifier):
-            identifier_type = "hex"
-        elif re.match(r'^[0-9]{4}$', identifier):
-            identifier_type = "squawk"
-        elif re.match(r'^[A-Z0-9]{2,7}$', identifier, re.I):
-            identifier_type = "callsign"
-        else:
-            identifier_type = "type"
+    async def json(self, ctx, identifier: str, identifier_type: str = None):
+        # Determine the type of aircraft identifier provided if not specified
+        if identifier_type is None:
+            if re.match(r'^[0-9a-fA-F]{6}$', identifier):
+                identifier_type = "hex"
+            elif re.match(r'^[0-9]{4}$', identifier):
+                identifier_type = "squawk"
+            elif re.match(r'^[A-Z0-9]{2,7}$', identifier, re.I):
+                identifier_type = "callsign"
+            else:
+                identifier_type = "type"  # Default to type if no match found and type not specified
+        
+        if identifier_type not in ["hex", "squawk", "callsign", "type"]:
+            await ctx.send("Invalid identifier type specified. Please use: hex, squawk, callsign, or type.")
+            return
         
         url = f"{self.api_url}/{identifier_type}/{identifier}"
         
