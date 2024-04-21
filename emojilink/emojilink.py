@@ -118,7 +118,6 @@ class EmojiLink(commands.Cog):
         return all_emojis
 
         @commands.command()
-        @commands.guild_only()
         @commands.has_permissions(manage_emojis=True)
         async def addemoji(self, ctx: commands.Context, name: str, url: str):
             """
