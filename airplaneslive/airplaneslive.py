@@ -13,6 +13,9 @@ class Airplaneslive(commands.Cog):
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color.blue() 
 
+    async def cog_unload(self):
+        await self._http_client.aclose()
+
     async def _make_request(self, url):
         async with httpx.AsyncClient() as client:
             try:
