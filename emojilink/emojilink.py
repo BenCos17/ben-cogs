@@ -9,11 +9,10 @@ class EmojiLink(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
 
-    @commands.group(name="emojilink")
+    @commands.group(name="emojilink", invoke_without_command=True)
     async def emojilink(self, ctx: commands.Context):
         """Emoji related commands."""
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help(str(ctx.command))
+        await ctx.send_help(str(ctx.command))
 
     @emojilink.command(name="getlink")
     async def get_emoji_link(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
@@ -48,12 +47,7 @@ class EmojiLink(commands.Cog):
             return
 
         emojis = [f"{emoji}: [Link](https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'})" for emoji in ctx.guild.emojis]
-        # Check if the message length exceeds Discord's limit and split the message if necessary
-        if len("\n".join(emojis)) > 2000:
-            for chunk in [emojis[i:i+10] for i in range(0, len(emojis), 10)]:  # Splitting the list into chunks
-                await ctx.send("\n".join(chunk))
-        else:
-            await ctx.send("\n".join(emojis))
+        await ctx.send("\n".join(emojis))
 
     @emojilink.command(name="info")
     async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
@@ -155,3 +149,4 @@ class EmojiLink(commands.Cog):
             await ctx.send("I do not have permissions to add emojis.")
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
+
