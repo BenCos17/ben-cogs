@@ -173,19 +173,20 @@ class Airplaneslive(commands.Cog):
         help='Get aircraft information in JSON format.'
     )
     async def json(self, ctx, aircraft_type: str):
-        # Check if the aircraft_type is a valid hexadecimal string
-        if re.match(r'^[0-9a-fA-F]+$', aircraft_type):
-            url = f"{self.api_url}/hex/{aircraft_type}"
-        else:
-            url = f"{self.api_url}/type/{aircraft_type}"
+        # Determine the type of aircraft identifier provided
+        identifier_type = "hex" if re.match(r'^[0-9a-fA-F]+$', aircraft_type) else "type"
+        url = f"{self.api_url}/{identifier_type}/{aircraft_type}"
         
-        response = await self._make_request(url)
-        if response:
+        try:
+            response = await self._make_request(url)
+            if not response:
+                raise ValueError("No data received from the API.")
+            
             aircraft_info = self._format_response(response)
             json_data = json.dumps(aircraft_info, indent=4)
             await ctx.send(f"```json\n{json_data}\n```")
-        else:
-            await ctx.send("Error retrieving aircraft information.")
+        except Exception as e:
+            await ctx.send(f"Error retrieving aircraft information: {e}")
 
 
 
@@ -217,3 +218,4 @@ class Airplaneslive(commands.Cog):
                 await ctx.send("Incomplete data received from API.")
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
+
