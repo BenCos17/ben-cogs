@@ -1,62 +1,47 @@
 import discord
+import asyncio
 from redbot.core import commands, Config
-from discord import Embed
 
 class Application(commands.Cog):
     """Cog for handling applications."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)  # Replace with a unique identifier
-        default_guild_settings = {
+        self.config = Config.get_conf(self, identifier=1234567890)
+        default_guild = {
             "application_channel": None,
-            "questions": {}  # Dictionary to store questions per role
+            "questions": {},
+            "applications": {}
         }
-        self.config.register_guild(**default_guild_settings)
+        self.config.register_guild(**default_guild)
 
-
+    @commands.guild_only()
     @commands.command()
     async def add_question(self, ctx, role: discord.Role, *, question: str):
         """Add a question for a specific role."""
-        guild_questions = await self.config.guild(ctx.guild).questions()
-        if not isinstance(guild_questions, dict):
-            guild_questions = {}
+        async with self.config.guild(ctx.guild).questions() as questions:
+            questions.setdefault(str(role.id), []).append(question)
+        await ctx.send(f"Question added for {role.name}.")
 
-        if role.id not in guild_questions:
-            guild_questions[role.id] = []
-
-        guild_questions[role.id].append(question)
-        await self.config.guild(ctx.guild).questions.set(guild_questions)
-        await ctx.send("Question added for the role.")
-
-
-
-    @commands.command()
     @commands.guild_only()
+    @commands.command()
     async def set_application_channel(self, ctx, channel: discord.TextChannel):
         """Set the application channel."""
         await self.config.guild(ctx.guild).application_channel.set(channel.id)
         await ctx.send(f"Application channel set to {channel.mention}.")
 
-
+    @commands.guild_only()
     @commands.command()
     async def list_roles(self, ctx):
         """List roles available for application."""
-        roles_with_questions = await self.config.guild(ctx.guild).questions()
-        if not roles_with_questions or not isinstance(roles_with_questions, dict):
-            return await ctx.send("No roles set for applications.")
-        
-        role_list = []
-        for role_id, role_questions in roles_with_questions.items():
-            role = ctx.guild.get_role(role_id)
-            if role:
-                role_list.append(role.name)
-        if role_list:
-            roles_text = "\n".join(role_list)
-            await ctx.send(f"Roles available for application:\n{roles_text}\n\nUse `apply <role_name>` to apply for a role.")
+        questions = await self.config.guild(ctx.guild).questions()
+        roles = [ctx.guild.get_role(int(role_id)).name for role_id in questions if ctx.guild.get_role(int(role_id))]
+        if roles:
+            await ctx.send(f"Roles available for application:\n{'\n'.join(roles)}\n\nUse `apply <role_name>` to apply for a role.")
         else:
-            await ctx.send("No roles found.")
+            await ctx.send("No roles set for applications.")
 
+    @commands.guild_only()
     @commands.command()
     async def apply(self, ctx, *, role_name: str):
         """Apply for a specific role."""
@@ -65,31 +50,29 @@ class Application(commands.Cog):
             return await ctx.send("Role not found.")
 
         questions = await self.config.guild(ctx.guild).questions()
-        if role.id not in questions:
+        role_questions = questions.get(str(role.id))
+        if not role_questions:
             return await ctx.send("No questions set for this role.")
 
-        user = ctx.author
         responses = {}
-        for question in questions[role.id]:
-            await user.send(f"Question: {question}\nPlease respond in this DM.")
+        for question in role_questions:
+            await ctx.author.send(f"Question: {question}\nPlease respond in this DM.")
             try:
                 response = await self.bot.wait_for(
                     "message",
-                    check=lambda m: m.author == user and m.channel.type == discord.ChannelType.private,
-                    timeout=300  # Adjust timeout as needed
+                    check=lambda m: m.author == ctx.author and m.channel.type == discord.ChannelType.private,
+                    timeout=300
                 )
                 responses[question] = response.content
             except asyncio.TimeoutError:
-                await user.send("Time's up. Please try again later.")
+                await ctx.author.send("Time's up. Please try again later.")
                 return
 
-        applications = await self.config.guild(ctx.guild).applications()
-        if role.id not in applications:
-            applications[role.id] = {}
-        applications[role.id][user.id] = responses  # Store responses for review per role
-        await self.config.guild(ctx.guild).applications.set(applications)
+        async with self.config.guild(ctx.guild).applications() as applications:
+            applications.setdefault(str(role.id), {})[str(ctx.author.id)] = responses
         await ctx.send("Application submitted. Thank you!")
 
+    @commands.guild_only()
     @commands.command()
     async def review_application(self, ctx, role_name: str, member: discord.Member):
         """Review a member's application for a specific role."""
@@ -98,47 +81,45 @@ class Application(commands.Cog):
             return await ctx.send("Role not found.")
 
         applications = await self.config.guild(ctx.guild).applications()
-        if role.id not in applications or member.id not in applications[role.id]:
+        member_applications = applications.get(str(role.id), {}).get(str(member.id))
+        if not member_applications:
             return await ctx.send("No application found for this member and role.")
 
         questions = await self.config.guild(ctx.guild).questions()
-        responses = applications[role.id][member.id]
-
+        role_questions = questions.get(str(role.id), [])
         application_channel_id = await self.config.guild(ctx.guild).application_channel()
         application_channel = self.bot.get_channel(application_channel_id)
 
-        if not questions or not responses or not application_channel:
-            return await ctx.send("Missing data required to review the application.")
+        if application_channel:
+            embed = discord.Embed(title=f"Application Review for {role.name}", color=discord.Color.blue())
+            for question in role_questions:
+                response = member_applications.get(question, "No response")
+                embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
+            await application_channel.send(embed=embed)
+            await ctx.send("Application sent to review channel.")
+        else:
+            await ctx.send("Application channel not set.")
 
-        embed = Embed(title=f"Application Review for {role.name}", color=discord.Color.blue())
-        for question in questions[role.id]:
-            response = responses.get(question, "No response")
-            embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
-        
-        await application_channel.send(embed=embed)
-        await ctx.send("Application sent to review channel.")
-
+    @commands.guild_only()
     @commands.command()
     async def remove_question(self, ctx, role: discord.Role, *, question: str):
         """Remove a question for a specific role."""
         async with self.config.guild(ctx.guild).questions() as questions:
-            if role.id not in questions:
-                return await ctx.send("No questions set for this role.")
-            if question in questions[role.id]:
-                questions[role.id].remove(question)
-                await ctx.send("Question removed for the role.")
+            if question in questions.get(str(role.id), []):
+                questions[str(role.id)].remove(question)
+                await ctx.send(f"Question removed for {role.name}.")
             else:
                 await ctx.send("Question not found for this role.")
 
+    @commands.guild_only()
     @commands.command()
     async def clear_questions(self, ctx, role: discord.Role):
         """Clear all questions for a specific role."""
         async with self.config.guild(ctx.guild).questions() as questions:
-            if role.id in questions:
-                del questions[role.id]
-                await ctx.send("Questions cleared for the role.")
+            if str(role.id) in questions:
+                del questions[str(role.id)]
+                await ctx.send(f"Questions cleared for {role.name}.")
             else:
                 await ctx.send("No questions set for this role.")
 
-def setup(bot):
-    bot.add_cog(Application(bot))
+

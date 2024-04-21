@@ -214,10 +214,3 @@ class Airplaneslive(commands.Cog):
                 await ctx.send("Incomplete data received from API.")
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
-
-
-
-
-
-
-
