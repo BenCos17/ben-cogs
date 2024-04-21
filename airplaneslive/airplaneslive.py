@@ -80,13 +80,13 @@ class Airplaneslive(commands.Cog):
         else:
             return "No aircraft found with the specified callsign."
 
-    @commands.group(name='aircraft', help='Get information about aircraft.')
+    @commands.hybrid_group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send('Invalid aircraft command passed.')
 
     @aircraft_group.command(name='hex', help='Get information about an aircraft by its hexadecimal identifier.')
-    async def aircraft_by_hex(self, ctx, hex_id):
+    async def aircraft_by_hex(self, ctx, hex_id: str):
         url = f"{self.api_url}/hex/{hex_id}"
         response = await self._make_request(url)
         if response:
@@ -95,7 +95,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send("Error retrieving aircraft information.")
 
     @aircraft_group.command(name='callsign', help='Get information about an aircraft by its callsign.')
-    async def aircraft_by_callsign(self, ctx, callsign):
+    async def aircraft_by_callsign(self, ctx, callsign: str):
         url = f"{self.api_url}/callsign/{callsign}"
         response = await self._make_request(url)
         if response:
@@ -104,7 +104,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send("No aircraft found with the specified callsign.")
 
     @aircraft_group.command(name='reg', help='Get information about an aircraft by its registration.')
-    async def aircraft_by_reg(self, ctx, registration):
+    async def aircraft_by_reg(self, ctx, registration: str):
         url = f"{self.api_url}/reg/{registration}"
         response = await self._make_request(url)
         if response:
@@ -113,7 +113,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send("Error retrieving aircraft information.")
 
     @aircraft_group.command(name='type', help='Get information about aircraft by its type.')
-    async def aircraft_by_type(self, ctx, aircraft_type):
+    async def aircraft_by_type(self, ctx, aircraft_type: str):
         url = f"{self.api_url}/type/{aircraft_type}"
         response = await self._make_request(url)
         if response:
@@ -122,7 +122,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send("Error retrieving aircraft information.")
 
     @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
-    async def aircraft_by_squawk(self, ctx, squawk_value):
+    async def aircraft_by_squawk(self, ctx, squawk_value: str):
         url = f"{self.api_url}/squawk/{squawk_value}"
         response = await self._make_request(url)
         if response:
@@ -158,7 +158,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send("Error retrieving PIA aircraft information.")
 
     @aircraft_group.command(name='radius', help='Get information about aircraft within a specified radius.')
-    async def aircraft_within_radius(self, ctx, lat, lon, radius):
+    async def aircraft_within_radius(self, ctx, lat: str, lon: str, radius: str):
         url = f"{self.api_url}/point/{lat}/{lon}/{radius}"
         response = await self._make_request(url)
         if response:
@@ -170,7 +170,7 @@ class Airplaneslive(commands.Cog):
         name='json', 
         help='Get aircraft information in JSON format.'
     )
-    async def json(self, ctx, aircraft_type):
+    async def json(self, ctx, aircraft_type: str):
         # Check if the aircraft_type is a valid hexadecimal string
         if re.match(r'^[0-9a-fA-F]+$', aircraft_type):
             url = f"{self.api_url}/hex/{aircraft_type}"
