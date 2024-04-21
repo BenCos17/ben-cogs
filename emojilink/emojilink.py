@@ -118,6 +118,9 @@ class EmojiLink(commands.Cog):
         return all_emojis
 
         @commands.command()
+        if not ctx.author.guild_permissions.manage_emojis:
+            await ctx.send("You do not have the required permissions to manage emojis.")
+            return
         @commands.has_permissions(manage_emojis=True)
         async def addemoji(self, ctx: commands.Context, name: str, url: str):
             """
