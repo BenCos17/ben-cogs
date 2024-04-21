@@ -170,7 +170,7 @@ class Airplaneslive(commands.Cog):
 
     @aircraft_group.command(
         name='json', 
-        help='Get aircraft information in JSON format for various identifiers like hex, squawk, callsign, and type.'
+        help='Retrieve aircraft information in various formats based on identifier type.'
     )
     async def json(self, ctx, identifier: str, identifier_type: str = None):
         # Determine the type of aircraft identifier provided if not specified
@@ -185,7 +185,7 @@ class Airplaneslive(commands.Cog):
                 identifier_type = "type"  # Default to type if no match found and type not specified
         
         if identifier_type not in ["hex", "squawk", "callsign", "type"]:
-            await ctx.send("Invalid identifier type specified. Please use: hex, squawk, callsign, or type.")
+            await ctx.send("Invalid identifier type specified. Use one of: hex, squawk, callsign, or type.")
             return
         
         url = f"{self.api_url}/{identifier_type}/{identifier}"
@@ -193,14 +193,13 @@ class Airplaneslive(commands.Cog):
         try:
             response = await self._make_request(url)
             if not response:
-                raise ValueError("No data received from the API.")
+                raise ValueError("Failed to receive data from the API.")
             
             aircraft_info = self._format_response(response)
             json_data = json.dumps(aircraft_info, indent=4)
             await ctx.send(f"```json\n{json_data}\n```")
         except Exception as e:
-            await ctx.send(f"Error retrieving aircraft information: {e}")
-
+            await ctx.send(f"Failed to retrieve aircraft information: {e}")
 
 
     @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
