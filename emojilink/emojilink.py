@@ -117,28 +117,28 @@ class EmojiLink(commands.Cog):
                 all_emojis.append((emoji, None))
         return all_emojis
 
-        @commands.command()
-        @commands.has_permissions(manage_emojis=True)
-        async def addemoji(self, ctx: commands.Context, name: str, url: str):
-            """
-            Add a custom emoji to the server from a given URL.
+    @commands.command()
+    @commands.has_permissions(manage_emojis=True)
+    async def addemoji(self, ctx: commands.Context, name: str, url: str):
+        """
+        Add a custom emoji to the server from a given URL.
 
-            Parameters:
-            - name: The name for the new emoji.
-            - url: The URL of the image to use for the emoji.
-            """
-            try:
-                async with ctx.typing():
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(url) as response:
-                            if response.status != 200:
-                                return await ctx.send("Failed to fetch image from URL.")
-                            image_data = await response.read()
-                            await ctx.guild.create_custom_emoji(name=name, image=image_data)
-                            await ctx.send(f"Emoji '{name}' added successfully.")
-            except discord.HTTPException as e:
-                await ctx.send(f"Failed to add emoji: {e.text}")
-            except discord.Forbidden:
-                await ctx.send("I do not have permissions to add emojis.")
-            except Exception as e:
-                await ctx.send(f"An unexpected error occurred: {e}")
+        Parameters:
+        - name: The name for the new emoji.
+        - url: The URL of the image to use for the emoji.
+        """
+        try:
+            async with ctx.typing():
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as response:
+                        if response.status != 200:
+                            return await ctx.send("Failed to fetch image from URL.")
+                        image_data = await response.read()
+                        await ctx.guild.create_custom_emoji(name=name, image=image_data)
+                        await ctx.send(f"Emoji '{name}' added successfully.")
+        except discord.HTTPException as e:
+            await ctx.send(f"Failed to add emoji: {e.text}")
+        except discord.Forbidden:
+            await ctx.send("I do not have permissions to add emojis.")
+        except Exception as e:
+            await ctx.send(f"An unexpected error occurred: {e}")
