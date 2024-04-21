@@ -43,11 +43,12 @@ class EmojiLink(commands.Cog):
         """
         List all custom emojis in the server along with their names and links.
         """
-        emojis = [f"{emoji}: [Link]({emoji_url})" for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis)]
-        if emojis:
-            await ctx.send("\n".join(emojis))
-        else:
+        if not ctx.guild.emojis:
             await ctx.send("No custom emojis found in this server.")
+            return
+
+        emojis = [f"{emoji}: [Link](https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'})" for emoji in ctx.guild.emojis]
+        await ctx.send("\n".join(emojis))
 
     @emojilink.command(name="info")
     async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
