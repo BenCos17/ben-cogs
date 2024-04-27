@@ -87,11 +87,155 @@ class Airplaneslive(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send('Invalid aircraft command passed.')
 
+    @aircraft_group.command(name='hex', help='Get information about an aircraft by its hexadecimal identifier.')
+    async def aircraft_by_hex(self, ctx, hex_id: str):
+        url = f"{self.api_url}/hex/{hex_id}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
+
+    @aircraft_group.command(name='callsign', help='Get information about an aircraft by its callsign.')
+    async def aircraft_by_callsign(self, ctx, callsign: str):
+        url = f"{self.api_url}/callsign/{callsign}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("No aircraft found with the specified callsign.")
+
+    @aircraft_group.command(name='reg', help='Get information about an aircraft by its registration.')
+    async def aircraft_by_reg(self, ctx, registration: str):
+        url = f"{self.api_url}/reg/{registration}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
+
+    @aircraft_group.command(name='type', help='Get information about aircraft by its type.')
+    async def aircraft_by_type(self, ctx, aircraft_type: str):
+        url = f"{self.api_url}/type/{aircraft_type}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
+
+    @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
+    async def aircraft_by_squawk(self, ctx, squawk_value: str):
+        url = f"{self.api_url}/squawk/{squawk_value}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information.")
+
+    @aircraft_group.command(name='military', help='Get information about military aircraft.')
+    async def military_aircraft(self, ctx):
+        url = f"{self.api_url}/mil"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving military aircraft information.")
+
+    @aircraft_group.command(name='ladd', help='Limiting Aircraft Data Displayed (LADD).')
+    async def ladd_aircraft(self, ctx):
+        url = f"{self.api_url}/ladd"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving LADD aircraft information.")
+
+    @aircraft_group.command(name='pia', help='Privacy ICAO Address.')
+    async def pia_aircraft(self, ctx):
+        url = f"{self.api_url}/pia"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving PIA aircraft information.")
+
+    @aircraft_group.command(name='radius', help='Get information about aircraft within a specified radius.')
+    async def aircraft_within_radius(self, ctx, lat: str, lon: str, radius: str):
+        url = f"{self.api_url}/point/{lat}/{lon}/{radius}"
+        response = await self._make_request(url)
+        if response:
+            await self._send_aircraft_info(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information within the specified radius.")
+
+    @aircraft_group.command(
+        name='json', 
+        help='Retrieve aircraft information in various formats based on identifier type.'
+    )
+    async def json(self, ctx, identifier: str, identifier_type: str = None):
+        # Determine the type of aircraft identifier provided if not specified
+        if identifier_type is None:
+            if re.match(r'^[0-9a-fA-F]{6}$', identifier):
+                identifier_type = "hex"
+            elif re.match(r'^[0-9]{4}$', identifier):
+                identifier_type = "squawk"
+            elif re.match(r'^[A-Z0-9]{2,7}$', identifier, re.I):
+                identifier_type = "callsign"
+            else:
+                identifier_type = "type"  # Default to type if no match found and type not specified
+        
+        if identifier_type not in ["hex", "squawk", "callsign", "type"]:
+            await ctx.send("Invalid identifier type specified. Use one of: hex, squawk, callsign, or type.")
+            return
+        
+        url = f"{self.api_url}/{identifier_type}/{identifier}"
+        
+        try:
+            response = await self._make_request(url)
+            if not response:
+                raise ValueError("Failed to receive data from the API.")
+            
+            aircraft_info = self._format_response(response)
+            json_data = json.dumps(aircraft_info, indent=4)
+            await ctx.send(f"```json\n{json_data}\n```")
+        except Exception as e:
+            await ctx.send(f"Failed to retrieve aircraft information: {e}")
+
+
+    @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
+    async def stats(self, ctx):
+        url = "https://api.airplanes.live/stats"
+
+        try:
+            if not hasattr(self, '_http_client'):
+                self._http_client = aiohttp.ClientSession()
+            async with self._http_client.get(url) as response:
+                data = await response.json()
+
+            if "beast" in data and "mlat" in data and "other" in data and "aircraft" in data:
+                beast_stats = data["beast"]
+                mlat_stats = data["mlat"]
+                other_stats = data["other"]
+                aircraft_stats = data["aircraft"]
+
+                embed = discord.Embed(title="airplanes.live Stats", color=0x00ff00)
+                embed.set_thumbnail(url="https://airplanes.live/img/airplanes-live-logo.png")
+                embed.add_field(name="Beast", value=beast_stats, inline=False)
+                embed.add_field(name="MLAT", value=mlat_stats, inline=False)
+                embed.add_field(name="Other", value=other_stats, inline=False)
+                embed.add_field(name="Aircraft", value=aircraft_stats, inline=False)
+
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send("Incomplete data received from API.")
+        except aiohttp.ClientError as e:
+            await ctx.send(f"Error fetching data: {e}")
+
     @commands.command(name='configure_alerts', help='Configure custom alerts for specific aircraft data.')
-    async def configure_alerts(self, ctx, identifier_type: str, identifier_value: str, alert_type: str, force_update: bool = False):
+    async def configure_alerts(self, ctx, identifier_type: str, identifier_value: str, alert_type: str):
         """Allows users to configure custom alerts based on specific aircraft data."""
-        user_id = ctx.author.id
-        config_data = await self.config.user_from_id(int(user_id)).alerts() or {}
+        user_id = str(ctx.author.id)
+        config_data = await self.config.user_from_id(user_id).alerts()
         if identifier_type not in ["hex", "squawk", "callsign", "type"]:
             await ctx.send("Invalid identifier type specified. Use one of: hex, squawk, callsign, or type.")
             return
@@ -99,22 +243,17 @@ class Airplaneslive(commands.Cog):
             await ctx.send("Invalid alert type specified. Use one of: emergency, all.")
             return
         # Create or update the alert configuration for the user
-        if identifier_type not in config_data or force_update:
+        if identifier_type not in config_data:
             config_data[identifier_type] = {}
         config_data[identifier_type][identifier_value] = alert_type
-        await self.config.user_from_id(int(user_id)).alerts.set(config_data)
+        await self.config.user_from_id(user_id).alerts.set(config_data)
         await ctx.send(f"Alert for {identifier_type} {identifier_value} configured successfully.")
-
-    @configure_alerts.command(name='force_update', help='Force update the alert configuration for specific aircraft data.')
-    async def force_update(self, ctx, identifier_type: str, identifier_value: str, alert_type: str):
-        """Force update the alert configuration for specific aircraft data."""
-        await self.configure_alerts(ctx, identifier_type, identifier_value, alert_type, force_update=True)
 
     async def check_for_alerts(self, aircraft_data):
         """Check if the received aircraft data matches any user-configured alerts."""
-        for user_id, user_alerts in (await self.config.all_users()).items() or {}:
-            for identifier_type, identifiers in user_alerts.get('alerts', {}).items() or {}:
-                for identifier, alert_type in identifiers.items() or {}:
+        for user_id, user_alerts in (await self.config.all_users()).items():
+            for identifier_type, identifiers in user_alerts.get('alerts', {}).items():
+                for identifier, alert_type in identifiers.items():
                     if identifier_type in aircraft_data and aircraft_data[identifier_type] == identifier:
                         if alert_type == "all" or (alert_type == "emergency" and aircraft_data.get("emergency", "") != ""):
                             user = self.bot.get_user(int(user_id))
@@ -126,3 +265,6 @@ class Airplaneslive(commands.Cog):
     async def on_aircraft_data_received(self, aircraft_data):
         """Listener to process received aircraft data and check for any alerts."""
         await self.check_for_alerts(aircraft_data)
+
+
+
