@@ -231,3 +231,40 @@ class Airplaneslive(commands.Cog):
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
 
+    @commands.command(name='configure_alerts', help='Configure custom alerts for specific aircraft data.')
+    async def configure_alerts(self, ctx, identifier_type: str, identifier_value: str, alert_type: str):
+        """Allows users to configure custom alerts based on specific aircraft data."""
+        user_id = str(ctx.author.id)
+        config_data = await self.config.user_from_id(user_id).alerts()
+        if identifier_type not in ["hex", "squawk", "callsign", "type"]:
+            await ctx.send("Invalid identifier type specified. Use one of: hex, squawk, callsign, or type.")
+            return
+        if alert_type not in ["emergency", "all"]:
+            await ctx.send("Invalid alert type specified. Use one of: emergency, all.")
+            return
+        # Create or update the alert configuration for the user
+        if identifier_type not in config_data:
+            config_data[identifier_type] = {}
+        config_data[identifier_type][identifier_value] = alert_type
+        await self.config.user_from_id(user_id).alerts.set(config_data)
+        await ctx.send(f"Alert for {identifier_type} {identifier_value} configured successfully.")
+
+    async def check_for_alerts(self, aircraft_data):
+        """Check if the received aircraft data matches any user-configured alerts."""
+        for user_id, user_alerts in (await self.config.all_users()).items():
+            for identifier_type, identifiers in user_alerts.get('alerts', {}).items():
+                for identifier, alert_type in identifiers.items():
+                    if identifier_type in aircraft_data and aircraft_data[identifier_type] == identifier:
+                        if alert_type == "all" or (alert_type == "emergency" and aircraft_data.get("emergency", "") != ""):
+                            user = self.bot.get_user(int(user_id))
+                            if user:
+                                await user.send(f"🚨 Alert Triggered for {identifier_type} {identifier}: {aircraft_data}")
+                                break  # Stop checking other alerts for this user to avoid duplicate messages
+
+    @commands.Cog.listener()
+    async def on_aircraft_data_received(self, aircraft_data):
+        """Listener to process received aircraft data and check for any alerts."""
+        await self.check_for_alerts(aircraft_data)
+
+
+
