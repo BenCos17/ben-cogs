@@ -232,7 +232,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"Error fetching data: {e}")
 
     @commands.command(name='configure_alerts', help='Configure custom alerts for specific aircraft data.')
-    async def configure_alerts(self, ctx, identifier_type: str, identifier_value: str, alert_type: str):
+    async def configure_alerts(self, ctx, identifier_type: str, identifier_value: str, alert_type: str, force_update: bool = False):
         """Allows users to configure custom alerts based on specific aircraft data."""
         user_id = ctx.author.id
         config_data = await self.config.user_from_id(int(user_id)).alerts() or {}
@@ -243,7 +243,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send("Invalid alert type specified. Use one of: emergency, all.")
             return
         # Create or update the alert configuration for the user
-        if identifier_type not in config_data:
+        if identifier_type not in config_data or force_update:
             config_data[identifier_type] = {}
         config_data[identifier_type][identifier_value] = alert_type
         await self.config.user_from_id(int(user_id)).alerts.set(config_data)
