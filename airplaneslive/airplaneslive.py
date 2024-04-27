@@ -234,8 +234,8 @@ class Airplaneslive(commands.Cog):
     @commands.command(name='configure_alerts', help='Configure custom alerts for specific aircraft data.')
     async def configure_alerts(self, ctx, identifier_type: str, identifier_value: str, alert_type: str):
         """Allows users to configure custom alerts based on specific aircraft data."""
-        user_id = str(ctx.author.id)
-        config_data = await self.config.user_from_id(user_id).alerts()
+        user_id = ctx.author.id
+        config_data = await self.config.user_from_id(int(user_id)).alerts()
         if identifier_type not in ["hex", "squawk", "callsign", "type"]:
             await ctx.send("Invalid identifier type specified. Use one of: hex, squawk, callsign, or type.")
             return
@@ -246,7 +246,7 @@ class Airplaneslive(commands.Cog):
         if identifier_type not in config_data:
             config_data[identifier_type] = {}
         config_data[identifier_type][identifier_value] = alert_type
-        await self.config.user_from_id(user_id).alerts.set(config_data)
+        await self.config.user_from_id(int(user_id)).alerts.set(config_data)
         await ctx.send(f"Alert for {identifier_type} {identifier_value} configured successfully.")
 
     async def check_for_alerts(self, aircraft_data):
