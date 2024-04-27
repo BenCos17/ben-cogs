@@ -231,6 +231,40 @@ class Airplaneslive(commands.Cog):
         except aiohttp.ClientError as e:
             await ctx.send(f"Error fetching data: {e}")
 
+    @aircraft_group.command(name='alert', help='Set up configurable alerts for specific keywords.')
+    async def alert(self, ctx, keyword: str, identifier_type: str):
+        try:
+            if not hasattr(self, 'alerts'):
+                self.alerts = {}
+            
+            if identifier_type not in ["hex", "squawk", "callsign", "type"]:
+                await ctx.send("Invalid identifier type specified. Use one of: hex, squawk, callsign, or type.")
+                return
+            
+            if keyword in self.alerts:
+                await ctx.send(f"Alert for keyword '{keyword}' already exists.")
+                return
+            
+            self.alerts[keyword] = (ctx.channel.id, identifier_type)
+            await ctx.send(f"Alert set up for keyword '{keyword}' with identifier type '{identifier_type}'.")
+        except Exception as e:
+            await ctx.send(f"An error occurred while setting up the alert: {e}")
+    
+    @aircraft_group.command(name='check_alerts', help='Check all configured alerts.')
+    async def check_alerts(self, ctx):
+        try:
+            if not hasattr(self, 'alerts') or not self.alerts:
+                await ctx.send("No alerts configured.")
+                return
+            
+            alerts_list = "\n".join([f"Keyword: {keyword}, Channel: {self.bot.get_channel(channel_id[0]).name}, Identifier Type: {channel_id[1]}" for keyword, channel_id in self.alerts.items()])
+            await ctx.send(f"Configured Alerts:\n{alerts_list}")
+        except Exception as e:
+            await ctx.send(f"An error occurred while checking alerts: {e}")
+
+
+
+
 
 
 
