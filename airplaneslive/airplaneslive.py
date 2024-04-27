@@ -249,6 +249,11 @@ class Airplaneslive(commands.Cog):
         await self.config.user_from_id(int(user_id)).alerts.set(config_data)
         await ctx.send(f"Alert for {identifier_type} {identifier_value} configured successfully.")
 
+    @configure_alerts.command(name='force_update', help='Force update the alert configuration for specific aircraft data.')
+    async def force_update(self, ctx, identifier_type: str, identifier_value: str, alert_type: str):
+        """Force update the alert configuration for specific aircraft data."""
+        await self.configure_alerts(ctx, identifier_type, identifier_value, alert_type, force_update=True)
+
     async def check_for_alerts(self, aircraft_data):
         """Check if the received aircraft data matches any user-configured alerts."""
         for user_id, user_alerts in (await self.config.all_users()).items() or {}:
