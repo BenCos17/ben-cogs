@@ -11,8 +11,6 @@ class Airplaneslive(commands.Cog):
         self.api_url = "https://api.airplanes.live/v2"
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color.blue() 
-        self.current_aircraft_index = 0
-        self.aircraft_list = []
 
     async def cog_unload(self):
         if hasattr(self, '_http_client'):
@@ -31,10 +29,8 @@ class Airplaneslive(commands.Cog):
 
     async def _send_aircraft_info(self, ctx, response):
         if 'ac' in response and response['ac']:                                            
-            self.aircraft_list = response['ac']
-            aircraft = self.aircraft_list[self.current_aircraft_index]
-            formatted_response = self._format_response(aircraft)
-            hex_id = aircraft.get('hex', '')                                      
+            formatted_response = self._format_response(response)
+            hex_id = response['ac'][0].get('hex', '')                                      
             image_url, photographer = await self._get_photo_by_hex(hex_id)
             link = f"[View on airplanes.live](https://globe.airplanes.live/?icao={hex_id})"  # Link to airplanes.live globe view
             formatted_response += f"\n\n{link}"  # Append the link to the end of the response
@@ -62,24 +58,6 @@ class Airplaneslive(commands.Cog):
             pass
         return None, None
 
-    def _format_response(self, aircraft_data):
-        formatted_data = (
-            f"**Flight:** {aircraft_data.get('flight', 'N/A').strip()}\n"
-            f"**Type:** {aircraft_data.get('desc', 'N/A')} ({aircraft_data.get('t', 'N/A')})\n"
-            f"**Altitude:** {aircraft_data.get('alt_baro', 'N/A')} feet\n"
-            f"**Ground Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
-            f"**Heading:** {aircraft_data.get('true_heading', 'N/A')} degrees\n"
-            f"**Position:** {aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}\n"
-            f"**Squawk:** {aircraft_data.get('squawk', 'N/A')}\n"
-            f"**Emergency:** {aircraft_data.get('emergency', 'N/A')}\n"
-            f"**Operator:** {aircraft_data.get('ownOp', 'N/A')}\n"
-            f"**Year:** {aircraft_data.get('year', 'N/A')}\n"
-            f"**Category:** {aircraft_data.get('category', 'N/A')}\n"
-            f"**Aircraft Type:** {aircraft_data.get('t', 'N/A')}\n"
-            f"**Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
-            f"**Altitude Rate:** {aircraft_data.get('baro_rate', 'N/A')} feet/minute\n"
-            f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute\n"
-        )
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
@@ -283,7 +261,6 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"Configured Alerts:\n{alerts_list}")
         except Exception as e:
             await ctx.send(f"An error occurred while checking alerts: {e}")
-
 
 
 
