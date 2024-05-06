@@ -294,9 +294,9 @@ class Airplaneslive(commands.Cog):
 
                     try:
                         reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                        await message.remove_reaction("➡️", ctx.author)  # Remove the reaction after processing
                     except asyncio.TimeoutError:
                         await ctx.send("No reaction received. Stopping.")
                         break
         except Exception as e:
             await ctx.send(f"An error occurred during scrolling: {e}.")
-
