@@ -279,10 +279,11 @@ class Airplaneslive(commands.Cog):
 
     @aircraft_group.command(name='scroll', help='Scroll through available planes.')
     async def scroll_planes(self, ctx):
-        url = f"{self.api_url}/planes"
+        url = f"{self.api_url}/mil"
         response = await self._make_request(url)
         if response:
             await self._scroll_through_planes(ctx, response)
         else:
             await ctx.send("Error retrieving aircraft information for scrolling.")
+
 
