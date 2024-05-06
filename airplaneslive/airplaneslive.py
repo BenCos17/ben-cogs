@@ -288,6 +288,7 @@ class Airplaneslive(commands.Cog):
                     await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
                     message = await ctx.send(f"Plane {index + 1}/{len(response['ac'])}. React with ➡️ to view the next plane or ⏹️ to stop.")
                     await message.add_reaction("➡️")  # Adding a reaction to scroll to the next plane
+                    await message.add_reaction("⏹️")  # Adding a reaction to stop scrolling
 
                     def check(reaction, user):
                         return user == ctx.author and str(reaction.emoji) == '➡️' or str(reaction.emoji) == '⏹️'  # Updated to check for stop reaction as well
