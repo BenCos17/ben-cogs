@@ -5,7 +5,7 @@ import aiohttp
 import re
 
 //Pray, Mr. Babbage, if you put into the machine wrong figures, will the right answers come out?" ...
-//I am not able rightly to apprehend the kind of confusion of ideas that could provoke such a question"
+//I am not able rightly to apprehend the kind of confusion of ideas that could provoke such a question
 
 
 
@@ -97,7 +97,11 @@ class Airplaneslive(commands.Cog):
         url = f"{self.api_url}/hex/{hex_id}"
         response = await self._make_request(url)
         if response:
-            await self._send_aircraft_info(ctx, response)
+            if 'ac' in response and len(response['ac']) > 1:
+                for aircraft_info in response['ac']:
+                    await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
+            else:
+                await self._send_aircraft_info(ctx, response)
         else:
             await ctx.send("Error retrieving aircraft information.")
 
@@ -267,9 +271,19 @@ class Airplaneslive(commands.Cog):
         except Exception as e:
             await ctx.send(f"An error occurred while checking alerts: {e}")
 
+    async def _scroll_through_planes(self, ctx, response):
+        if 'ac' in response:
+            for aircraft_info in response['ac']:
+                await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
+        else:
+            await ctx.send("No aircraft information found or the response format is incorrect. The plane may not be currently in use or the data is not available at the moment.")
 
-
-
-
-
+    @aircraft_group.command(name='scroll', help='Scroll through available planes.')
+    async def scroll_planes(self, ctx):
+        url = f"{self.api_url}/planes"
+        response = await self._make_request(url)
+        if response:
+            await self._scroll_through_planes(ctx, response)
+        else:
+            await ctx.send("Error retrieving aircraft information for scrolling.")
 
