@@ -284,33 +284,21 @@ class Airplaneslive(commands.Cog):
         try:
             response = await self._make_request(url)
             if response and 'ac' in response:
-                index = 0
-                message = None
-                while index < len(response['ac']):
-                    aircraft_info = response['ac'][index]
-                    if message:
-                        await message.edit(content=f"Plane {index + 1}/{len(response['ac'])}")
-                    else:
-                        message = await ctx.send(f"Plane {index + 1}/{len(response['ac'])}")
+                for index, aircraft_info in enumerate(response['ac']):
                     await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
-                    if index > 0:
-                        await message.add_reaction("⬅️")  # Adding a reaction to go back to the previous plane
-                    await message.add_reaction("➡️")  # Adding a reaction to view the next plane
+                    message = await ctx.send(f"Plane {index + 1}/{len(response['ac'])}. React with ➡️ to view the next plane or ⏹️ to stop.")
+                    await message.add_reaction("➡️")  # Adding a reaction to scroll to the next plane
                     await message.add_reaction("⏹️")  # Adding a reaction to stop scrolling
 
                     def check(reaction, user):
-                        return user == ctx.author and str(reaction.emoji) in ['⬅️', '➡️', '⏹️']
+                        return user == ctx.author and str(reaction.emoji) == '➡️' or str(reaction.emoji) == '⏹️'  # Updated to check for stop reaction as well
 
                     try:
                         reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
                         await message.remove_reaction(reaction.emoji, ctx.author)  # Remove the reaction after processing
-                        if str(reaction.emoji) == '⏹️':
+                        if str(reaction.emoji) == '⏹️':  # Check if the stop reaction was added
                             await ctx.send("Stopping.")
                             break
-                        elif str(reaction.emoji) == '⬅️':
-                            index = max(0, index - 1)
-                        else:
-                            index += 1
                     except asyncio.TimeoutError:
                         await ctx.send("No reaction received. Stopping.")
                         break
