@@ -283,7 +283,7 @@ class Airplaneslive(commands.Cog):
         response = await self._make_request(url)
         if response:
             await self._scroll_through_planes(ctx, response)
+            await ctx.message.add_reaction("➡️")  # Adding a reaction to scroll to the next plane
         else:
             await ctx.send("Error retrieving aircraft information for scrolling.")
-
-
+            return
