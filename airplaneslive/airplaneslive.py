@@ -285,13 +285,9 @@ class Airplaneslive(commands.Cog):
             response = await self._make_request(url)
             if response and 'ac' in response:
                 index = 0
-                message = None
+                message = await ctx.send(f"Plane {index + 1}/{len(response['ac'])}")
                 while index < len(response['ac']):
                     aircraft_info = response['ac'][index]
-                    if message:
-                        await message.edit(content=f"Plane {index + 1}/{len(response['ac'])}")
-                    else:
-                        message = await ctx.send(f"Plane {index + 1}/{len(response['ac'])}")
                     await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
                     if index > 0:
                         await message.add_reaction("⬅️")  # Adding a reaction to go back to the previous plane
