@@ -284,9 +284,33 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._scroll_through_planes(ctx, response)
             message = await ctx.send("React with ➡️ to view the next plane or ⏹️ to stop.")
+
             await message.add_reaction("➡️")  # Adding a reaction to scroll to the next plane
             await message.add_reaction("⏹️")  # Adding a reaction to stop scrolling
 
+            def check(reaction, user):
+                return user == ctx.author and str(reaction.emoji) in ['➡️', '⏹️']
+
+            while True:
+                try:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                except asyncio.TimeoutError:
+                    await ctx.send("No reaction received. Stopping.")
+                    break
+                else:
+                    if str(reaction.emoji) == '➡️':
+                        response = await self._make_request(url)  # Get the next plane
+                        if response:
+                            await self._scroll_through_planes(ctx, response)  # Show the next plane
+                        else:
+                            await ctx.send("No more planes available. Stopping.")
+                            break
+                    else:
+                        await ctx.send("Stopping scrolling.")
+                        break
+        else:
+            await ctx.send("Error retrieving aircraft information for scrolling.")
+            return
             def check(reaction, user):
                 return user == ctx.author and str(reaction.emoji) in ['➡️', '⏹️']
 
@@ -305,3 +329,4 @@ class Airplaneslive(commands.Cog):
         else:
             await ctx.send("Error retrieving aircraft information for scrolling.")
             return
+
