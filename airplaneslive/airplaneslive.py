@@ -4,10 +4,9 @@ import json
 import aiohttp
 import re
 
+
 //Pray, Mr. Babbage, if you put into the machine wrong figures, will the right answers come out?" ...
 //I am not able rightly to apprehend the kind of confusion of ideas that could provoke such a question
-
-
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
