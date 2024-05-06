@@ -290,11 +290,14 @@ class Airplaneslive(commands.Cog):
                     await message.add_reaction("➡️")  # Adding a reaction to scroll to the next plane
 
                     def check(reaction, user):
-                        return user == ctx.author and str(reaction.emoji) == '➡️'
+                        return user == ctx.author and str(reaction.emoji) == '➡️' or str(reaction.emoji) == '⏹️'  # Updated to check for stop reaction as well
 
                     try:
                         reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
-                        await message.remove_reaction("➡️", ctx.author)  # Remove the reaction after processing
+                        await message.remove_reaction(reaction.emoji, ctx.author)  # Remove the reaction after processing
+                        if str(reaction.emoji) == '⏹️':  # Check if the stop reaction was added
+                            await ctx.send("Stopping.")
+                            break
                     except asyncio.TimeoutError:
                         await ctx.send("No reaction received. Stopping.")
                         break
