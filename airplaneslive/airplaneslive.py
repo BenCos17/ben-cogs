@@ -3,6 +3,7 @@ from redbot.core import commands, Config
 import json
 import aiohttp
 import re
+import asyncio  # Added asyncio import
 
 
 #Pray, Mr. Babbage, if you put into the machine wrong figures, will the right answers come out?
@@ -280,40 +281,41 @@ class Airplaneslive(commands.Cog):
     @aircraft_group.command(name='scroll', help='Scroll through available planes.')
     async def scroll_planes(self, ctx):
         url = f"{self.api_url}/mil"
-        response = await self._make_request(url)
-        if response:
-            await self._scroll_through_planes(ctx, response)
-            message = await ctx.send("React with ➡️ to view the next plane or ⏹️ to stop.")
-            await message.add_reaction("➡️")  # Adding a reaction to scroll to the next plane
+        try:
+            response = await self._make_request(url)
+            if response:
+                await self._scroll_through_planes(ctx, response)
+                message = await ctx.send("React with ➡️ to view the next plane or ⏹️ to stop.")
+                await message.add_reaction("➡️")  # Adding a reaction to scroll to the next plane
 
-            def check(reaction, user):
-                return user == ctx.author and str(reaction.emoji) == '➡️'
+                def check(reaction, user):
+                    return user == ctx.author and str(reaction.emoji) == '➡️'
 
-            try:
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
-            except asyncio.TimeoutError:
-                await ctx.send("No reaction received. Stopping.")
-            else:
-                await self._scroll_through_planes(ctx, response)  # Show the next plane
-        else:
-            await ctx.send("Error retrieving aircraft information for scrolling.")
-            return
-            def check(reaction, user):
-                return user == ctx.author and str(reaction.emoji) in ['➡️', '⏹️']
-
-            while True:
                 try:
                     reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
                 except asyncio.TimeoutError:
                     await ctx.send("No reaction received. Stopping.")
-                    break
                 else:
-                    if str(reaction.emoji) == '➡️':
-                        await self._scroll_through_planes(ctx, response)  # Show the next plane
-                    else:
-                        await ctx.send("Stopping scrolling.")
+                    await self._scroll_through_planes(ctx, response)  # Show the next plane
+            else:
+                await ctx.send("Error retrieving aircraft information for scrolling.")
+                return
+                def check(reaction, user):
+                    return user == ctx.author and str(reaction.emoji) in ['➡️', '⏹️']
+
+                while True:
+                    try:
+                        reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                    except asyncio.TimeoutError:
+                        await ctx.send("No reaction received. Stopping.")
                         break
-        else:
-            await ctx.send("Error retrieving aircraft information for scrolling.")
-            return
+                    else:
+                        if str(reaction.emoji) == '➡️':
+                            await self._scroll_through_planes(ctx, response)  # Show the next plane
+                        else:
+                            await ctx.send("Stopping scrolling.")
+                            break
+        except Exception as e:
+            error_message = await response.text()
+            await ctx.send(f"An error occurred during scrolling: {e}. Server-side error: {error_message}")
 
