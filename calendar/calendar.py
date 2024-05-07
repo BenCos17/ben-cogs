@@ -21,10 +21,12 @@ class Calendar(kuroutils.Cog):
     async def _calendar(
         self,
         ctx: commands.Context,
-        month: int = discord.utils.utcnow().month,
-        year: int = discord.utils.utcnow().year,
+        month: int = None,
+        year: int = None,
     ):
         """View the calendar!"""
+        month = month or discord.utils.utcnow().month
+        year = year or discord.utils.utcnow().year
         if not (0 < month < 13 and 0 < year < 10000):
             await ctx.send("Invalid month or year provided.")
             return
