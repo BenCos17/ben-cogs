@@ -29,7 +29,7 @@ class Calendar(kuroutils.Cog):
             await ctx.send("Invalid month or year provided.")
             return
         w = 4 if isinstance(ctx.author, discord.Member) and ctx.author.is_on_mobile() else 5
-        cal = calendar.month(year, month, w=w, l=2)
+        cal = "\n".join(calendar.monthcalendar(year, month))
         if await ctx.embed_requested():
             embed = discord.Embed(
                 description=box(cal, lang="prolog"), color=await ctx.embed_color()
