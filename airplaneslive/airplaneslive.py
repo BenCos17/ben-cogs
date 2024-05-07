@@ -66,27 +66,26 @@ class Airplaneslive(commands.Cog):
     def _format_response(self, response):
         if 'ac' in response and response['ac']:
             aircraft_data = response['ac'][0]
-            formatted_data = {
-                'Flight': aircraft_data.get('flight', 'N/A').strip(),
-                'Type': f"{aircraft_data.get('desc', 'N/A')} ({aircraft_data.get('t', 'N/A')})",
-                'Altitude': f"{aircraft_data.get('alt_baro', 'N/A')} feet",
-                'Ground Speed': f"{aircraft_data.get('gs', 'N/A')} knots",
-                'Heading': f"{aircraft_data.get('true_heading', 'N/A')} degrees",
-                'Position': f"{aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}",
-                'Squawk': aircraft_data.get('squawk', 'N/A'),
-                'Emergency': aircraft_data.get('emergency', 'N/A'),
-                'Operator': aircraft_data.get('ownOp', 'N/A'),
-                'Year': aircraft_data.get('year', 'N/A'),
-                'Category': aircraft_data.get('category', 'N/A'),
-                'Aircraft Type': aircraft_data.get('t', 'N/A'),
-                'Speed': f"{aircraft_data.get('gs', 'N/A')} knots",
-                'Altitude Rate': f"{aircraft_data.get('baro_rate', 'N/A')} feet/minute",
-                'Vertical Rate': f"{aircraft_data.get('geom_rate', 'N/A')} feet/minute"
-            }
+            formatted_data = (
+                f"**Flight:** {aircraft_data.get('flight', 'N/A').strip()}\n"
+                f"**Type:** {aircraft_data.get('desc', 'N/A')} ({aircraft_data.get('t', 'N/A')})\n"
+                f"**Altitude:** {aircraft_data.get('alt_baro', 'N/A')} feet\n"
+                f"**Ground Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
+                f"**Heading:** {aircraft_data.get('true_heading', 'N/A')} degrees\n"
+                f"**Position:** {aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}\n"
+                f"**Squawk:** {aircraft_data.get('squawk', 'N/A')}\n"
+                f"**Emergency:** {aircraft_data.get('emergency', 'N/A')}\n"
+                f"**Operator:** {aircraft_data.get('ownOp', 'N/A')}\n"
+                f"**Year:** {aircraft_data.get('year', 'N/A')}\n"
+                f"**Category:** {aircraft_data.get('category', 'N/A')}\n"
+                f"**Aircraft Type:** {aircraft_data.get('t', 'N/A')}\n"
+                f"**Speed:** {aircraft_data.get('gs', 'N/A')} knots\n"
+                f"**Altitude Rate:** {aircraft_data.get('baro_rate', 'N/A')} feet/minute\n"
+                f"**Vertical Rate:** {aircraft_data.get('geom_rate', 'N/A')} feet/minute\n"
+            )
             return formatted_data
         else:
-            return {}
-
+            return "No aircraft found with the specified callsign."
 
     @commands.hybrid_group(name='aircraft', help='Get information about aircraft.')
     async def aircraft_group(self, ctx):
