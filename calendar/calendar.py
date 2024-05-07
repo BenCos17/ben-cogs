@@ -1,11 +1,9 @@
-import calendar
-
 import discord
 import kuroutils
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.utils.chat_formatting import box
-
+from calendar import monthcalendar  # Importing monthcalendar directly
 
 class Calendar(kuroutils.Cog):
     """See the calendar on Discord!"""
@@ -31,7 +29,7 @@ class Calendar(kuroutils.Cog):
             await ctx.send("Invalid month or year provided.")
             return
         w = 4 if isinstance(ctx.author, discord.Member) and ctx.author.is_on_mobile() else 5
-        cal = "\n".join(str(w) for w in calendar.monthcalendar(year, month))
+        cal = "\n".join(str(w) for w in monthcalendar(year, month))  # Using monthcalendar directly
         if await ctx.embed_requested():
             embed = discord.Embed(
                 description=box(cal, lang="prolog"), color=await ctx.embed_color()
@@ -67,4 +65,3 @@ class Calendar(kuroutils.Cog):
 
 def setup(bot):
     bot.add_cog(Calendar(bot))
-
