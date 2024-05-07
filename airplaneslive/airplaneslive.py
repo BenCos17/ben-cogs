@@ -241,7 +241,7 @@ class Airplaneslive(commands.Cog):
             await ctx.send(f"Error fetching data: {e}")
 
     @aircraft_group.command(name='alert', help='Set up configurable alerts for specific keywords.')
-    async def alert(self, ctx, keyword: str, identifier_type: str, channel: discord.TextChannel):
+    async def alert(self, ctx, keyword: str, identifier_type: str, channel: discord.TextChannel, force_update: bool = False):
         try:
             if not hasattr(self, 'alerts'):
                 self.alerts = {}
@@ -251,14 +251,31 @@ class Airplaneslive(commands.Cog):
                 return
             
             if any(keyword == alert_keyword for alert_keyword, (_, alert_channel) in self.alerts.items() if alert_channel == channel):
-                await ctx.send(f"Alert for keyword '{keyword}' already exists in channel '{channel.name}'.")
-                return
+                if not force_update:
+                    await ctx.send(f"Alert for keyword '{keyword}' already exists in channel '{channel.name}'.")
+                    return
             
             self.alerts[keyword] = (identifier_type, channel)
             await ctx.send(f"Alert set up for keyword '{keyword}' with identifier type '{identifier_type}' in channel '{channel.name}'.")
         except Exception as e:
             await ctx.send(f"An error occurred while setting up the alert: {e}")
     
+    @aircraft_group.command(name='force_update', help='Force an update for a specific alert.')
+    async def force_update(self, ctx, keyword: str, identifier_type: str, channel: discord.TextChannel):
+        try:
+            if not hasattr(self, 'alerts'):
+                await ctx.send("No alerts configured.")
+                return
+            
+            if (keyword, (identifier_type, channel)) not in self.alerts.items():
+                await ctx.send(f"No alert found for keyword '{keyword}' with identifier type '{identifier_type}' in channel '{channel.name}'.")
+                return
+            
+            self.alerts[keyword] = (identifier_type, channel)
+            await ctx.send(f"Forced update for alert with keyword '{keyword}' and identifier type '{identifier_type}' in channel '{channel.name}'.")
+        except Exception as e:
+            await ctx.send(f"An error occurred while forcing an update for the alert: {e}")
+
     @aircraft_group.command(name='check_alerts', help='Check all configured alerts.')
     async def check_alerts(self, ctx):
         try:
@@ -277,6 +294,10 @@ class Airplaneslive(commands.Cog):
                 await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
         else:
             await ctx.send("No aircraft information found or the response format is incorrect. The plane may not be currently in use or the data is not available at the moment.")
+
+
+            
+
     @aircraft_group.command(name='scroll', help='Scroll through available planes.')
     async def scroll_planes(self, ctx):
         url = f"{self.api_url}/mil"
