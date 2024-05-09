@@ -4,6 +4,7 @@ import json
 import aiohttp
 import re
 import asyncio
+import typing
 
 class Airplaneslive(commands.Cog):
     def __init__(self, bot):
@@ -34,17 +35,34 @@ class Airplaneslive(commands.Cog):
             hex_id = aircraft_data.get('hex', '')                                      
             image_url, photographer = await self._get_photo_by_hex(hex_id)
             link = f"https://globe.airplanes.live/?icao={hex_id}"
-            embed = discord.Embed(title='Aircraft Information', color=self.EMBED_COLOR)
+            emergency_squawk_codes = ['7500', '7600', '7700']
+            if aircraft_data.get('squawk', 'N/A') in emergency_squawk_codes:
+                embed = discord.Embed(title='Aircraft Information', color=discord.Colour(0xFF9145))
+                emergency_status = ":warning: **Declared**"
+                embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/Orange/alert-circle-outline.png")
+            else:
+                embed = discord.Embed(title='Aircraft Information', color=discord.Colour(0xfffffe))
+                emergency_status = "None Declared"
+                embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
             embed.set_image(url=image_url)
-            embed.set_footer(text="Powered by Planespotters.net and airplanes.live ✈️")
+            embed.set_footer(text="")
             embed.add_field(name="Flight", value=aircraft_data.get('flight', 'N/A').strip(), inline=True)
+            embed.add_field(name="Registration", value=aircraft_data.get('reg', 'N/A'), inline=True)
             embed.add_field(name="Type", value=f"{aircraft_data.get('desc', 'N/A')} ({aircraft_data.get('t', 'N/A')})", inline=True)
-            embed.add_field(name="Altitude", value=f"{aircraft_data.get('alt_baro', 'N/A')} feet", inline=True)
-            embed.add_field(name="Ground Speed", value=f"{aircraft_data.get('gs', 'N/A')} knots", inline=True)
+            altitude = aircraft_data.get('alt_baro', 'N/A')
+            ground_speed = aircraft_data.get('gs', 'N/A')
+            if altitude == 'ground':
+                embed.add_field(name="Altitude", value="On the Ground", inline=True)
+            else:
+                embed.add_field(name="Altitude", value=f"{altitude} feet", inline=True)
+            if ground_speed == 'ground':
+                embed.add_field(name="Ground Speed", value="On the Ground", inline=True)
+            else:
+                embed.add_field(name="Ground Speed", value=f"{ground_speed} knots", inline=True)
             embed.add_field(name="Heading", value=f"{aircraft_data.get('true_heading', 'N/A')} degrees", inline=True)
             embed.add_field(name="Position", value=f"{aircraft_data.get('lat', 'N/A')}, {aircraft_data.get('lon', 'N/A')}", inline=True)
             embed.add_field(name="Squawk", value=aircraft_data.get('squawk', 'N/A'), inline=True)
-            embed.add_field(name="Emergency", value=aircraft_data.get('emergency', 'N/A'), inline=True)
+            embed.add_field(name="Emergency", value=emergency_status, inline=True)
             embed.add_field(name="Operator", value=aircraft_data.get('ownOp', 'N/A'), inline=True)
             embed.add_field(name="Year", value=aircraft_data.get('year', 'N/A'), inline=True)
             embed.add_field(name="Category", value=aircraft_data.get('category', 'N/A'), inline=True)
@@ -55,6 +73,16 @@ class Airplaneslive(commands.Cog):
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label="Track flight live", url=f"{link}", style=discord.ButtonStyle.link, emoji="<:info:1199305085738553385>"))
             await ctx.send(embed=embed, view=view)
+            squawk_code = aircraft_data.get('squawk', 'N/A')
+            if squawk_code in emergency_squawk_codes:
+                emergency_embed = discord.Embed(title='Emergency declared', color=discord.Colour(0xFF9145))
+                if squawk_code == '7500':
+                    emergency_embed.add_field(name="Squawk 7500 - Hijacking", value="The pilots of this aircraft have indicated that the plane is being hijacked.", inline=False)
+                elif squawk_code == '7600':
+                    emergency_embed.add_field(name="Squawk 7600 - Radio Failure", value="This code is used to indicate a radio failure. While this code is squawked, assume an aircraft is in a location where reception and/or communication, and thus tracking, may be poor, restricted, or non-existant.", inline=False)
+                elif squawk_code == '7700':
+                    emergency_embed.add_field(name="Squawk 7700 - General Emergency", value="This code is used to indicate a general emergency. The pilot currently has ATC priority and is working on the situation.", inline=False)
+                await ctx.send(embed=emergency_embed)
         else:
             await ctx.send("No aircraft information found or the response format is incorrect.\n\nThe plane may be not currently in use or the data is not available at the moment")
 
@@ -74,13 +102,109 @@ class Airplaneslive(commands.Cog):
             pass
         return None, None
 
-    @commands.hybrid_group(name='aircraft', help='Get information about aircraft.')
+    @commands.group(name='aircraft ', help='Get information about aircraft.', invoke_without_command=True)
     async def aircraft_group(self, ctx):
+        """"""
         if ctx.invoked_subcommand is None:
-            await ctx.send('Invalid aircraft command passed.')
+            embed = discord.Embed(
+                title="aircraft  Actions",
+                description="Please select what you'd like to do with aircraft ...",
+                color=discord.Color.from_str("#fffffe")
+            )
+            view = discord.ui.View(timeout=180)  # Set a timeout for the view
 
-    @aircraft_group.command(name='hex', help='Get information about an aircraft by its hexadecimal identifier.')
-    async def aircraft_by_hex(self, ctx, hex_id: str):
+            # Create buttons with click actions
+            search_callsign = discord.ui.Button(label=f"Search by callsign", style=discord.ButtonStyle.green)
+            search_icao = discord.ui.Button(label="Search by ICAO", style=discord.ButtonStyle.grey)
+            search_registration = discord.ui.Button(label="Search by registration", style=discord.ButtonStyle.grey)
+            search_squawk = discord.ui.Button(label="Search by squawk", style=discord.ButtonStyle.grey)
+            search_type = discord.ui.Button(label="Search by type", style=discord.ButtonStyle.grey)
+            show_the_commands = discord.ui.Button(label="Show available commands", style=discord.ButtonStyle.grey)
+
+            # Define button callbacks
+            async def search_callsign_callback(interaction):
+                if interaction.user != ctx.author:
+                    await interaction.response.send_message("You are not allowed to interact with this button.", ephemeral=True)
+                    return
+                await interaction.response.defer()
+                await ctx.send("Please reply with the callsign you want to search.")
+                def check(m):
+                    return m.author == ctx.author
+                message = await self.bot.wait_for('message', check=check)
+                await self.aircraft_by_callsign(ctx, message.content)
+
+            async def search_icao_callback(interaction):
+                if interaction.user != ctx.author:
+                    await interaction.response.send_message("You are not allowed to interact with this button.", ephemeral=True)
+                    return
+                await interaction.response.defer()
+                await ctx.send("Please reply with the ICAO you want to search.")
+                def check(m):
+                    return m.author == ctx.author
+                message = await self.bot.wait_for('message', check=check)
+                await self.aircraft_by_icao(ctx, message.content)
+
+            async def search_registration_callback(interaction):
+                if interaction.user != ctx.author:
+                    await interaction.response.send_message("You are not allowed to interact with this button.", ephemeral=True)
+                    return
+                await interaction.response.defer()
+                await ctx.send("Please reply with the registration you want to search.")
+                def check(m):
+                    return m.author == ctx.author
+                message = await self.bot.wait_for('message', check=check)
+                await self.aircraft_by_reg(ctx, message.content)
+
+            async def search_squawk_callback(interaction):
+                if interaction.user != ctx.author:
+                    await interaction.response.send_message("You are not allowed to interact with this button.", ephemeral=True)
+                    return
+                await interaction.response.defer()
+                await ctx.send("Please reply with the squawk you want to search.")
+                def check(m):
+                    return m.author == ctx.author
+                message = await self.bot.wait_for('message', check=check)
+                await self.aircraft_by_squawk(ctx, message.content)
+
+            async def search_type_callback(interaction):
+                if interaction.user != ctx.author:
+                    await interaction.response.send_message("You are not allowed to interact with this button.", ephemeral=True)
+                    return
+                await interaction.response.defer()
+                await ctx.send("Please reply with the type you want to search.")
+                def check(m):
+                    return m.author == ctx.author
+                message = await self.bot.wait_for('message', check=check)
+                await self.aircraft_by_type(ctx, message.content)
+
+            async def show_the_commands_callback(interaction):
+                if interaction.user != ctx.author:
+                    await interaction.response.send_message("You are not allowed to interact with this button.", ephemeral=True)
+                    return
+                await interaction.response.defer()
+                await ctx.send_help(self.aircraft_group)
+
+            # Assign callbacks to buttons
+            search_callsign.callback = search_callsign_callback
+            search_icao.callback = search_icao_callback
+            search_registration.callback = search_registration_callback
+            search_squawk.callback = search_squawk_callback
+            search_type.callback = search_type_callback
+            show_the_commands.callback = show_the_commands_callback
+
+            # Add buttons to the view
+            view.add_item(search_callsign)
+            view.add_item(search_icao)
+            view.add_item(search_registration)
+            view.add_item(search_squawk)
+            view.add_item(search_type)
+            view.add_item(show_the_commands)
+
+            # Send the embed with the view
+            await ctx.send(embed=embed, view=view)
+
+    @aircraft_group.command(name='icao', help='Get information about an aircraft by its 24-bit ICAO Address')
+    async def aircraft_by_icao(self, ctx, hex_id: str):
         url = f"{self.api_url}/hex/{hex_id}"
         response = await self._make_request(url)
         if response:
@@ -90,8 +214,8 @@ class Airplaneslive(commands.Cog):
             else:
                 await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information.")
-
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
     @aircraft_group.command(name='callsign', help='Get information about an aircraft by its callsign.')
     async def aircraft_by_callsign(self, ctx, callsign: str):
         url = f"{self.api_url}/callsign/{callsign}"
@@ -99,7 +223,8 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("No aircraft found with the specified callsign.")
+            embed = discord.Embed(title="Error", description="No aircraft found with the specified callsign.", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(name='reg', help='Get information about an aircraft by its registration.')
     async def aircraft_by_reg(self, ctx, registration: str):
@@ -108,25 +233,71 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information.")
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(name='type', help='Get information about aircraft by its type.')
     async def aircraft_by_type(self, ctx, aircraft_type: str):
         url = f"{self.api_url}/type/{aircraft_type}"
         response = await self._make_request(url)
         if response:
-            await self._send_aircraft_info(ctx, response)
+            if 'ac' in response and len(response['ac']) > 1:
+                pages = []
+                for aircraft_info in response['ac']:
+                    embed = self._create_embed({'ac': [aircraft_info]})
+                    pages.append(embed)
+                message = await ctx.send(embed=pages[0])
+                await message.add_reaction('⬅️')
+                await message.add_reaction('➡️')
+                def check(reaction, user):
+                    return user == ctx.author and str(reaction.emoji) in ['⬅️', '➡️']
+                page = 0
+                while True:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                    if str(reaction.emoji) == '⬅️':
+                        if page > 0:
+                            page -= 1
+                            await message.edit(embed=pages[page])
+                    elif str(reaction.emoji) == '➡️':
+                        if page < len(pages) - 1:
+                            page += 1
+                            await message.edit(embed=pages[page])
+            else:
+                await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information.")
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
     async def aircraft_by_squawk(self, ctx, squawk_value: str):
         url = f"{self.api_url}/squawk/{squawk_value}"
         response = await self._make_request(url)
         if response:
-            await self._send_aircraft_info(ctx, response)
+            if 'ac' in response and len(response['ac']) > 1:
+                pages = []
+                for aircraft_info in response['ac']:
+                    embed = self._create_embed({'ac': [aircraft_info]})
+                    pages.append(embed)
+                message = await ctx.send(embed=pages[0])
+                await message.add_reaction('⬅️')
+                await message.add_reaction('➡️')
+                def check(reaction, user):
+                    return user == ctx.author and str(reaction.emoji) in ['⬅️', '➡️']
+                while True:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                    if str(reaction.emoji) == '⬅️':
+                        if page > 0:
+                            page -= 1
+                            await message.edit(embed=pages[page])
+                    elif str(reaction.emoji) == '➡️':
+                        if page < len(pages) - 1:
+                            page += 1
+                            await message.edit(embed=pages[page])
+            else:
+                await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information.")
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(name='military', help='Get information about military aircraft.')
     async def military_aircraft(self, ctx):
@@ -135,7 +306,8 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving military aircraft information.")
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(name='ladd', help='Limiting Aircraft Data Displayed (LADD).')
     async def ladd_aircraft(self, ctx):
@@ -144,7 +316,8 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving LADD aircraft information.")
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(name='pia', help='Privacy ICAO Address.')
     async def pia_aircraft(self, ctx):
@@ -153,7 +326,8 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving PIA aircraft information.")
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(name='radius', help='Get information about aircraft within a specified radius.')
     async def aircraft_within_radius(self, ctx, lat: str, lon: str, radius: str):
@@ -162,7 +336,8 @@ class Airplaneslive(commands.Cog):
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
-            await ctx.send("Error retrieving aircraft information within the specified radius.")
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information for aircraft within the specified radius.", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(
         name='json', 
@@ -181,7 +356,8 @@ class Airplaneslive(commands.Cog):
                 identifier_type = "type"  # Default to type if no match found and type not specified
         
         if identifier_type not in ["hex", "squawk", "callsign", "type"]:
-            await ctx.send("Invalid identifier type specified. Use one of: hex, squawk, callsign, or type.")
+            embed = discord.Embed(title="Error", description="Invalid identifier type specified.\n\nChoose between `hex`, `squawk`, `callsign`, or `type`.", color=0xff4545)
+            await ctx.send(embed=embed)
             return
         
         url = f"{self.api_url}/{identifier_type}/{identifier}"
@@ -195,10 +371,10 @@ class Airplaneslive(commands.Cog):
             json_data = json.dumps(aircraft_info, indent=4)
             await ctx.send(f"```json\n{json_data}\n```")
         except Exception as e:
-            await ctx.send(f"Failed to retrieve aircraft information: {e}")
+            embed = discord.Embed(title="Error", description=f"Failed to retrieve aircraft information: {e}", color=0xff4545)
+            await ctx.send(embed=embed)
 
-
-    @aircraft_group.command(name='stats', help='Get https://airplanes.live feeder stats.')
+    @aircraft_group.command(name='stats', help='Get feeder stats for airplanes.live')
     async def stats(self, ctx):
         url = "https://api.airplanes.live/stats"
 
@@ -225,7 +401,8 @@ class Airplaneslive(commands.Cog):
             else:
                 await ctx.send("Incomplete data received from API.")
         except aiohttp.ClientError as e:
-            await ctx.send(f"Error fetching data: {e}")
+            embed = discord.Embed(title="Error", description=f"Error fetching data: {e}", color=0xff4545)
+            await ctx.send(embed=embed)
 
     @aircraft_group.command(name='alert', help='Set up configurable alerts for specific keywords.')
     async def alert(self, ctx, keyword: str, identifier_type: str, channel: discord.TextChannel, force_update: bool = False):
@@ -293,7 +470,8 @@ class Airplaneslive(commands.Cog):
             if response and 'ac' in response:
                 for index, aircraft_info in enumerate(response['ac']):
                     await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
-                    message = await ctx.send(f"Plane {index + 1}/{len(response['ac'])}. React with ➡️ to view the next plane or ⏹️ to stop.")
+                    embed = discord.Embed(description=f"Plane {index + 1}/{len(response['ac'])}. React with ➡️ to view the next plane or ⏹️ to stop.")
+                    message = await ctx.send(embed=embed)
                     await message.add_reaction("➡️")  # Adding a reaction to scroll to the next plane
                     await message.add_reaction("⏹️")  # Adding a reaction to stop scrolling
 
@@ -304,23 +482,13 @@ class Airplaneslive(commands.Cog):
                         reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
                         await message.remove_reaction(reaction.emoji, ctx.author)  # Remove the reaction after processing
                         if str(reaction.emoji) == '⏹️':  # Check if the stop reaction was added
-                            await ctx.send("Stopping.")
+                            embed = discord.Embed(description="Stopping.")
+                            await ctx.send(embed=embed)
                             break
                     except asyncio.TimeoutError:
-                        await ctx.send("No reaction received. Stopping.")
+                        embed = discord.Embed(description="No reaction received. Stopping.")
+                        await ctx.send(embed=embed)
                         break
         except Exception as e:
-            await ctx.send(f"An error occurred during scrolling: {e}.")
-
-            @tasks.loop(minutes=15)
-            async def send_alerts(self):
-                for keyword, (identifier_type, channel) in self.alerts.items():
-                    try:
-                        url = f"{self.api_url}/{keyword}"
-                        response = await self._make_request(url)
-                        if response and 'ac' in response:
-                            for aircraft_info in response['ac']:
-                                if identifier_type in aircraft_info:
-                                    await channel.send(f"Alert for {keyword}: {aircraft_info[identifier_type]}")
-                    except Exception as e:
-                        print(f"An error occurred while sending alerts: {e}")
+            embed = discord.Embed(description=f"An error occurred during scrolling: {e}.")
+            await ctx.send(embed=embed)
