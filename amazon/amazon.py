@@ -1,12 +1,14 @@
 import re
-from redbot.core import commands
+from redbot.core import commands, Config
 
 class Amazon(commands.Cog):
     """Cog for handling Amazon affiliate links."""
     
     def __init__(self, bot):
         self.bot = bot
-        self.affiliate_tags = {}  # Dictionary to store affiliate tags per server
+        self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
+        default_guild = {"affiliate_tag": "yourtag-20"}
+        self.config.register_guild(**default_guild)
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -19,8 +21,8 @@ class Amazon(commands.Cog):
         
         if matches:
             affiliate_links = []
-            server_id = str(message.guild.id)
-            affiliate_tag = self.affiliate_tags.get(server_id, "yourtag-20")  # Use default if not set
+            server_id = message.guild.id
+            affiliate_tag = await self.config.guild(message.guild).affiliate_tag()
             for _, product_id in matches:
                 # Generate affiliate link
                 affiliate_link = f"https://www.amazon.com/dp/{product_id}?tag={affiliate_tag}"
@@ -33,7 +35,6 @@ class Amazon(commands.Cog):
     @commands.command()
     async def set_affiliate_tag(self, ctx, tag: str):
         """Set the Amazon affiliate tag for this server."""
-        server_id = str(ctx.guild.id)
-        self.affiliate_tags[server_id] = tag
+        await self.config.guild(ctx.guild).affiliate_tag.set(tag)
         await ctx.send(f"Affiliate tag set to: {tag} for this server.")
 
