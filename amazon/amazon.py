@@ -21,9 +21,9 @@ class Amazon(commands.Cog):
             affiliate_links = []
             server_id = str(message.guild.id)
             affiliate_tag = self.affiliate_tags.get(server_id, "yourtag-20")  # Use default if not set
-            for match in matches:
+            for _, product_id in matches:
                 # Generate affiliate link
-                affiliate_link = f"https://www.amazon.com/dp/{match[1]}?tag={affiliate_tag}"
+                affiliate_link = f"https://www.amazon.com/dp/{product_id}?tag={affiliate_tag}"
                 affiliate_links.append(affiliate_link)
             
             if affiliate_links:
