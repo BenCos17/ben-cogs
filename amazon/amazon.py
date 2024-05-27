@@ -38,3 +38,8 @@ class Amazon(commands.Cog):
         await self.config.guild(ctx.guild).affiliate_tag.set(tag)
         await ctx.send(f"Affiliate tag set to: {tag} for this server.")
 
+
+        @commands.command()
+        async def test(self, ctx):
+            """A simple test command."""
+            await ctx.send("test")
