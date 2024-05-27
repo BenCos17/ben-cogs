@@ -35,5 +35,3 @@ class Amazon(commands.Cog):
         self.affiliate_tags[server_id] = tag
         await ctx.send(f"Affiliate tag set to: {tag} for this server.")
 
-def setup(bot):
-    bot.add_cog(Amazon(bot))
