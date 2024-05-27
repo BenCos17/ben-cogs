@@ -2,6 +2,8 @@ import re
 from redbot.core import commands
 
 class Amazon(commands.Cog):
+    """Cog for handling Amazon affiliate links."""
+    
     def __init__(self, bot):
         self.bot = bot
         self.affiliate_tags = {}  # Dictionary to store affiliate tags per server
