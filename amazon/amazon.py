@@ -50,9 +50,6 @@ class Amazon(commands.Cog):
             response = "Here are the Amazon affiliate links:\n" + "\n".join(affiliate_links)
             await message.channel.send(response)
 
-
-
-
     @commands.group()
     @commands.admin_or_permissions(manage_guild=True)
     async def amazon(self, ctx):
@@ -62,7 +59,7 @@ class Amazon(commands.Cog):
     
     @amazon.command()
     @commands.admin_or_permissions(manage_guild=True)
-    async def set_tag(self, ctx, tag: str):
+    async def set(self, ctx, tag: str):
         """Set the Amazon affiliate tag for this server."""
         if not tag:
             await ctx.send("Invalid affiliate tag.")
@@ -74,6 +71,13 @@ class Amazon(commands.Cog):
         except Exception as e:
             await ctx.send("There was an error setting the affiliate tag. Please try again later.")
     
+    @amazon.command()
+    @commands.admin_or_permissions(manage_guild=True)
+    async def show(self, ctx):
+        """Show the current Amazon affiliate tag for this server."""
+        current_tag = await self.config.guild(ctx.guild).affiliate_tag()
+        await ctx.send(f"The current affiliate tag for this server is: {current_tag}")
+
     @amazon.command()
     @commands.admin_or_permissions(manage_guild=True)
     async def enable(self, ctx):
