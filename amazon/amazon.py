@@ -93,4 +93,12 @@ class Amazon(commands.Cog):
         
         
         
-        
+        @amazon.command()
+        @commands.admin_or_permissions(manage_guild=True)
+        async def current_tag(self, ctx):
+            """Display the current Amazon affiliate tag for this server."""
+            current_tag = await self.config.guild(ctx.guild).affiliate_tag()
+            if current_tag:
+                await ctx.send(f"The current Amazon affiliate tag for this server is: {current_tag}")
+            else:
+                await ctx.send("No Amazon affiliate tag has been set for this server.")
