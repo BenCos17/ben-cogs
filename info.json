@@ -4,5 +4,5 @@
     "name": "ben-cogs.",
     "short": "some random cogs I made for my own use and decided to make public.",
     "description": "airplanes tracking cog for the https://airplanes.live api and some misc random ones I'm working on.",
-    "tags": ["airplanes", "airplaneslive", "cooldown", "spam"]
+    "tags": ["cooldown", "spam"]
 }
