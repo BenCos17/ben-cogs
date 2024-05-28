@@ -50,13 +50,18 @@ class Amazon(commands.Cog):
             response = "Here are the Amazon affiliate links:\n" + "\n".join(affiliate_links)
             await message.channel.send(response)
 
+
+
+
     @commands.group()
+    @commands.admin_or_permissions(manage_guild=True)
     async def amazon(self, ctx):
         """Commands for managing Amazon affiliate settings."""
         if ctx.invoked_subcommand is None:
             await ctx.send("Invalid subcommand passed. Use [p]help amazon for available subcommands.")
     
     @amazon.command()
+    @commands.admin_or_permissions(manage_guild=True)
     async def set_tag(self, ctx, tag: str):
         """Set the Amazon affiliate tag for this server."""
         if not tag:
@@ -70,12 +75,14 @@ class Amazon(commands.Cog):
             await ctx.send("There was an error setting the affiliate tag. Please try again later.")
     
     @amazon.command()
+    @commands.admin_or_permissions(manage_guild=True)
     async def enable(self, ctx):
         """Enable Amazon affiliate link handling for this server."""
         await self.config.guild(ctx.guild).enabled.set(True)
         await ctx.send("Amazon affiliate link handling has been enabled for this server.")
 
     @amazon.command()
+    @commands.admin_or_permissions(manage_guild=True)
     async def disable(self, ctx):
         """Disable Amazon affiliate link handling for this server."""
         await self.config.guild(ctx.guild).enabled.set(False)
