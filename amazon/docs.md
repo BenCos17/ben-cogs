@@ -33,12 +33,8 @@ This cog includes several commands to manage Amazon affiliate settings for your 
 ## Configuration Options
 
 - `affiliate_tag`: The Amazon affiliate tag used for generating affiliate links.
-- `enabled`: A boolean indicating whether the affiliate link handling is enabled or disabled for the server.
-
 ## Examples
 
 - Setting an affiliate tag: `[p]amazon set_tag yourtag-20`
 - Enabling affiliate link handling: `[p]amazon enable`
 - Disabling affiliate link handling: `[p]amazon disable`
-
-These commands manage the affiliate settings and ensure that any Amazon links sent in the server are automatically converted to affiliate links if enabled.
