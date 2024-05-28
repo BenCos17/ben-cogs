@@ -12,7 +12,7 @@ class Amazon(commands.Cog):
 
         # Compile the regex pattern once and reuse it
         self.amazon_link_pattern = re.compile(
-            r"https?://(?:www\.)?amazon\.[a-z]{2,3}(?:\.[a-z]{2})?/(?:.*/)?(?:dp|gp/product)/(\w+/)?(\w{10})"
+            r"https?://(?:www\.)?(amazon\.[a-z]{2,3}(?:\.[a-z]{2})?)/(?:.*/)?(?:dp|gp/product)/(\w+/)?(\w{10})"
         )
 
     @commands.Cog.listener()
@@ -35,10 +35,11 @@ class Amazon(commands.Cog):
         affiliate_tag = await self.config.guild(message.guild).affiliate_tag()
         
         for match in matches:
-            product_id = match.group(2)
-            if product_id:
+            domain = match.group(1)
+            product_id = match.group(3)
+            if domain and product_id:
                 # Generate affiliate link
-                affiliate_link = f"https://www.amazon.com/dp/{product_id}?tag={affiliate_tag}"
+                affiliate_link = f"https://{domain}/dp/{product_id}?tag={affiliate_tag}"
                 affiliate_links.append(affiliate_link)
         
         if affiliate_links:
