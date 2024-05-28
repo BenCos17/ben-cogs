@@ -50,12 +50,11 @@ class Amazon(commands.Cog):
             response = "Here are the Amazon affiliate links:\n" + "\n".join(affiliate_links)
             await message.channel.send(response)
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @commands.admin_or_permissions(manage_guild=True)
     async def amazon(self, ctx):
         """Commands for managing Amazon affiliate settings."""
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid subcommand passed. Use [p]help amazon for available subcommands.")
+        await ctx.send_help('amazon')
     
     @amazon.command()
     @commands.admin_or_permissions(manage_guild=True)
@@ -91,3 +90,7 @@ class Amazon(commands.Cog):
         """Disable Amazon affiliate link handling for this server."""
         await self.config.guild(ctx.guild).enabled.set(False)
         await ctx.send("Amazon affiliate link handling has been disabled for this server.")
+        
+        
+        
+        
