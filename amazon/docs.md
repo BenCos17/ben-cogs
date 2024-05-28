@@ -41,4 +41,4 @@ This cog includes several commands to manage Amazon affiliate settings for your 
 - Enabling affiliate link handling: `[p]amazon enable`
 - Disabling affiliate link handling: `[p]amazon disable`
 
-These commands help manage the affiliate settings and ensure that any Amazon links sent in the server are automatically converted to affiliate links if enabled.
+These commands manage the affiliate settings and ensure that any Amazon links sent in the server are automatically converted to affiliate links if enabled.
