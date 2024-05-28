@@ -12,15 +12,19 @@ class Amazon(commands.Cog):
 
         # Compile the regex pattern once and reuse it
         self.amazon_link_pattern = re.compile(
-            r"https?://(?:www\.)?(amazon\.[a-z]{2,3}(?:\.[a-z]{2})?)/(?:.*/)?(?:dp|gp/product)/(\w+/)?(\w{10})"
+            r"https?://(?:www\.)?(amazon\.[a-z]{2,3}(?:\.[a-z]{2})?)/(?:.*/)?(?:dp|gp/product)/(\w+/)?(\w{10})(?:[/?#]|$)"
         )
+
+    def create_affiliate_link(self, domain, product_id, affiliate_tag):
+        """Create an affiliate link based on domain, product ID, and affiliate tag."""
+        return f"https://{domain}/dp/{product_id}?tag={affiliate_tag}"
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author.bot:
+        if message.author.bot or not message.guild:
             return
         
-        if not message.guild:
+        if "amazon" not in message.content.lower():
             return
 
         # Check if the cog is enabled for this server
@@ -38,8 +42,8 @@ class Amazon(commands.Cog):
             domain = match.group(1)
             product_id = match.group(3)
             if domain and product_id:
-                # Generate affiliate link
-                affiliate_link = f"https://{domain}/dp/{product_id}?tag={affiliate_tag}"
+                # Generate affiliate link using the helper method
+                affiliate_link = self.create_affiliate_link(domain, product_id, affiliate_tag)
                 affiliate_links.append(affiliate_link)
         
         if affiliate_links:
@@ -48,7 +52,7 @@ class Amazon(commands.Cog):
 
     @commands.group()
     async def amazon(self, ctx):
-        """Group command for managing Amazon affiliate settings."""
+        """Commands for managing Amazon affiliate settings."""
         if ctx.invoked_subcommand is None:
             await ctx.send("Invalid subcommand passed. Use [p]help amazon for available subcommands.")
     
@@ -59,8 +63,11 @@ class Amazon(commands.Cog):
             await ctx.send("Invalid affiliate tag.")
             return
         
-        await self.config.guild(ctx.guild).affiliate_tag.set(tag)
-        await ctx.send(f"Affiliate tag set to: {tag} for this server.")
+        try:
+            await self.config.guild(ctx.guild).affiliate_tag.set(tag)
+            await ctx.send(f"Affiliate tag set to: {tag} for this server.")
+        except Exception as e:
+            await ctx.send("There was an error setting the affiliate tag. Please try again later.")
     
     @amazon.command()
     async def enable(self, ctx):
