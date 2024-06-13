@@ -114,7 +114,7 @@ class TalkNotifier(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def getdocs(self, ctx):
         """Get the documentation for TalkNotifier."""
-        await ctx.send("You can find the documentation for TalkNotifier [docs](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md).")
+        await ctx.send("You can find the documentation for TalkNotifier [here](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md).")
 
     async def check_cooldown(self, user_id):
         cooldown = await self.config.cooldown()
