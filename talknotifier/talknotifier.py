@@ -64,6 +64,13 @@ class TalkNotifier(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
+    async def cleartargetusers(self, ctx):
+        await self.config.target_users.set([])
+        await ctx.send("All target users have been cleared.")
+
+    @commands.command()
+    @commands.guild_only()
+    @commands.admin_or_permissions(manage_guild=True)
     async def listtargetusers(self, ctx):
         target_users = await self.config.target_users()
         if target_users:
