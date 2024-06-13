@@ -116,3 +116,4 @@ class TalkNotifier(commands.Cog):
         if time.time() - last_message_time < cooldown:
             return True
         return False
+
