@@ -79,7 +79,7 @@ class TalkNotifier(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def clearusers(self, ctx):
         """Clear all target users from the notification list."""
-        await self.config.guild(ctx.guild).clear_raw("target_users")
+        await self.config.guild(ctx.guild).target_users.set({})
         await ctx.send("All target users have been cleared.")
 
     @talk_group.command()
@@ -122,6 +122,5 @@ class TalkNotifier(commands.Cog):
         if time.time() - last_message_time < cooldown:
             return True
         return False
-
 
 
