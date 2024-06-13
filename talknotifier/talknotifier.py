@@ -2,6 +2,7 @@ import discord
 from redbot.core import commands
 from redbot.core import Config
 import asyncio
+import time
 
 class TalkNotifier(commands.Cog):
     def __init__(self, bot):
@@ -19,10 +20,15 @@ class TalkNotifier(commands.Cog):
         channel = message.channel
         notification_message = await self.config.notification_message()
         target_users = await self.config.target_users()
+        cooldown = await self.config.cooldown()
 
         if message.author.id in target_users:
-            msg_content = notification_message.format(author=message.author.display_name, content=message.content)
-            await channel.send(msg_content)
+            if not await self.check_cooldown(message.author.id):
+                msg_content = notification_message.format(author=message.author.display_name, content=message.content)
+                await channel.send(msg_content)
+                self.cooldowns[message.author.id] = time.time()
+            else:
+                await channel.send(f"Please wait for the cooldown period to end before sending another notification.")
 
     @commands.command()
     @commands.guild_only()
@@ -58,15 +64,34 @@ class TalkNotifier(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
+    async def listtargetusers(self, ctx):
+        target_users = await self.config.target_users()
+        if target_users:
+            user_names = []
+            for user_id in target_users:
+                user = ctx.guild.get_member(user_id)
+                if user:
+                    user_names.append(user.display_name)
+            if user_names:
+                await ctx.send("Target users: " + ", ".join(user_names))
+            else:
+                await ctx.send("No target users found.")
+        else:
+            await ctx.send("There are currently no target users set.")
+
+    @commands.command()
+    @commands.guild_only()
+    @commands.admin_or_permissions(manage_guild=True)
     async def setcooldown(self, ctx, cooldown: int):
-        await self.config.cooldown.set(cooldown)
-        await ctx.send(f"Cooldown set to {cooldown} seconds.")
+        if cooldown < 0:
+            await ctx.send("Cooldown cannot be negative.")
+        else:
+            await self.config.cooldown.set(cooldown)
+            await ctx.send(f"Cooldown set to {cooldown} seconds.")
 
     async def check_cooldown(self, user_id):
         cooldown = await self.config.cooldown()
-        if user_id in self.cooldowns:
-            if self.cooldowns[user_id] + cooldown > time():
-                return True
+        last_message_time = self.cooldowns.get(user_id, 0)
+        if time.time() - last_message_time < cooldown:
+            return True
         return False
-
-
