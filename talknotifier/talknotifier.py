@@ -30,13 +30,24 @@ class TalkNotifier(commands.Cog):
             else:
                 await channel.send(f"Please wait for the cooldown period to end before sending another notification.")
 
-    @commands.group()
+    # @commands.group()
+    # @commands.guild_only()
+    # @commands.admin_or_permissions(manage_guild=True)
+    # async def talk(self, ctx):
+    #     """Notification related commands."""
+    #     if ctx.invoked_subcommand is None:
+    #         await ctx.send_help(ctx.command)
+    #         # End of Selection
+            
+            
+
+
+
     @commands.guild_only()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def talk(self, ctx):
+    @commands.group(name='talk', help='Notification related commands.', invoke_without_command=True, aliases=["talknotfier"])
+    async def aircraft_group(self, ctx):
         """Notification related commands."""
         if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
 
     @talk.command()
     @commands.admin_or_permissions(manage_guild=True)
