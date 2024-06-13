@@ -83,6 +83,16 @@ class TalkNotifier(commands.Cog):
         await ctx.send("All target users have been cleared.")
 
     @talk_group.command()
+    @commands.is_owner()
+    async def clearall(self, ctx):
+        """Clear all target users and messages from the notification list for all servers."""
+        all_guilds = self.bot.guilds
+        for guild in all_guilds:
+            await self.config.guild(guild).clear_raw("target_users")
+            await self.config.guild(guild).clear_raw("notification_message")
+        await ctx.send("All target users and messages have been cleared for all servers.")
+
+    @talk_group.command()
     @commands.admin_or_permissions(manage_guild=True)
     async def listusers(self, ctx):
         """List all users who are set to receive notifications."""
@@ -114,7 +124,7 @@ class TalkNotifier(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def getdocs(self, ctx):
         """Get the documentation for TalkNotifier."""
-        await ctx.send("You can find the documentation for TalkNotifier [here](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md).")
+        await ctx.send("You can find the documentation for TalkNotifier [here](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md)")
 
     async def check_cooldown(self, user_id):
         cooldown = await self.config.guild(ctx.guild).cooldown()
@@ -122,6 +132,3 @@ class TalkNotifier(commands.Cog):
         if time.time() - last_message_time < cooldown:
             return True
         return False
-
-
-
