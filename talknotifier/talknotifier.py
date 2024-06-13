@@ -110,6 +110,12 @@ class TalkNotifier(commands.Cog):
             await self.config.cooldown.set(cooldown)
             await ctx.send(f"Cooldown set to {cooldown} seconds.")
 
+    @talk_group.command()
+    @commands.admin_or_permissions(manage_guild=True)
+    async def getdocs(self, ctx):
+        """Get the documentation for TalkNotifier."""
+        await ctx.send("You can find the documentation for TalkNotifier [docs](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md).")
+
     async def check_cooldown(self, user_id):
         cooldown = await self.config.cooldown()
         last_message_time = self.cooldowns.get(user_id, 0)
