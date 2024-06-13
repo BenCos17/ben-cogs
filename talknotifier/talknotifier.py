@@ -34,6 +34,7 @@ class TalkNotifier(commands.Cog):
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def setnotificationmessage(self, ctx, *, message: str):
+        """Set the notification message for the server."""
         await self.config.notification_message.set(message)
         await ctx.send("Notification message has been set successfully.")
 
@@ -41,6 +42,7 @@ class TalkNotifier(commands.Cog):
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def showcurrentnotificationmessage(self, ctx):
+        """Display the current notification message."""
         notification_message = await self.config.notification_message()
         await ctx.send(f"Current notification message: {notification_message}")
 
@@ -48,6 +50,7 @@ class TalkNotifier(commands.Cog):
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def addtargetuser(self, ctx, user: discord.Member):
+        """Add a user to the target list for notifications."""
         target_users = await self.config.target_users()
         if user.id not in target_users:
             target_users.append(user.id)
@@ -60,6 +63,7 @@ class TalkNotifier(commands.Cog):
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def removetargetuser(self, ctx, user: discord.Member):
+        """Remove a user from the target list for notifications."""
         target_users = await self.config.target_users()
         if user.id in target_users:
             target_users.remove(user.id)
@@ -72,6 +76,7 @@ class TalkNotifier(commands.Cog):
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def cleartargetusers(self, ctx):
+        """Clear all target users from the notification list."""
         await self.config.target_users.set([])
         await ctx.send("All target users have been cleared.")
 
@@ -79,6 +84,7 @@ class TalkNotifier(commands.Cog):
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def listtargetusers(self, ctx):
+        """List all users who are set to receive notifications."""
         target_users = await self.config.target_users()
         if target_users:
             user_names = []
@@ -97,6 +103,7 @@ class TalkNotifier(commands.Cog):
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def setcooldown(self, ctx, cooldown: int):
+        """Set the cooldown period for notifications."""
         if cooldown < 0:
             await ctx.send("Cooldown cannot be negative.")
         else:
