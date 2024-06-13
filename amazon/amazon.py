@@ -6,7 +6,7 @@ class Amazon(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
+        self.config = Config.get_conf(self, identifier=492089091320446976, force_registration=True)
         default_guild = {"affiliate_tag": "yourtag-20", "enabled": False}
         self.config.register_guild(**default_guild)
 
