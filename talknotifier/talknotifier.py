@@ -40,6 +40,13 @@ class TalkNotifier(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
+    async def showcurrentnotificationmessage(self, ctx):
+        notification_message = await self.config.notification_message()
+        await ctx.send(f"Current notification message: {notification_message}")
+
+    @commands.command()
+    @commands.guild_only()
+    @commands.admin_or_permissions(manage_guild=True)
     async def addtargetuser(self, ctx, user: discord.Member):
         target_users = await self.config.target_users()
         if user.id not in target_users:
