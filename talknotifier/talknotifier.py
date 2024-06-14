@@ -30,30 +30,26 @@ class TalkNotifier(commands.Cog):
             else:
                 await channel.send(f"Please wait for the cooldown period to end before sending another notification.")
 
-    @commands.guild_only()
     @commands.group(name='talk', help='Notification related commands.', invoke_without_command=True, aliases=["talknotifier"])
     async def talk_group(self, ctx):
         """Notification related commands."""
         if ctx.invoked_subcommand is None:
-            pass
+            await ctx.send_help(ctx.command)
 
-    @talk_group.command()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def setmessage(self, ctx, *, message: str):
+    @talk_group.command(name='setmessage', help='Set the notification message for the server.')
+    async def talk_setmessage(self, ctx, *, message: str):
         """Set the notification message for the server."""
         await self.config.notification_message.set(message)
         await ctx.send("Notification message has been set successfully.")
 
-    @talk_group.command()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def showmessage(self, ctx):
+    @talk_group.command(name='showmessage', help='Display the current notification message.')
+    async def talk_showmessage(self, ctx):
         """Display the current notification message."""
         notification_message = await self.config.notification_message()
         await ctx.send(f"Current notification message: {notification_message}")
 
-    @talk_group.command()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def adduser(self, ctx, user: discord.Member):
+    @talk_group.command(name='adduser', help='Add a user to the target list for notifications.')
+    async def talk_adduser(self, ctx, user: discord.Member):
         """Add a user to the target list for notifications."""
         target_users = await self.config.target_users()
         if user.id not in target_users:
@@ -63,9 +59,8 @@ class TalkNotifier(commands.Cog):
         else:
             await ctx.send(f"{user.display_name} is already set to receive notifications.")
 
-    @talk_group.command()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def removeuser(self, ctx, user: discord.Member):
+    @talk_group.command(name='removeuser', help='Remove a user from the target list for notifications.')
+    async def talk_removeuser(self, ctx, user: discord.Member):
         """Remove a user from the target list for notifications."""
         target_users = await self.config.target_users()
         if user.id in target_users:
@@ -75,16 +70,14 @@ class TalkNotifier(commands.Cog):
         else:
             await ctx.send(f"{user.display_name} is not set to receive notifications.")
 
-    @talk_group.command()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def clearusers(self, ctx):
+    @talk_group.command(name='clearusers', help='Clear all target users from the notification list.')
+    async def talk_clearusers(self, ctx):
         """Clear all target users from the notification list."""
         await self.config.target_users.set([])
         await ctx.send("All target users have been cleared.")
 
-    @talk_group.command()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def listusers(self, ctx):
+    @talk_group.command(name='listusers', help='List all users who are set to receive notifications.')
+    async def talk_listusers(self, ctx):
         """List all users who are set to receive notifications."""
         target_users = await self.config.target_users()
         if target_users:
@@ -100,9 +93,8 @@ class TalkNotifier(commands.Cog):
         else:
             await ctx.send("There are currently no target users set.")
 
-    @talk_group.command()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def setcooldown(self, ctx, cooldown: int):
+    @talk_group.command(name='setcooldown', help='Set the cooldown period for notifications.')
+    async def talk_setcooldown(self, ctx, cooldown: int):
         """Set the cooldown period for notifications."""
         if cooldown < 0:
             await ctx.send("Cooldown cannot be negative.")
