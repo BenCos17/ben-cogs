@@ -2,6 +2,7 @@ import discord
 from redbot.core import commands
 from redbot.core import Config
 import asyncio
+import time
 
 class TalkNotifier(commands.Cog):
     def __init__(self, bot):
@@ -48,7 +49,7 @@ class TalkNotifier(commands.Cog):
     async def showmessage(self, ctx):
         """Display the current notification message."""
         guild_config = self.config.guild(ctx.guild)
-        notification_message = await guild_config.notification_message()
+        notification_message = await guild_config.get_raw("notification_message", default="{author} said: {content}")
         await ctx.send(f"Current notification message: {notification_message}")
 
     @talk_group.command()
