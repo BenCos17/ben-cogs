@@ -19,7 +19,7 @@ class TalkNotifier(commands.Cog):
         channel = message.channel
         guild_config = self.config.guild(message.guild)
         notification_message = await guild_config.notification_message()
-        target_users = await guild_config.target_users()
+        target_users = await guild_config.get_raw("target_users", default={})
         cooldown = await guild_config.cooldown()
 
         if message.author.id in target_users:
@@ -56,9 +56,9 @@ class TalkNotifier(commands.Cog):
     async def adduser(self, ctx, user: discord.Member):
         """Add a user to the target list for notifications."""
         guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.target_users()
+        target_users = await guild_config.get_raw("target_users", default={})
         if user.id not in target_users:
-            target_users.append(user.id)
+            target_users[user.id] = True
             await guild_config.set_raw("target_users", value=target_users)
             await ctx.send(f"{user.display_name} will now receive notifications.")
         else:
@@ -69,9 +69,9 @@ class TalkNotifier(commands.Cog):
     async def removeuser(self, ctx, user: discord.Member):
         """Remove a user from the target list for notifications."""
         guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.target_users()
+        target_users = await guild_config.get_raw("target_users", default={})
         if user.id in target_users:
-            target_users.remove(user.id)
+            del target_users[user.id]
             await guild_config.set_raw("target_users", value=target_users)
             await ctx.send(f"{user.display_name} will no longer receive notifications.")
         else:
@@ -90,7 +90,7 @@ class TalkNotifier(commands.Cog):
     async def listusers(self, ctx):
         """List all users who are set to receive notifications."""
         guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.target_users()
+        target_users = await guild_config.get_raw("target_users", default={})
         if target_users:
             user_names = []
             for user_id in target_users:
@@ -126,5 +126,4 @@ class TalkNotifier(commands.Cog):
         if time.time() - last_message_time < cooldown:
             return True
         return False
-
 
