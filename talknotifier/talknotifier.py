@@ -19,9 +19,9 @@ class TalkNotifier(commands.Cog):
 
         channel = message.channel
         guild_config = self.config.guild(message.guild)
-        notification_message = await guild_config.notification_message()
+        notification_message = await guild_config.get_raw("notification_message", default="{author} said: {content}")
         target_users = await guild_config.get_raw("target_users", default={})
-        cooldown = await guild_config.cooldown()
+        cooldown = await guild_config.get_raw("cooldown", default=10)
 
         if message.author.id in target_users:
             if not await self.check_cooldown(message.author.id, cooldown):
