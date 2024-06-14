@@ -19,9 +19,9 @@ class TalkNotifier(commands.Cog):
 
         channel = message.channel
         guild_config = self.config.guild(message.guild)
-        notification_message = await guild_config.get_raw("notification_message", default="{author} said: {content}")
-        target_users = await guild_config.get_raw("target_users", default={})
-        cooldown = await guild_config.get_raw("cooldown", default=10)
+        notification_message = await guild_config.notification_message()
+        target_users = await guild_config.target_users()
+        cooldown = await guild_config.cooldown()
 
         if message.author.id in target_users:
             if not await self.check_cooldown(message.author.id, cooldown):
@@ -40,27 +40,24 @@ class TalkNotifier(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def setmessage(self, ctx, *, message: str):
         """Set the notification message for the server."""
-        guild_config = self.config.guild(ctx.guild)
-        await guild_config.set_raw("notification_message", value=message)
+        await self.config.guild(ctx.guild).notification_message.set(message)
         await ctx.send("Notification message has been set successfully.")
 
     @talk_group.command()
     @commands.admin_or_permissions(manage_guild=True)
     async def showmessage(self, ctx):
         """Display the current notification message."""
-        guild_config = self.config.guild(ctx.guild)
-        notification_message = await guild_config.get_raw("notification_message", default="{author} said: {content}")
+        notification_message = await self.config.guild(ctx.guild).notification_message()
         await ctx.send(f"Current notification message: {notification_message}")
 
     @talk_group.command()
     @commands.admin_or_permissions(manage_guild=True)
     async def adduser(self, ctx, user: discord.Member):
         """Add a user to the target list for notifications."""
-        guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.get_raw("target_users", default={})
+        target_users = await self.config.guild(ctx.guild).target_users()
         if user.id not in target_users:
             target_users[user.id] = True
-            await guild_config.set_raw("target_users", value=target_users)
+            await self.config.guild(ctx.guild).target_users.set(target_users)
             await ctx.send(f"{user.display_name} will now receive notifications.")
         else:
             await ctx.send(f"{user.display_name} is already set to receive notifications.")
@@ -69,11 +66,10 @@ class TalkNotifier(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def removeuser(self, ctx, user: discord.Member):
         """Remove a user from the target list for notifications."""
-        guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.get_raw("target_users", default={})
+        target_users = await self.config.guild(ctx.guild).target_users()
         if user.id in target_users:
             del target_users[user.id]
-            await guild_config.set_raw("target_users", value=target_users)
+            await self.config.guild(ctx.guild).target_users.set(target_users)
             await ctx.send(f"{user.display_name} will no longer receive notifications.")
         else:
             await ctx.send(f"{user.display_name} is not set to receive notifications.")
@@ -82,16 +78,14 @@ class TalkNotifier(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def clearusers(self, ctx):
         """Clear all target users from the notification list."""
-        guild_config = self.config.guild(ctx.guild)
-        await guild_config.set_raw("target_users", value={})
+        await self.config.guild(ctx.guild).target_users.set({})
         await ctx.send("All target users have been cleared.")
 
     @talk_group.command()
     @commands.admin_or_permissions(manage_guild=True)
     async def listusers(self, ctx):
         """List all users who are set to receive notifications."""
-        guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.get_raw("target_users", default={})
+        target_users = await self.config.guild(ctx.guild).target_users()
         if target_users:
             user_names = []
             for user_id in target_users:
@@ -109,11 +103,10 @@ class TalkNotifier(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def setcooldown(self, ctx, cooldown: int):
         """Set the cooldown period for notifications."""
-        guild_config = self.config.guild(ctx.guild)
         if cooldown < 0:
             await ctx.send("Cooldown cannot be negative.")
         else:
-            await guild_config.set_raw("cooldown", value=cooldown)
+            await self.config.guild(ctx.guild).cooldown.set(cooldown)
             await ctx.send(f"Cooldown set to {cooldown} seconds.")
 
     @talk_group.command()
@@ -127,4 +120,5 @@ class TalkNotifier(commands.Cog):
         if time.time() - last_message_time < cooldown:
             return True
         return False
+
 
