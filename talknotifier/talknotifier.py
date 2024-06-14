@@ -19,9 +19,21 @@ class TalkNotifier(commands.Cog):
 
         channel = message.channel
         guild_config = self.config.guild(message.guild)
-        notification_message = await guild_config.notification_message()
-        target_users = await guild_config.target_users()
-        cooldown = await guild_config.cooldown()
+        try:
+            notification_message = await guild_config.notification_message()
+        except AttributeError:
+            await channel.send("Error: notification_message is not a valid registered Group or value.")
+            return
+        try:
+            target_users = await guild_config.target_users()
+        except AttributeError:
+            await channel.send("Error: target_users is not a valid registered Group or value.")
+            return
+        try:
+            cooldown = await guild_config.cooldown()
+        except AttributeError:
+            await channel.send("Error: cooldown is not a valid registered Group or value.")
+            return
 
         if message.author.id in target_users:
             if not await self.check_cooldown(message.author.id):
@@ -43,7 +55,11 @@ class TalkNotifier(commands.Cog):
     async def setmessage(self, ctx, *, message: str):
         """Set the notification message for the server."""
         guild_config = self.config.guild(ctx.guild)
-        await guild_config.set_raw("notification_message", value=message)
+        try:
+            await guild_config.set_raw("notification_message", value=message)
+        except Exception as e:
+            await ctx.send(f"Error: {str(e)}")
+            return
         await ctx.send("Notification message has been set successfully.")
 
     @talk_group.command()
@@ -51,7 +67,11 @@ class TalkNotifier(commands.Cog):
     async def showmessage(self, ctx):
         """Display the current notification message."""
         guild_config = self.config.guild(ctx.guild)
-        notification_message = await guild_config.notification_message()
+        try:
+            notification_message = await guild_config.notification_message()
+        except AttributeError:
+            await ctx.send("Error: notification_message is not a valid registered Group or value.")
+            return
         await ctx.send(f"Current notification message: {notification_message}")
 
     @talk_group.command()
@@ -59,10 +79,18 @@ class TalkNotifier(commands.Cog):
     async def adduser(self, ctx, user: discord.Member):
         """Add a user to the target list for notifications."""
         guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.target_users()
+        try:
+            target_users = await guild_config.target_users()
+        except AttributeError:
+            await ctx.send("Error: target_users is not a valid registered Group or value.")
+            return
         if user.id not in target_users:
             target_users.append(user.id)
-            await guild_config.set_raw("target_users", value=target_users)
+            try:
+                await guild_config.set_raw("target_users", value=target_users)
+            except Exception as e:
+                await ctx.send(f"Error: {str(e)}")
+                return
             await ctx.send(f"{user.display_name} will now receive notifications.")
         else:
             await ctx.send(f"{user.display_name} is already set to receive notifications.")
@@ -72,10 +100,18 @@ class TalkNotifier(commands.Cog):
     async def removeuser(self, ctx, user: discord.Member):
         """Remove a user from the target list for notifications."""
         guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.target_users()
+        try:
+            target_users = await guild_config.target_users()
+        except AttributeError:
+            await ctx.send("Error: target_users is not a valid registered Group or value.")
+            return
         if user.id in target_users:
             target_users.remove(user.id)
-            await guild_config.set_raw("target_users", value=target_users)
+            try:
+                await guild_config.set_raw("target_users", value=target_users)
+            except Exception as e:
+                await ctx.send(f"Error: {str(e)}")
+                return
             await ctx.send(f"{user.display_name} will no longer receive notifications.")
         else:
             await ctx.send(f"{user.display_name} is not set to receive notifications.")
@@ -85,7 +121,11 @@ class TalkNotifier(commands.Cog):
     async def clearusers(self, ctx):
         """Clear all target users from the notification list."""
         guild_config = self.config.guild(ctx.guild)
-        await guild_config.set_raw("target_users", value={})
+        try:
+            await guild_config.set_raw("target_users", value={})
+        except Exception as e:
+            await ctx.send(f"Error: {str(e)}")
+            return
         await ctx.send("All target users have been cleared.")
 
     @talk_group.command()
@@ -93,7 +133,11 @@ class TalkNotifier(commands.Cog):
     async def listusers(self, ctx):
         """List all users who are set to receive notifications."""
         guild_config = self.config.guild(ctx.guild)
-        target_users = await guild_config.target_users()
+        try:
+            target_users = await guild_config.target_users()
+        except AttributeError:
+            await ctx.send("Error: target_users is not a valid registered Group or value.")
+            return
         if target_users:
             user_names = []
             for user_id in target_users:
@@ -115,7 +159,11 @@ class TalkNotifier(commands.Cog):
         if cooldown < 0:
             await ctx.send("Cooldown cannot be negative.")
         else:
-            await guild_config.set_raw("cooldown", value=cooldown)
+            try:
+                await guild_config.set_raw("cooldown", value=cooldown)
+            except Exception as e:
+                await ctx.send(f"Error: {str(e)}")
+                return
             await ctx.send(f"Cooldown set to {cooldown} seconds.")
 
     @talk_group.command()
@@ -126,7 +174,10 @@ class TalkNotifier(commands.Cog):
 
     async def check_cooldown(self, user_id):
         guild_config = self.config.guild(ctx.guild)
-        cooldown = await guild_config.cooldown()
+        try:
+            cooldown = await guild_config.cooldown()
+        except AttributeError:
+            return False
         last_message_time = self.cooldowns.get(user_id, 0)
         if time.time() - last_message_time < cooldown:
             return True
