@@ -116,8 +116,8 @@ class TalkNotifier(commands.Cog):
             return True
         return False
 
+        @talk_group.command(name='cleardocs', help='Clear the example message and set a new one that links to the docs.')
         @commands.is_owner()
-        @commands.group(name='cleardocs', invoke_without_command=True)
         async def talk_cleardocs(self, ctx):
             """Clear the example message and set a new one that links to the docs."""
             await self.config.example_message.set("Check out the [docs](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md) for more information!")
