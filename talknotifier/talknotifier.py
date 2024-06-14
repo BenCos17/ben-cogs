@@ -43,7 +43,7 @@ class TalkNotifier(commands.Cog):
     async def setmessage(self, ctx, *, message: str):
         """Set the notification message for the server."""
         guild_config = self.config.guild(ctx.guild)
-        await guild_config.notification_message.set(message)
+        await guild_config.set_raw("notification_message", value=message)
         await ctx.send("Notification message has been set successfully.")
 
     @talk_group.command()
@@ -62,7 +62,7 @@ class TalkNotifier(commands.Cog):
         target_users = await guild_config.target_users()
         if user.id not in target_users:
             target_users.append(user.id)
-            await guild_config.target_users.set(target_users)
+            await guild_config.set_raw("target_users", value=target_users)
             await ctx.send(f"{user.display_name} will now receive notifications.")
         else:
             await ctx.send(f"{user.display_name} is already set to receive notifications.")
@@ -75,7 +75,7 @@ class TalkNotifier(commands.Cog):
         target_users = await guild_config.target_users()
         if user.id in target_users:
             target_users.remove(user.id)
-            await guild_config.target_users.set(target_users)
+            await guild_config.set_raw("target_users", value=target_users)
             await ctx.send(f"{user.display_name} will no longer receive notifications.")
         else:
             await ctx.send(f"{user.display_name} is not set to receive notifications.")
@@ -85,7 +85,7 @@ class TalkNotifier(commands.Cog):
     async def clearusers(self, ctx):
         """Clear all target users from the notification list."""
         guild_config = self.config.guild(ctx.guild)
-        await guild_config.target_users.set({})
+        await guild_config.set_raw("target_users", value={})
         await ctx.send("All target users have been cleared.")
 
     @talk_group.command()
@@ -115,7 +115,7 @@ class TalkNotifier(commands.Cog):
         if cooldown < 0:
             await ctx.send("Cooldown cannot be negative.")
         else:
-            await guild_config.cooldown.set(cooldown)
+            await guild_config.set_raw("cooldown", value=cooldown)
             await ctx.send(f"Cooldown set to {cooldown} seconds.")
 
     @talk_group.command()
