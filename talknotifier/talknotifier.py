@@ -30,6 +30,7 @@ class TalkNotifier(commands.Cog):
                 self.cooldowns.setdefault(guild_id, {})[message.author.id] = time.time()
             else:
                 await channel.send(f"Please wait for the cooldown period to end before sending another notification.")
+                await asyncio.sleep(cooldown - (time.time() - self.cooldowns[guild_id][message.author.id]))
 
     @commands.group(name='talk', help='Notification related commands.', invoke_without_command=True, aliases=["talknotifier"])
     async def talk_group(self, ctx):
@@ -123,4 +124,5 @@ class TalkNotifier(commands.Cog):
         """Clear the example message and set a new one that links to the docs."""
         await self.config.guild(ctx.guild).example_message.set("Check out the [docs](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md) for more information!")
         await ctx.send("Example message cleared and set to a new one that links to the docs.")
+
 
