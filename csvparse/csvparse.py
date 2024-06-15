@@ -2,9 +2,12 @@ import csv
 from redbot.core import commands
 import discord
 
+
+
 class CSVParse(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
 
     @commands.command(name="parsecsv", help="Parses a CSV file and returns it in a more readable format")
     async def parse_csv(self, ctx, *, file: str):
