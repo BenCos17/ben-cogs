@@ -2,7 +2,7 @@ import csv
 from redbot.core import commands
 import discord
 
-class csvparse(commands.Cog):
+class CSVParse(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -28,3 +28,5 @@ class csvparse(commands.Cog):
                 await ctx.send("The file was not found. Please make sure the file is in the same directory as the bot.")
         else:
             await ctx.send("Please upload a CSV file.")
+
+
