@@ -2,7 +2,7 @@ import csv
 from redbot.core import commands
 import discord
 
-class CSVParse(commands.Cog):
+class csvparse(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
