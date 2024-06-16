@@ -16,25 +16,25 @@ class Application(commands.Cog):
         self.config.register_guild(**default_guild)
 
     @commands.group()
-    async def roleset(self, ctx):
+    async def appset(self, ctx):
         """Subcommands for setting up roles."""
 
-    @roleset.command()
+    @appset.command()
     @commands.guild_only()
-    async def add_question(self, ctx, role: discord.Role, *, question: str):
+    async def add(self, ctx, role: discord.Role, *, question: str):
         """Add a question for a specific role."""
         async with self.config.guild(ctx.guild).questions() as questions:
             questions.setdefault(str(role.id), []).append(question)
         await ctx.send(f"Question added for {role.name}.")
 
-    @roleset.command()
+    @appset.command()
     @commands.guild_only()
     async def set(self, ctx, channel: discord.TextChannel):
         """Set the application channel."""
         await self.config.guild(ctx.guild).application_channel.set(channel.id)
         await ctx.send(f"Application channel set to {channel.mention}.")
 
-    @roleset.command()
+    @appset.command()
     @commands.guild_only()
     async def listroles(self, ctx):
         """List roles available for application."""
@@ -80,6 +80,7 @@ class Application(commands.Cog):
         application_channel = self.bot.get_channel(application_channel_id)
         if application_channel:
             embed = discord.Embed(title=f"Application Review for {role.name}", color=discord.Color.blue())
+            embed.set_author(name=f"Application by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
             for question in role_questions:
                 response = responses.get(question, "No response")
                 embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
@@ -88,13 +89,56 @@ class Application(commands.Cog):
         else:
             await ctx.send("Application channel not set.")
 
-    @roleset.command()
+    @appset.command()
     @commands.guild_only()
     async def review(self, ctx, role_name: str, member: discord.Member):
         """Review a member's application for a specific role."""
         role = discord.utils.get(ctx.guild.roles, name=role_name)
         if not role:
             return await ctx.send("Role not found.")
+
+        applications = await self.config.guild(ctx.guild).applications()
+        member_applications = applications.get(str(role.id), {}).get(str(member.id))
+        if not member_applications:
+            return await ctx.send("No application found for this member and role.")
+
+        questions = await self.config.guild(ctx.guild).questions()
+        role_questions = questions.get(str(role.id), [])
+        application_channel_id = await self.config.guild(ctx.guild).application_channel()
+        application_channel = self.bot.get_channel(application_channel_id)
+
+        if application_channel:
+            embed = discord.Embed(title=f"Application Review for {role.name}", color=discord.Color.blue())
+            embed.set_author(name=f"Application by {member.display_name}", icon_url=member.avatar.url)
+            for question in role_questions:
+                response = member_applications.get(question, "No response")
+                embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
+            await application_channel.send(embed=embed)
+            await ctx.send("Application sent to review channel.")
+        else:
+            await ctx.send("Application channel not set.")
+
+    @appset.command()
+    @commands.guild_only()
+    async def removeq(self, ctx, role: discord.Role, *, question: str):
+        """Remove a question for a specific role."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            if question in questions.get(str(role.id), []):
+                questions[str(role.id)].remove(question)
+                await ctx.send(f"Question removed for {role.name}.")
+            else:
+                await ctx.send("Question not found for this role.")
+
+    @appset.command()
+    @commands.guild_only()
+    async def clearq(self, ctx, role: discord.Role):
+        """Clear all questions for a specific role."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            if str(role.id) in questions:
+                del questions[str(role.id)]
+                await ctx.send(f"Questions cleared for {role.name}.")
+            else:
+                await ctx.send("No questions set for this role.")
 
         applications = await self.config.guild(ctx.guild).applications()
         member_applications = applications.get(str(role.id), {}).get(str(member.id))
@@ -116,7 +160,7 @@ class Application(commands.Cog):
         else:
             await ctx.send("Application channel not set.")
 
-    @roleset.command()
+    @appset.command()
     @commands.guild_only()
     async def remove(self, ctx, role: discord.Role, *, question: str):
         """Remove a question for a specific role."""
@@ -127,7 +171,7 @@ class Application(commands.Cog):
             else:
                 await ctx.send("Question not found for this role.")
 
-    @roleset.command()
+    @appset.command()
     @commands.guild_only()
     async def clear(self, ctx, role: discord.Role):
         """Clear all questions for a specific role."""
@@ -137,3 +181,4 @@ class Application(commands.Cog):
                 await ctx.send(f"Questions cleared for {role.name}.")
             else:
                 await ctx.send("No questions set for this role.")
+
