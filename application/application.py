@@ -85,6 +85,7 @@ class Application(commands.Cog):
                 response = responses.get(question, "No response")
                 embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
             await application_channel.send(embed=embed)
+            await ctx.author.send("Application submitted. Thank you!")
             await ctx.send("Application submitted. Thank you!")
         else:
             await ctx.send("Application channel not set.")
