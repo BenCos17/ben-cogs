@@ -7,7 +7,7 @@ class Application(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config = Config.get_conf(self, identifier=492089091320446976)
         default_guild = {
             "application_channel": None,
             "questions": {},
