@@ -71,7 +71,18 @@ class Application(commands.Cog):
 
         async with self.config.guild(ctx.guild).applications() as applications:
             applications.setdefault(str(role.id), {})[str(ctx.author.id)] = responses
-        await ctx.send("Application submitted. Thank you!")
+
+        application_channel_id = await self.config.guild(ctx.guild).application_channel()
+        application_channel = self.bot.get_channel(application_channel_id)
+        if application_channel:
+            embed = discord.Embed(title=f"Application Review for {role.name}", color=discord.Color.blue())
+            for question in role_questions:
+                response = responses.get(question, "No response")
+                embed.add_field(name=f"Question: {question}", value=f"Response: {response}", inline=False)
+            await application_channel.send(embed=embed)
+            await ctx.send("Application submitted. Thank you!")
+        else:
+            await ctx.send("Application channel not set.")
 
     @commands.guild_only()
     @commands.command()
