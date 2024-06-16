@@ -56,8 +56,8 @@ class Application(commands.Cog):
             return await ctx.send("No questions set for this role.")
 
         responses = {}
-        for question in role_questions:
-            await ctx.author.send(f"Question: {question}\nPlease respond in this DM.")
+        for i, question in enumerate(role_questions, 1):
+            await ctx.author.send(f"Question {i}: {question}\nPlease respond in this DM.")
             try:
                 response = await self.bot.wait_for(
                     "message",
@@ -70,7 +70,9 @@ class Application(commands.Cog):
                 return
 
         async with self.config.guild(ctx.guild).applications() as applications:
-            applications.setdefault(str(role.id), {})[str(ctx.author.id)] = responses
+            if str(role.id) not in applications:
+                applications[str(role.id)] = {}
+            applications[str(role.id)][str(ctx.author.id)] = responses
         await ctx.send("Application submitted. Thank you!")
 
     @commands.guild_only()
