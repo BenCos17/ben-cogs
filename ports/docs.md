@@ -1,6 +1,10 @@
 # Ports Cog Documentation
 
 **Warning:** The `scanports` and `searchports` commands can be used to scan for open ports on a host, which may be against the terms of service of the host or even illegal in some jurisdictions. Use these commands responsibly and only with permission from the host. For more information on the legality of port scanning, please visit [this link](https://www.stationx.net/is-port-scanning-legal/).
+also this will leak your bots ip addressto the host you are scanning 
+
+
+## Do not use unless you know what you are you doing
 
 ## Commands
 
