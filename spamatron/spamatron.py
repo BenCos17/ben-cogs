@@ -67,16 +67,21 @@ class Spamatron(commands.Cog):
             await asyncio.sleep(interval)
             if ctx.message.created_at.timestamp() >= end_time:
                 break
-
     @commands.guild_only()
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def stop_ghostping(self, ctx):
         """Stop the random ghost ping task."""
-        self.bot.loop.create_task(self.stop_ghostping_task(ctx))
+        await self.stop_ghostping_task(ctx)
+        await ctx.send("Random ghost ping task stopped successfully.")
 
     async def stop_ghostping_task(self, ctx):
         tasks = [task for task in asyncio.all_tasks() if task.get_name() == 'random_ghostping_task']
         for task in tasks:
-            task.cancel()
+            try:
+                task.cancel()
+            except Exception as e:
+                print(f"Error canceling task: {e}")
+            else:
+                task.exception()
 
