@@ -2,9 +2,20 @@ from redbot.core import commands
 import discord
 import asyncio
 
+from redbot.core import commands, Config
+import discord
+import asyncio
+
 class Spamatron(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config = Config.get_conf(self, identifier=492089091320446976)
+
+        default_guild_settings = {
+            "deletion_delay": 10,
+        }
+
+        self.config.register_guild(**default_guild_settings)
 
     @commands.guild_only()
     @commands.command()
@@ -39,7 +50,7 @@ class Spamatron(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def ghostping(self, ctx, channel: discord.TextChannel, users: commands.Greedy[discord.Member], *, reason: str = None):
         """Ghost ping one or multiple users with optional reason and customizable deletion delay."""
-        deletion_delay = 10  # seconds
+        deletion_delay = await self.config.guild(ctx.guild).deletion_delay()
         await ctx.send("Ghost ping initiated...", delete_after=deletion_delay)
         for user in users:
             await channel.send(f"{user.mention}", delete_after=0.1)
@@ -51,9 +62,17 @@ class Spamatron(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @commands.has_permissions(administrator=True)
+    async def set_deletion_delay(self, ctx, delay: int):
+        """Set the deletion delay for ghost pings."""
+        await self.config.guild(ctx.guild).deletion_delay.set(delay)
+        await ctx.send(f"Deletion delay set to {delay} seconds.")
+
+    @commands.guild_only()
+    @commands.command()
+    @commands.has_permissions(administrator=True)
     async def random_ghostping(self, ctx, channel: discord.TextChannel, users: commands.Greedy[discord.Member], duration: int, interval: int, *, reason: str = None):
         """Randomly ghost ping one or multiple users over a specified duration with a specified interval."""
-        await ctx.send("Random ghost ping initiated...", delete_after=10)
+        await ctx.send("Random ghost ping initiated...", delete_after=await self.config.guild(ctx.guild).deletion_delay())
         self.bot.loop.create_task(self.random_ghostping_task(ctx, channel, users, duration, interval, reason))
 
     async def random_ghostping_task(self, ctx, channel, users, duration, interval, reason):
@@ -62,9 +81,9 @@ class Spamatron(commands.Cog):
             for user in users:
                 await channel.send(f"{user.mention}", delete_after=0.1)
             if reason:
-                await channel.send(f"Ghost pinged {', '.join(u.mention for u in users)} for reason: {reason}", delete_after=10)
+                await channel.send(f"Ghost pinged {', '.join(u.mention for u in users)} for reason: {reason}", delete_after=await self.config.guild(ctx.guild).deletion_delay())
             else:
-                await channel.send(f"Ghost pinged {', '.join(u.mention for u in users)}", delete_after=10)
+                await channel.send(f"Ghost pinged {', '.join(u.mention for u in users)}", delete_after=await self.config.guild(ctx.guild).deletion_delay())
             await asyncio.sleep(interval)
             if ctx.message.created_at.timestamp() >= end_time:
                 break
@@ -86,5 +105,4 @@ class Spamatron(commands.Cog):
                 print(f"Error canceling task: {e}")
             else:
                 task.exception()
-
 
