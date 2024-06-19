@@ -32,3 +32,18 @@ class Spamatron(commands.Cog):
             await channel.send(message)
 
         await ctx.send(f"Successfully sent `{amount}` messages to {channel.mention}.")
+        @commands.guild_only()
+        @commands.command()
+        @commands.has_permissions(administrator=True)
+        async def ghostping(self, ctx, users: commands.Greedy[discord.Member], *, reason: str = None):
+            """Ghost ping one or multiple users with optional reason and customizable deletion delay."""
+            deletion_delay = 10  # seconds
+            await ctx.send("Ghost ping initiated...", delete_after=deletion_delay)
+            for user in users:
+                await ctx.send(f"{user.mention}", delete_after=0.1)
+            if reason:
+                await ctx.send(f"Ghost pinged {', '.join(u.mention for u in users)} for reason: {reason}", delete_after=deletion_delay)
+            else:
+                await ctx.send(f"Ghost pinged {', '.join(u.mention for u in users)}", delete_after=deletion_delay)
+
+
