@@ -1,5 +1,6 @@
 from redbot.core import commands
 import discord
+import asyncio
 
 class Spamatron(commands.Cog):
     def __init__(self, bot):
@@ -67,6 +68,7 @@ class Spamatron(commands.Cog):
             await asyncio.sleep(interval)
             if ctx.message.created_at.timestamp() >= end_time:
                 break
+
     @commands.guild_only()
     @commands.command()
     @commands.has_permissions(administrator=True)
@@ -84,4 +86,5 @@ class Spamatron(commands.Cog):
                 print(f"Error canceling task: {e}")
             else:
                 task.exception()
+
 
