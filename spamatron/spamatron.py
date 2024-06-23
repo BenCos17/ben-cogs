@@ -53,6 +53,7 @@ class Spamatron(commands.Cog):
                 msg = await ctx.send(f"{member.mention} has been ghostpinged.")
                 await msg.delete()
                 await asyncio.sleep(interval)
+            self.ghostping_tasks.pop(ctx.author.id, None)  # Remove the task from the dictionary after completion
 
         self.ghostping_tasks[ctx.author.id] = self.bot.loop.create_task(ghostping_task(member, amount, interval))
         await ctx.send(f"Ghostping task started for {member.mention} with {amount} pings at an interval of {interval} seconds.")
@@ -68,3 +69,4 @@ class Spamatron(commands.Cog):
         task = self.ghostping_tasks.pop(ctx.author.id)
         task.cancel()
         await ctx.send("Ghostping task stopped.")
+
