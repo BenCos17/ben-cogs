@@ -34,7 +34,7 @@ class Servertools(commands.Cog):
         if ctx.guild:
             if ctx.guild.get_member(user.id):
                 try:
-                    await user.voice.channel.move_to(channel.id)
+                    await user.move_to(channel)
                     await ctx.send(f"Moved {user.name} to {channel.name}.")
                 except discord.Forbidden:
                     await ctx.send("I do not have permission to move members in voice channels.")
