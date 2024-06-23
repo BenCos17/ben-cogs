@@ -69,20 +69,7 @@ class Servertools(commands.Cog):
         else:
             await ctx.send("This command can only be used in a channel.")
 
-    @commands.command()
-    @commands.has_permissions(manage_roles=True)
-    async def role(self, ctx, user: discord.Member, role: discord.Role):
-        if ctx.guild:
-            if ctx.guild.get_member(user.id):
-                try:
-                    await user.add_roles(role)
-                    await ctx.send(f"Added {role.name} to {user.name}.")
-                except discord.Forbidden:
-                    await ctx.send("I do not have permission to manage roles.")
-            else:
-                await ctx.send("This user is not a member of this server.")
-        else:
-            await ctx.send("This command can only be used in a server.")
+
 
     @commands.command()
     @commands.has_permissions(view_audit_log=True)
