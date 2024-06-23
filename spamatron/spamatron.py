@@ -38,8 +38,8 @@ class Spamatron(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def ghostping(self, ctx, member: discord.Member, amount: int = 1, interval: int = 1):
-        """Ghostping a member."""
+    async def ghostping(self, ctx, member: discord.Member, channel: discord.TextChannel, amount: int = 1, interval: int = 1):
+        """Ghostping a member in a specified channel."""
         if amount <= 0:
             return await ctx.send("Please provide a positive number for the amount.")
         if interval <= 0:
@@ -48,15 +48,15 @@ class Spamatron(commands.Cog):
         if ctx.author.id in self.ghostping_tasks:
             return await ctx.send("You already have a ghostping task running.")
 
-        async def ghostping_task(member, amount, interval):
+        async def ghostping_task(member, channel, amount, interval):
             for _ in range(amount):
-                msg = await ctx.send(f"{member.mention} has been ghostpinged.")
+                msg = await channel.send(f"{member.mention} has been ghostpinged.")
                 await msg.delete()
                 await asyncio.sleep(interval)
             self.ghostping_tasks.pop(ctx.author.id, None)  # Remove the task from the dictionary after completion
 
-        self.ghostping_tasks[ctx.author.id] = self.bot.loop.create_task(ghostping_task(member, amount, interval))
-        await ctx.send(f"Ghostping task started for {member.mention} with {amount} pings at an interval of {interval} seconds.")
+        self.ghostping_tasks[ctx.author.id] = self.bot.loop.create_task(ghostping_task(member, channel, amount, interval))
+        await ctx.send(f"Ghostping task started for {member.mention} in {channel.mention} with {amount} pings at an interval of {interval} seconds.")
 
     @commands.guild_only()
     @commands.command()
