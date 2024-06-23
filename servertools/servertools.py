@@ -47,7 +47,7 @@ class Servertools(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
-    async def lockdown(self, ctx, channel: discord.TextChannel, *, permissions: str):
+    async def ld(self, ctx, channel: discord.TextChannel, *, permissions: str):
         if ctx.guild:
             try:
                 await channel.set_permissions(ctx.guild.roles[0], send_messages=False)
