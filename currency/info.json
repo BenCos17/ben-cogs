@@ -1,0 +1,11 @@
+{
+    "name": "Currency",
+    "author": ["bencos18"],
+    "description": "A cog for converting currencies and fetching exchange rates using the FreeCurrencyAPI.",
+    "install_msg": "Thank you for installing the Currency cog. Please set your API key using `[p]set api freecurrencyapi api_key,YOUR_API_KEY`.",
+    "short": "Currency conversion and exchange rates",
+    "requirements": ["aiohttp"],
+    "tags": ["currency", "conversion", "exchange rates"],
+    "min_bot_version": "3.4.0",
+    "end_user_data_statement": "This cog does not store any end user data."
+}
