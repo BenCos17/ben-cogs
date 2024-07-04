@@ -26,13 +26,19 @@ class Currency(commands.Cog):
             await ctx.send("API key not set. Please set it using `[p]set api freecurrencyapi api_key,YOUR_API_KEY`")
             return
         base_url = await self.config.base_url()
-        url = f"{base_url}convert?apikey={api_key}&base_currency={from_currency}&currencies={to_currency}&amount={amount}"
+        url = f"{base_url}latest?apikey={api_key}&currencies={from_currency},{to_currency}"
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url) as response:
+                    if response.status == 422:
+                        await ctx.send(f'Invalid currency code(s) provided: {from_currency}, {to_currency}. Please check the currency codes and try again.')
+                        return
                     response.raise_for_status()
                     data = await response.json()
-                    converted_amount = data['data'][to_currency]
+                    rates = data['data']
+                    from_rate = rates[from_currency]
+                    to_rate = rates[to_currency]
+                    converted_amount = (amount / from_rate) * to_rate
                     await ctx.send(f'{amount} {from_currency} is equal to {converted_amount:.2f} {to_currency}')
             except Exception as e:
                 await ctx.send(f'Failed to fetch currency data. Please try again later. Error: {str(e)}')
@@ -48,6 +54,9 @@ class Currency(commands.Cog):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url) as response:
+                    if response.status == 422:
+                        await ctx.send(f'Invalid base currency code provided: {base_currency}. Please check the currency code and try again.')
+                        return
                     response.raise_for_status()
                     data = await response.json()
                     rates = data['data']
