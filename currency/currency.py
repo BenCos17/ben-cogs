@@ -35,7 +35,7 @@ class Currency(commands.Cog):
                     converted_amount = amount * rate
                     await ctx.send(f'{amount} {from_currency} is equal to {converted_amount:.2f} {to_currency}')
                 else:
-                    await ctx.send('Failed to fetch currency data. Please try again later.')
+                    await ctx.send('Failed to fetch currency data. Please try again later. Error code: {response.status}')
 
     @commands.command(name='rates')
     async def get_rates(self, ctx, base_currency: str):
@@ -54,4 +54,4 @@ class Currency(commands.Cog):
                     rates_message = '\n'.join([f'{currency}: {rate}' for currency, rate in rates.items()])
                     await ctx.send(f'Exchange rates for {base_currency}:\n{rates_message}')
                 else:
-                    await ctx.send('Failed to fetch currency data. Please try again later.')
+                    await ctx.send('Failed to fetch currency data. Please try again later. Error code: {response.status}')
