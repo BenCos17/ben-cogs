@@ -11,47 +11,47 @@ class Currency(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
         default_global = {
-            "base_url": "https://api.freecurrencyapi.com/v1/"
+            "base_url": "https://api.freecurrencyapi.com/v1/",
         }
         self.config.register_global(**default_global)
 
-    async def red_get_api_key(self, api_key_name: str):
-        return await self.bot.get_shared_api_tokens(api_key_name)
+    async def red_get_api_key(self):
+        api_key = await self.bot.get_shared_api_tokens("freecurrencyapi")
+        return api_key.get("api_key")
 
     @commands.command(name='currency')
     async def convert_currency(self, ctx, amount: float, from_currency: str, to_currency: str):
-        api_tokens = await self.red_get_api_key("freecurrencyapi")
-        api_key = api_tokens.get("api_key")
+        api_key = await self.red_get_api_key()
         if not api_key:
             await ctx.send("API key not set. Please set it using `[p]set api freecurrencyapi api_key,YOUR_API_KEY`")
             return
         base_url = await self.config.base_url()
+        url = f"{base_url}convert?apikey={api_key}&base_currency={from_currency}&currencies={to_currency}&amount={amount}"
         async with aiohttp.ClientSession() as session:
-            url = f'{base_url}latest?apikey={api_key}&base_currency={from_currency}&currencies={to_currency}'
-            async with session.get(url) as response:
-                if response.status == 200:
+            try:
+                async with session.get(url) as response:
+                    response.raise_for_status()
                     data = await response.json()
-                    rate = data['data'][to_currency]
-                    converted_amount = amount * rate
+                    converted_amount = data['data'][to_currency]
                     await ctx.send(f'{amount} {from_currency} is equal to {converted_amount:.2f} {to_currency}')
-                else:
-                    await ctx.send('Failed to fetch currency data. Please try again later. Error code: {response.status}')
+            except Exception as e:
+                await ctx.send(f'Failed to fetch currency data. Please try again later. Error: {str(e)}')
 
     @commands.command(name='rates')
     async def get_rates(self, ctx, base_currency: str):
-        api_tokens = await self.red_get_api_key("freecurrencyapi")
-        api_key = api_tokens.get("api_key")
+        api_key = await self.red_get_api_key()
         if not api_key:
             await ctx.send("API key not set. Please set it using `[p]set api freecurrencyapi api_key,YOUR_API_KEY`")
             return
         base_url = await self.config.base_url()
+        url = f"{base_url}latest?apikey={api_key}&base_currency={base_currency}"
         async with aiohttp.ClientSession() as session:
-            url = f'{base_url}latest?apikey={api_key}&base_currency={base_currency}'
-            async with session.get(url) as response:
-                if response.status == 200:
+            try:
+                async with session.get(url) as response:
+                    response.raise_for_status()
                     data = await response.json()
                     rates = data['data']
                     rates_message = '\n'.join([f'{currency}: {rate}' for currency, rate in rates.items()])
                     await ctx.send(f'Exchange rates for {base_currency}:\n{rates_message}')
-                else:
-                    await ctx.send('Failed to fetch currency data. Please try again later. Error code: {response.status}')
+            except Exception as e:
+                await ctx.send(f'Failed to fetch currency data. Please try again later. Error: {str(e)}')
