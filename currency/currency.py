@@ -18,7 +18,7 @@ class Currency(commands.Cog):
     async def red_get_api_key(self, api_key_name: str):
         return await self.bot.get_shared_api_tokens(api_key_name)
 
-    @commands.command(name='convert')
+    @commands.command(name='currency')
     async def convert_currency(self, ctx, amount: float, from_currency: str, to_currency: str):
         api_tokens = await self.red_get_api_key("freecurrencyapi")
         api_key = api_tokens.get("api_key")
