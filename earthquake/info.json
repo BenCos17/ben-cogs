@@ -1,6 +1,18 @@
 {
-  "name": "Earthquake",
-  "version": "1.0",
-  "description": "Fetches the latest earthquake information from the USGS API.",
-  "author": "bencos18"
+    "name": "earthquake",
+    "short": "earthquake stuff",
+    "description": "Get the latest earthquake information",
+    "end_user_data_statement": "This cog does not record end user data.",
+    "install_msg": "",
+    "author": [
+        "bencos18",
+    ],
+
+    "tags": [
+        "api",
+        "earthquake"
+    ],
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
 }
