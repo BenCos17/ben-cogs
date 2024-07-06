@@ -18,8 +18,8 @@ class Earthquake(commands.Cog):
         if search_query:
             params['query'] = search_query
         else:
-            params['starttime'] = '2020-01-01'
-            params['endtime'] = '2020-01-02'
+            params['starttime'] = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+            params['endtime'] = datetime.datetime.now().strftime('%Y-%m-%d')
             params['minmagnitude'] = '5'
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
@@ -27,7 +27,7 @@ class Earthquake(commands.Cog):
         if response.status == 200:
             if data['metadata']['count'] > 0:
                 webhook = await ctx.channel.create_webhook(name="Earthquake Alert Webhook")
-                for feature in data['features']:
+                for feature in data['features']:  # Send all earthquakes
                     utc_time = datetime.datetime.utcfromtimestamp(feature['properties']['time'] / 1000)
                     embed = discord.Embed(title=f"Earthquake Alert", description=f"Location: {feature['properties']['place']}", color=0x00ff00, timestamp=utc_time)
                     embed.add_field(name="Magnitude", value=feature['properties']['mag'], inline=False)
