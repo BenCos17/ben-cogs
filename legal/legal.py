@@ -7,18 +7,18 @@ class Legal(commands.Cog):
         self.bot = bot
 
     @commands.command(name="subpoena")
-    async def subpoena_command(self, ctx, *, target_name: str):
+    async def subpoena_command(self, ctx, *, target_name: str, case_number: str, case_type: str, court_location: str, documents: str, date: str, signature: str):
         """Generate a subpoena with advanced details."""
         embed = discord.Embed(
             title="SUBPOENA",
             color=0xff0000,  # Red color
-            description=f"To: {target_name}\n\nYou are hereby commanded to appear before the court as a witness and to bring with you and produce the following documents: [List of documents]\n\nDate: [Date]\n\nSignature: [Your signature]"
+            description=f"To: {target_name}\n\nYou are hereby commanded to appear before the court as a witness and to bring with you and produce the following documents: {documents}\n\nDate: {date}\n\nSignature: {signature}"
         )
         embed.set_footer(text="This is an official court document.")
         embed.timestamp = datetime.datetime.utcnow()
 
         # Adding a field for case details
-        embed.add_field(name="Case Details", value="Case Number: [Case Number]\nCase Type: [Case Type]\nCourt Location: [Court Location]", inline=False)
+        embed.add_field(name="Case Details", value=f"Case Number: {case_number}\nCase Type: {case_type}\nCourt Location: {court_location}", inline=False)
 
         await ctx.send(embed=embed)
 

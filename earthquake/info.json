@@ -1,0 +1,6 @@
+{
+  "name": "Earthquake",
+  "version": "1.0",
+  "description": "Fetches the latest earthquake information from the USGS API.",
+  "author": "bencos18"
+}
