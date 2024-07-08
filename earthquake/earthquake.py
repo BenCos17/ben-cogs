@@ -26,16 +26,26 @@ class Earthquake(commands.Cog):
                 data = await response.json()
         if response.status == 200:
             if data['metadata']['count'] > 0:
-                webhook = await ctx.channel.create_webhook(name="Earthquake Alert Webhook")
-                for feature in data['features']:  # Send all earthquakes
-                    utc_time = datetime.datetime.utcfromtimestamp(feature['properties']['time'] / 1000)
-                    embed = discord.Embed(title=f"Earthquake Alert", description=f"Location: {feature['properties']['place']}", color=0x00ff00, timestamp=utc_time)
-                    embed.add_field(name="Magnitude", value=feature['properties']['mag'], inline=False)
-                    embed.add_field(name="Time", value=discord.utils.format_dt(utc_time, style='F'), inline=False)
-                    embed.add_field(name="Depth", value=feature['geometry']['coordinates'][2], inline=False)
-                    embed.add_field(name="More Info", value=f"[USGS Info Page]({feature['properties']['url']})", inline=False)
-                    await webhook.send(embed=embed)
-                await webhook.delete()
+                try:
+                    webhook = await ctx.channel.create_webhook(name="Earthquake Alert Webhook")
+                    for feature in data['features']:  # Send all earthquakes
+                        utc_time = datetime.datetime.utcfromtimestamp(feature['properties']['time'] / 1000)
+                        embed = discord.Embed(title=f"Earthquake Alert", description=f"Location: {feature['properties']['place']}", color=0x00ff00, timestamp=utc_time)
+                        embed.add_field(name="Magnitude", value=feature['properties']['mag'], inline=False)
+                        embed.add_field(name="Time", value=discord.utils.format_dt(utc_time, style='F'), inline=False)
+                        embed.add_field(name="Depth", value=feature['geometry']['coordinates'][2], inline=False)
+                        embed.add_field(name="More Info", value=f"[USGS Info Page]({feature['properties']['url']})", inline=False)
+                        await webhook.send(embed=embed)
+                    await webhook.delete()
+                except discord.Forbidden:
+                    for feature in data['features']:  # Send all earthquakes
+                        utc_time = datetime.datetime.utcfromtimestamp(feature['properties']['time'] / 1000)
+                        embed = discord.Embed(title=f"Earthquake Alert", description=f"Location: {feature['properties']['place']}", color=0x00ff00, timestamp=utc_time)
+                        embed.add_field(name="Magnitude", value=feature['properties']['mag'], inline=False)
+                        embed.add_field(name="Time", value=discord.utils.format_dt(utc_time, style='F'), inline=False)
+                        embed.add_field(name="Depth", value=feature['geometry']['coordinates'][2], inline=False)
+                        embed.add_field(name="More Info", value=f"[USGS Info Page]({feature['properties']['url']})", inline=False)
+                        await ctx.send(embed=embed)
             else:
                 await ctx.send("No earthquakes found in the given time period or matching the search query.")
         else:
