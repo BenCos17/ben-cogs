@@ -7,6 +7,7 @@ import datetime
 class Earthquake(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.stop_messages = False
 
     @commands.command(name='earthquake', help='Get the latest earthquake information')
     async def earthquake(self, ctx, *, search_query: str = None):
@@ -27,8 +28,10 @@ class Earthquake(commands.Cog):
         if response.status == 200:
             if data['metadata']['count'] > 0:
                 try:
-                    webhook = await ctx.channel.create_webhook(name="Earthquake Alert Webhook")
+                    webhook = await ctx.channel.create_webhook(name="Earthquake Alert Webhook", avatar=self.bot.user.avatar.url)
                     for feature in data['features']:  # Send all earthquakes
+                        if self.stop_messages:
+                            break
                         utc_time = datetime.datetime.utcfromtimestamp(feature['properties']['time'] / 1000)
                         embed = discord.Embed(title=f"Earthquake Alert", description=f"Location: {feature['properties']['place']}", color=0x00ff00, timestamp=utc_time)
                         embed.add_field(name="Magnitude", value=feature['properties']['mag'], inline=False)
@@ -39,6 +42,8 @@ class Earthquake(commands.Cog):
                     await webhook.delete()
                 except discord.Forbidden:
                     for feature in data['features']:  # Send all earthquakes
+                        if self.stop_messages:
+                            break
                         utc_time = datetime.datetime.utcfromtimestamp(feature['properties']['time'] / 1000)
                         embed = discord.Embed(title=f"Earthquake Alert", description=f"Location: {feature['properties']['place']}", color=0x00ff00, timestamp=utc_time)
                         embed.add_field(name="Magnitude", value=feature['properties']['mag'], inline=False)
@@ -51,5 +56,7 @@ class Earthquake(commands.Cog):
         else:
             await ctx.send("Failed to fetch earthquake data.")
 
-def setup(bot):
-    bot.add_cog(Earthquake(bot))
+    @commands.command(name='eqstop', help='Stop the earthquake messages')
+    async def stop_messages(self, ctx):
+        self.stop_messages = True
+        await ctx.send("Earthquake messages stopped.")
