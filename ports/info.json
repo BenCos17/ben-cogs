@@ -1,0 +1,20 @@
+{
+    "author": [
+        "bencos17"
+    ],
+    "description": "port scanner cog",
+    "disabled": false,
+    "end_user_data_statement": ".",
+    "hidden": true,
+    "install_msg": "commands are locked to bot owner only....crashes bot if used atm",
+
+
+    "name": "ports",
+    "requirements": [],
+    "short": "port scanner!",
+    "tags": [
+        "ports",
+        "scanner"
+    ],
+    "type": "COG"
+}
