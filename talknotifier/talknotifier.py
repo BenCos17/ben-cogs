@@ -1,6 +1,7 @@
 import discord
 from redbot.core import commands
 from redbot.core import Config
+from redbot.core import dashboard  # Import Dashboard
 import asyncio
 import time
 import wtforms
