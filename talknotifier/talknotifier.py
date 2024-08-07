@@ -219,6 +219,7 @@ class TalkNotifier(commands.Cog):
                             <p>Current Notification Message: {form.notification_message.data}</p>
                             <p>Target Users: {', '.join([str(guild.get_member(user_id)) for user_id in target_users])}</p>
                             <p>Cooldown: {form.cooldown.data} seconds</p>
+                            {form.hidden_tag()}
                             {form.notification_message.label} {form.notification_message()}
                             {form.cooldown.label} {form.cooldown()}
                             {form.target_user.label} {form.target_user()}
@@ -243,6 +244,7 @@ class TalkNotifier(commands.Cog):
                 <p>Current Notification Message: {notification_message}</p>
                 <p>Target Users: {', '.join([str(guild.get_member(user_id)) for user_id in target_users])}</p>
                 <p>Cooldown: {cooldown} seconds</p>
+                {form.hidden_tag()}
                 {form.notification_message.label} {form.notification_message()}
                 {form.cooldown.label} {form.cooldown()}
                 {form.target_user.label} {form.target_user()}
