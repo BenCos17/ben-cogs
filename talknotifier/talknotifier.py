@@ -182,19 +182,17 @@ class TalkNotifier(commands.Cog):
 
         # Create a form for updating settings
         class SettingsForm(wtforms.Form):
-            notification_message = wtforms.TextAreaField("Notification Message")
-            cooldown = wtforms.IntegerField("Cooldown (seconds)")
+            notification_message = wtforms.TextAreaField("Notification Message", default=notification_message)
+            cooldown = wtforms.IntegerField("Cooldown (seconds)", default=cooldown)
             target_user = wtforms.IntegerField("User ID to Add/Remove")
             submit = wtforms.SubmitField("Update Settings")
 
         # Instantiate the form
-        form = SettingsForm(
-            notification_message=notification_message,
-            cooldown=cooldown
-        )
+        form = SettingsForm()
 
         # Check if the form is submitted
         if kwargs.get('method') == 'POST':
+            form.process(data=kwargs.get('data'))  # Process the form with submitted data
             if form.validate():
                 try:
                     # Update notification message
@@ -233,6 +231,7 @@ class TalkNotifier(commands.Cog):
                         "error_message": "An error occurred while updating settings.",
                     }
 
+        # Render the form with current values
         return {
             "status": 0,
             "web_content": {
