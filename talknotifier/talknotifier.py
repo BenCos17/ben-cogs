@@ -3,8 +3,21 @@ from redbot.core import commands
 from redbot.core import Config
 import asyncio
 import time
+import wtforms
+import typing
 
-class TalkNotifier(commands.Cog):
+class DashboardIntegration:
+    @commands.Cog.listener()
+    async def on_dashboard_cog_add(self, dashboard_cog: commands.Cog) -> None:
+        dashboard_cog.rpc.third_parties_handler.add_third_party(self)
+
+def dashboard_page(*args, **kwargs):
+    def decorator(func: typing.Callable):
+        func.__dashboard_decorator_params__ = (args, kwargs)
+        return func
+    return decorator
+
+class TalkNotifier(DashboardIntegration, commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
@@ -125,4 +138,36 @@ class TalkNotifier(commands.Cog):
         await self.config.guild(ctx.guild).example_message.set("Check out the [docs](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md) for more information!")
         await ctx.send("Example message cleared and set to a new one that links to the docs.")
 
+    @dashboard.dashboard("Talk Notifier")
+    async def dashboard_info(self):
+        """Dashboard information for the Talk Notifier."""
+        return {
+            "description": "Manage notifications for users in your server.",
+            "fields": {
+                "Notification Message": await self.config.guild(ctx.guild).notification_message(),
+                "Target Users": await self.config.guild(ctx.guild).target_users(),
+                "Cooldown": await self.config.guild(ctx.guild).cooldown(),
+            },
+        }
 
+    @dashboard_page(name="Notification Settings", description="Manage notification settings.", methods=("GET", "POST"))
+    async def notification_settings(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
+        class Form(kwargs["Form"]):
+            message: wtforms.TextAreaField = wtforms.TextAreaField("Notification Message", validators=[wtforms.validators.InputRequired()])
+            submit: wtforms.SubmitField = wtforms.SubmitField("Update")
+
+        form = Form()
+        if form.validate_on_submit():
+            # Update the notification message in the config
+            await self.config.guild(guild).notification_message.set(form.message.data)
+            return {
+                "status": 0,
+                "notifications": [{"message": "Notification message updated!", "category": "success"}],
+                "redirect_url": kwargs["request_url"],
+            }
+
+        source = "{{ form|safe }}"
+        return {
+            "status": 0,
+            "web_content": {"source": source, "form": form},
+        }
