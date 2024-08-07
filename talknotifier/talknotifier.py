@@ -54,8 +54,12 @@ class TalkNotifier(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def talk_setmessage(self, ctx, *, message: str):
         """Set the notification message for the server."""
-        await self.config.guild(ctx.guild).notification_message.set(message)
-        await ctx.send("Notification message has been set successfully.")
+        try:
+            await self.config.guild(ctx.guild).notification_message.set(message)
+            await ctx.send("Notification message has been set successfully.")
+        except Exception as e:
+            logger.error(f"Error setting notification message: {e}")
+            await ctx.send("Failed to set notification message.")
 
     @talk_group.command(name='showmessage', help='Display the current notification message.')
     @commands.admin_or_permissions(manage_guild=True)
@@ -120,8 +124,12 @@ class TalkNotifier(commands.Cog):
         if cooldown < 0:
             await ctx.send("Cooldown cannot be negative.")
         else:
-            await self.config.guild(ctx.guild).cooldown.set(cooldown)
-            await ctx.send(f"Cooldown set to {cooldown} seconds.")
+            try:
+                await self.config.guild(ctx.guild).cooldown.set(cooldown)
+                await ctx.send(f"Cooldown set to {cooldown} seconds.")
+            except Exception as e:
+                logger.error(f"Error setting cooldown: {e}")
+                await ctx.send("Failed to set cooldown.")
 
     async def check_cooldown(self, user_id, guild_id):
         cooldown = await self.config.guild(self.bot.get_guild(guild_id)).cooldown()
@@ -246,10 +254,7 @@ class TalkNotifier(commands.Cog):
                 <p>Current Notification Message: {notification_message}</p>
                 <p>Target Users: {', '.join([str(guild.get_member(user_id)) for user_id in target_users])}</p>
                 <p>Cooldown: {cooldown} seconds</p>
-                {form.notification_message.label} {form.notification_message()}
-                {form.cooldown.label} {form.cooldown()}
-                {form.target_user.label} {form.target_user()}
-                {form.submit()}
+                {{ form|safe }}
                 """,
             },
         }
