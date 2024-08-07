@@ -3,6 +3,7 @@ from redbot.core import commands
 from redbot.core import Config
 import asyncio
 import time
+import typing as t
 
 class TalkNotifier(commands.Cog):
     def __init__(self, bot):
@@ -125,3 +126,57 @@ class TalkNotifier(commands.Cog):
         await self.config.guild(ctx.guild).example_message.set("Check out the [docs](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md) for more information!")
         await ctx.send("Example message cleared and set to a new one that links to the docs.")
 
+    # Dashboard Integration
+    @commands.Cog.listener()
+    async def on_dashboard_cog_add(self, dashboard_cog: commands.Cog) -> None:
+        dashboard_cog.rpc.third_parties_handler.add_third_party(self)
+
+    @dashboard_page(name="settings", description="View and modify notification settings.")
+    async def settings_page(self, user: discord.User, guild: discord.Guild, **kwargs) -> t.Dict[str, t.Any]:
+        notification_message = await self.config.guild(guild).notification_message()
+        target_users = await self.config.guild(guild).target_users()
+        cooldown = await self.config.guild(guild).cooldown()
+
+        return {
+            "status": 0,
+            "web_content": {
+                "source": f"""
+                <h3>Notification Settings</h3>
+                <p>Current Notification Message: {notification_message}</p>
+                <p>Target Users: {', '.join([str(guild.get_member(user_id)) for user_id in target_users])}</p>
+                <p>Cooldown: {cooldown} seconds</p>
+                """,
+            },
+        }
+
+    @dashboard_page(name="adduser", description="Add a user to the target list for notifications.")
+    async def add_user_page(self, user: discord.User, guild: discord.Guild, user_id: int, **kwargs) -> t.Dict[str, t.Any]:
+        target_users = await self.config.guild(guild).target_users()
+        if user_id not in target_users:
+            target_users.append(user_id)
+            await self.config.guild(guild).target_users.set(target_users)
+            return {
+                "status": 0,
+                "notifications": [{"message": f"User added successfully.", "category": "success"}],
+            }
+        return {
+            "status": 1,
+            "error_title": "User already exists",
+            "error_message": "This user is already set to receive notifications.",
+        }
+
+    @dashboard_page(name="removeuser", description="Remove a user from the target list for notifications.")
+    async def remove_user_page(self, user: discord.User, guild: discord.Guild, user_id: int, **kwargs) -> t.Dict[str, t.Any]:
+        target_users = await self.config.guild(guild).target_users()
+        if user_id in target_users:
+            target_users.remove(user_id)
+            await self.config.guild(guild).target_users.set(target_users)
+            return {
+                "status": 0,
+                "notifications": [{"message": f"User removed successfully.", "category": "success"}],
+            }
+        return {
+            "status": 1,
+            "error_title": "User not found",
+            "error_message": "This user is not set to receive notifications.",
+        }
