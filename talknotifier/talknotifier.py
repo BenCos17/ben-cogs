@@ -182,16 +182,13 @@ class TalkNotifier(commands.Cog):
 
         # Create a form for updating settings
         class SettingsForm(wtforms.Form):
-            notification_message = wtforms.TextAreaField("Notification Message")
-            cooldown = wtforms.IntegerField("Cooldown (seconds)")
+            notification_message = wtforms.TextAreaField("Notification Message", default=notification_message)
+            cooldown = wtforms.IntegerField("Cooldown (seconds)", default=cooldown)
             target_user = wtforms.IntegerField("User ID to Add/Remove")
             submit = wtforms.SubmitField("Update Settings")
 
-        # Instantiate the form with current values
-        form = SettingsForm(
-            notification_message=notification_message,
-            cooldown=cooldown
-        )
+        # Instantiate the form
+        form = SettingsForm()
 
         # Check if the form is submitted
         if kwargs.get('method') == 'POST':
@@ -222,7 +219,6 @@ class TalkNotifier(commands.Cog):
                             <p>Current Notification Message: {form.notification_message.data}</p>
                             <p>Target Users: {', '.join([str(guild.get_member(user_id)) for user_id in target_users])}</p>
                             <p>Cooldown: {form.cooldown.data} seconds</p>
-                            {form.hidden_tag()}
                             {form.notification_message.label} {form.notification_message()}
                             {form.cooldown.label} {form.cooldown()}
                             {form.target_user.label} {form.target_user()}
@@ -247,7 +243,6 @@ class TalkNotifier(commands.Cog):
                 <p>Current Notification Message: {notification_message}</p>
                 <p>Target Users: {', '.join([str(guild.get_member(user_id)) for user_id in target_users])}</p>
                 <p>Cooldown: {cooldown} seconds</p>
-                {form.hidden_tag()}
                 {form.notification_message.label} {form.notification_message()}
                 {form.cooldown.label} {form.cooldown()}
                 {form.target_user.label} {form.target_user()}
