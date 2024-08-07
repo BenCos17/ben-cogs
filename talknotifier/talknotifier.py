@@ -215,7 +215,15 @@ class TalkNotifier(commands.Cog):
                     return {
                         "status": 0,
                         "notifications": [{"message": "Settings updated successfully!", "category": "success"}],
-                        "web_content": {"source": "{{ form|safe }}", "form": form},
+                        "web_content": {
+                            "source": f"""
+                            <h3>Notification Settings</h3>
+                            <p>Current Notification Message: {form.notification_message.data}</p>
+                            <p>Target Users: {', '.join([str(guild.get_member(user_id)) for user_id in target_users])}</p>
+                            <p>Cooldown: {form.cooldown.data} seconds</p>
+                            {{ form|safe }}
+                            """,
+                        },
                     }
                 except Exception as e:
                     logger.error(f"Error updating settings: {e}")
@@ -235,6 +243,5 @@ class TalkNotifier(commands.Cog):
                 <p>Cooldown: {cooldown} seconds</p>
                 {{ form|safe }}
                 """,
-                "form": form,
             },
         }
