@@ -193,35 +193,37 @@ class TalkNotifier(commands.Cog):
             cooldown=cooldown
         )
 
-        if form.validate_on_submit():
-            try:
-                # Update notification message
-                await self.config.guild(guild).notification_message.set(form.notification_message.data)
-                # Update cooldown
-                await self.config.guild(guild).cooldown.set(form.cooldown.data)
+        # Check if the form is submitted
+        if kwargs.get('method') == 'POST':
+            if form.validate():
+                try:
+                    # Update notification message
+                    await self.config.guild(guild).notification_message.set(form.notification_message.data)
+                    # Update cooldown
+                    await self.config.guild(guild).cooldown.set(form.cooldown.data)
 
-                # Add or remove target user
-                target_users = await self.config.guild(guild).target_users()
-                user_id = form.target_user.data
-                if user_id:
-                    if user_id not in target_users:
-                        target_users.append(user_id)
-                    else:
-                        target_users.remove(user_id)
-                    await self.config.guild(guild).target_users.set(target_users)
+                    # Add or remove target user
+                    target_users = await self.config.guild(guild).target_users()
+                    user_id = form.target_user.data
+                    if user_id:
+                        if user_id not in target_users:
+                            target_users.append(user_id)
+                        else:
+                            target_users.remove(user_id)
+                        await self.config.guild(guild).target_users.set(target_users)
 
-                return {
-                    "status": 0,
-                    "notifications": [{"message": "Settings updated successfully!", "category": "success"}],
-                    "web_content": {"source": "{{ form|safe }}", "form": form},
-                }
-            except Exception as e:
-                logger.error(f"Error updating settings: {e}")
-                return {
-                    "status": 1,
-                    "error_title": "Update Failed",
-                    "error_message": "An error occurred while updating settings.",
-                }
+                    return {
+                        "status": 0,
+                        "notifications": [{"message": "Settings updated successfully!", "category": "success"}],
+                        "web_content": {"source": "{{ form|safe }}", "form": form},
+                    }
+                except Exception as e:
+                    logger.error(f"Error updating settings: {e}")
+                    return {
+                        "status": 1,
+                        "error_title": "Update Failed",
+                        "error_message": "An error occurred while updating settings.",
+                    }
 
         return {
             "status": 0,
