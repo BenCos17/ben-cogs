@@ -4,6 +4,7 @@ from redbot.core import Config
 import asyncio
 import time
 import typing as t
+import wtforms
 
 def dashboard_page(*args, **kwargs):
     def decorator(func: t.Callable):
@@ -143,6 +144,37 @@ class TalkNotifier(commands.Cog):
         target_users = await self.config.guild(guild).target_users()
         cooldown = await self.config.guild(guild).cooldown()
 
+        # Create a form for updating settings
+        class SettingsForm(wtforms.Form):
+            notification_message = wtforms.TextAreaField("Notification Message", default=notification_message)
+            cooldown = wtforms.IntegerField("Cooldown (seconds)", default=cooldown)
+            target_user = wtforms.IntegerField("User ID to Add/Remove")
+            submit = wtforms.SubmitField("Update Settings")
+
+        form = SettingsForm()
+
+        if form.validate_on_submit():
+            # Update notification message
+            await self.config.guild(guild).notification_message.set(form.notification_message.data)
+            # Update cooldown
+            await self.config.guild(guild).cooldown.set(form.cooldown.data)
+
+            # Add or remove target user
+            target_users = await self.config.guild(guild).target_users()
+            if form.target_user.data:
+                user_id = form.target_user.data
+                if user_id not in target_users:
+                    target_users.append(user_id)
+                else:
+                    target_users.remove(user_id)
+                await self.config.guild(guild).target_users.set(target_users)
+
+            return {
+                "status": 0,
+                "notifications": [{"message": "Settings updated successfully!", "category": "success"}],
+                "web_content": {"source": "{{ form|safe }}", "form": form},
+            }
+
         return {
             "status": 0,
             "web_content": {
@@ -151,7 +183,9 @@ class TalkNotifier(commands.Cog):
                 <p>Current Notification Message: {notification_message}</p>
                 <p>Target Users: {', '.join([str(guild.get_member(user_id)) for user_id in target_users])}</p>
                 <p>Cooldown: {cooldown} seconds</p>
+                {{ form|safe }}
                 """,
+                "form": form,
             },
         }
 
