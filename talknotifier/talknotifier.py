@@ -5,6 +5,12 @@ import asyncio
 import time
 import typing as t
 
+def dashboard_page(*args, **kwargs):
+    def decorator(func: t.Callable):
+        func.__dashboard_decorator_params__ = (args, kwargs)
+        return func
+    return decorator
+
 class TalkNotifier(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
