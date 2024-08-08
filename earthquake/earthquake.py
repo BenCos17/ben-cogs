@@ -144,11 +144,17 @@ class Earthquake(commands.Cog):
         else:
             await ctx.send("No earthquakes found in the given parameters.")
 
-    @commands.command(name='eqstop', help='Stop the earthquake messages')
+    @commands.command(name='eqstop', help='Stop all earthquake messages and tasks')
     async def stop_messages(self, ctx):
-        self.stop_messages = True
-        self.check_earthquakes.stop()  # Stop the task
-        await ctx.send("Earthquake messages stopped.")
+        self.stop_messages = True  # Set the flag to stop messages
+        self.check_earthquakes.stop()  # Stop the task loop
+        await ctx.send("All earthquake messages and tasks have been stopped.")
+
+    @commands.command(name='eqstart', help='Restart earthquake messages and tasks')
+    async def start_messages(self, ctx):
+        self.stop_messages = False  # Reset the flag to allow messages
+        self.check_earthquakes.start()  # Restart the task loop
+        await ctx.send("Earthquake messages and tasks have been restarted.")
 
     @commands.command(name='testalert', help='Test the earthquake alert system')
     async def test_alert(self, ctx):
