@@ -67,25 +67,44 @@ class Earthquake(commands.Cog):
         else:
             await ctx.send(embed=embed)
 
-    @commands.command(name='earthquake', help='Get the latest earthquake information')
-    async def earthquake(self, ctx, *, search_query: str = None):
+    @commands.command(name='earthquake', help='Get the latest earthquake information. Use !earthquake <type> <params>. Type can be "rectangle" or "circle".')
+    async def earthquake(self, ctx, search_type: str, *, params: str):
         url = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
-        params = {
+        params_dict = {
             'format': 'geojson',
             'orderby': 'time',
         }
-        
-        # Set minmagnitude only if no search query is provided
-        if search_query:
-            params['query'] = search_query
+
+        if search_type.lower() == "rectangle":
+            try:
+                # Expecting params in the format: "minlat,maxlat,minlon,maxlon"
+                minlat, maxlat, minlon, maxlon = map(float, params.split(','))
+                params_dict['minlatitude'] = minlat
+                params_dict['maxlatitude'] = maxlat
+                params_dict['minlongitude'] = minlon
+                params_dict['maxlongitude'] = maxlon
+            except ValueError:
+                await ctx.send("Invalid parameters for rectangle. Use: minlat,maxlat,minlon,maxlon")
+                return
+
+        elif search_type.lower() == "circle":
+            try:
+                # Expecting params in the format: "latitude,longitude,maxradiuskm"
+                latitude, longitude, maxradiuskm = map(float, params.split(','))
+                params_dict['latitude'] = latitude
+                params_dict['longitude'] = longitude
+                params_dict['maxradiuskm'] = maxradiuskm
+            except ValueError:
+                await ctx.send("Invalid parameters for circle. Use: latitude,longitude,maxradiuskm")
+                return
+
         else:
-            params['minmagnitude'] = self.min_magnitude  # Use configured min magnitude
-            params['starttime'] = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
-            params['endtime'] = datetime.datetime.now().strftime('%Y-%m-%d')
+            await ctx.send("Invalid search type. Use 'rectangle' or 'circle'.")
+            return
 
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.get(url, params=params) as response:
+                async with session.get(url, params=params_dict) as response:
                     response.raise_for_status()  # Raise an error for bad responses
                     data = await response.json()
             except Exception as e:
@@ -108,7 +127,7 @@ class Earthquake(commands.Cog):
                         break
                     await self.send_earthquake_embed(ctx, feature)
         else:
-            await ctx.send("No earthquakes found in the given time period or matching the search query.")
+            await ctx.send("No earthquakes found in the given parameters.")
 
     @commands.command(name='eqstop', help='Stop the earthquake messages')
     async def stop_messages(self, ctx):
