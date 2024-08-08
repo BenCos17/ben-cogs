@@ -19,10 +19,11 @@ class Earthquake(commands.Cog):
         logging.basicConfig(level=logging.INFO)
         self.check_earthquakes.start()
 
-    @commands.command(name='setalertchannel', help='Set the channel for earthquake alerts')
-    async def set_alert_channel(self, ctx):
-        await self.config.guild(ctx.guild).alert_channel_id.set(ctx.channel.id)
-        await ctx.send(f"Alert channel set to {ctx.channel.name}.")
+    @commands.command(name='setalertchannel', help='Set the channel for earthquake alerts. Usage: !setalertchannel <channel>')
+    async def set_alert_channel(self, ctx, channel: discord.TextChannel):
+        await self.config.guild(ctx.guild).alert_channel_id.set(channel.id)  # Set to the specified channel
+        logging.info(f"Alert channel set to {channel.id} ({channel.name}) for guild {ctx.guild.id}.")  # Added logging
+        await ctx.send(f"Alert channel set to {channel.name}.")
 
     @commands.command(name='setminmagnitude', help='Set the minimum magnitude for alerts')
     async def set_min_magnitude(self, ctx, magnitude: float):
