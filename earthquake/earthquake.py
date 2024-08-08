@@ -28,7 +28,8 @@ class Earthquake(commands.Cog):
         if response.status == 200:
             if data['metadata']['count'] > 0:
                 try:
-                    webhook = await ctx.channel.create_webhook(name="Earthquake Alert Webhook", avatar=self.bot.user.avatar.url)
+                    avatar_bytes = await self.bot.user.avatar.read()
+                    webhook = await ctx.channel.create_webhook(name="Earthquake Alert Webhook", avatar=avatar_bytes)
                     for feature in data['features']:  # Send all earthquakes
                         if self.stop_messages:
                             break
