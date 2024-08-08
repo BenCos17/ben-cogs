@@ -69,6 +69,10 @@ class Earthquake(commands.Cog):
 
     @commands.command(name='earthquake', help='Get the latest earthquake information. Use !earthquake <type> <params>. Type can be "rectangle" or "circle".')
     async def earthquake(self, ctx, search_type: str, *, params: str):
+        if self.stop_messages:  # Check if messages should be stopped
+            await ctx.send("Earthquake messages are currently stopped.")
+            return
+
         url = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
         params_dict = {
             'format': 'geojson',
