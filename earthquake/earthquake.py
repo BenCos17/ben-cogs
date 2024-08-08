@@ -25,10 +25,13 @@ class Earthquake(commands.Cog):
         self.min_magnitude = magnitude
         await ctx.send(f"Minimum magnitude for alerts set to {self.min_magnitude}.")
 
+
     @tasks.loop(minutes=10)
     async def check_earthquakes(self):
-        if self.alert_channel_id is None:
+        if self.alert_channel_id is None:  # Check if alert channel is not set
             return  # Do not check if alert channel is not set
+        if self.stop_messages:  # Check if messages should be stopped
+            return  # Do not check if messages are stopped
 
         url = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
         params = {
@@ -43,7 +46,7 @@ class Earthquake(commands.Cog):
                     data = await response.json()
                     if data['metadata']['count'] > 0:
                         for feature in data['features']:
-                            if self.stop_messages:
+                            if self.stop_messages:  # Check here before sending
                                 break
                             # Send alert for each new earthquake
                             await self.send_earthquake_embed(self.bot.get_channel(self.alert_channel_id), feature)
@@ -136,6 +139,7 @@ class Earthquake(commands.Cog):
     @commands.command(name='eqstop', help='Stop the earthquake messages')
     async def stop_messages(self, ctx):
         self.stop_messages = True
+        self.check_earthquakes.stop()  # Stop the task
         await ctx.send("Earthquake messages stopped.")
 
     @commands.command(name='testalert', help='Test the earthquake alert system')
