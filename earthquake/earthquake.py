@@ -112,3 +112,28 @@ class Earthquake(commands.Cog):
     async def stop_messages(self, ctx):
         self.stop_messages = True
         await ctx.send("Earthquake messages stopped.")
+
+    @commands.command(name='testalert', help='Test the earthquake alert system')
+    async def test_alert(self, ctx):
+        if self.alert_channel_id is None:
+            await ctx.send("Alert channel is not set. Use `!setalertchannel` to set it.")
+            return
+        test_feature = {
+            'properties': {
+                'place': 'Test Location',
+                'mag': 5.0,
+                'time': datetime.datetime.now().timestamp() * 1000,
+                'url': 'https://earthquake.usgs.gov/'
+            },
+            'geometry': {
+                'coordinates': [0, 0, 10]
+            }
+        }
+        await self.send_earthquake_embed(ctx, test_feature)
+
+    @commands.command(name='forceupdate', help='Force an update for earthquake alerts')
+    async def force_update(self, ctx):
+        if self.alert_channel_id is None:
+            await ctx.send("Alert channel is not set. Use `!setalertchannel` to set it.")
+            return
+        await self.check_earthquakes()  # Manually trigger the check for earthquakes
