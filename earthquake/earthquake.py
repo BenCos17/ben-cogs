@@ -73,11 +73,13 @@ class Earthquake(commands.Cog):
         params = {
             'format': 'geojson',
             'orderby': 'time',
-            'minmagnitude': '5' if not search_query else None  # Set minmagnitude conditionally
         }
+        
+        # Set minmagnitude only if no search query is provided
         if search_query:
             params['query'] = search_query
         else:
+            params['minmagnitude'] = self.min_magnitude  # Use configured min magnitude
             params['starttime'] = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
             params['endtime'] = datetime.datetime.now().strftime('%Y-%m-%d')
 
@@ -88,7 +90,7 @@ class Earthquake(commands.Cog):
                     data = await response.json()
             except Exception as e:
                 logging.error(f"Error fetching earthquake data: {e}")
-                await ctx.send("Failed to fetch earthquake data.")
+                await ctx.send(f"Failed to fetch earthquake data: {str(e)}")
                 return
 
         if data['metadata']['count'] > 0:
