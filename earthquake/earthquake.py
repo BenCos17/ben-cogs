@@ -1,15 +1,57 @@
 import discord
-from redbot.core import commands
+from redbot.core import commands, tasks
 import aiohttp
 import json
 import datetime
-import logging  # Added logging
+import logging
 
 class Earthquake(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.stop_messages = False
-        logging.basicConfig(level=logging.INFO)  # Configure logging
+        self.alert_channel_id = None  # Store the alert channel ID
+        self.min_magnitude = 5  # Default minimum magnitude
+        logging.basicConfig(level=logging.INFO)
+        self.check_earthquakes.start()
+
+    @commands.command(name='setalertchannel', help='Set the channel for earthquake alerts')
+    async def set_alert_channel(self, ctx):
+        self.alert_channel_id = ctx.channel.id
+        await ctx.send(f"Alert channel set to {ctx.channel.name}.")
+
+    @commands.command(name='setminmagnitude', help='Set the minimum magnitude for alerts')
+    async def set_min_magnitude(self, ctx, magnitude: float):
+        self.min_magnitude = magnitude
+        await ctx.send(f"Minimum magnitude for alerts set to {self.min_magnitude}.")
+
+    @tasks.loop(minutes=10)
+    async def check_earthquakes(self):
+        if self.alert_channel_id is None:
+            return  # Do not check if alert channel is not set
+
+        url = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
+        params = {
+            'format': 'geojson',
+            'orderby': 'time',
+            'minmagnitude': self.min_magnitude  # Use the configured minimum magnitude
+        }
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(url, params=params) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    if data['metadata']['count'] > 0:
+                        for feature in data['features']:
+                            if self.stop_messages:
+                                break
+                            # Send alert for each new earthquake
+                            await self.send_earthquake_embed(self.bot.get_channel(self.alert_channel_id), feature)
+            except Exception as e:
+                logging.error(f"Error fetching earthquake data: {e}")
+
+    @check_earthquakes.before_loop
+    async def before_check_earthquakes(self):
+        await self.bot.wait_until_ready()
 
     async def send_earthquake_embed(self, ctx, feature, webhook=None):
         utc_time = datetime.datetime.utcfromtimestamp(feature['properties']['time'] / 1000)
