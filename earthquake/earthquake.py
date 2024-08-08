@@ -152,6 +152,9 @@ class Earthquake(commands.Cog):
 
     @commands.command(name='eqstart', help='Restart earthquake messages and tasks')
     async def start_messages(self, ctx):
+        if self.check_earthquakes.is_running():  # Check if the task is already running
+            await ctx.send("Earthquake messages are already running.")
+            return
         self.stop_messages = False  # Reset the flag to allow messages
         self.check_earthquakes.start()  # Restart the task loop
         await ctx.send("Earthquake messages and tasks have been restarted.")
