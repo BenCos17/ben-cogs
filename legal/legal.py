@@ -7,7 +7,7 @@ class Legal(commands.Cog):
         self.bot = bot
 
     @commands.command(name="subpoena")
-    async def subpoena_command(self, ctx, *, target_name: str, case_number: str, case_type: str, court_location: str, documents: str, date: str, signature: str):
+    async def subpoena_command(self, ctx, *, target_name: str, case_number: str = "N/A", case_type: str = "N/A", court_location: str = "N/A", documents: str = "N/A", date: str = "N/A", signature: str = "N/A"):
         """Generate a subpoena with advanced details."""
         embed = discord.Embed(
             title="SUBPOENA",
@@ -89,4 +89,3 @@ class Legal(commands.Cog):
         embed.add_field(name="Case Details", value="Case Number: [Case Number]\nCase Type: [Case Type]\nCourt Location: [Court Location]", inline=False)
 
         await ctx.send(embed=embed)
-
