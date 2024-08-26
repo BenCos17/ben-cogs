@@ -39,10 +39,12 @@ class TalkNotifier(commands.Cog):
             if not await self.check_cooldown(message.author.id, guild_id):
                 msg_content = notification_message.format(author=message.author.display_name, content=message.content)
                 await channel.send(msg_content)
-                self.cooldowns.setdefault(guild_id, {})[message.author.id] = time.time()
-            else:
-                await channel.send(f"Please wait for the cooldown period to end before sending another notification.")
-                await asyncio.sleep(cooldown - (time.time() - self.cooldowns[guild_id][message.author.id]))
+                self.cooldowns.setdefault(guild_id, {})[message.author.id] = time.time()  # Update cooldown time
+
+    async def check_cooldown(self, user_id, guild_id):
+        cooldown = await self.config.guild(self.bot.get_guild(guild_id)).cooldown()
+        last_message_time = self.cooldowns.get(guild_id, {}).get(user_id, 0)
+        return time.time() - last_message_time < cooldown  # Return True if still in cooldown
 
     @commands.group(name='talk', help='Notification related commands.', invoke_without_command=True, aliases=["talknotifier"])
     async def talk_group(self, ctx):
@@ -126,9 +128,7 @@ class TalkNotifier(commands.Cog):
     async def check_cooldown(self, user_id, guild_id):
         cooldown = await self.config.guild(self.bot.get_guild(guild_id)).cooldown()
         last_message_time = self.cooldowns.get(guild_id, {}).get(user_id, 0)
-        if time.time() - last_message_time < cooldown:
-            return True
-        return False
+        return time.time() - last_message_time < cooldown  # Return True if still in cooldown
 
     @talk_group.command(name='cleardocs', help='Clear the example message and set a new one that links to the docs.')
     @commands.is_owner()
