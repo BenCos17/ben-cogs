@@ -29,6 +29,10 @@ class TalkNotifier(commands.Cog):
         if message.author == self.bot.user:
             return
 
+        # Check if the message is in a guild (not a DM)
+        if message.guild is None:
+            return  # Ignore DMs
+
         channel = message.channel
         guild_id = message.guild.id
         notification_message = await self.config.guild(message.guild).notification_message()
