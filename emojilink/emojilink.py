@@ -187,3 +187,42 @@ class EmojiLink(commands.Cog):
             await ctx.send("I do not have permissions to add emojis.")
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
+
+    @emojilink.command(name="delete", require_var_positional=True)
+    @commands.has_permissions(manage_emojis=True)
+    async def delete_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji):
+        """
+        Delete a custom emoji from the server.
+
+        Parameters:
+        - emoji: The custom emoji to delete.
+        """
+        try:
+            await emoji.delete()
+            await ctx.send(f"Emoji '{emoji.name}' deleted successfully.")
+        except discord.HTTPException as e:
+            await ctx.send(f"Failed to delete emoji: {e.text}")
+        except discord.Forbidden:
+            await ctx.send("I do not have permissions to delete emojis.")
+        except Exception as e:
+            await ctx.send(f"An unexpected error occurred: {e}")
+
+    @emojilink.command(name="rename", require_var_positional=True)
+    @commands.has_permissions(manage_emojis=True)
+    async def rename_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji, new_name: str):
+        """
+        Rename a custom emoji in the server.
+
+        Parameters:
+        - emoji: The custom emoji to rename.
+        - new_name: The new name for the emoji.
+        """
+        try:
+            await emoji.edit(name=new_name)
+            await ctx.send(f"Emoji renamed to '{new_name}' successfully.")
+        except discord.HTTPException as e:
+            await ctx.send(f"Failed to rename emoji: {e.text}")
+        except discord.Forbidden:
+            await ctx.send("I do not have permissions to rename emojis.")
+        except Exception as e:
+            await ctx.send(f"An unexpected error occurred: {e}")
