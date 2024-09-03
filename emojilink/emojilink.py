@@ -109,7 +109,11 @@ class EmojiLink(commands.Cog):
         Parameters:
         - keyword: The search keyword.
         """
-        matching_emojis = [f"{emoji}: [Link]({emoji_url})" for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis) if keyword.lower() in emoji.lower()]
+        matching_emojis = [
+            f"{emoji}: [Link]({emoji_url})" 
+            for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis) 
+            if keyword.lower() in emoji.name.lower()  # Compare against emoji name
+        ]
         if matching_emojis:
             await ctx.send("\n".join(matching_emojis))
         else:
