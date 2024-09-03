@@ -218,7 +218,7 @@ class EmojiLink(commands.Cog):
         - new_name: The new name for the emoji.
         """
         try:
-            await emoji.edit(name=new_name)
+            await ctx.guild.edit_custom_emoji(emoji, name=new_name)  # Corrected method
             await ctx.send(f"Emoji renamed to '{new_name}' successfully.")
         except discord.HTTPException as e:
             await ctx.send(f"Failed to rename emoji: {e.text}")
