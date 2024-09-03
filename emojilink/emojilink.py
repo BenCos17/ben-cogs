@@ -154,3 +154,36 @@ class EmojiLink(commands.Cog):
             await ctx.send("I do not have permissions to add emojis.")
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
+
+    @emojilink.command(name="copy", require_var_positional=True)
+    @commands.has_permissions(manage_emojis=True)
+    async def copy_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji):
+        """
+        Copy a custom emoji from one server to another.
+
+        Parameters:
+        - emoji: The custom emoji to copy.
+        """
+        # Check if the user has permission to manage emojis
+        if not ctx.author.guild_permissions.manage_emojis:
+            return await ctx.send("You do not have permission to manage emojis.")
+
+        if not ctx.guild.me.guild_permissions.manage_emojis:
+            return await ctx.send("I do not have permissions to manage emojis in this server.")
+
+        try:
+            async with ctx.typing():
+                emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(emoji_url) as response:
+                        if response.status != 200:
+                            return await ctx.send("Failed to fetch emoji image.")
+                        image_data = await response.read()
+                        await ctx.guild.create_custom_emoji(name=emoji.name, image=image_data)
+                        await ctx.send(f"Emoji '{emoji.name}' copied successfully.")
+        except discord.HTTPException as e:
+            await ctx.send(f"Failed to copy emoji: {e.text}")
+        except discord.Forbidden:
+            await ctx.send("I do not have permissions to add emojis.")
+        except Exception as e:
+            await ctx.send(f"An unexpected error occurred: {e}")
