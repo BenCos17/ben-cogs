@@ -13,8 +13,12 @@ class Clowndan(commands.Cog):
         self.template_path = os.path.join(os.path.dirname(__file__), "clown_image_template.png")  # Adjust the filename as needed
 
     @commands.command(name="memegen")
-    async def memegen(self, ctx, *, text: str):
+    async def clowndan(self, ctx, *, text: str):
         """Generates a meme with custom text."""
+        
+        if not text:
+            await ctx.send("Please provide text for the image.")
+            return
         
         # Load the template image
         try:
@@ -26,12 +30,8 @@ class Clowndan(commands.Cog):
         # Prepare for drawing the text
         draw = ImageDraw.Draw(img)
         
-        # Set up font (you might need to provide a path to a TTF font)
-        font_path = "/path/to/font/arial.ttf"  # Replace with the actual path of a font file on your server
-        try:
-            font = ImageFont.truetype(font_path, 50)
-        except IOError:
-            font = ImageFont.load_default()  # Fallback to default font if the font file is not found
+        # Use the default font provided by PIL
+        font = ImageFont.load_default()  # Fallback to default font if the font file is not found
 
         # Position for the custom text (adjust as per the image size and template)
         text_position = (100, 930)
