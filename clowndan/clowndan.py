@@ -60,3 +60,8 @@ class Clowndan(commands.Cog):
         await ctx.send(file=discord.File(self.template_path, "template.png"))
 
 
+
+def setup(bot):
+    bot.add_cog(Clowndan(bot))  # Register the Clowndan cog with the bot
+
+
