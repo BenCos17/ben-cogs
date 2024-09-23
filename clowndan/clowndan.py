@@ -14,7 +14,7 @@ class Clowndan(commands.Cog):
 
     @commands.command(name="memegen")
     async def clowndan(self, ctx, *, text: str):
-        """Generates a meme with custom text."""
+        """Generates a clowndan image with custom text."""
         
         if not text:
             await ctx.send("Please provide text for the image.")
