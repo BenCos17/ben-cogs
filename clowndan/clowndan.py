@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from redbot.core import commands
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import os  # Add this import
