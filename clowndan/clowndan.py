@@ -40,13 +40,18 @@ class MemeGenerator(commands.Cog):
         draw.rectangle(((0, 900), (1024, 1024)), fill=(255, 255, 255))  # Cover old text area
         draw.text(text_position, text, font=font, fill="black")  # Add custom text
 
-        # Save image to a bytes object
-        image_bytes = BytesIO()
-        img.save(image_bytes, format="PNG")
-        image_bytes.seek(0)
+        # Define the directory to save images in the cog's path
+        save_directory = os.path.join(os.path.dirname(__file__), "saved_memes")  # Create a 'saved_memes' folder in the cog directory
+        os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
 
-        # Send the image back to the user
-        file = discord.File(fp=image_bytes, filename="meme.png")
+        # Define the path to save the image
+        save_path = os.path.join(save_directory, f"meme_{ctx.author.id}.png")  # Unique filename for each user
+
+        # Save the image to the specified directory
+        img.save(save_path, format="PNG")
+
+        # Optionally, send the image back to the user
+        file = discord.File(fp=save_path)  # Load from saved path
         await ctx.send(file=file)
 
     @commands.command(name="memetemplate")
