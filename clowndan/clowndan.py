@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import os  # Add this import
 
-class MemeGenerator(commands.Cog):
+class Clowndan(commands.Cog):
     """A cog to generate clowndan images."""
 
     def __init__(self, bot):
