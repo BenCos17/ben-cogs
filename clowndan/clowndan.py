@@ -9,7 +9,6 @@ class Clowndan(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # Update the template path to be relative to the current file's directory
         self.template_path = os.path.join(os.path.dirname(__file__), "clown_image_template.png")  # Adjust the filename as needed
 
     @commands.command(name="memegen")
