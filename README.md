@@ -1,5 +1,5 @@
-see docs file in each cog folder 
-for support join my discord (https://discord.gg/WW4eNQj9qr) or ping me in #support other cogs in the redbcog support server or dm me (bencos18) if you want.
+I'msee docs file in each cog folder 
+for support join my [discord](https://discord.gg/WW4eNQj9qr) or ping me in #support other cogs in the redbcog support server or dm me (bencos18) if you want.
 
 BenCos17's cogs for Red-DiscordBot.To add the cogs to your instance please do: [p]repo add ben-cogs https://github.com/bencos17/ben-cogs
 
