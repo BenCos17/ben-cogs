@@ -19,8 +19,15 @@ class BellCog(commands.Cog):
         # Retrieve the user bell counts for the guild
         user_bell_counts = await self.config.guild(guild).user_bell_counts()
 
-        # Initialize and increment the user's bell count
-        user_bell_counts[user.id] = user_bell_counts.get(user.id, 0) + 1
+        # Initialize the user's bell count if it doesn't exist
+        if user.id not in user_bell_counts:
+            user_bell_counts[user.id] = 0  # Ensure the user has a count initialized
+        else:
+            # Inform the user how many times they have rung the bell before incrementing
+            await ctx.send(f"{user.mention}, you have rung the bell {user_bell_counts[user.id]} times before!")
+
+        # Increment the user's bell count
+        user_bell_counts[user.id] += 1
         
         # Update the counts in the config
         await self.config.guild(guild).user_bell_counts.set(user_bell_counts)
