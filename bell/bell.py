@@ -1,5 +1,6 @@
 from redbot.core import commands, Config
 import discord
+import asyncio
 
 class BellCog(commands.Cog):
     def __init__(self, bot):
@@ -41,3 +42,26 @@ class BellCog(commands.Cog):
         # Send a bell ringing gif
         gif_url = "https://github.com/BenCos17/ben-cogs/blob/main/bell/bell.gif?raw=true"
         await ctx.send(gif_url)
+
+    @commands.command(aliases=['resetbell'])  
+    async def reset_bell(self, ctx):
+        """Resets the user's bell count in this server after confirmation."""
+        user = ctx.author
+        guild = ctx.guild
+
+        # Ask for confirmation
+        confirmation_message = await ctx.send(f"{user.mention}, are you sure you want to reset your bell count? (yes/no)")
+
+        def check(m):
+            return m.author == user and m.channel == ctx.channel and m.content.lower() in ['yes', 'no']
+
+        try:
+            response = await self.bot.wait_for('message', check=check, timeout=30)
+            if response.content.lower() == 'yes':
+                # Reset the user's bell count in the config
+                await self.config.guild(guild).user_bell_counts.set_raw(user.id, value=0)
+                await ctx.send(f"{user.mention}, your bell count has been reset to 0.")
+            else:
+                await ctx.send(f"{user.mention}, your bell count reset has been canceled.")
+        except asyncio.TimeoutError:
+            await ctx.send(f"{user.mention}, you took too long to respond. The reset has been canceled.")
