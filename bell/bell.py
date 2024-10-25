@@ -10,7 +10,7 @@ class BellCog(commands.Cog):
         }
         self.config.register_guild(**default_guild)
 
-    @commands.command()
+    @commands.command(aliases=['bell'])  
     async def ringbell(self, ctx):
         """Rings a bell and increases the user's bell count in this server."""
         user = ctx.author
