@@ -19,9 +19,12 @@ class BellCog(commands.Cog):
         # Retrieve the user's current bell count from the config
         user_bell_count = await self.config.guild(guild).user_bell_counts.get_raw(user.id, default=0)
 
-        # Inform the user of their previous bell count
+        # Prepare the response message in a single variable
+        message = f"{user.mention}, "
+
+        # Add the previous count message if the user has rung the bell before
         if user_bell_count > 0:
-            await ctx.send(f"{user.mention}, you have rung the bell {user_bell_count} times before!")
+            message += f"you have rung the bell {user_bell_count} times before! "
 
         # Increment the user's bell count
         user_bell_count += 1
@@ -29,10 +32,11 @@ class BellCog(commands.Cog):
         # Update the count for this specific user in the config
         await self.config.guild(guild).user_bell_counts.set_raw(user.id, value=user_bell_count)
 
-        # Send the message with the updated bell count for the user
-        await ctx.send(
-            f"{user.mention} rang the bell! 🔔 You have rung the bell {user_bell_count} times in this server."
-        )
+        # Append the updated count message
+        message += f"You have now rung the bell {user_bell_count} times in this server. 🔔"
+
+        # Send the single message
+        await ctx.send(message)
 
         # Send a bell ringing gif
         gif_url = "https://github.com/BenCos17/ben-cogs/blob/main/bell/bell.gif?raw=true"
