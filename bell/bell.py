@@ -23,7 +23,9 @@ class BellCog(commands.Cog):
 
         # Increment the user's bell count
         user_bell_counts[user.id] += 1
-        await self.config.guild(guild).user_bell_counts.set(user_bell_counts)  # Update the counts in the config
+        
+        # Update the counts in the config
+        await self.config.guild(guild).user_bell_counts.set(user_bell_counts)  # Ensure this line is executed
 
         # Send the message with the updated bell count for the user
         await ctx.send(f"{user.mention} rang the bell! 🔔 You have rung the bell {user_bell_counts[user.id]} times in this server.")
