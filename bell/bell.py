@@ -12,24 +12,24 @@ class BellCog(commands.Cog):
 
     @commands.command()
     async def ringbell(self, ctx):
-        """Rings a bell and increases the user's bell count in this server."""  # Updated docstring
+        """Rings a bell and increases the user's bell count in this server."""
         user = ctx.author  # Get the user who invoked the command
         guild = ctx.guild  # Get the guild (server) context
-        user_bell_counts = await self.config.guild(guild).user_bell_counts()  # Get the user bell counts for the guild
 
-        # Initialize the user's bell count 
-        if user.id not in user_bell_counts:
-            user_bell_counts[user.id] = 0
+        # Retrieve the user bell counts for the guild
+        user_bell_counts = await self.config.guild(guild).user_bell_counts()
 
-        # Increment the user's bell count
-        user_bell_counts[user.id] += 1
+        # Initialize and increment the user's bell count
+        user_bell_counts[user.id] = user_bell_counts.get(user.id, 0) + 1
         
         # Update the counts in the config
-        await self.config.guild(guild).user_bell_counts.set(user_bell_counts)  # Ensure this line is executed
+        await self.config.guild(guild).user_bell_counts.set(user_bell_counts)
 
         # Send the message with the updated bell count for the user
-        await ctx.send(f"{user.mention} rang the bell! 🔔 You have rung the bell {user_bell_counts[user.id]} times in this server.")
+        await ctx.send(
+            f"{user.mention} rang the bell! 🔔 You have rung the bell {user_bell_counts[user.id]} times in this server."
+        )
 
         # Send a bell ringing gif
         gif_url = "https://github.com/BenCos17/ben-cogs/blob/main/bell/bell.gif?raw=true"
-        await ctx.send(gif_url)  
+        await ctx.send(gif_url)
