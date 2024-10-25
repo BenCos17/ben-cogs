@@ -6,24 +6,23 @@ class BellCog(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
         default_guild = {
-            "user_bell_counts": {}  # Changed to store user counts per guild
+            "user_bell_counts": {}
         }
-        self.config.register_guild(**default_guild)  # Register guild-level configuration
+        self.config.register_guild(**default_guild)
 
     @commands.command()
     async def ringbell(self, ctx):
         """Rings a bell and increases the user's bell count in this server."""
-        user = ctx.author  # Get the user who invoked the command
-        guild = ctx.guild  # Get the guild (server) context
+        user = ctx.author
+        guild = ctx.guild
 
         # Retrieve the user bell counts for the guild
         user_bell_counts = await self.config.guild(guild).user_bell_counts()
 
         # Initialize the user's bell count if it doesn't exist
         if user.id not in user_bell_counts:
-            user_bell_counts[user.id] = 0  # Ensure the user has a count initialized
+            user_bell_counts[user.id] = 0
         else:
-            # Inform the user how many times they have rung the bell before incrementing
             await ctx.send(f"{user.mention}, you have rung the bell {user_bell_counts[user.id]} times before!")
 
         # Increment the user's bell count
