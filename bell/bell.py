@@ -4,7 +4,7 @@ import discord
 class BellCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config = Config.get_conf(self, identifier=492089091320446976)
         default_user = {
             "bell_count": 0
         }
@@ -21,4 +21,4 @@ class BellCog(commands.Cog):
         await ctx.send(f"{user.mention} rang the bell! 🔔 You have rung the bell {bell_count} times.")
         
         # Send a bell ringing gif
-        await ctx.send("https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif")
+        await ctx.send("https://github.com/BenCos17/ben-cogs/blob/main/bell/bell.gif?raw=true")
