@@ -2,7 +2,7 @@ from redbot.core import commands, Config
 import discord
 import asyncio
 
-class BellCog(commands.Cog):
+class Bell(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
@@ -11,6 +11,7 @@ class BellCog(commands.Cog):
         }
         self.config.register_guild(**default_guild)
 
+#message method for the sent message
     async def construct_bell_message(self, user, user_bell_count: int) -> str:
         """Constructs the bell message for the user."""
         message = f"{user.mention}, "
@@ -19,6 +20,9 @@ class BellCog(commands.Cog):
         message += f"You have now rung the bell {user_bell_count + 1} times in this server. 🔔"
         return message
 
+
+
+#command to add another ring to the server count 
     @commands.hybrid_command(aliases=['bell'])  
     async def ringbell(self, ctx) -> None:
         """Rings a bell and increases the user's bell count in this server."""
@@ -40,6 +44,9 @@ class BellCog(commands.Cog):
         gif_url = "https://github.com/BenCos17/ben-cogs/blob/main/bell/bell.gif?raw=true"
         await ctx.send(message + f"\n[gif]({gif_url})")  # Include the GIF URL as a clickable link
 
+
+
+#reset a users count (only the user can run it and reset their own count)
     @commands.command(aliases=['resetbell'])  
     async def reset_bell(self, ctx) -> None:
         """Resets the user's bell count in this server after confirmation."""
