@@ -25,9 +25,9 @@ class Bell(commands.Cog):
 #command to add another ring to the server count 
     @commands.hybrid_command(aliases=['bell'])  
     async def ringbell(self, ctx) -> None:
-        """Rings a bell and increases the user's bell count in this server."""
+        """Rings a bell and increases the user's bell count in this server or DM."""
         user = ctx.author
-        guild = ctx.guild
+        guild = ctx.guild if ctx.guild else user  # Use user as guild in DMs
 
         try:
             user_bell_count = await self.config.guild(guild).user_bell_counts.get_raw(user.id, default=0)
@@ -49,9 +49,9 @@ class Bell(commands.Cog):
 #reset a users count (only the user can run it and reset their own count)
     @commands.command(aliases=['resetbell'])  
     async def reset_bell(self, ctx) -> None:
-        """Resets the user's bell count in this server after confirmation."""
+        """Resets the user's bell count in this server or DM after confirmation."""
         user = ctx.author
-        guild = ctx.guild
+        guild = ctx.guild if ctx.guild else user  # Use user as guild in DMs
 
         try:
             user_bell_count = await self.config.guild(guild).user_bell_counts.get_raw(user.id, default=0)
