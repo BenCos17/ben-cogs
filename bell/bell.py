@@ -11,42 +11,48 @@ class BellCog(commands.Cog):
         }
         self.config.register_guild(**default_guild)
 
+    async def construct_bell_message(self, user, user_bell_count: int) -> str:
+        """Constructs the bell message for the user."""
+        message = f"{user.mention}, "
+        if user_bell_count > 0:
+            message += f"you have rung the bell {user_bell_count} times before! "
+        message += f"You have now rung the bell {user_bell_count + 1} times in this server. 🔔"
+        return message
+
     @commands.hybrid_command(aliases=['bell'])  
-    async def ringbell(self, ctx):
+    async def ringbell(self, ctx) -> None:
         """Rings a bell and increases the user's bell count in this server."""
         user = ctx.author
         guild = ctx.guild
 
-        # Retrieve the user's current bell count from the config
-        user_bell_count = await self.config.guild(guild).user_bell_counts.get_raw(user.id, default=0)
+        try:
+            user_bell_count = await self.config.guild(guild).user_bell_counts.get_raw(user.id, default=0)
+        except Exception as e:
+            await ctx.send(f"An error occurred while retrieving your bell count: {str(e)}")
+            return
 
-        # Prepare the response message in a single variable
-        message = f"{user.mention}, "
-
-        # Add the previous count message if the user has rung the bell before
-        if user_bell_count > 0:
-            message += f"you have rung the bell {user_bell_count} times before! "
-
-        # Increment the user's bell count
-        user_bell_count += 1
+        user_bell_count += 1  # Increment the user's bell count
         
-        # Update the count for this specific user in the config
         await self.config.guild(guild).user_bell_counts.set_raw(user.id, value=user_bell_count)
 
-        # Append the updated count messages from stats 
-        message += f"You have now rung the bell {user_bell_count} times in this server. 🔔"
+        message = await self.construct_bell_message(user, user_bell_count)
 
         gif_url = "https://github.com/BenCos17/ben-cogs/blob/main/bell/bell.gif?raw=true"
         await ctx.send(message + f"\n[gif]({gif_url})")  # Include the GIF URL as a clickable link
 
     @commands.command(aliases=['resetbell'])  
-    async def reset_bell(self, ctx):
+    async def reset_bell(self, ctx) -> None:
         """Resets the user's bell count in this server after confirmation."""
         user = ctx.author
         guild = ctx.guild
 
-        # Ask for confirmation
-        confirmation_message = await ctx.send(f"{user.mention}, are you sure you want to reset your bell count? (yes/no)")
+        try:
+            user_bell_count = await self.config.guild(guild).user_bell_counts.get_raw(user.id, default=0)
+        except Exception as e:
+            await ctx.send(f"An error occurred while retrieving your bell count: {str(e)}")
+            return
+
+        confirmation_message = await ctx.send(f"{user.mention}, your current bell count is {user_bell_count}. Are you sure you want to reset it to 0? (yes/no)")
 
         def check(m):
             return m.author == user and m.channel == ctx.channel and m.content.lower() in ['yes', 'no']
