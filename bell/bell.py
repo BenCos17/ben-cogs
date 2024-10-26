@@ -36,14 +36,9 @@ class BellCog(commands.Cog):
         # Append the updated count message
         message += f"You have now rung the bell {user_bell_count} times in this server. 🔔"
 
-        # Send the single message
-        await ctx.send(message)
-
-        # Send a bell ringing gif
+        # Send the single message with the GIF
         gif_url = "https://github.com/BenCos17/ben-cogs/blob/main/bell/bell.gif?raw=true"
-        await ctx.send(gif_url)
-
-
+        await ctx.send(message + f"\n{gif_url}")  # Include the GIF URL in the same message
 
     @commands.command(aliases=['resetbell'])  
     async def reset_bell(self, ctx):
