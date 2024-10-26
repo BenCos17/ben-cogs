@@ -1,0 +1,10 @@
+{
+    "name": "Bell",
+    "author": ["bencos18 "],
+    "description": "A cog that allows users to ring a bell and keep track of their bell count in the server.",
+    "install_msg": "Thank you for installing the Bell cog. Use `[p]ringbell` to ring the bell and `[p]resetbell` to reset your bell count.",
+    "short": "Bell ringing cog",
+    "requirements": [],
+    "tags": ["fun", "utility"],
+    "end_user_data_statement": "This cog stores user bell counts per server using a users user id."
+}
