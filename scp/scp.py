@@ -10,7 +10,7 @@ class SCPInfoView(View):
         self.detailed_info = detailed_info
         self.url = url
         self.current_page = 0
-        self.max_length = 4000
+        self.max_length = 2000  # Set max length to 2000 characters
         self.pages = [detailed_info[i:i + self.max_length] for i in range(0, len(detailed_info), self.max_length)]
 
     async def send_page(self, interaction):
