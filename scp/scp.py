@@ -103,22 +103,37 @@ class scpLookup(commands.Cog):
             await ctx.send(f"An unexpected error occurred: {str(e)}")
 
     @scp_group.command(name='search')
-    async def scp_search(self, ctx, *, scp_name: str):
-        """Search for SCP articles by their name."""
-        base_url = "https://scp-api.com/scp/search"
-        params = {'query': scp_name}
+    async def scp_search(self, ctx, *, search_term: str):
+        """Search for SCP articles by their name and within their content."""
+        base_url = "http://www.scpwiki.com/api/v1/search"
+        params = {'query': search_term}
         
-        # Disable SSL verification testing to see if it's just a minor issue 
-        connector = aiohttp.TCPConnector(ssl=False)
-        async with aiohttp.ClientSession(connector=connector) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.get(base_url, params=params) as response:
                 if response.status == 200:
                     articles = await response.json()
-                    if articles:
-                        article_titles = [article['title'] for article in articles]
-                        await ctx.send(f"Search results for '{scp_name}':\n" + "\n".join(article_titles))
+                    if articles and 'results' in articles:
+                        if articles['results']:
+                            found_articles = []
+                            for article in articles['results']:
+                                article_url = f"http://www.scpwiki.com{article['url']}"
+                                async with session.get(article_url) as article_response:
+                                    if article_response.status == 200:
+                                        article_content = await article_response.text()
+                                        soup = BeautifulSoup(article_content, 'html.parser')
+                                        content_div = soup.find('div', {'id': 'page-content'})
+                                        if content_div:
+                                            content_text = content_div.get_text()
+                                            if search_term.lower() in content_text.lower() or search_term.lower() in article['title'].lower():
+                                                found_articles.append(article['title'])
+                            if found_articles:
+                                await ctx.send(f"Articles containing '{search_term}':\n" + "\n".join(found_articles))
+                            else:
+                                await ctx.send(f"No articles found containing: {search_term}.")
+                        else:
+                            await ctx.send("No articles found matching your search.")
                     else:
-                        await ctx.send(f"No SCPs found matching: {scp_name}.")
+                        await ctx.send("Unexpected response format.")
                 else:
                     await ctx.send("Failed to fetch SCP articles. Please try again later.")
 
