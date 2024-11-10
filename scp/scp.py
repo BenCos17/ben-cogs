@@ -108,7 +108,9 @@ class scpLookup(commands.Cog):
         base_url = "https://scp-api.com/scp/search"
         params = {'query': scp_name}
         
-        async with aiohttp.ClientSession() as session:
+        # Disable SSL verification testing to see if it's just a minor issue 
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.get(base_url, params=params) as response:
                 if response.status == 200:
                     articles = await response.json()
