@@ -1,6 +1,6 @@
 from redbot.core.bot import Red
 
-from .scp import SCPLookup
+from .scp import scpLookup
 
 async def setup(bot: Red):
-    await bot.add_cog(ScpLookup(bot))
+    await bot.add_cog(scpLookup(bot))

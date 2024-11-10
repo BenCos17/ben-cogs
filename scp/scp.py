@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import random
 import requests
 
-class SCPLookup(commands.Cog):
+class scpLookup(commands.Cog):
     """A cog for looking up SCP articles with more detailed information."""
 
     def __init__(self, bot):
