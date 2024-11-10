@@ -81,11 +81,14 @@ class scpLookup(commands.Cog):
                         description_tag = soup.find('div', {'id': 'page-content'})
                         detailed_info = description_tag.text.strip() if description_tag else "Detailed information not available."
 
-                        # Split the detailed_info into chunks of 2000 characters
-                        max_length = 2000
+                        # Prepare the link
+                        read_more_link = f"[Read more]({url})"
+                        max_length = 2000 - len(title) - len(read_more_link) - 2  # Subtracting 2 for the newline characters
+
+                        # Split the detailed_info into chunks of max_length
                         for i in range(0, len(detailed_info), max_length):
                             chunk = detailed_info[i:i + max_length]
-                            await ctx.send(f"**{title}**\n{chunk}\n[Read more]({url})")
+                            await ctx.send(f"**{title}**\n{chunk}\n{read_more_link}")
                     else:
                         await ctx.send(f"SCP-{scp_number} not found. Status code: {response.status}")
         except aiohttp.ClientError as e:
