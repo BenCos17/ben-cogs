@@ -10,7 +10,15 @@ class scpLookup(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='scp')
+    @commands.hybrid_group(name='scp', invoke_without_command=True)
+    async def scp_group(self, ctx, scp_number: str = None):
+        """Main command for SCP lookups. Use `scp <subcommand>` for more options."""
+        if scp_number is not None:
+            await self.scp_lookup(ctx, scp_number)
+        else:
+            await ctx.send("Please specify a subcommand or SCP number. Available subcommands: lookup, list, random, info.")
+
+    @scp_group.command(name='lookup')
     async def scp_lookup(self, ctx, scp_number: str):
         """Lookup SCP articles by their number and provide a summary."""
         url = f"http://www.scpwiki.com/scp-{scp_number}"
@@ -29,7 +37,7 @@ class scpLookup(commands.Cog):
                 else:
                     await ctx.send(f"SCP-{scp_number} not found.")
 
-    @commands.command(name='list_scp')
+    @scp_group.command(name='list')
     async def list_scp(self, ctx, category: str = None):
         """List SCP articles by category or a specific range."""
         base_url = "https://scp-api.com/scp"
@@ -53,20 +61,17 @@ class scpLookup(commands.Cog):
         else:
             await ctx.send("Failed to fetch SCP articles. Please try again later.")
 
-    @commands.command(name='random_scp')
+    @scp_group.command(name='random')
     async def random_scp(self, ctx):
         """Fetch a random SCP article."""
         random_number = random.randint(1, 9999)  # Adjust range as needed
         await self.scp_lookup(ctx, str(random_number))  # Reuse existing lookup command
 
-    @commands.command(name='scp_info')
+    @scp_group.command(name='info')
     async def scp_info(self, ctx, scp_number: str):
         """Provide detailed information about an SCP."""
         # Example implementation (you would need to define how to fetch this data)
         await ctx.send(f"Fetching detailed info for SCP-{scp_number}...")
         # ... logic to fetch and display detailed info ...
-
-def setup(bot):
-    bot.add_cog(SCPLookup(bot))
 
 
