@@ -2,6 +2,9 @@ from redbot.core import commands
 import aiohttp
 from bs4 import BeautifulSoup
 
+# Define the maximum SCP number here
+MAX_SCP_NUMBER = 8999  
+
 class scpLookup(commands.Cog):
     """A cog for looking up SCP articles with more detailed information."""
 
@@ -105,8 +108,9 @@ class scpLookup(commands.Cog):
     @scp_group.command(name='search')
     async def scp_search(self, ctx, *, search_term: str):
         """Search for SCP articles by their name and within their content."""
+        await ctx.send("Searching for articles may take a while, please be patient...")
+
         # List of known SCP articles (SCP-001 to SCP-8999)
-        MAX_SCP_NUMBER = 8999  # Define the maximum SCP number here
         scp_numbers = [f"SCP-{i:04}" for i in range(1, MAX_SCP_NUMBER + 1)]  # SCP-0001 to SCP-8999
 
         found_articles = []
