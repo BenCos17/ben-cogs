@@ -87,7 +87,7 @@ class scpLookup(commands.Cog):
 
                         # Ensure max_length is positive
                         if max_length <= 0:
-                            await ctx.send("The SCP title and link are too long to send any information.")
+                            await ctx.send("The SCP title and link are too long to send any information, Working on this command still -Ben")
                             return
 
                         # Split the detailed_info into chunks of max_length
