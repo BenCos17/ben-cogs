@@ -1,0 +1,12 @@
+{
+    "name": "SCPLookup",
+    "author": ["bencos18"],
+    "description": "A Redbot cog for looking up SCP articles with detailed information.",
+    "install_msg": "Thank you for installing SCPLookup. Use `[p]help SCPLookup` to see available commands.",
+    "short": "SCP Lookup",
+    "requirements": ["aiohttp", "beautifulsoup4", "requests"],
+    "tags": ["scp", "lookup", "information", "random"],
+    "min_bot_version": "3.4.0",
+    "end_user_data_statement": "This cog does not store any end user data."
+}
+
