@@ -105,45 +105,35 @@ class scpLookup(commands.Cog):
     @scp_group.command(name='search')
     async def scp_search(self, ctx, *, search_term: str):
         """Search for SCP articles by their name and within their content."""
-        search_url = f"http://www.scpwiki.com/search?query={search_term}"
-        
+        # List of known SCP articles (SCP-001 to SCP-8999)
+        MAX_SCP_NUMBER = 8999  # Define the maximum SCP number here
+        scp_numbers = [f"SCP-{i:04}" for i in range(1, MAX_SCP_NUMBER + 1)]  # SCP-0001 to SCP-8999
+
+        found_articles = []
+
         async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(search_url) as response:
-                    if response.status == 200:
-                        page_content = await response.text()
-                        soup = BeautifulSoup(page_content, 'html.parser')
-                        
-                        # Find all article links in the search results
-                        results = soup.find_all('div', class_='scp-list-item')
-                        found_articles = []
-                        
-                        for result in results:
-                            title_tag = result.find('a', class_='scp-title')
-                            if title_tag:
-                                article_title = title_tag.text.strip()
-                                article_url = f"http://www.scpwiki.com{title_tag['href']}"
-                                
-                                # Fetch the article content
-                                async with session.get(article_url) as article_response:
-                                    if article_response.status == 200:
-                                        article_content = await article_response.text()
-                                        article_soup = BeautifulSoup(article_content, 'html.parser')
-                                        content_div = article_soup.find('div', {'id': 'page-content'})
-                                        
-                                        if content_div:
-                                            content_text = content_div.get_text()
-                                            # Check if the search term is in the content
-                                            if search_term.lower() in content_text.lower() or search_term.lower() in article_title.lower():
-                                                found_articles.append(article_title)
-                    
-                        if found_articles:
-                            await ctx.send(f"Articles containing '{search_term}':\n" + "\n".join(found_articles))
+            for scp_number in scp_numbers:
+                article_url = f"http://www.scpwiki.com/{scp_number}"
+                try:
+                    async with session.get(article_url) as response:
+                        if response.status == 200:
+                            article_content = await response.text()
+                            soup = BeautifulSoup(article_content, 'html.parser')
+                            content_div = soup.find('div', {'id': 'page-content'})
+                            
+                            if content_div:
+                                content_text = content_div.get_text()
+                                # Check if the search term is in the content or title
+                                if search_term.lower() in content_text.lower() or search_term.lower() in scp_number.lower():
+                                    found_articles.append(scp_number)
                         else:
-                            await ctx.send(f"No articles found containing: {search_term}.")
-                    else:
-                        await ctx.send(f"Failed to fetch search results. Status code: {response.status}")
-            except Exception as e:
-                await ctx.send(f"An error occurred: {str(e)}")
+                            continue  # Skip if the article does not exist
+                except Exception as e:
+                    await ctx.send(f"An error occurred while fetching {scp_number}: {str(e)}")
+
+        if found_articles:
+            await ctx.send(f"Articles containing '{search_term}':\n" + "\n".join(found_articles))
+        else:
+            await ctx.send(f"No articles found containing: {search_term}.")
 
 
