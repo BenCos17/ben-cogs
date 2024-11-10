@@ -1,33 +1,6 @@
 from redbot.core import commands
 import aiohttp
 from bs4 import BeautifulSoup
-from discord.ui import View, Button
-
-class SCPInfoView(View):
-    def __init__(self, title, detailed_info, url):
-        super().__init__(timeout=None)  # No timeout for the view
-        self.title = title
-        self.detailed_info = detailed_info
-        self.url = url
-        self.current_page = 0
-        self.max_length = 2000  # Set max length to 2000 characters
-        self.pages = [detailed_info[i:i + self.max_length] for i in range(0, len(detailed_info), self.max_length)]
-
-    async def send_page(self, interaction):
-        if self.current_page < len(self.pages):
-            await interaction.response.edit_message(content=f"**{self.title}**\n{self.pages[self.current_page]}\n[Read more]({self.url})", view=self)
-
-    @discord.ui.button(label="Previous", style=discord.ButtonStyle.primary)
-    async def previous_button(self, button: Button, interaction):
-        if self.current_page > 0:
-            self.current_page -= 1
-            await self.send_page(interaction)
-
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
-    async def next_button(self, button: Button, interaction):
-        if self.current_page < len(self.pages) - 1:
-            self.current_page += 1
-            await self.send_page(interaction)
 
 class scpLookup(commands.Cog):
     """A cog for looking up SCP articles with more detailed information."""
@@ -108,9 +81,11 @@ class scpLookup(commands.Cog):
                         description_tag = soup.find('div', {'id': 'page-content'})
                         detailed_info = description_tag.text.strip() if description_tag else "Detailed information not available."
 
-                        # Create a pagination view
-                        view = SCPInfoView(title, detailed_info, url)
-                        await ctx.send(content=f"**{title}**\n{view.pages[0]}\n[Read more]({url})", view=view)
+                        # Split the detailed_info into chunks of 2000 characters
+                        max_length = 2000
+                        for i in range(0, len(detailed_info), max_length):
+                            chunk = detailed_info[i:i + max_length]
+                            await ctx.send(f"**{title}**\n{chunk}\n[Read more]({url})")
                     else:
                         await ctx.send(f"SCP-{scp_number} not found. Status code: {response.status}")
         except aiohttp.ClientError as e:
