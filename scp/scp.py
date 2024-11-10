@@ -105,36 +105,45 @@ class scpLookup(commands.Cog):
     @scp_group.command(name='search')
     async def scp_search(self, ctx, *, search_term: str):
         """Search for SCP articles by their name and within their content."""
-        base_url = "http://www.scpwiki.com/api/v1/search"
-        params = {'query': search_term}
+        search_url = f"http://www.scpwiki.com/search?query={search_term}"
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(base_url, params=params) as response:
-                if response.status == 200:
-                    articles = await response.json()
-                    if articles and 'results' in articles:
-                        if articles['results']:
-                            found_articles = []
-                            for article in articles['results']:
-                                article_url = f"http://www.scpwiki.com{article['url']}"
+            try:
+                async with session.get(search_url) as response:
+                    if response.status == 200:
+                        page_content = await response.text()
+                        soup = BeautifulSoup(page_content, 'html.parser')
+                        
+                        # Find all article links in the search results
+                        results = soup.find_all('div', class_='scp-list-item')
+                        found_articles = []
+                        
+                        for result in results:
+                            title_tag = result.find('a', class_='scp-title')
+                            if title_tag:
+                                article_title = title_tag.text.strip()
+                                article_url = f"http://www.scpwiki.com{title_tag['href']}"
+                                
+                                # Fetch the article content
                                 async with session.get(article_url) as article_response:
                                     if article_response.status == 200:
                                         article_content = await article_response.text()
-                                        soup = BeautifulSoup(article_content, 'html.parser')
-                                        content_div = soup.find('div', {'id': 'page-content'})
+                                        article_soup = BeautifulSoup(article_content, 'html.parser')
+                                        content_div = article_soup.find('div', {'id': 'page-content'})
+                                        
                                         if content_div:
                                             content_text = content_div.get_text()
-                                            if search_term.lower() in content_text.lower() or search_term.lower() in article['title'].lower():
-                                                found_articles.append(article['title'])
-                            if found_articles:
-                                await ctx.send(f"Articles containing '{search_term}':\n" + "\n".join(found_articles))
-                            else:
-                                await ctx.send(f"No articles found containing: {search_term}.")
+                                            # Check if the search term is in the content
+                                            if search_term.lower() in content_text.lower() or search_term.lower() in article_title.lower():
+                                                found_articles.append(article_title)
+                    
+                        if found_articles:
+                            await ctx.send(f"Articles containing '{search_term}':\n" + "\n".join(found_articles))
                         else:
-                            await ctx.send("No articles found matching your search.")
+                            await ctx.send(f"No articles found containing: {search_term}.")
                     else:
-                        await ctx.send("Unexpected response format.")
-                else:
-                    await ctx.send("Failed to fetch SCP articles. Please try again later.")
+                        await ctx.send(f"Failed to fetch search results. Status code: {response.status}")
+            except Exception as e:
+                await ctx.send(f"An error occurred: {str(e)}")
 
 
