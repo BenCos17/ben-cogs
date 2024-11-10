@@ -25,7 +25,7 @@ class scpLookup(commands.Cog):
                     description_tag = soup.find('div', {'id': 'page-content'})
                     description = description_tag.text.strip()[:500] if description_tag else "Description not available."
 
-                    await ctx.send(f"**{title}**\n{description}\nRead more: {url}")
+                    await ctx.send(f"**{title}**\n{description}\n[Read more]({url})")
                 else:
                     await ctx.send(f"SCP-{scp_number} not found.")
 
