@@ -64,14 +64,26 @@ class scpLookup(commands.Cog):
     @scp_group.command(name='random')
     async def random_scp(self, ctx):
         """Fetch a random SCP article."""
-        random_number = random.randint(1, 9999)  # Adjust range as needed
+        random_number = random.randint(1, 9999)  # scp range
         await self.scp_lookup(ctx, str(random_number))  # Reuse existing lookup command
 
     @scp_group.command(name='info')
     async def scp_info(self, ctx, scp_number: str):
         """Provide detailed information about an SCP."""
-        # Example implementation (you would need to define how to fetch this data)
-        await ctx.send(f"Fetching detailed info for SCP-{scp_number}...")
-        # ... logic to fetch and display detailed info ...
+        url = f"http://www.scpwiki.com/scp-{scp_number}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    page_content = await response.text()
+                    soup = BeautifulSoup(page_content, 'html.parser')
+                    
+                    # Attempt to extract detailed information
+                    title = soup.find('title').text if soup.find('title') else f"SCP-{scp_number}"
+                    description_tag = soup.find('div', {'id': 'page-content'})
+                    detailed_info = description_tag.text.strip() if description_tag else "Detailed information not available."
+
+                    await ctx.send(f"**{title}**\n{detailed_info}\n[Read more]({url})")
+                else:
+                    await ctx.send(f"SCP-{scp_number} not found.")
 
 
