@@ -102,4 +102,22 @@ class scpLookup(commands.Cog):
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {str(e)}")
 
+    @scp_group.command(name='search')
+    async def scp_search(self, ctx, *, scp_name: str):
+        """Search for SCP articles by their name."""
+        base_url = "https://scp-api.com/scp/search"
+        params = {'query': scp_name}
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(base_url, params=params) as response:
+                if response.status == 200:
+                    articles = await response.json()
+                    if articles:
+                        article_titles = [article['title'] for article in articles]
+                        await ctx.send(f"Search results for '{scp_name}':\n" + "\n".join(article_titles))
+                    else:
+                        await ctx.send(f"No SCPs found matching: {scp_name}.")
+                else:
+                    await ctx.send("Failed to fetch SCP articles. Please try again later.")
+
 
