@@ -85,9 +85,15 @@ class scpLookup(commands.Cog):
                         read_more_link = f"[Read more]({url})"
                         max_length = 2000 - len(title) - len(read_more_link) - 2  # Subtracting 2 for the newline characters
 
+                        # Ensure max_length is positive
+                        if max_length <= 0:
+                            await ctx.send("The SCP title and link are too long to send any information.")
+                            return
+
                         # Split the detailed_info into chunks of max_length
                         for i in range(0, len(detailed_info), max_length):
                             chunk = detailed_info[i:i + max_length]
+                            # Send the message ensuring it does not exceed the limit
                             await ctx.send(f"**{title}**\n{chunk}\n{read_more_link}")
                     else:
                         await ctx.send(f"SCP-{scp_number} not found. Status code: {response.status}")
