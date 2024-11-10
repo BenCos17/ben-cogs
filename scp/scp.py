@@ -108,7 +108,7 @@ class scpLookup(commands.Cog):
     @scp_group.command(name='search')
     async def scp_search(self, ctx, *, search_term: str):
         """Search for SCP articles by their name and within their content."""
-        await ctx.send("Searching for articles may take a while, please be patient...")
+        await ctx.send("Searching for articles may take a while, as this command uses web scraping and may break if the website structure changes. Please be patient...")
 
         # List of known SCP articles (SCP-001 to SCP-8999)
         scp_numbers = [f"SCP-{i:04}" for i in range(1, MAX_SCP_NUMBER + 1)]  # SCP-0001 to SCP-8999
