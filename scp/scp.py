@@ -20,8 +20,8 @@ class scpLookup(commands.Cog):
             await ctx.send("Please specify a subcommand or SCP number. Available subcommands: lookup, list, random, info.")
 
     @scp_group.command(name='lookup')
-    async def scp_lookup(self, ctx, scp_number: str):
-        """Lookup SCP articles by their number and provide a summary."""
+    async def scp_lookup(self, ctx, scp_number: str, search_term: str = None):
+        """Search SCP articles and provide a summary and number."""
         url = f"http://www.scpwiki.com/scp-{scp_number}"
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
@@ -34,7 +34,15 @@ class scpLookup(commands.Cog):
                     description_tag = soup.find('div', {'id': 'page-content'})
                     description = description_tag.text.strip()[:500] if description_tag else "Description not available."
 
-                    await ctx.send(f"**{title}**\n{description}\n[Read more]({url})")
+                    # If a search term is provided, check if it's in the content
+                    if search_term:
+                        content_text = description_tag.text if description_tag else ""
+                        if search_term.lower() in content_text.lower():
+                            await ctx.send(f"**{title}**\nThe term '{search_term}' was found in SCP-{scp_number}.\n{description}\n[Read more]({url})")
+                        else:
+                            await ctx.send(f"**{title}**\nThe term '{search_term}' was not found in SCP-{scp_number}.\n{description}\n[Read more]({url})")
+                    else:
+                        await ctx.send(f"**{title}**\n{description}\n[Read more]({url})")
                 else:
                     await ctx.send(f"SCP-{scp_number} not found.")
 
