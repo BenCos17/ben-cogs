@@ -41,26 +41,26 @@ class scpLookup(commands.Cog):
     @scp_group.command(name='list')
     async def list_scp(self, ctx, category: str = None):
         """List SCP articles by category or a specific range."""
-        base_url = "https://scp-api.com/scp"
+        base_url = "https://scp-data.tedivm.com/data/scp/items/index.json"  # Updated to use SCP Data API
         
-        # Determine the URL based on the category
-        if category:
-            url = f"{base_url}/category/{category}"
-        else:
-            url = base_url
-
         # Fetch SCP articles from the API
-        response = requests.get(url)
-        
-        if response.status_code == 200:
-            articles = response.json()
-            if articles:
-                article_titles = [article['title'] for article in articles]
-                await ctx.send(f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join(article_titles))
-            else:
-                await ctx.send(f"No SCPs found in category: {category}.")
-        else:
-            await ctx.send("Failed to fetch SCP articles. Please try again later.")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(base_url) as response:
+                if response.status == 200:
+                    articles = await response.json()  # Await the JSON response
+                    article_titles = []
+                    
+                    # Filter articles by category if specified
+                    for key, article in articles.items():
+                        if category is None or category in article.get('tags', []):
+                            article_titles.append(article['title'])
+
+                    if article_titles:
+                        await ctx.send(f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join(article_titles))
+                    else:
+                        await ctx.send(f"No SCPs found in category: {category}.")
+                else:
+                    await ctx.send("Failed to fetch SCP articles. Please try again later.")
 
     @scp_group.command(name='random')
     async def random_scp(self, ctx):
