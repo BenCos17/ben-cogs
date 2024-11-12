@@ -22,29 +22,61 @@ class scpLookup(commands.Cog):
     @scp_group.command(name='lookup')
     async def scp_lookup(self, ctx, scp_number: str, search_term: str = None):
         """Search SCP articles and provide a summary and number."""
-        url = f"http://www.scpwiki.com/scp-{scp_number}"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    page_content = await response.text()
-                    soup = BeautifulSoup(page_content, 'html.parser')
-                    
-                    # Attempt to extract the SCP title and description
-                    title = soup.find('title').text if soup.find('title') else f"SCP-{scp_number}"
-                    description_tag = soup.find('div', {'id': 'page-content'})
-                    description = description_tag.text.strip()[:500] if description_tag else "Description not available."
+        base_url = "https://scp-data.tedivm.com/data/scp/items/index.json"  # SCP Data API endpoint
 
-                    # If a search term is provided, check if it's in the content
-                    if search_term:
-                        content_text = description_tag.text if description_tag else ""
-                        if search_term.lower() in content_text.lower():
-                            await ctx.send(f"**{title}**\nThe term '{search_term}' was found in SCP-{scp_number}.\n{description}\n[Read more]({url})")
+        # Check if the input is a valid SCP number format
+        if scp_number.lower().startswith("scp-"):
+            # Fetch specific SCP article from the API
+            async with aiohttp.ClientSession() as session:
+                async with session.get(base_url) as response:
+                    if response.status == 200:
+                        articles = await response.json()  # Await the JSON response
+                        article_key = scp_number.lower()  # Normalize the SCP number for lookup
+
+                        # Check if the specific SCP article exists in the API data
+                        if article_key in articles:
+                            article = articles[article_key]
+                            title = article['title']
+                            description = article.get('description', 'Description not available.')[:500]  # Limit to 500 characters
+                            read_more_link = f"[Read more](https://scpwiki.com/{scp_number})"
+
+                            # If a search term is provided, check if it's in the description
+                            if search_term:
+                                if search_term.lower() in description.lower():
+                                    await ctx.send(f"**{title}**\nThe term '{search_term}' was found in {scp_number}.\n{description}\n{read_more_link}")
+                                else:
+                                    await ctx.send(f"**{title}**\nThe term '{search_term}' was not found in {scp_number}.\n{description}\n{read_more_link}")
+                            else:
+                                await ctx.send(f"**{title}**\n{description}\n{read_more_link}")
                         else:
-                            await ctx.send(f"**{title}**\nThe term '{search_term}' was not found in SCP-{scp_number}.\n{description}\n[Read more]({url})")
+                            await ctx.send(f"{scp_number} not found in the SCP Data API.")
                     else:
-                        await ctx.send(f"**{title}**\n{description}\n[Read more]({url})")
-                else:
-                    await ctx.send(f"SCP-{scp_number} not found.")
+                        await ctx.send("Failed to fetch articles from the SCP Data API.")
+        else:
+            # If the input is not a valid SCP number, perform a search using the SCP Data API
+            await ctx.send(f"Searching for articles containing '{scp_number}'...")
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(base_url) as response:
+                    if response.status == 200:
+                        articles = await response.json()  # Await the JSON response
+                        found_articles = []
+
+                        # Search through the articles for the term
+                        for key, article in articles.items():
+                            title = article['title']
+                            content = article.get('raw_content', '')  # Use raw_content if available
+                            
+                            # Check if the search term is in the title or content
+                            if scp_number.lower() in title.lower() or scp_number.lower() in content.lower():
+                                found_articles.append(title)
+
+                        if found_articles:
+                            await ctx.send(f"Articles containing '{scp_number}':\n" + "\n".join(found_articles))
+                        else:
+                            await ctx.send(f"No articles found containing: {scp_number}.")
+                    else:
+                        await ctx.send("Failed to fetch articles from the SCP Data API.")
 
     @scp_group.command(name='list')
     async def list_scp(self, ctx, category: str = None):
