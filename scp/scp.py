@@ -56,7 +56,12 @@ class scpLookup(commands.Cog):
                             article_titles.append(article['title'])
 
                     if article_titles:
-                        await ctx.send(f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join(article_titles))
+                        # Prepare the message
+                        message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join(article_titles)
+                        
+                        # Split the message into chunks if it exceeds 2000 characters
+                        for i in range(0, len(message), 2000):
+                            await ctx.send(message[i:i + 2000])
                     else:
                         await ctx.send(f"No SCPs found in category: {category}.")
                 else:
