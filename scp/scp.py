@@ -145,9 +145,11 @@ class scpLookup(commands.Cog):
                         # Send the first chunk
                         current_chunk = 0
                         message = await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
-                        await message.add_reaction("➡️")  # Add a reaction for next chunk
+                        
+                        # Add reactions in the correct order
                         if len(chunks) > 1:
-                            await message.add_reaction("⬅️")  # Add a reaction for previous chunk if there are multiple chunks
+                            await message.add_reaction("➡️")  # Add next chunk reaction first
+                            await message.add_reaction("⬅️")  # Add previous chunk reaction second
 
                         # Handle reactions for navigation
                         def check(reaction, user):
