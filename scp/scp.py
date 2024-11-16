@@ -1,6 +1,7 @@
 from redbot.core import commands
 import aiohttp
 from bs4 import BeautifulSoup
+import asyncio
 
 # Define the maximum SCP number here
 MAX_SCP_NUMBER = 8999  
@@ -139,10 +140,42 @@ class scpLookup(commands.Cog):
                             return
 
                         # Split the detailed_info into chunks of max_length
-                        for i in range(0, len(detailed_info), max_length):
-                            chunk = detailed_info[i:i + max_length]
-                            # Send the message ensuring it does not exceed the limit
-                            await ctx.send(f"**{title}**\n{chunk}\n{read_more_link}")
+                        chunks = [detailed_info[i:i + max_length] for i in range(0, len(detailed_info), max_length)]
+                        
+                        # Send the first chunk
+                        current_chunk = 0
+                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                        message = await ctx.send("Use the reactions to navigate.")  # Placeholder message
+                        await message.add_reaction("➡️")  # Add a reaction for next chunk
+                        if len(chunks) > 1:
+                            await message.add_reaction("⬅️")  # Add a reaction for previous chunk if there are multiple chunks
+
+                        # Handle reactions for navigation
+                        def check(reaction, user):
+                            return user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ["➡️", "⬅️"]
+
+                        while True:
+                            try:
+                                reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                                
+                                if str(reaction.emoji) == "➡️":
+                                    if current_chunk < len(chunks) - 1:
+                                        current_chunk += 1
+                                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                                    if current_chunk == len(chunks) - 1:
+                                        await message.remove_reaction("➡️", user)  # Remove next reaction if at the last chunk
+                                
+                                elif str(reaction.emoji) == "⬅️":
+                                    if current_chunk > 0:
+                                        current_chunk -= 1
+                                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                                    if current_chunk == 0:
+                                        await message.remove_reaction("⬅️", user)  # Remove previous reaction if at the first chunk
+
+                                await message.remove_reaction(reaction, user)  # Remove the user's reaction
+                            except asyncio.TimeoutError:
+                                await ctx.send("You took too long to respond. Navigation timed out.")
+                                break  # Exit the loop if the user doesn't react in time
                     else:
                         await ctx.send(f"SCP-{scp_number} not found. Status code: {response.status}")
         except aiohttp.ClientError as e:
