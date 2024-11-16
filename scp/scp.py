@@ -157,23 +157,22 @@ class scpLookup(commands.Cog):
                             try:
                                 reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
                                 
-                                # Send debug info to the channel
-                                await ctx.send(f"Reaction received: {reaction.emoji} from {user.name}")
-
                                 # Remove the user's reaction
                                 await message.remove_reaction(reaction, user)
 
                                 if str(reaction.emoji) == "➡️":
                                     if current_chunk < len(chunks) - 1:
                                         current_chunk += 1
-                                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                                        # Edit the original message with the new chunk
+                                        await message.edit(content=f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
                                     if current_chunk == len(chunks) - 1:
                                         await message.remove_reaction("➡️", user)  # Remove next reaction if at the last chunk
                                 
                                 elif str(reaction.emoji) == "⬅️":
                                     if current_chunk > 0:
                                         current_chunk -= 1
-                                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                                        # Edit the original message with the new chunk
+                                        await message.edit(content=f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
                                     if current_chunk == 0:
                                         await message.remove_reaction("⬅️", user)  # Remove previous reaction if at the first chunk
 
