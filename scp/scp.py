@@ -144,8 +144,7 @@ class scpLookup(commands.Cog):
                         
                         # Send the first chunk
                         current_chunk = 0
-                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
-                        message = await ctx.send("Use the reactions to navigate.")  # Placeholder message
+                        message = await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
                         await message.add_reaction("➡️")  # Add a reaction for next chunk
                         if len(chunks) > 1:
                             await message.add_reaction("⬅️")  # Add a reaction for previous chunk if there are multiple chunks
@@ -158,25 +157,26 @@ class scpLookup(commands.Cog):
                             try:
                                 reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
                                 
+                                # Send debug info to the channel
+                                await ctx.send(f"Reaction received: {reaction.emoji} from {user.name}")
+
+                                # Remove the user's reaction
+                                await message.remove_reaction(reaction, user)
+
                                 if str(reaction.emoji) == "➡️":
                                     if current_chunk < len(chunks) - 1:
                                         current_chunk += 1
-                                        # Check if the message fits within the limit
-                                        if len(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}") <= 1800:
-                                            await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
                                     if current_chunk == len(chunks) - 1:
                                         await message.remove_reaction("➡️", user)  # Remove next reaction if at the last chunk
                                 
                                 elif str(reaction.emoji) == "⬅️":
                                     if current_chunk > 0:
                                         current_chunk -= 1
-                                        # Check if the message fits within the limit
-                                        if len(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}") <= 1800:
-                                            await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
                                     if current_chunk == 0:
                                         await message.remove_reaction("⬅️", user)  # Remove previous reaction if at the first chunk
 
-                                await message.remove_reaction(reaction, user)  # Remove the user's reaction
                             except asyncio.TimeoutError:
                                 await ctx.send("You took too long to respond. Navigation timed out.")
                                 break  # Exit the loop if the user doesn't react in time
