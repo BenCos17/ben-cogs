@@ -132,7 +132,7 @@ class scpLookup(commands.Cog):
 
                         # Prepare the link
                         read_more_link = f"[Read more]({url})"
-                        max_length = 2000 - len(title) - len(read_more_link) - 2  # Subtracting 2 for the newline characters
+                        max_length = 1800 - len(title) - len(read_more_link) - 2  # Subtracting 2 for the newline characters
 
                         # Ensure max_length is positive
                         if max_length <= 0:
@@ -161,14 +161,18 @@ class scpLookup(commands.Cog):
                                 if str(reaction.emoji) == "➡️":
                                     if current_chunk < len(chunks) - 1:
                                         current_chunk += 1
-                                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                                        # Check if the message fits within the limit
+                                        if len(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}") <= 1800:
+                                            await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
                                     if current_chunk == len(chunks) - 1:
                                         await message.remove_reaction("➡️", user)  # Remove next reaction if at the last chunk
                                 
                                 elif str(reaction.emoji) == "⬅️":
                                     if current_chunk > 0:
                                         current_chunk -= 1
-                                        await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
+                                        # Check if the message fits within the limit
+                                        if len(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}") <= 1800:
+                                            await ctx.send(f"**{title}**\n{chunks[current_chunk]}\n{read_more_link}")
                                     if current_chunk == 0:
                                         await message.remove_reaction("⬅️", user)  # Remove previous reaction if at the first chunk
 
