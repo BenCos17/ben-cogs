@@ -23,12 +23,20 @@ class AmputatorBot(commands.Cog):
     @amputator.command(name='optin')
     async def opt_in(self, ctx):
         """Opt-in to use the AmputatorBot service"""
-        await ctx.send("This command cannot be used in DMs.")
+        if ctx.guild:
+            await self.config.guild(ctx.guild).opted_in.set(True)
+            await ctx.send("Successfully opted in to use the AmputatorBot service.")
+        else:
+            await ctx.send("This command cannot be used in DMs.")
 
     @amputator.command(name='optout')
     async def opt_out(self, ctx):
         """Opt-out from using the AmputatorBot service"""
-        await ctx.send("This command cannot be used in DMs.")
+        if ctx.guild:
+            await self.config.guild(ctx.guild).opted_in.set(False)
+            await ctx.send("Successfully opted out from using the AmputatorBot service.")
+        else:
+            await ctx.send("This command cannot be used in DMs.")
 
     @amputator.command(name='convert')
     async def convert_amp(self, ctx, *, message: str):
