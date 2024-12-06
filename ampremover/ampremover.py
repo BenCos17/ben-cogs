@@ -1,12 +1,17 @@
-from redbot.core import commands
+from redbot.core import commands, Config
 import requests
 import re
 
 class AmputatorBot(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config = bot.get_cog('Config')  # Access the Config cog
         self.opted_in_users = set()
         self.opted_in_servers = set()
+
+    async def initialize_config(self):
+        """Initialize the configuration for the server."""
+        self.opted_in_servers = await self.config.opted_in_servers()  # Load opted-in servers from config
 
     @commands.group(name='amputator', invoke_without_command=True)
     async def amputator(self, ctx):
@@ -21,6 +26,7 @@ class AmputatorBot(commands.Cog):
             await ctx.send(f"{ctx.author.mention}, you have opted in to use the AmputatorBot service in DMs.")
         else:  # Server context
             self.opted_in_servers.add(ctx.guild.id)
+            await self.config.opted_in_servers.set(self.opted_in_servers)  # Save to config
             await ctx.send(f"Server {ctx.guild.name} has opted in to use the AmputatorBot service.")
 
     @amputator.command(name='optout')
@@ -31,6 +37,7 @@ class AmputatorBot(commands.Cog):
             await ctx.send(f"{ctx.author.mention}, you have opted out from using the AmputatorBot service in DMs.")
         else:  # Server context
             self.opted_in_servers.discard(ctx.guild.id)
+            await self.config.opted_in_servers.set(self.opted_in_servers)  # Save to config
             await ctx.send(f"Server {ctx.guild.name} has opted out from using the AmputatorBot service.")
 
     @amputator.command(name='convert')
