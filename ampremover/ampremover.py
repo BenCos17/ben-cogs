@@ -36,18 +36,13 @@ class AmputatorBot(commands.Cog):
     @amputator.command(name='convert')
     async def convert_amp(self, ctx, *, message: str):
         """Converts AMP URLs to canonical URLs using AmputatorBot API"""
-        if ctx.guild is None:  # DM context
-            if ctx.author.id not in self.opted_in_users:
-                await ctx.send(f"{ctx.author.mention}, you need to opt-in to use this service in DMs. Use the `[p]amputator optin` command.")
-                return
-        else:  # Server context
-            if ctx.guild.id not in self.opted_in_servers:
-                await ctx.send(f"Server {ctx.guild.name} needs to opt-in to use this service. Use the `[p]amputator optin` command.")
-                return
-
         urls = re.findall(r'(https?://\S+)', message)
         if not urls:
             await ctx.send("No URLs found in the message.")
+            return
+
+        if ctx.guild is not None and ctx.guild.id not in self.opted_in_servers:
+            # If the server hasn't opted in, do not respond
             return
 
         canonical_links = []
