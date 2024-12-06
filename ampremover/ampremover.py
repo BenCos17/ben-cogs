@@ -23,22 +23,12 @@ class AmputatorBot(commands.Cog):
     @amputator.command(name='optin')
     async def opt_in(self, ctx):
         """Opt-in to use the AmputatorBot service"""
-        if ctx.guild is None:  # DM context
-            self.opted_in_users.add(ctx.author.id)
-            await ctx.send(f"{ctx.author.mention}, you have opted in to use the AmputatorBot service in DMs.")
-        else:  # Server context
-            await self.config.guild(ctx.guild).opted_in.set(True)  # Save to config
-            await ctx.send(f"Server {ctx.guild.name} has opted in to use the AmputatorBot service.")
+        await ctx.send("This command cannot be used in DMs.")
 
     @amputator.command(name='optout')
     async def opt_out(self, ctx):
         """Opt-out from using the AmputatorBot service"""
-        if ctx.guild is None:  # DM context
-            self.opted_in_users.discard(ctx.author.id)
-            await ctx.send(f"{ctx.author.mention}, you have opted out from using the AmputatorBot service in DMs.")
-        else:  # Server context
-            await self.config.guild(ctx.guild).opted_in.set(False)  # Save to config
-            await ctx.send(f"Server {ctx.guild.name} has opted out from using the AmputatorBot service.")
+        await ctx.send("This command cannot be used in DMs.")
 
     @amputator.command(name='convert')
     async def convert_amp(self, ctx, *, message: str):
@@ -50,7 +40,10 @@ class AmputatorBot(commands.Cog):
 
         canonical_links = self.fetch_canonical_links(urls)
         if canonical_links:
-            await ctx.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
+            if ctx.guild:  # If in a server, respond in the channel
+                await ctx.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
+            else:  # If in DMs, respond in DMs
+                await ctx.author.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
         else:
             await ctx.send("No canonical URLs found.")
 
@@ -92,17 +85,20 @@ class AmputatorBot(commands.Cog):
                 if urls:
                     canonical_links = self.fetch_canonical_links(urls)
                     if canonical_links:
-                        await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
+                        await message.author.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
 
     @amputator.command(name='settings')
     async def show_settings(self, ctx):
         """Displays the current configuration settings for the AmputatorBot."""
-        opted_in = await self.config.guild(ctx.guild).opted_in()  # Get opted-in status
-        status_color = "✅" if opted_in else "❌"  # Use checkmark for Yes and cross for No
-        status_text = "Opted In: " + (f"{status_color} Yes" if opted_in else f"{status_color} No")  # Create status text
-        
-        embed = Embed(title=f"Settings for {ctx.guild.name}", color=0x00ff00 if opted_in else 0xff0000)  # Green for Yes, Red for No
-        embed.add_field(name="Status", value=status_text, inline=False)  # Add status field
-        embed.set_footer(text="Use [p]amputator for more commands.")  # Add a footer for additional context
-        
-        await ctx.send(embed=embed)  # Send the embed message
+        if ctx.guild:  # Check if the command is invoked in a guild
+            opted_in = await self.config.guild(ctx.guild).opted_in()  # Get opted-in status
+            status_color = "✅" if opted_in else "❌"  # Use checkmark for Yes and cross for No
+            status_text = "Opted In: " + (f"{status_color} Yes" if opted_in else f"{status_color} No")  # Create status text
+            
+            embed = Embed(title=f"Settings for {ctx.guild.name}", color=0x00ff00 if opted_in else 0xff0000)  # Green for Yes, Red for No
+            embed.add_field(name="Status", value=status_text, inline=False)  # Add status field
+            embed.set_footer(text="Use [p]amputator for more commands.")  # Add a footer for additional context
+            
+            await ctx.send(embed=embed)  # Send the embed message
+        else:  # DM context
+            await ctx.send("This command cannot be used in DMs.")
