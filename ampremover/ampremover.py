@@ -42,10 +42,6 @@ class AmputatorBot(commands.Cog):
     @amputator.command(name='convert')
     async def convert_amp(self, ctx, *, message: str):
         """Converts AMP URLs to canonical URLs using AmputatorBot API"""
-        if not await self.config.guild(ctx.guild).opted_in():  # Check if the server is opted in
-            await ctx.send("This server is not opted in to use the AmputatorBot service.")
-            return
-
         urls = self.extract_urls(message)
         if not urls:
             await ctx.send("No URLs found in the message.")
