@@ -1,0 +1,14 @@
+{
+    "name": "AmputatorBot",
+    "author": ["bencos18"],
+    "description": "A Redbot cog that converts AMP URLs to canonical URLs using the AmputatorBot API.",
+    "install_msg": "Thank you for installing AmputatorBot. Use `[p]amputator` to get started.",
+    "short": "Converts AMP URLs to canonical URLs.",
+    "requirements": ["requests"],
+    "tags": ["url", "amp", "converter"],
+    "min_bot_version": "3.4.0",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG",
+    "end_user_data_statement": "This cog stores user IDs for the purpose of tracking opt-in status."
+}
