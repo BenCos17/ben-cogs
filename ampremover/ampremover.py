@@ -41,6 +41,10 @@ class AmputatorBot(commands.Cog):
             await ctx.send("No URLs found in the message.")
             return
 
+        if ctx.guild and ctx.guild.id not in self.opted_in_servers:
+            await ctx.send("This server has not opted in to use the AmputatorBot service. Please opt-in to use this feature.")
+            return
+
         canonical_links = []
         for url in urls:
             api_url = f"https://www.amputatorbot.com/api/v1/convert?gac=true&md=3&q={url}"
