@@ -89,6 +89,8 @@ class AmputatorBot(commands.Cog):
     async def show_settings(self, ctx):
         """Displays the current configuration settings for the AmputatorBot."""
         opted_in = await self.config.guild(ctx.guild).opted_in()  # Get opted-in status
-        settings_message = f"Current settings for {ctx.guild.name}:\n"
-        settings_message += f"Opted In: {'Yes' if opted_in else 'No'}"
-        await ctx.send(settings_message)
+        embed = ctx.embed()  # Create an embed object
+        embed.title = f"Settings for {ctx.guild.name}"
+        embed.add_field(name="Opted In", value="Yes" if opted_in else "No", inline=False)
+        
+        await ctx.send(embed=embed)  # Send the embed message
