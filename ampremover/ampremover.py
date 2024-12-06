@@ -36,11 +36,23 @@ class AmputatorBot(commands.Cog):
     @amputator.command(name='convert')
     async def convert_amp(self, ctx, *, message: str):
         """Converts AMP URLs to canonical URLs using AmputatorBot API"""
-        urls = re.findall(r'(https?://\S+)', message)
+        urls = self.extract_urls(message)
         if not urls:
             await ctx.send("No URLs found in the message.")
             return
 
+        canonical_links = self.fetch_canonical_links(urls)
+        if canonical_links:
+            await ctx.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
+        else:
+            await ctx.send("No canonical URLs found.")
+
+    def extract_urls(self, message: str):
+        """Extracts URLs from a given message"""
+        return re.findall(r'(https?://\S+)', message)
+
+    def fetch_canonical_links(self, urls):
+        """Fetches canonical links for a list of URLs using the AmputatorBot API"""
         canonical_links = []
         for url in urls:
             api_url = f"https://www.amputatorbot.com/api/v1/convert?gac=true&md=3&q={url}"
@@ -49,14 +61,21 @@ class AmputatorBot(commands.Cog):
             if response.status_code == 200:
                 data = response.json()
                 if 'error' in data:
-                    await ctx.send(f"Error for {url}: {data['error']}")
+                    continue
                 else:
                     links = [link['canonical']['url'] for link in data if link['canonical']]
                     canonical_links.extend(links)
             else:
-                await ctx.send(f"Failed to fetch data from AmputatorBot API for {url}. Status code: {response.status_code}")
+                continue
+        return canonical_links
 
-        if canonical_links:
-            await ctx.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
-        else:
-            await ctx.send("No canonical URLs found.")
+    async def scan_links_in_server(self, ctx, message: str):
+        """Scans and converts links in a server if opted in"""
+        if ctx.guild and ctx.guild.id in self.opted_in_servers:
+            urls = self.extract_urls(message)
+            if urls:
+                canonical_links = self.fetch_canonical_links(urls)
+                if canonical_links:
+                    await ctx.send(f"Canonical URL(s) in server: {'; '.join(canonical_links)}")
+                else:
+                    await ctx.send("No canonical URLs found in server.")
