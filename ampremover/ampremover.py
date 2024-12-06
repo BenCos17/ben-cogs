@@ -1,6 +1,7 @@
 from redbot.core import commands, Config
 import requests
 import re
+from discord import Embed
 
 class AmputatorBot(commands.Cog):
     def __init__(self, bot):
@@ -89,7 +90,7 @@ class AmputatorBot(commands.Cog):
     async def show_settings(self, ctx):
         """Displays the current configuration settings for the AmputatorBot."""
         opted_in = await self.config.guild(ctx.guild).opted_in()  # Get opted-in status
-        embed = ctx.embed()  # Create an embed object
+        embed = Embed()  # Create an embed object
         embed.title = f"Settings for {ctx.guild.name}"
         embed.add_field(name="Opted In", value="Yes" if opted_in else "No", inline=False)
         
