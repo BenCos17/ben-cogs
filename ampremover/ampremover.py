@@ -69,13 +69,14 @@ class AmputatorBot(commands.Cog):
                 continue
         return canonical_links
 
-    async def scan_links_in_server(self, ctx, message: str):
-        """Scans and converts links in a server if opted in"""
-        if ctx.guild and ctx.guild.id in self.opted_in_servers:
-            urls = self.extract_urls(message)
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        """Detects links in messages and responds if the server has opted in"""
+        if message.guild and message.guild.id in self.opted_in_servers:
+            urls = self.extract_urls(message.content)
             if urls:
                 canonical_links = self.fetch_canonical_links(urls)
                 if canonical_links:
-                    await ctx.send(f"Canonical URL(s) in server: {'; '.join(canonical_links)}")
+                    await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
                 else:
-                    await ctx.send("No canonical URLs found in server.")
+                    await message.channel.send("No canonical URLs found.")
