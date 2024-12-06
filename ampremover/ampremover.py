@@ -79,12 +79,20 @@ class AmputatorBot(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Detects links in messages and responds if the server has opted in"""
-        if message.guild and await self.config.guild(message.guild).opted_in():  # Check if the server is opted in
-            urls = self.extract_urls(message.content)
-            if urls:
-                canonical_links = self.fetch_canonical_links(urls)
-                if canonical_links:
-                    await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
+        if message.guild:  # Check if the message is in a guild
+            if await self.config.guild(message.guild).opted_in():  # Check if the server is opted in
+                urls = self.extract_urls(message.content)
+                if urls:
+                    canonical_links = self.fetch_canonical_links(urls)
+                    if canonical_links:
+                        await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
+        else:  # DM context
+            if message.author.id in self.opted_in_users:  # Check if the user is opted in
+                urls = self.extract_urls(message.content)
+                if urls:
+                    canonical_links = self.fetch_canonical_links(urls)
+                    if canonical_links:
+                        await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
 
     @amputator.command(name='settings')
     async def show_settings(self, ctx):
