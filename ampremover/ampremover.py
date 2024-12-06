@@ -84,3 +84,11 @@ class AmputatorBot(commands.Cog):
                 canonical_links = self.fetch_canonical_links(urls)
                 if canonical_links:
                     await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
+
+    @amputator.command(name='settings')
+    async def show_settings(self, ctx):
+        """Displays the current configuration settings for the AmputatorBot."""
+        opted_in = await self.config.guild(ctx.guild).opted_in()  # Get opted-in status
+        settings_message = f"Current settings for {ctx.guild.name}:\n"
+        settings_message += f"Opted In: {'Yes' if opted_in else 'No'}"
+        await ctx.send(settings_message)
