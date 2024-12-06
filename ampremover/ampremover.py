@@ -78,5 +78,7 @@ class AmputatorBot(commands.Cog):
                 canonical_links = self.fetch_canonical_links(urls)
                 if canonical_links:
                     await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
-                else:
-                    await message.channel.send("No canonical URLs found.")
+#                else:
+#                    await message.channel.send("No canonical URLs found.")
+#commented out as it doesn't work for now 
+#It'll be used for a future system 
