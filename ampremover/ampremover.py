@@ -17,7 +17,7 @@ class AmputatorBot(commands.Cog):
     @commands.group(name='amputator', invoke_without_command=True)
     async def amputator(self, ctx):
         """Base command for AmputatorBot operations"""
-        await ctx.send("Use `[p]amputator optin`, `[p]amputator optout`, or `[p]amputator convert`.")
+        await ctx.invoke(self.bot.get_command('help'), command='amputator')  # Show help for the amputator command
 
     @amputator.command(name='optin')
     async def opt_in(self, ctx):
