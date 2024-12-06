@@ -5,13 +5,14 @@ import re
 class AmputatorBot(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = bot.get_cog('Config')  # Access the Config cog
+        self.config = Config.get_conf(self, identifier=492089091320446976)  # Use a unique identifier for your cog
+        self.config.register_guild(opted_in=False)  # Register a guild-specific variable for opted-in status
         self.opted_in_users = set()
-        self.opted_in_servers = set()
 
     async def initialize_config(self):
         """Initialize the configuration for the server."""
-        self.opted_in_servers = await self.config.opted_in_servers()  # Load opted-in servers from config
+        # Load opted-in status from config
+        self.opted_in_servers = await self.config.guild(ctx.guild).opted_in()  # Load opted-in status for the guild
 
     @commands.group(name='amputator', invoke_without_command=True)
     async def amputator(self, ctx):
@@ -25,8 +26,7 @@ class AmputatorBot(commands.Cog):
             self.opted_in_users.add(ctx.author.id)
             await ctx.send(f"{ctx.author.mention}, you have opted in to use the AmputatorBot service in DMs.")
         else:  # Server context
-            self.opted_in_servers.add(ctx.guild.id)
-            await self.config.opted_in_servers.set(self.opted_in_servers)  # Save to config
+            await self.config.guild(ctx.guild).opted_in.set(True)  # Save to config
             await ctx.send(f"Server {ctx.guild.name} has opted in to use the AmputatorBot service.")
 
     @amputator.command(name='optout')
@@ -36,13 +36,16 @@ class AmputatorBot(commands.Cog):
             self.opted_in_users.discard(ctx.author.id)
             await ctx.send(f"{ctx.author.mention}, you have opted out from using the AmputatorBot service in DMs.")
         else:  # Server context
-            self.opted_in_servers.discard(ctx.guild.id)
-            await self.config.opted_in_servers.set(self.opted_in_servers)  # Save to config
+            await self.config.guild(ctx.guild).opted_in.set(False)  # Save to config
             await ctx.send(f"Server {ctx.guild.name} has opted out from using the AmputatorBot service.")
 
     @amputator.command(name='convert')
     async def convert_amp(self, ctx, *, message: str):
         """Converts AMP URLs to canonical URLs using AmputatorBot API"""
+        if not await self.config.guild(ctx.guild).opted_in():  # Check if the server is opted in
+            await ctx.send("This server is not opted in to use the AmputatorBot service.")
+            return
+
         urls = self.extract_urls(message)
         if not urls:
             await ctx.send("No URLs found in the message.")
@@ -79,13 +82,9 @@ class AmputatorBot(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Detects links in messages and responds if the server has opted in"""
-        if message.guild and message.guild.id in self.opted_in_servers:
+        if message.guild and await self.config.guild(message.guild).opted_in():  # Check if the server is opted in
             urls = self.extract_urls(message.content)
             if urls:
                 canonical_links = self.fetch_canonical_links(urls)
                 if canonical_links:
                     await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
-#                else:
-#                    await message.channel.send("No canonical URLs found.")
-#commented out as it doesn't work for now 
-#It'll be used for a future system 
