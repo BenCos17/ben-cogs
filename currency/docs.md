@@ -85,4 +85,4 @@ Make sure to check the error messages and follow the instructions provided to re
 
 ---
 
-For further assistance, please create a github issue [[here](https://github.com/BenCos17/ben-cogs/issues/new)] or on discord at bencos18.
+For further assistance, please create a github issue [here(https://github.com/BenCos17/ben-cogs/issues/new)] or on discord at bencos18.
