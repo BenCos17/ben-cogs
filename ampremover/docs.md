@@ -6,8 +6,8 @@ AmputatorBot is a Discord bot cog designed to convert AMP URLs to their canonica
 
 ## Installation
 
-1. Ensure you have the Red-DiscordBot framework installed.
-2. Add the repository using the command: 
+1. Ensure you have Red-DiscordBot  installed.
+2. Add the repository using the command: [p] is your bots prefix 
    ```
    [p]repo add ben-cogs https://github.com/bencos17/ben-cogs
    ```
