@@ -2,7 +2,7 @@
 
 ## Overview
 
-AmputatorBot is a Discord bot cog designed to convert AMP URLs to their canonical URLs using the AmputatorBot API. This cog provides several commands to manage user and server preferences, convert URLs, and display the current settings.
+AmputatorBot is a Discord bot cog designed to convert AMP URLs to their canonical URLs using the AmputatorBot API. This cog provides several commands to manage server preferences, convert URLs, and display the current settings.
 
 ## Installation
 
@@ -27,14 +27,14 @@ The base command for AmputatorBot operations. This command provides a brief over
 
 ### `[p]amputator optin`
 
-Opt-in to use the AmputatorBot service. This command can be used in both server and DM contexts.
+Opt-in to use the AmputatorBot service. This command cannot be used in DMs and is a per-server setting.
 
 **Usage:**
 `[p]amputator optin`
 
 ### `[p]amputator optout`
 
-Opt-out from using the AmputatorBot service. This command can be used in both server and DM contexts.
+Opt-out from using the AmputatorBot service. This command cannot be used in DMs and is a per-server setting.
 
 **Usage:**
 `[p]amputator optout`
@@ -48,7 +48,12 @@ Converts AMP URLs to canonical URLs using the AmputatorBot API. Provide the mess
 
 ### `[p]amputator settings`
 
-Displays the current configuration settings for the AmputatorBot, including the opt-in status of the server.
+Displays the current configuration settings for the AmputatorBot, including the opt-in status of the server. This command cannot be used in DMs.
 
 **Usage:**
 `[p]amputator settings`
+
+**Details:**
+- **Opt-in Status:** Shows whether the server is currently opted in to use the AmputatorBot service. A checkmark (✅) indicates the server is opted in, while a cross (❌) indicates it is not.
+- **Embed Display:** The settings are displayed in an embed format, with the title showing the server's name. The embed color is green if opted in and red if not.
+- **Footer Information:** The embed includes a footer with a reminder to use `[p]amputator` for more commands.
