@@ -55,6 +55,9 @@ Fetches the latest exchange rates for a given base currency.
 
 Before using the commands, you need to set the API key for FreeCurrencyAPI, 
 You will need to create an account with https://freecurrencyapi.com
+this is where the api key is 
+![image](https://github.com/user-attachments/assets/13e19c14-1bde-4d04-aee7-a85b7a1a0454)
+
 
 **Command:**
 
