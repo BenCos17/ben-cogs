@@ -49,10 +49,12 @@ Fetches the latest exchange rates for a given base currency.
 **Notes:**
 - If the API key is not set, the bot will prompt you to set it using the command `[p]set api freecurrencyapi api_key,YOUR_API_KEY`.
 - If an invalid base currency code is provided, the bot will display a list of supported currencies.
+  
 
 ## Setting the API Key
 
-Before using the commands, you need to set the API key for FreeCurrencyAPI.
+Before using the commands, you need to set the API key for FreeCurrencyAPI, 
+You will need to create an account with https://freecurrencyapi.com
 
 **Command:**
 
