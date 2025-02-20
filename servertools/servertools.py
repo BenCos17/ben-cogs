@@ -1,6 +1,7 @@
 import os
 import discord
 from redbot.core import commands
+import asyncio
 
 class Servertools(commands.Cog):
     def __init__(self, bot):
@@ -11,15 +12,29 @@ class Servertools(commands.Cog):
     async def moddm(self, ctx, user: discord.User, *, message):
         if ctx.guild:
             if ctx.guild.get_member(user.id):
+                # Prompt for confirmation
+                confirm_embed = discord.Embed(title="Confirmation", description=f"Are you sure you want to send this message to {user.name}?", color=0x00ff00)
+                await ctx.send(embed=confirm_embed)
+                
+                def check(m):
+                    return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() in ['yes', 'no']
+
                 try:
-                    dm_embed = discord.Embed(title="Message from Server", description=message, color=0x00ff00)
-                    dm_embed.set_footer(text=f"Sent from {ctx.guild.name}")
-                    await user.send(embed=dm_embed)
-                    embed = discord.Embed(title="Message Sent", description=f"Message sent to {user.name} from {ctx.guild.name}", color=0x00ff00)
-                    await ctx.send(embed=embed)
-                except discord.Forbidden:
-                    embed = discord.Embed(title="Error", description="I cannot send a message to this user.", color=0xff0000)
-                    await ctx.send(embed=embed)
+                    response = await self.bot.wait_for('message', check=check, timeout=30.0)
+                    if response.content.lower() == 'yes':
+                        try:
+                            dm_embed = discord.Embed(title="Message from Server", description=message, color=0x00ff00)
+                            dm_embed.set_footer(text=f"Sent from {ctx.guild.name}")
+                            await user.send(embed=dm_embed)
+                            embed = discord.Embed(title="Message Sent", description=f"Message sent to {user.name} from {ctx.guild.name}", color=0x00ff00)
+                            await ctx.send(embed=embed)
+                        except discord.Forbidden:
+                            embed = discord.Embed(title="Error", description="I cannot send a message to this user.", color=0xff0000)
+                            await ctx.send(embed=embed)
+                    else:
+                        await ctx.send("Message sending canceled.")
+                except asyncio.TimeoutError:
+                    await ctx.send("You took too long to respond. Message sending canceled.")
             else:
                 embed = discord.Embed(title="Error", description="This user is not a member of this server.", color=0xff0000)
                 await ctx.send(embed=embed)
