@@ -12,7 +12,7 @@ class Servertools(commands.Cog):
     async def moddm(self, ctx, user: discord.User, *, message):
         if ctx.guild:
             if ctx.guild.get_member(user.id):
-                # Prompt for confirmation
+                # Prompt for confirmation before sending dm
                 confirm_embed = discord.Embed(title="Confirmation", description=f"Are you sure you want to send this message to {user.name}?", color=0x00ff00)
                 await ctx.send(embed=confirm_embed)
                 
@@ -34,7 +34,7 @@ class Servertools(commands.Cog):
                     else:
                         await ctx.send("Message sending canceled.")
                 except asyncio.TimeoutError:
-                    await ctx.send("You took too long to respond. Message sending canceled.")
+                    await ctx.send("You took too long to reply with yes (y) or no (n). Message sending canceled.")
             else:
                 embed = discord.Embed(title="Error", description="This user is not a member of this server.", color=0xff0000)
                 await ctx.send(embed=embed)
