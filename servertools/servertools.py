@@ -17,11 +17,11 @@ class Servertools(commands.Cog):
                 await ctx.send(embed=confirm_embed)
                 
                 def check(m):
-                    return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() in ['yes', 'no']
+                    return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() in ['yes', 'no', 'y', 'n']
 
                 try:
                     response = await self.bot.wait_for('message', check=check, timeout=30.0)
-                    if response.content.lower() == 'yes':
+                    if response.content.lower() in ['yes', 'y']:
                         try:
                             dm_embed = discord.Embed(title="Message from Server", description=message, color=0x00ff00)
                             dm_embed.set_footer(text=f"Sent from {ctx.guild.name}")
