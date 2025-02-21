@@ -116,9 +116,9 @@ class Servertools(commands.Cog):
             await ctx.send("This command can only be used in a server.")
 
     async def get_image(self, url: str):
-        async with self.bot.session.get(url) as response:
-            if response.status == 200:
-                return await response.read()
-            raise ValueError("Invalid image URL")
+        response = await self.bot.http.get(url)
+        if response.status == 200:
+            return await response.read()
+        raise ValueError("Invalid image URL")
             
 
