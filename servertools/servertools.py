@@ -108,7 +108,8 @@ class Servertools(commands.Cog):
     async def serverimage(self, ctx, url: str):
         if ctx.guild:
             try:
-                await ctx.guild.edit(icon=await self.get_image(url))
+                image_data = await self.get_image(url)  # Fetch the image data
+                await ctx.guild.edit(icon=image_data)  # Set the server icon
                 await ctx.send("Server image updated successfully.")
             except discord.HTTPException:
                 await ctx.send("Failed to update the server image. Please ensure the URL is valid and points to an image.")
@@ -116,9 +117,9 @@ class Servertools(commands.Cog):
             await ctx.send("This command can only be used in a server.")
 
     async def get_image(self, url: str):
-        response = await self.bot.http.get(url)
-        if response.status == 200:
-            return await response.read()
-        raise ValueError("Invalid image URL")
+        async with self.bot.http.get(url) as response:  # Use the bot's HTTP client
+            if response.status == 200:
+                return await response.read()
+            raise ValueError("Invalid image URL")
             
 
