@@ -103,3 +103,22 @@ class Servertools(commands.Cog):
             await ctx.send("This command can only be used in a server.")
             
 
+    @commands.command()
+    @commands.has_permissions(manage_guild=True)
+    async def serverimage(self, ctx, url: str):
+        if ctx.guild:
+            try:
+                await ctx.guild.edit(icon=await self.get_image(url))
+                await ctx.send("Server image updated successfully.")
+            except discord.HTTPException:
+                await ctx.send("Failed to update the server image. Please ensure the URL is valid and points to an image.")
+        else:
+            await ctx.send("This command can only be used in a server.")
+
+    async def get_image(self, url: str):
+        async with self.bot.session.get(url) as response:
+            if response.status == 200:
+                return await response.read()
+            raise ValueError("Invalid image URL")
+            
+
