@@ -10,6 +10,7 @@ class Servertools(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  # Initialize config with a unique identifier
+        self.config.register_guild(auto_reactions=[])  # Initialize auto_reactions as an empty list
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
