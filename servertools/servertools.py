@@ -171,5 +171,60 @@ class Servertools(commands.Cog):
                 file = discord.File(buffer, filename='fake_ping.png')
                 await ctx.send(file=file)
 
+    @commands.group()
+    async def autoreact(self, ctx):
+        """Manage auto reactions"""
+        if ctx.invoked_subcommand is None:
+            await ctx.send("Use subcommands: add, remove, list")
+
+    @autoreact.command(name="add")
+    async def add_autoreact(self, ctx, user: discord.Member, channel: discord.TextChannel, emoji: str):
+        """Add an auto-reaction for a user in a specific channel"""
+        async with self.config.guild(ctx.guild).auto_reactions() as reactions:
+            reactions[f"{channel.id}-{user.id}"] = emoji
+        await ctx.send(f"Added auto-reaction with {emoji} for {user.display_name} in {channel.mention}")
+
+    @autoreact.command(name="remove")
+    async def remove_autoreact(self, ctx, user: discord.Member, channel: discord.TextChannel):
+        """Remove an auto-reaction"""
+        async with self.config.guild(ctx.guild).auto_reactions() as reactions:
+            key = f"{channel.id}-{user.id}"
+            if key in reactions:
+                del reactions[key]
+                await ctx.send("Auto-reaction removed.")
+            else:
+                await ctx.send("No auto-reaction found for that user in that channel.")
+
+    @autoreact.command(name="list")
+    async def list_autoreacts(self, ctx):
+        """List all auto-reactions"""
+        reactions = await self.config.guild(ctx.guild).auto_reactions()
+        if not reactions:
+            await ctx.send("No auto-reactions set.")
+            return
+
+        msg = "\n".join([f"<#{key.split('-')[0]}> - <@{key.split('-')[1]}>: {emoji}" for key, emoji in reactions.items()])
+        await ctx.send(f"Auto-reactions:\n{msg}")
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author.bot:
+            return
+
+        guild = message.guild
+        if not guild:
+            return
+
+        reactions = await self.config.guild(guild).auto_reactions()
+        key = f"{message.channel.id}-{message.author.id}"
+        if key in reactions:
+            await message.add_reaction(reactions[key])
+
+
+
+
+
+
+
 
 
