@@ -1,6 +1,6 @@
 import os
 import discord
-from redbot.core import commands config
+from redbot.core import commands, Config
 import asyncio
 import aiohttp
 from io import BytesIO
