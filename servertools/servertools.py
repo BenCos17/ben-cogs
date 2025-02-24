@@ -1,6 +1,6 @@
 import os
 import discord
-from redbot.core import commands
+from redbot.core import commands config
 import asyncio
 import aiohttp
 from io import BytesIO
@@ -9,6 +9,7 @@ from PIL import Image
 class Servertools(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config = None  # Initialize the config attribute
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
