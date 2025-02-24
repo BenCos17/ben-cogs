@@ -9,7 +9,7 @@ from PIL import Image
 class Servertools(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = None  # Initialize the config attribute
+        self.config = Config.get_conf(self, identifier=492089091320446976)  # Initialize config with a unique identifier
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
