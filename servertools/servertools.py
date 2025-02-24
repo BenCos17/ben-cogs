@@ -217,6 +217,8 @@ class Servertools(commands.Cog):
             return
 
         reactions = await self.config.guild(guild).auto_reactions()
+        if reactions is None:  # Check if reactions is None
+            reactions = {}  # Initialize as an empty dictionary
         key = f"{message.channel.id}-{message.author.id}"
         if key in reactions:
             await message.add_reaction(reactions[key])
