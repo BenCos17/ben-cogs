@@ -2,6 +2,8 @@ from redbot.core import commands, Config
 import requests
 import re
 from discord import Embed
+import aiohttp
+import asyncio
 
 class AmputatorBot(commands.Cog):
     """A cog to convert AMP URLs to their canonical forms using AmputatorBot API.
@@ -72,7 +74,7 @@ class AmputatorBot(commands.Cog):
             await ctx.send("No URLs found in the message.")
             return
 
-        canonical_links = self.fetch_canonical_links(urls)
+        canonical_links = await self.fetch_canonical_links(urls)
         if canonical_links:
             if ctx.guild:  # If in a server, respond in the channel
                 await ctx.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
@@ -100,7 +102,7 @@ class AmputatorBot(commands.Cog):
         """
         return re.findall(r'(https?://\S+)', message)
 
-    def fetch_canonical_links(self, urls):
+    async def fetch_canonical_links(self, urls):
         """Fetches canonical links for a list of URLs using the AmputatorBot API.
         
         Parameters
@@ -112,26 +114,20 @@ class AmputatorBot(commands.Cog):
         -------
         list
             List of canonical URLs found
-            
-        Note
-        ----
-        Makes HTTP requests to AmputatorBot API (https://www.amputatorbot.com/api/v1/convert)
-        Returns empty list if API calls fail or no canonical URLs are found
         """
         canonical_links = []
-        for url in urls:
-            api_url = f"https://www.amputatorbot.com/api/v1/convert?gac=true&md=3&q={url}"
-            response = requests.get(api_url)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if 'error' in data:
+        async with aiohttp.ClientSession() as session:
+            for url in urls:
+                api_url = f"https://www.amputatorbot.com/api/v1/convert?gac=true&md=3&q={url}"
+                try:
+                    async with session.get(api_url, timeout=10) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if not 'error' in data:
+                                links = [link['canonical']['url'] for link in data if link['canonical']]
+                                canonical_links.extend(links)
+                except (aiohttp.ClientError, asyncio.TimeoutError):
                     continue
-                else:
-                    links = [link['canonical']['url'] for link in data if link['canonical']]
-                    canonical_links.extend(links)
-            else:
-                continue
         return canonical_links
 
     @commands.Cog.listener()
@@ -155,14 +151,14 @@ class AmputatorBot(commands.Cog):
             if await self.config.guild(message.guild).opted_in():  # Check if the server is opted in
                 urls = self.extract_urls(message.content)
                 if urls:
-                    canonical_links = self.fetch_canonical_links(urls)
+                    canonical_links = await self.fetch_canonical_links(urls)
                     if canonical_links:
                         await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
         else:  # DM context
             if message.author.id in self.opted_in_users:  # Check if the user is opted in
                 urls = self.extract_urls(message.content)
                 if urls:
-                    canonical_links = self.fetch_canonical_links(urls)
+                    canonical_links = await self.fetch_canonical_links(urls)
                     if canonical_links:
                         await message.author.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
 
