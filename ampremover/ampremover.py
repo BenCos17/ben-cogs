@@ -4,20 +4,46 @@ import re
 from discord import Embed
 
 class AmputatorBot(commands.Cog):
+    """A cog to convert AMP URLs to their canonical forms using AmputatorBot API.
+    
+    This cog provides functionality to automatically detect and convert AMP URLs in messages,
+    with opt-in/opt-out capabilities for servers and users.
+    """
+    
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  # Use a unique identifier for your cog
         self.config.register_guild(opted_in=False)  # Register a guild-specific variable for opted-in status
         self.opted_in_users = set()
 
-    async def initialize_config(self):
-        """Initialize the configuration for the server."""
-        # Load opted-in status from config
-        self.opted_in_servers = await self.config.guild(ctx.guild).opted_in()  # Load opted-in status for the guild
+    async def initialize_config(self, guild):
+        """Initialize the configuration for the server.
+        
+        Parameters
+        ----------
+        guild : discord.Guild
+            The guild to initialize configuration for
+            
+        Returns
+        -------
+        bool
+            The opted-in status for the guild
+        """
+        return await self.config.guild(guild).opted_in()
 
     @commands.group(name='amputator', invoke_without_command=True)
     async def amputator(self, ctx):
-        """Base command for AmputatorBot operations"""
+        """Base command for AmputatorBot operations.
+        
+        If no subcommand is provided, displays the available commands.
+        
+        Subcommands
+        -----------
+        optin : Opt-in to the service
+        optout : Opt-out from the service
+        convert : Convert AMP URLs in a message
+        settings : Display current settings
+        """
         await ctx.send("Use `[p]amputator optin`, `[p]amputator optout`, or `[p]amputator convert`.")
 
     @amputator.command(name='optin')
@@ -56,11 +82,42 @@ class AmputatorBot(commands.Cog):
             await ctx.send("No canonical URLs found.")
 
     def extract_urls(self, message: str):
-        """Extracts URLs from a given message"""
+        """Extracts URLs from a given message.
+        
+        Parameters
+        ----------
+        message : str
+            The message to extract URLs from
+            
+        Returns
+        -------
+        list
+            A list of URLs found in the message
+            
+        Note
+        ----
+        Uses regex pattern to match http:// and https:// URLs
+        """
         return re.findall(r'(https?://\S+)', message)
 
     def fetch_canonical_links(self, urls):
-        """Fetches canonical links for a list of URLs using the AmputatorBot API"""
+        """Fetches canonical links for a list of URLs using the AmputatorBot API.
+        
+        Parameters
+        ----------
+        urls : list
+            List of URLs to convert
+            
+        Returns
+        -------
+        list
+            List of canonical URLs found
+            
+        Note
+        ----
+        Makes HTTP requests to AmputatorBot API (https://www.amputatorbot.com/api/v1/convert)
+        Returns empty list if API calls fail or no canonical URLs are found
+        """
         canonical_links = []
         for url in urls:
             api_url = f"https://www.amputatorbot.com/api/v1/convert?gac=true&md=3&q={url}"
@@ -79,7 +136,21 @@ class AmputatorBot(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Detects links in messages and responds if the server has opted in"""
+        """Automatically detects and converts AMP links in messages.
+        
+        This event listener triggers when a message is sent in:
+        - A guild channel where the server has opted in
+        - DMs where the user has opted in
+        
+        Parameters
+        ----------
+        message : discord.Message
+            The message to process
+            
+        Note
+        ----
+        Will only respond if valid canonical URLs are found
+        """
         if message.guild:  # Check if the message is in a guild
             if await self.config.guild(message.guild).opted_in():  # Check if the server is opted in
                 urls = self.extract_urls(message.content)
@@ -97,7 +168,20 @@ class AmputatorBot(commands.Cog):
 
     @amputator.command(name='settings')
     async def show_settings(self, ctx):
-        """Displays the current configuration settings for the AmputatorBot."""
+        """Displays the current configuration settings for the AmputatorBot.
+        
+        Shows the opted-in status for the current guild using an embedded message.
+        
+        Parameters
+        ----------
+        ctx : commands.Context
+            The command context
+            
+        Note
+        ----
+        Can only be used in guild channels, not in DMs
+        Uses color-coding: Green for opted-in, Red for opted-out
+        """
         if ctx.guild:  # Check if the command is invoked in a guild
             opted_in = await self.config.guild(ctx.guild).opted_in()  # Get opted-in status
             status_color = "✅" if opted_in else "❌"  # Use checkmark for Yes and cross for No
