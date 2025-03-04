@@ -23,28 +23,38 @@ class Seasons(commands.Cog):
     @commands.command()
     async def pancake(self, ctx):
         """Flip a pancake! Win currency and track your flipping stats!"""
-        base_outcomes = [
-            ("🥞 You flipped the pancake perfectly! Golden brown and delicious!", (75, 150), "perfect"),
-            ("😅 Oops! The pancake stuck to the ceiling... better luck next time!", (-75, -25), "fail"),
-            ("🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!", (-100, -50), "fail"),
-            ("🤹 Fancy! You did a triple flip and landed it like a pro!", (125, 200), "perfect"),
-            ("🐶 Uh-oh... the dog stole your pancake mid-air!", (-50, -10), "fail"),
-            ("🌟 INCREDIBLE! You juggled multiple pancakes like a master chef!", (150, 250), "perfect"),
-            ("🎭 Your pancake landed making a perfect smiley face!", (100, 175), "success"),
-            ("💫 You did a backflip while flipping the pancake! Spectacular!", (125, 225), "success"),
-            ("😱 The pancake somehow turned into a waffle mid-flip...", (-40, -20), "fail"),
-            ("🌪️ A sudden gust of wind carried your pancake away!", (-60, -30), "fail")
-        ]
-        
-        outcome_text, credit_range, result = random.choice(base_outcomes)
-        credits = random.randint(credit_range[0], credit_range[1])
+        # Rare easter egg (1% chance)
+        if random.random() < 0.01:  # 1% chance
+            outcome_text = "🌈✨ [2;33mMIRACULOUS! Your pancake transformed into a golden, glowing masterpiece![0m"
+            credits = 1000  # Special high reward
+            result = "perfect"
+        else:
+            base_outcomes = [
+                ("🥞 You flipped the pancake perfectly! Golden brown and delicious!", (75, 150), "perfect"),
+                ("😅 Oops! The pancake stuck to the ceiling... better luck next time!", (-75, -25), "fail"),
+                ("🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!", (-100, -50), "fail"),
+                ("🤹 Fancy! You did a triple flip and landed it like a pro!", (125, 200), "perfect"),
+                ("🐶 Uh-oh... the dog stole your pancake mid-air!", (-50, -10), "fail"),
+                ("🌟 INCREDIBLE! You juggled multiple pancakes like a master chef!", (150, 250), "perfect"),
+                ("🎭 Your pancake landed making a perfect smiley face!", (100, 175), "success"),
+                ("💫 You did a backflip while flipping the pancake! Spectacular!", (125, 225), "success"),
+                ("😱 The pancake somehow turned into a waffle mid-flip...", (-40, -20), "fail"),
+                ("🌪️ A sudden gust of wind carried your pancake away!", (-60, -30), "fail")
+            ]
+            outcome_text, credit_range, result = random.choice(base_outcomes)
+            credits = random.randint(credit_range[0], credit_range[1])
+
         currency_name = await bank.get_currency_name(ctx.guild)
         
         # Update user's stats first
         async with self.config.member(ctx.author).all() as user_data:
             user_data["total_flips"] += 1
             
-            if result == "perfect":
+            if outcome_text.startswith("🌈✨ MIRACULOUS!"):  # Easter egg flip
+                user_data["perfect_flips"] += 1
+                user_data["successful_flips"] += 1
+                user_data["best_flip"] = f"✝️ {outcome_text} ({datetime.datetime.now().strftime('%Y-%m-%d')})"
+            elif result == "perfect":
                 user_data["perfect_flips"] += 1
                 user_data["successful_flips"] += 1
                 if not user_data["best_flip"] or outcome_text not in user_data["best_flip"]:
