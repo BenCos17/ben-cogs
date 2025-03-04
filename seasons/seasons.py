@@ -2,6 +2,8 @@ from redbot.core import commands, Config, bank
 import random
 import datetime
 import discord
+from discord import ui, ButtonStyle, Embed
+from typing import List, Tuple
 
 class Seasons(commands.Cog):
     """A cog for Christian seasons and holidays like Lent, Easter, and more!"""
@@ -223,19 +225,80 @@ class Seasons(commands.Cog):
         pentecost_date = easter_date + datetime.timedelta(days=49)
         await ctx.send(f"🕊️ Pentecost in {year} is on {pentecost_date.strftime('%A, %B %d, %Y')}.")
 
+    class StatsView(ui.View):
+        def __init__(self, stats_pages: List[Embed]):
+            super().__init__(timeout=60)
+            self.current_page = 0
+            self.pages = stats_pages
+
+        @ui.button(label="◀️", style=ButtonStyle.gray)
+        async def previous_button(self, interaction, button):
+            self.current_page = (self.current_page - 1) % len(self.pages)
+            await interaction.response.edit_message(embed=self.pages[self.current_page], view=self)
+
+        @ui.button(label="▶️", style=ButtonStyle.gray)
+        async def next_button(self, interaction, button):
+            self.current_page = (self.current_page + 1) % len(self.pages)
+            await interaction.response.edit_message(embed=self.pages[self.current_page], view=self)
+
+        async def on_timeout(self):
+            # Disable all buttons when the view times out
+            for item in self.children:
+                item.disabled = True
+            await self.message.edit(view=self)
+
     @commands.command()
     async def pancake_leaders(self, ctx, top: int = 5):
-        """Show the richest pancake flippers!"""
+        """Show detailed pancake leaderboards with multiple categories."""
+        all_members = await self.config.all_members(ctx.guild)
+        if not all_members:
+            await ctx.send("No one has flipped any pancakes yet!")
+            return
+
+        # Prepare stats for each category
+        categories = {
+            "Success Rate 🎯": [],
+            "Perfect Flips ✨": [],
+            "Total Flips 🥞": [],
+            "Total Earnings 💰": [],
+        }
+
         currency_name = await bank.get_currency_name(ctx.guild)
-        leaderboard = await bank.get_leaderboard(positions=top, guild=ctx.guild)
-        
-        msg = f"🏆 Top {top} Pancake Flippers 🥞\n\n"
-        for pos, (user_id, balance) in enumerate(leaderboard, start=1):
-            user = ctx.guild.get_member(user_id)
-            if user:
-                msg += f"{pos}. {user.display_name}: {balance} {currency_name}\n"
-        
-        await ctx.send(msg)
+
+        for member_id, data in all_members.items():
+            member = ctx.guild.get_member(member_id)
+            if member and data["total_flips"] > 0:
+                success_rate = (data["successful_flips"] / data["total_flips"]) * 100
+                
+                categories["Success Rate 🎯"].append((member, success_rate, f"{success_rate:.1f}%"))
+                categories["Perfect Flips ✨"].append((member, data["perfect_flips"], str(data["perfect_flips"])))
+                categories["Total Flips 🥞"].append((member, data["total_flips"], str(data["total_flips"])))
+                categories["Total Earnings 💰"].append((member, data["total_earnings"], f"{data['total_earnings']} {currency_name}"))
+
+        # Sort each category and create embeds
+        embeds = []
+        for category, stats in categories.items():
+            embed = Embed(title=f"Pancake Leaderboard - {category}", color=0xFFD700)
+            embed.set_footer(text=f"Use the buttons to view different categories • Page {len(embeds) + 1}/{len(categories)}")
+            
+            # Sort and get top entries
+            stats.sort(key=lambda x: x[1], reverse=True)
+            top_entries = stats[:top]
+
+            # Add fields to embed
+            for pos, (member, value, display_value) in enumerate(top_entries, start=1):
+                medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(pos, f"{pos}.")
+                embed.add_field(
+                    name=f"{medal} {member.display_name}",
+                    value=display_value,
+                    inline=False
+                )
+
+            embeds.append(embed)
+
+        # Create and send view with embeds
+        view = self.StatsView(embeds)
+        view.message = await ctx.send(embed=embeds[0], view=view)
 
     @commands.command()
     async def balance(self, ctx, user: discord.Member = None):
@@ -246,6 +309,12 @@ class Seasons(commands.Cog):
         bal = await bank.get_balance(user)
         currency_name = await bank.get_currency_name(ctx.guild)
         await ctx.send(f"{user.display_name}'s balance: {bal} {currency_name}")
+
+
+
+
+
+
 
     @bank.cost(10)  # Entry fee of 10 credits
     @commands.command()
