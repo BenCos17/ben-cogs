@@ -1,4 +1,4 @@
-from redbot.core import commands
+from redbot.core import commands, bank
 import random
 import datetime
 
@@ -10,15 +10,26 @@ class Seasons(commands.Cog):
 
     @commands.command()
     async def pancake(self, ctx):
-        """Celebrate Pancake Tuesday with a virtual flip!"""
+        """Celebrate Pancake Tuesday with a virtual flip! Win or lose credits based on your flipping skills."""
         outcomes = [
-            "🥞 You flipped the pancake perfectly! Golden brown and delicious!",
-            "😅 Oops! The pancake stuck to the ceiling... better luck next time!",
-            "🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!",
-            "🤹 Fancy! You did a triple flip and landed it like a pro!",
-            "🐶 Uh-oh... the dog stole your pancake mid-air!"
+            ("🥞 You flipped the pancake perfectly! Golden brown and delicious!", 100),
+            ("😅 Oops! The pancake stuck to the ceiling... better luck next time!", -50),
+            ("🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!", -75),
+            ("🤹 Fancy! You did a triple flip and landed it like a pro!", 150),
+            ("🐶 Uh-oh... the dog stole your pancake mid-air!", -25)
         ]
-        await ctx.send(random.choice(outcomes))
+        
+        outcome, credits = random.choice(outcomes)
+        
+        try:
+            if credits > 0:
+                await bank.deposit_credits(ctx.author, credits)
+                await ctx.send(f"{outcome}\nYou earned {credits} credits for your flipping skills! 🎉")
+            else:
+                await bank.withdraw_credits(ctx.author, abs(credits))
+                await ctx.send(f"{outcome}\nOh no! You lost {abs(credits)} credits! 😅")
+        except ValueError:
+            await ctx.send(f"{outcome}\nBut you don't have enough credits to pay for the mishap!")
 
     @commands.command()
     async def ashwednesday(self, ctx):
