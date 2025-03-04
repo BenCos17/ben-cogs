@@ -32,7 +32,13 @@ class Seasons(commands.Cog):
         if year is None:
             year = datetime.date.today().year
         easter_date = self.calculate_easter(year)
-        await ctx.send(f"🐣🌸 He is risen! Happy Easter! 🎉✨\nEaster in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
+        
+        today = datetime.date.today()
+        if today == easter_date:
+            await ctx.send("🐣🌸 He is risen! Happy Easter! 🎉✨")
+        else:
+            await ctx.send(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
+
 
     @commands.command()
     async def lent(self, ctx):
