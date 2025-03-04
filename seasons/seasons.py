@@ -26,16 +26,17 @@ class Seasons(commands.Cog):
         
         outcome_text, credit_range = random.choice(base_outcomes)
         credits = random.randint(credit_range[0], credit_range[1])
+        currency_name = await bank.get_currency_name(ctx.guild)
         
         try:
             if credits > 0:
                 await bank.deposit_credits(ctx.author, credits)
-                await ctx.send(f"{outcome_text}\nYou earned {credits} credits for your flipping skills! 🎉")
+                await ctx.send(f"{outcome_text}\nYou earned {credits} {currency_name} for your flipping skills! 🎉")
             else:
                 await bank.withdraw_credits(ctx.author, abs(credits))
-                await ctx.send(f"{outcome_text}\nOh no! You lost {abs(credits)} credits! 😅")
+                await ctx.send(f"{outcome_text}\nOh no! You lost {abs(credits)} {currency_name}! 😅")
         except ValueError:
-            await ctx.send(f"{outcome_text}\nBut you don't have enough credits to pay for the mishap!")
+            await ctx.send(f"{outcome_text}\nBut you don't have enough {currency_name} to pay for the mishap!")
 
     @commands.command()
     async def ashwednesday(self, ctx):
