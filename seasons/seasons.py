@@ -25,7 +25,7 @@ class Seasons(commands.Cog):
         """Flip a pancake! Win currency and track your flipping stats!"""
         # Rare easter egg (1% chance)
         if random.random() < 0.01:  # 1% chance
-            outcome_text = "🌈✨ [2;33mMIRACULOUS! Your pancake transformed into a golden, glowing masterpiece![0m"
+            outcome_text = "✨ [2;33mMIRACULOUS! Your pancake transformed into a golden, glowing masterpiece![0m"
             credits = 1000  # Special high reward
             result = "perfect"
         else:
