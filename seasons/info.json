@@ -1,0 +1,12 @@
+{
+    "name": "Seasons",
+    "author": ["bencos17"],
+    "description": "A cog for Christian seasons and holidays like Pancake Tuesday, Lent, and Easter.",
+    "install_msg": "Thank you for installing the Seasons cog! Use [p]catholic_today to check the current Christian event.",
+    "requirements": [],
+    "tags": ["Christian", "Seasons", "Holidays", "Easter", "Lent"],
+    "min_bot_version": "3.5.0",
+    "hidden": false,
+    "disabled": false,
+    "type": "COG"
+}
