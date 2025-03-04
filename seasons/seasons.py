@@ -25,6 +25,13 @@ class Seasons(commands.Cog):
         """Ash Wednesday reminder."""
         await ctx.send("✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday.")
 
+@commands.command()
+async def easter(self, ctx, year: int):
+    """Get the date of Easter for a given year."""
+    easter_date = self.calculate_easter(year)
+    await ctx.send(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
+
+
     @commands.command()
     async def lent(self, ctx):
         """Start of Lent message."""
