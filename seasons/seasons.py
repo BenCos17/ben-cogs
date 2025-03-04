@@ -261,5 +261,42 @@ class Seasons(commands.Cog):
         ]
         # Rest of the code similar to pancake command...
 
+    @commands.is_owner()  # Only bot owner can use this
+    @commands.command()
+    async def test_pancake(self, ctx, event_type: str = None):
+        """Test pancake flip events without currency rewards. Owner only.
+        
+        Types: miraculous, perfect, success, fail, or random"""
+        if event_type == "miraculous":
+            outcome_text = "🌈✨ MIRACULOUS! Your pancake transformed into a golden, glowing masterpiece blessed by angels! The heavens themselves celebrate your flip!"
+            result = "perfect"
+        else:
+            base_outcomes = [
+                ("🥞 You flipped the pancake perfectly! Golden brown and delicious!", "perfect"),
+                ("😅 Oops! The pancake stuck to the ceiling... better luck next time!", "fail"),
+                ("🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!", "fail"),
+                ("🤹 Fancy! You did a triple flip and landed it like a pro!", "perfect"),
+                ("🐶 Uh-oh... the dog stole your pancake mid-air!", "fail"),
+                ("🌟 INCREDIBLE! You juggled multiple pancakes like a master chef!", "perfect"),
+                ("🎭 Your pancake landed making a perfect smiley face!", "success"),
+                ("💫 You did a backflip while flipping the pancake! Spectacular!", "success"),
+                ("😱 The pancake somehow turned into a waffle mid-flip...", "fail"),
+                ("🌪️ A sudden gust of wind carried your pancake away!", "fail")
+            ]
+            
+            if event_type in ["perfect", "success", "fail"]:
+                # Filter outcomes by type
+                filtered_outcomes = [(text, result) for text, result in base_outcomes if result == event_type]
+                if filtered_outcomes:
+                    outcome_text, result = random.choice(filtered_outcomes)
+                else:
+                    await ctx.send("Invalid event type. Use: miraculous, perfect, success, fail, or random")
+                    return
+            else:
+                # Random outcome
+                outcome_text, result = random.choice(base_outcomes)
+
+        await ctx.send(f"Test flip: {outcome_text}")
+
 async def setup(bot):
     await bot.add_cog(Seasons(bot))
