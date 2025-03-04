@@ -11,25 +11,31 @@ class Seasons(commands.Cog):
     @commands.command()
     async def pancake(self, ctx):
         """Celebrate Pancake Tuesday with a virtual flip! Win or lose credits based on your flipping skills."""
-        outcomes = [
-            ("🥞 You flipped the pancake perfectly! Golden brown and delicious!", 100),
-            ("😅 Oops! The pancake stuck to the ceiling... better luck next time!", -50),
-            ("🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!", -75),
-            ("🤹 Fancy! You did a triple flip and landed it like a pro!", 150),
-            ("🐶 Uh-oh... the dog stole your pancake mid-air!", -25)
+        base_outcomes = [
+            ("🥞 You flipped the pancake perfectly! Golden brown and delicious!", (75, 150)),
+            ("😅 Oops! The pancake stuck to the ceiling... better luck next time!", (-75, -25)),
+            ("🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!", (-100, -50)),
+            ("🤹 Fancy! You did a triple flip and landed it like a pro!", (125, 200)),
+            ("🐶 Uh-oh... the dog stole your pancake mid-air!", (-50, -10)),
+            ("🌟 INCREDIBLE! You juggled multiple pancakes like a master chef!", (150, 250)),
+            ("🎭 Your pancake landed making a perfect smiley face!", (100, 175)),
+            ("💫 You did a backflip while flipping the pancake! Spectacular!", (125, 225)),
+            ("😱 The pancake somehow turned into a waffle mid-flip...", (-40, -20)),
+            ("🌪️ A sudden gust of wind carried your pancake away!", (-60, -30))
         ]
         
-        outcome, credits = random.choice(outcomes)
+        outcome_text, credit_range = random.choice(base_outcomes)
+        credits = random.randint(credit_range[0], credit_range[1])
         
         try:
             if credits > 0:
                 await bank.deposit_credits(ctx.author, credits)
-                await ctx.send(f"{outcome}\nYou earned {credits} credits for your flipping skills! 🎉")
+                await ctx.send(f"{outcome_text}\nYou earned {credits} credits for your flipping skills! 🎉")
             else:
                 await bank.withdraw_credits(ctx.author, abs(credits))
-                await ctx.send(f"{outcome}\nOh no! You lost {abs(credits)} credits! 😅")
+                await ctx.send(f"{outcome_text}\nOh no! You lost {abs(credits)} credits! 😅")
         except ValueError:
-            await ctx.send(f"{outcome}\nBut you don't have enough credits to pay for the mishap!")
+            await ctx.send(f"{outcome_text}\nBut you don't have enough credits to pay for the mishap!")
 
     @commands.command()
     async def ashwednesday(self, ctx):
