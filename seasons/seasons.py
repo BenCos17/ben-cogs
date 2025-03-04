@@ -253,16 +253,50 @@ class Seasons(commands.Cog):
         """Like pancake, but with an entry fee for bigger stakes!"""
         # Similar to regular pancake but with higher rewards
         base_outcomes = [
-            ("🥞 Perfect flip! Championship material!", (100, 200)),
-            ("🏆 Tournament-winning flip!", (150, 300)),
-            ("💫 Legendary performance!", (200, 400)),
-            ("😅 Not your best showing...", (-150, -50)),
-            ("💔 That's going to hurt the rankings!", (-200, -100))
+            ("🥞 Perfect flip! Championship material!", (100, 200), "perfect"),
+            ("🏆 Tournament-winning flip!", (150, 300), "perfect"),
+            ("💫 Legendary performance!", (200, 400), "perfect"),
+            ("😅 Not your best showing...", (-150, -50), "fail"),
+            ("💔 That's going to hurt the rankings!", (-200, -100), "fail")
         ]
+        
+        outcome_text, credit_range, result = random.choice(base_outcomes)
+        credits = random.randint(credit_range[0], credit_range[1])
+        currency_name = await bank.get_currency_name(ctx.guild)
+        
+        # Update user's stats first
+        async with self.config.member(ctx.author).all() as user_data:
+            user_data["total_flips"] += 1
+            
+            if result == "perfect":
+                user_data["perfect_flips"] += 1
+                user_data["successful_flips"] += 1
+                if not user_data["best_flip"] or outcome_text not in user_data["best_flip"]:
+                    user_data["best_flip"] = f"{outcome_text} ({datetime.datetime.now().strftime('%Y-%m-%d')})"
+            elif result == "fail":
+                user_data["failed_flips"] += 1
+                if not user_data["worst_flip"] or outcome_text not in user_data["worst_flip"]:
+                    user_data["worst_flip"] = f"{outcome_text} ({datetime.datetime.now().strftime('%Y-%m-%d')})"
+
+        # Handle currency rewards
+        try:
+            if credits > 0:
+                await bank.deposit_credits(ctx.author, credits)
+                new_balance = await bank.get_balance(ctx.author)
+                await ctx.send(f"{outcome_text}\nYou earned {credits} {currency_name} for your flipping skills! 🎉\n"
+                             f"Your new balance is: {new_balance} {currency_name}")
+                
+                async with self.config.member(ctx.author).all() as user_data:
+                    user_data["total_earnings"] += credits
+            else:
+                await bank.withdraw_credits(ctx.author, abs(credits))
+                new_balance = await bank.get_balance(ctx.author)
+                await ctx.send(f"{outcome_text}\nOh no! You lost {abs(credits)} {currency_name}! 😅\n"
+                             f"Your new balance is: {new_balance} {currency_name}")
+                
+                async with self.config.member(ctx.author).all() as user_data:
+                    user_data["total_earnings"] -= abs(credits)
+        except ValueError:
+            await ctx.send(f"{outcome_text}\nBut you don't have enough {currency_name} to pay for the mishap!")
 
 
-
-        await ctx.send(f"Test flip: {outcome_text}")
-
-async def setup(bot):
-    await bot.add_cog(Seasons(bot))
