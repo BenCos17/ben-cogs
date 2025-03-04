@@ -55,8 +55,26 @@ class Seasons(commands.Cog):
         easter = self.calculate_easter(year)
         ash_wednesday = easter - datetime.timedelta(days=46)
         pancake_tuesday = ash_wednesday - datetime.timedelta(days=1)
+        pentecost = easter + datetime.timedelta(days=49)
+        
+        # Calculate Advent (4 Sundays before Christmas)
+        christmas = datetime.date(year, 12, 25)
+        advent_start = christmas - datetime.timedelta(days=22)  # Approximate
 
-        if today == pancake_tuesday:
+        # Add more special dates
+        good_friday = easter - datetime.timedelta(days=2)
+        palm_sunday = easter - datetime.timedelta(days=7)
+        holy_thursday = easter - datetime.timedelta(days=3)
+        
+        if today == christmas:
+            await ctx.send("🎄 Merry Christmas! Glory to God in the highest!")
+        elif today == good_friday:
+            await ctx.send("✝️ Today is Good Friday, commemorating Christ's crucifixion.")
+        elif today == palm_sunday:
+            await ctx.send("🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.")
+        elif today == holy_thursday:
+            await ctx.send("🍷🍞 Today is Holy Thursday, commemorating the Last Supper.")
+        elif today == pancake_tuesday:
             await self.pancake(ctx)
         elif today == ash_wednesday:
             await self.ash(ctx)
@@ -84,6 +102,27 @@ class Seasons(commands.Cog):
         month = (h + l - 7 * m + 114) // 31
         day = ((h + l - 7 * m + 114) % 31) + 1
         return datetime.date(year, month, day)
+
+    @commands.command()
+    async def advent(self, ctx):
+        """Information about Advent season."""
+        await ctx.send("🕯️ Advent is a time of waiting and preparation for the celebration of Jesus's birth. "
+                      "Each candle on the Advent wreath represents: Hope, Peace, Joy, and Love.")
+
+    @commands.command()
+    async def christmas(self, ctx):
+        """Celebrate Christmas!"""
+        await ctx.send("🎄✨ Glory to God in the highest! Merry Christmas! "
+                      "Celebrating the birth of our Savior Jesus Christ. 👶⭐")
+
+    @commands.command()
+    async def pentecost(self, ctx, year: int = None):
+        """Get the date of Pentecost (50 days after Easter)."""
+        if year is None:
+            year = datetime.date.today().year
+        easter_date = self.calculate_easter(year)
+        pentecost_date = easter_date + datetime.timedelta(days=49)
+        await ctx.send(f"🕊️ Pentecost in {year} is on {pentecost_date.strftime('%A, %B %d, %Y')}.")
 
 async def setup(bot):
     await bot.add_cog(Seasons(bot))
