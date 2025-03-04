@@ -29,11 +29,10 @@ class Seasons(commands.Cog):
     async def easter(self, ctx, year: int = None):
         """Get the date of Easter or celebrate Easter!
         If year is provided, shows Easter date for that year."""
-        if year:
-            easter_date = self.calculate_easter(year)
-            await ctx.send(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
-        else:
-            await ctx.send("🐣🌸 He is risen! Happy Easter! 🎉✨")
+        if year is None:
+            year = datetime.date.today().year
+        easter_date = self.calculate_easter(year)
+        await ctx.send(f"🐣🌸 He is risen! Happy Easter! 🎉✨\nEaster in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
 
     @commands.command()
     async def lent(self, ctx):
