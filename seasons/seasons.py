@@ -31,10 +31,14 @@ class Seasons(commands.Cog):
         try:
             if credits > 0:
                 await bank.deposit_credits(ctx.author, credits)
-                await ctx.send(f"{outcome_text}\nYou earned {credits} {currency_name} for your flipping skills! 🎉")
+                new_balance = await bank.get_balance(ctx.author)
+                await ctx.send(f"{outcome_text}\nYou earned {credits} {currency_name} for your flipping skills! 🎉\n"
+                             f"Your new balance: {new_balance} {currency_name}")
             else:
                 await bank.withdraw_credits(ctx.author, abs(credits))
-                await ctx.send(f"{outcome_text}\nOh no! You lost {abs(credits)} {currency_name}! 😅")
+                new_balance = await bank.get_balance(ctx.author)
+                await ctx.send(f"{outcome_text}\nOh no! You lost {abs(credits)} {currency_name}! 😅\n"
+                             f"Your new balance: {new_balance} {currency_name}")
         except ValueError:
             await ctx.send(f"{outcome_text}\nBut you don't have enough {currency_name} to pay for the mishap!")
 
