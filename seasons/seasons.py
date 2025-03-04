@@ -21,7 +21,7 @@ class Seasons(commands.Cog):
         await ctx.send(random.choice(outcomes))
 
     @commands.command()
-    async def ash(self, ctx):
+    async def ashwednesday(self, ctx):
         """Ash Wednesday reminder."""
         await ctx.send("✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday.")
 
