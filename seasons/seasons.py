@@ -299,22 +299,7 @@ class Seasons(commands.Cog):
         # Create and send view with embeds
         view = self.StatsView(embeds)
         view.message = await ctx.send(embed=embeds[0], view=view)
-
-    @commands.command()
-    async def balance(self, ctx, user: discord.Member = None):
-        """Check your balance or someone else's."""
-        if user is None:
-            user = ctx.author
-            
-        bal = await bank.get_balance(user)
-        currency_name = await bank.get_currency_name(ctx.guild)
-        await ctx.send(f"{user.display_name}'s balance: {bal} {currency_name}")
-
-
-
-
-
-
+        
 
     @bank.cost(10)  # Entry fee of 10 credits
     @commands.command()
