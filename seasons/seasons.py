@@ -31,18 +31,29 @@ class Seasons(commands.Cog):
             credits = 1000  # Special high reward
             result = "perfect"
         else:
-            base_outcomes = [
-                ("🥞 You flipped the pancake perfectly! Golden brown and delicious!", (75, 150), "perfect"),
-                ("😅 Oops! The pancake stuck to the ceiling... better luck next time!", (-75, -25), "fail"),
-                ("🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!", (-100, -50), "fail"),
-                ("🤹 Fancy! You did a triple flip and landed it like a pro!", (125, 200), "perfect"),
-                ("🐶 Uh-oh... the dog stole your pancake mid-air!", (-50, -10), "fail"),
-                ("🌟 INCREDIBLE! You juggled multiple pancakes like a master chef!", (150, 250), "perfect"),
-                ("🎭 Your pancake landed making a perfect smiley face!", (100, 175), "success"),
-                ("💫 You did a backflip while flipping the pancake! Spectacular!", (125, 225), "success"),
-                ("😱 The pancake somehow turned into a waffle mid-flip...", (-40, -20), "fail"),
-                ("🌪️ A sudden gust of wind carried your pancake away!", (-60, -30), "fail")
-            ]
+base_outcomes = [
+    ("🥞 You flipped the pancake perfectly! Golden brown and delicious!", (75, 150), "perfect"),
+    ("😅 Oops! The pancake stuck to the ceiling... better luck next time!", (-75, -25), "fail"),
+    ("🔥 Oh no! The pancake caught fire! Quick, grab the extinguisher!", (-100, -50), "fail"),
+    ("🤹 Fancy! You did a triple flip and landed it like a pro!", (125, 200), "perfect"),
+    ("🐶 Uh-oh... the dog stole your pancake mid-air!", (-50, -10), "fail"),
+    ("🌟 INCREDIBLE! You juggled multiple pancakes like a master chef!", (150, 250), "perfect"),
+    ("🎭 Your pancake landed making a perfect smiley face!", (100, 175), "success"),
+    ("💫 You did a backflip while flipping the pancake! Spectacular!", (125, 225), "success"),
+    ("😱 The pancake somehow turned into a waffle mid-flip...", (-40, -20), "fail"),
+    ("🌪️ A sudden gust of wind carried your pancake away!", (-60, -30), "fail"),
+    ("🍕 A pancake... or is it a pizza? You flipped a delicious hybrid!", (90, 160), "perfect"),
+    ("🐱 The cat jumped and snatched the pancake right out of the air!", (-80, -40), "fail"),
+    ("💥 You launched the pancake into orbit! Space-bound!", (-120, -70), "fail"),
+    ("🎉 You nailed the pancake flip with perfect flair! Everyone’s impressed!", (110, 180), "perfect"),
+    ("👽 An alien spacecraft intercepted your pancake mid-flip. Strange!", (-90, -50), "fail"),
+    ("🌈 The pancake made a rainbow arc in the air before landing perfectly!", (130, 210), "perfect"),
+    ("🏆 You landed your pancake in the shape of a trophy. A winner!", (140, 220), "perfect"),
+    ("⏳ You flipped your pancake just in time before the timer ran out!", (100, 150), "success"),
+    ("💨 A breeze carried the pancake away, but it was a close call!", (-70, -20), "fail"),
+    ("🍴 Your pancake landed perfectly on the plate, ready to be eaten!", (120, 190), "success")
+]
+
             outcome_text, credit_range, result = random.choice(base_outcomes)
             credits = random.randint(credit_range[0], credit_range[1])
 
