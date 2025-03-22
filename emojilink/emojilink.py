@@ -210,12 +210,44 @@ class EmojiLink(commands.Cog):
         - emoji: The custom emoji to delete.
         """
         try:
-            await emoji.delete()
-            await ctx.send(f"Emoji '{emoji.name}' deleted successfully.")
-        except discord.HTTPException as e:
-            await ctx.send(f"Failed to delete emoji: {e.text}")
-        except discord.Forbidden:
-            await ctx.send("I do not have permissions to delete emojis.")
+            # Find the emoji in the guild's emoji list
+            guild_emoji = discord.utils.get(ctx.guild.emojis, id=emoji.id)
+            if guild_emoji is None:
+                return await ctx.send("This emoji doesn't exist in this server.")
+            
+            # Create confirmation view
+            view = discord.ui.View(timeout=30)
+            confirm_button = discord.ui.Button(label="Confirm", style=discord.ButtonStyle.danger)
+            cancel_button = discord.ui.Button(label="Cancel", style=discord.ButtonStyle.secondary)
+            
+            async def confirm_callback(interaction: discord.Interaction):
+                if interaction.user != ctx.author:
+                    return await interaction.response.send_message("You cannot use this button.", ephemeral=True)
+                
+                try:
+                    await guild_emoji.delete()
+                    await interaction.response.edit_message(content=f"Emoji '{emoji.name}' deleted successfully.", view=None)
+                except Exception as e:
+                    await interaction.response.edit_message(content=f"Failed to delete emoji: {e}", view=None)
+            
+            async def cancel_callback(interaction: discord.Interaction):
+                if interaction.user != ctx.author:
+                    return await interaction.response.send_message("You cannot use this button.", ephemeral=True)
+                
+                await interaction.response.edit_message(content="Emoji deletion cancelled.", view=None)
+            
+            confirm_button.callback = confirm_callback
+            cancel_button.callback = cancel_callback
+            
+            view.add_item(confirm_button)
+            view.add_item(cancel_button)
+            
+            # Send confirmation message
+            await ctx.send(
+                f"Are you sure you want to delete the emoji {emoji}?",
+                view=view
+            )
+            
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
 
