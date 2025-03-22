@@ -44,7 +44,7 @@ class EmojiLink(commands.Cog):
             await ctx.send("No custom emojis found in this server.")
             return
 
-        # Create embed pages with 3 emojis per page for larger display
+        # Create embed pages with 3 emojis per page
         emojis = ctx.guild.emojis
         pages = []
         for i in range(0, len(emojis), 3):
@@ -54,24 +54,17 @@ class EmojiLink(commands.Cog):
             # Add each emoji as a large image
             for emoji in chunk:
                 emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
-                # Create a field for the emoji name and download link
+                # Create a clickable image with name and download text underneath
                 embed.add_field(
                     name=f":{emoji.name}:",
-                    value=f"{emoji} • [Download]({emoji_url})",
-                    inline=False
+                    value=f"[⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀]({emoji_url})\n{emoji} • [Download]({emoji_url})",
+                    inline=True
                 )
-                # Add the emoji image as a large inline field
-                embed.add_field(
-                    name="⠀",  # Zero-width space
-                    value=f"[⠀]({emoji_url})",
-                    inline=False
-                )
-                # Add a separator between emojis
-                embed.add_field(name="⠀", value="▬▬▬▬▬▬▬▬▬▬▬▬▬▬", inline=False)
 
-            # Remove the last separator if it exists
-            if len(embed.fields) > 0 and embed.fields[-1].value == "▬▬▬▬▬▬▬▬▬▬▬▬▬▬":
-                embed.remove_field(-1)
+            # Add empty fields to maintain grid layout if needed
+            remaining = 3 - len(chunk)
+            for _ in range(remaining):
+                embed.add_field(name="⠀", value="⠀", inline=True)
 
             embed.set_footer(text=f"Page {i//3 + 1}/{-(-len(emojis)//3)} • Total emojis: {len(emojis)}")
             pages.append(embed)
