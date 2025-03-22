@@ -44,26 +44,36 @@ class EmojiLink(commands.Cog):
             await ctx.send("No custom emojis found in this server.")
             return
 
-        # Create embed pages with 5 emojis per page (reduced from 10 to show larger images)
+        # Create embed pages with 3 emojis per page for larger display
         emojis = ctx.guild.emojis
         pages = []
-        for i in range(0, len(emojis), 5):
+        for i in range(0, len(emojis), 3):
             embed = discord.Embed(title="Server Emojis", color=discord.Color.blue())
-            chunk = emojis[i:i + 5]
+            chunk = emojis[i:i + 3]
+            
+            # Add each emoji as a large image
             for emoji in chunk:
                 emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
+                # Create a field for the emoji name and download link
                 embed.add_field(
                     name=f":{emoji.name}:",
-                    value=f"{emoji} [Download]({emoji_url})",
+                    value=f"{emoji} • [Download]({emoji_url})",
                     inline=False
                 )
-                # Add the emoji as a thumbnail in the embed
-                if len(chunk) == 1:  # If only one emoji, use a large thumbnail
-                    embed.set_thumbnail(url=emoji_url)
-                else:  # If multiple emojis, add the image directly
-                    embed.add_field(name="‎", value=f"[⠀]({emoji_url})", inline=False)  # Zero-width space for name
+                # Add the emoji image as a large inline field
+                embed.add_field(
+                    name="⠀",  # Zero-width space
+                    value=f"[⠀]({emoji_url})",
+                    inline=False
+                )
+                # Add a separator between emojis
+                embed.add_field(name="⠀", value="▬▬▬▬▬▬▬▬▬▬▬▬▬▬", inline=False)
 
-            embed.set_footer(text=f"Page {i//5 + 1}/{-(-len(emojis)//5)} • Total emojis: {len(emojis)}")
+            # Remove the last separator if it exists
+            if len(embed.fields) > 0 and embed.fields[-1].value == "▬▬▬▬▬▬▬▬▬▬▬▬▬▬":
+                embed.remove_field(-1)
+
+            embed.set_footer(text=f"Page {i//3 + 1}/{-(-len(emojis)//3)} • Total emojis: {len(emojis)}")
             pages.append(embed)
 
         if not pages:
@@ -75,7 +85,7 @@ class EmojiLink(commands.Cog):
                 super().__init__(timeout=60)
                 self.current_page = 0
 
-            @discord.ui.button(label="◀️ Previous", style=discord.ButtonStyle.secondary, disabled=True)
+            @discord.ui.button(emoji="⏪", style=discord.ButtonStyle.secondary, disabled=True)
             async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
                 if interaction.user != ctx.author:
                     return await interaction.response.send_message("You cannot use these buttons.", ephemeral=True)
@@ -83,27 +93,25 @@ class EmojiLink(commands.Cog):
                 self.current_page -= 1
                 # Update button states
                 button.disabled = self.current_page == 0
-                self.children[1].disabled = self.current_page == len(pages) - 1  # Next button
+                self.children[1].disabled = self.current_page == len(pages) - 1
                 
                 await interaction.response.edit_message(embed=pages[self.current_page], view=self)
 
-            @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.secondary)
+            @discord.ui.button(emoji="⏩", style=discord.ButtonStyle.secondary)
             async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
                 if interaction.user != ctx.author:
                     return await interaction.response.send_message("You cannot use these buttons.", ephemeral=True)
                 
                 self.current_page += 1
                 # Update button states
-                self.children[0].disabled = self.current_page == 0  # Previous button
+                self.children[0].disabled = self.current_page == 0
                 button.disabled = self.current_page == len(pages) - 1
                 
                 await interaction.response.edit_message(embed=pages[self.current_page], view=self)
 
             async def on_timeout(self):
-                # Disable all buttons when the view times out
                 for item in self.children:
                     item.disabled = True
-                # Try to update the message with disabled buttons
                 try:
                     await self.message.edit(view=self)
                 except:
