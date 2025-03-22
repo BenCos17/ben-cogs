@@ -133,22 +133,30 @@ class EmojiLink(commands.Cog):
                 all_emojis.append((emoji, None))
         return all_emojis
 
-    @emojilink.command(name="add", require_var_positional=True)
+    @emojilink.command(name="add")
     @commands.has_permissions(manage_emojis=True)
-    async def add_emoji(self, ctx: commands.Context, name: str, url: str):
+    async def add_emoji(self, ctx: commands.Context, name: str, url: str = None):
         """
-        Add a custom emoji to the server from a given URL.
+        Add a custom emoji to the server from a URL or attachment.
 
         Parameters:
         - name: The name for the new emoji.
-        - url: The URL of the image to use for the emoji.
+        - url: (Optional) The URL of the image to use for the emoji. If not provided, an attachment must be included.
         """
+        # Check for attachment if no URL is provided
+        if not url and not ctx.message.attachments:
+            return await ctx.send("Please provide either a URL or attach an image file.")
+        
         try:
             async with ctx.typing():
                 async with aiohttp.ClientSession() as session:
+                    # Use attachment URL if no URL is provided
+                    if not url and ctx.message.attachments:
+                        url = ctx.message.attachments[0].url
+                    
                     async with session.get(url) as response:
                         if response.status != 200:
-                            return await ctx.send("Failed to fetch image from URL.")
+                            return await ctx.send("Failed to fetch image.")
                         image_data = await response.read()
                         await ctx.guild.create_custom_emoji(name=name, image=image_data)
                         await ctx.send(f"Emoji '{name}' added successfully.")
