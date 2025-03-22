@@ -78,7 +78,7 @@ class EmojiLink(commands.Cog):
                 super().__init__(timeout=60)
                 self.current_page = 0
 
-            @discord.ui.button(emoji="⏪", style=discord.ButtonStyle.secondary, disabled=True)
+            @discord.ui.button(label="◀️ Previous", style=discord.ButtonStyle.secondary, disabled=True)
             async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
                 if interaction.user != ctx.author:
                     return await interaction.response.send_message("You cannot use these buttons.", ephemeral=True)
@@ -90,7 +90,7 @@ class EmojiLink(commands.Cog):
                 
                 await interaction.response.edit_message(embed=pages[self.current_page], view=self)
 
-            @discord.ui.button(emoji="⏩", style=discord.ButtonStyle.secondary)
+            @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.secondary)
             async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
                 if interaction.user != ctx.author:
                     return await interaction.response.send_message("You cannot use these buttons.", ephemeral=True)
