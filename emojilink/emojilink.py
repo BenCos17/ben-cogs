@@ -37,22 +37,57 @@ class EmojiLink(commands.Cog):
         await ctx.send(f"Emoji: {emoji_str}")
         await ctx.send(f"Emoji link: {emoji_url}")
 
-    @emojilink.command(name="list")
+    @emojilink.command(name="list", aliases=["all"])
     async def list_emojis(self, ctx: commands.Context):
-        """
-        List all custom emojis in the server along with their names and links.
-        """
+        """List all custom emojis in the server along with their names and links."""
         if not ctx.guild.emojis:
             await ctx.send("No custom emojis found in this server.")
             return
 
-        emojis = [f"{emoji}: [Link](https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'})" for emoji in ctx.guild.emojis]
-        # Check if the message length exceeds Discord's limit and split the message if necessary
-        if len("\n".join(emojis)) > 2000:
-            for chunk in [emojis[i:i+10] for i in range(0, len(emojis), 10)]:  # Splitting the list into chunks
-                await ctx.send("\n".join(chunk))
-        else:
-            await ctx.send("\n".join(emojis))
+        # Create embed pages with 10 emojis per page
+        emojis = ctx.guild.emojis
+        pages = []
+        for i in range(0, len(emojis), 10):
+            embed = discord.Embed(title="Server Emojis", color=discord.Color.blue())
+            chunk = emojis[i:i + 10]
+            for emoji in chunk:
+                emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
+                embed.add_field(
+                    name=f":{emoji.name}:",
+                    value=f"{emoji} [Link]({emoji_url})",
+                    inline=False
+                )
+            embed.set_footer(text=f"Page {i//10 + 1}/{-(-len(emojis)//10)}")
+            pages.append(embed)
+
+        if not pages:
+            return await ctx.send("No emojis to display.")
+
+        # Create pagination view
+        current_page = 0
+        message = await ctx.send(embed=pages[0])
+        
+        if len(pages) > 1:
+            await message.add_reaction("◀️")
+            await message.add_reaction("▶️")
+
+            def check(reaction, user):
+                return user == ctx.author and str(reaction.emoji) in ["◀️", "▶️"]
+
+            while True:
+                try:
+                    reaction, user = await ctx.bot.wait_for("reaction_add", timeout=60.0, check=check)
+
+                    if str(reaction.emoji) == "▶️" and current_page < len(pages) - 1:
+                        current_page += 1
+                        await message.edit(embed=pages[current_page])
+                    elif str(reaction.emoji) == "◀️" and current_page > 0:
+                        current_page -= 1
+                        await message.edit(embed=pages[current_page])
+
+                    await message.remove_reaction(reaction, user)
+                except:
+                    break
 
     @emojilink.command(name="info")
     async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
@@ -133,16 +168,17 @@ class EmojiLink(commands.Cog):
                 all_emojis.append((emoji, None))
         return all_emojis
 
-    @emojilink.command(name="add")
+    @emojilink.command(name="add", aliases=["create"])
     @commands.has_permissions(manage_emojis=True)
     async def add_emoji(self, ctx: commands.Context, name: str, url: str = None):
-        """
-        Add a custom emoji to the server from a URL or attachment.
+        """Add a custom emoji to the server from a URL or attachment."""
+        # Validate emoji name
+        if not name.isalnum() and not '_' in name:
+            return await ctx.send("Emoji name must contain only letters, numbers, and underscores.")
+        
+        if len(name) < 2 or len(name) > 32:
+            return await ctx.send("Emoji name must be between 2 and 32 characters long.")
 
-        Parameters:
-        - name: The name for the new emoji.
-        - url: (Optional) The URL of the image to use for the emoji. If not provided, an attachment must be included.
-        """
         # Check for attachment if no URL is provided
         if not url and not ctx.message.attachments:
             return await ctx.send("Please provide either a URL or attach an image file.")
@@ -251,19 +287,25 @@ class EmojiLink(commands.Cog):
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
 
-    @emojilink.command(name="rename", require_var_positional=True)
+    @emojilink.command(name="rename", aliases=["edit"])
     @commands.has_permissions(manage_emojis=True)
     async def rename_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji, new_name: str):
-        """
-        Rename a custom emoji in the server.
+        """Rename a custom emoji in the server."""
+        # Validate new name
+        if not new_name.isalnum() and not '_' in new_name:
+            return await ctx.send("Emoji name must contain only letters, numbers, and underscores.")
+        
+        if len(new_name) < 2 or len(new_name) > 32:
+            return await ctx.send("Emoji name must be between 2 and 32 characters long.")
 
-        Parameters:
-        - emoji: The custom emoji to rename.
-        - new_name: The new name for the emoji.
-        """
+        # Find the emoji in the guild's emoji list
+        guild_emoji = discord.utils.get(ctx.guild.emojis, id=emoji.id)
+        if guild_emoji is None:
+            return await ctx.send("This emoji doesn't exist in this server.")
+
         try:
-            await ctx.guild.edit_custom_emoji(emoji, name=new_name)  # Corrected method
-            await ctx.send(f"Emoji renamed to '{new_name}' successfully.")
+            await guild_emoji.edit(name=new_name)
+            await ctx.send(f"Emoji successfully renamed from `:{emoji.name}:` to `:{new_name}:`")
         except discord.HTTPException as e:
             await ctx.send(f"Failed to rename emoji: {e.text}")
         except discord.Forbidden:
