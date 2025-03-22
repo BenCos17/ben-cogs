@@ -44,50 +44,74 @@ class EmojiLink(commands.Cog):
             await ctx.send("No custom emojis found in this server.")
             return
 
-        # Create embed pages with 10 emojis per page
+        # Create embed pages with 5 emojis per page (reduced from 10 to show larger images)
         emojis = ctx.guild.emojis
         pages = []
-        for i in range(0, len(emojis), 10):
+        for i in range(0, len(emojis), 5):
             embed = discord.Embed(title="Server Emojis", color=discord.Color.blue())
-            chunk = emojis[i:i + 10]
+            chunk = emojis[i:i + 5]
             for emoji in chunk:
                 emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{emoji.animated and 'gif' or 'png'}"
                 embed.add_field(
                     name=f":{emoji.name}:",
-                    value=f"{emoji} [Link]({emoji_url})",
+                    value=f"{emoji} [Download]({emoji_url})",
                     inline=False
                 )
-            embed.set_footer(text=f"Page {i//10 + 1}/{-(-len(emojis)//10)}")
+                # Add the emoji as a thumbnail in the embed
+                if len(chunk) == 1:  # If only one emoji, use a large thumbnail
+                    embed.set_thumbnail(url=emoji_url)
+                else:  # If multiple emojis, add the image directly
+                    embed.add_field(name="‎", value=f"[⠀]({emoji_url})", inline=False)  # Zero-width space for name
+
+            embed.set_footer(text=f"Page {i//5 + 1}/{-(-len(emojis)//5)} • Total emojis: {len(emojis)}")
             pages.append(embed)
 
         if not pages:
             return await ctx.send("No emojis to display.")
 
-        # Create pagination view
-        current_page = 0
-        message = await ctx.send(embed=pages[0])
-        
-        if len(pages) > 1:
-            await message.add_reaction("◀️")
-            await message.add_reaction("▶️")
+        # Create custom view with buttons
+        class PaginationView(discord.ui.View):
+            def __init__(self):
+                super().__init__(timeout=60)
+                self.current_page = 0
 
-            def check(reaction, user):
-                return user == ctx.author and str(reaction.emoji) in ["◀️", "▶️"]
+            @discord.ui.button(label="◀️ Previous", style=discord.ButtonStyle.secondary, disabled=True)
+            async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+                if interaction.user != ctx.author:
+                    return await interaction.response.send_message("You cannot use these buttons.", ephemeral=True)
+                
+                self.current_page -= 1
+                # Update button states
+                button.disabled = self.current_page == 0
+                self.children[1].disabled = self.current_page == len(pages) - 1  # Next button
+                
+                await interaction.response.edit_message(embed=pages[self.current_page], view=self)
 
-            while True:
+            @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.secondary)
+            async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+                if interaction.user != ctx.author:
+                    return await interaction.response.send_message("You cannot use these buttons.", ephemeral=True)
+                
+                self.current_page += 1
+                # Update button states
+                self.children[0].disabled = self.current_page == 0  # Previous button
+                button.disabled = self.current_page == len(pages) - 1
+                
+                await interaction.response.edit_message(embed=pages[self.current_page], view=self)
+
+            async def on_timeout(self):
+                # Disable all buttons when the view times out
+                for item in self.children:
+                    item.disabled = True
+                # Try to update the message with disabled buttons
                 try:
-                    reaction, user = await ctx.bot.wait_for("reaction_add", timeout=60.0, check=check)
-
-                    if str(reaction.emoji) == "▶️" and current_page < len(pages) - 1:
-                        current_page += 1
-                        await message.edit(embed=pages[current_page])
-                    elif str(reaction.emoji) == "◀️" and current_page > 0:
-                        current_page -= 1
-                        await message.edit(embed=pages[current_page])
-
-                    await message.remove_reaction(reaction, user)
+                    await self.message.edit(view=self)
                 except:
-                    break
+                    pass
+
+        # Send the initial message with the view
+        view = PaginationView()
+        view.message = await ctx.send(embed=pages[0], view=view)
 
     @emojilink.command(name="info")
     async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
