@@ -60,20 +60,33 @@ class scpLookup(commands.Cog):
             async with aiohttp.ClientSession() as session:
                 async with session.get(base_url) as response:
                     if response.status == 200:
-                        articles = await response.json()  # Await the JSON response
+                        articles = await response.json()
                         found_articles = []
 
                         # Search through the articles for the term
                         for key, article in articles.items():
                             title = article['title']
-                            content = article.get('raw_content', '')  # Use raw_content if available
+                            content = article.get('raw_content', '')
                             
-                            # Check if the search term is in the title or content
                             if scp_number.lower() in title.lower() or scp_number.lower() in content.lower():
                                 found_articles.append(title)
 
                         if found_articles:
-                            await ctx.send(f"Articles containing '{scp_number}':\n" + "\n".join(found_articles))
+                            # Prepare the base message
+                            base_message = f"Articles containing '{scp_number}':\n"
+                            
+                            # Create chunks of articles that fit within Discord's limit
+                            current_chunk = base_message
+                            for article in found_articles:
+                                if len(current_chunk + article + "\n") > 1990:  # Using 1990 to be safe
+                                    await ctx.send(current_chunk)
+                                    current_chunk = article + "\n"
+                                else:
+                                    current_chunk += article + "\n"
+                            
+                            # Send the last chunk if it's not empty
+                            if current_chunk:
+                                await ctx.send(current_chunk)
                         else:
                             await ctx.send(f"No articles found containing: {scp_number}.")
                     else:
