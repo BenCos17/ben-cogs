@@ -101,3 +101,22 @@ class YTDownloader(commands.Cog):
         await self.config.cookie_path.set(path if method == "file" else "")
 
         await ctx.send(f"`Cookies {'enabled' if enable else 'disabled'}. Method: {method}{' (Path: ' + path + ')' if method == 'file' else ''}`")
+
+    @commands.command()
+    async def ytsetcookies(self, ctx, path: str):
+        """
+        Sets the path for the YouTube cookies file.
+
+        Parameters:
+        `<path>` The full path to the cookies.txt file.
+        """
+        if not os.path.exists(path):
+            await ctx.send("`Error: The specified file does not exist.`")
+            return
+
+        await self.config.cookie_path.set(path)
+        await ctx.send(f"`Cookies path set to: {path}`")
+
+    async def get_cookie_path(self):
+        """Returns the stored cookie path or None if not set."""
+        return await self.config.cookie_path()
