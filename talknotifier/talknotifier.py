@@ -6,6 +6,7 @@ import time
 import typing as t
 import wtforms
 import logging
+from .dashboard_integration import DashboardIntegration
 
 # Set up logging
 logger = logging.getLogger("TalkNotifier")
