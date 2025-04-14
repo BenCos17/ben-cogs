@@ -183,7 +183,10 @@ class TalkNotifier(DashboardIntegration, commands.Cog):
 
                 return {
                     "status": 0,
-                    "notifications": [{"message": "Settings updated successfully!", "category": "success"}],
+                    "notifications": [
+                        {"message": "Settings updated successfully!", "category": "success"},
+                        {"message": "Your changes have been saved.", "category": "info"}
+                    ],
                     "web_content": {
                         "source": f"""
                         <h3>Notification Settings</h3>
