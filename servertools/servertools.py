@@ -11,6 +11,7 @@ class Servertools(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  # Initialize config with a unique identifier
         self.config.register_guild(auto_reactions=[])  # Initialize auto_reactions as an empty list
+        self.config.register_user(online_notifications=[])  # Add this line to register online notifications
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
@@ -222,6 +223,69 @@ class Servertools(commands.Cog):
         key = f"{message.channel.id}-{message.author.id}"
         if key in reactions:
             await message.add_reaction(reactions[key])
+
+    @commands.group()
+    async def notify(self, ctx):
+        """Manage online status notifications"""
+        if ctx.invoked_subcommand is None:
+            await ctx.send("Use subcommands: add, remove, list")
+
+    @notify.command(name="add")
+    async def add_notification(self, ctx, user: discord.Member):
+        """Get notified when a specific user comes online"""
+        if user.bot:
+            await ctx.send("You cannot track bot accounts!")
+            return
+
+        async with self.config.user(ctx.author).online_notifications() as notifications:
+            if user.id in notifications:
+                await ctx.send(f"You're already tracking {user.display_name}'s online status!")
+                return
+            
+            notifications.append(user.id)
+            await ctx.send(f"You will be notified when {user.display_name} comes online!")
+
+    @notify.command(name="remove")
+    async def remove_notification(self, ctx, user: discord.Member):
+        """Stop getting notifications for a specific user"""
+        async with self.config.user(ctx.author).online_notifications() as notifications:
+            if user.id in notifications:
+                notifications.remove(user.id)
+                await ctx.send(f"Stopped tracking {user.display_name}'s online status.")
+            else:
+                await ctx.send(f"You weren't tracking {user.display_name}'s online status.")
+
+    @notify.command(name="list")
+    async def list_notifications(self, ctx):
+        """List all users you're tracking"""
+        notifications = await self.config.user(ctx.author).online_notifications()
+        if not notifications:
+            await ctx.send("You're not tracking anyone's online status.")
+            return
+
+        users = []
+        for user_id in notifications:
+            user = self.bot.get_user(user_id)
+            if user:
+                users.append(f"- {user.name}#{user.discriminator}")
+            
+        await ctx.send("You're tracking these users:\n" + "\n".join(users))
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before, after):
+        if before.status != after.status:
+            if after.status == discord.Status.online and before.status in [discord.Status.offline, discord.Status.invisible]:
+                async for user_data in self.config.all_users():
+                    user_id = int(user_data)
+                    notifications = await self.config.user_from_id(user_id).online_notifications()
+                    
+                    if after.id in notifications:
+                        user = self.bot.get_user(user_id)
+                        if user:
+                            try:
+                                await user.send(f"🟢 **{after.name}#{after.discriminator}** is now online!")
+                            except discord.Forbidden:
+                                pass  # Can't send DM to this user
 
 
 
