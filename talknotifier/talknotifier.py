@@ -185,7 +185,7 @@ class TalkNotifier(commands.Cog):
         cooldown = await self.config.guild(guild).cooldown()
 
         # Create a form for updating settings
-       class SettingsForm(kwargs["Form"])
+        class SettingsForm(kwargs["Form"]):
             notification_message = wtforms.TextAreaField("Notification Message")
             cooldown = wtforms.IntegerField("Cooldown (seconds)")
             target_user = wtforms.IntegerField("User ID to Add/Remove")
