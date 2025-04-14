@@ -202,7 +202,7 @@ class TalkNotifier(DashboardIntegration, commands.Cog):
                 return {
                     "status": 1,
                     "error_title": "Update Failed",
-                    "error_message": "An error occurred while updating settings.",
+                    "error_message": f"An error occurred while updating settings: {str(e)}",
                 }
 
         # Render the form with current values
