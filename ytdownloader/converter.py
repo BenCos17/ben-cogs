@@ -126,3 +126,14 @@ class YTDownloader(commands.Cog):
         self.save_cookie_preference(self.cookie_preference)
         status = "enabled" if self.cookie_preference else "disabled"
         await ctx.send(f"`Cookie usage has been {status}.`")
+
+    @commands.command()
+    async def check_cookies(self, ctx):
+        """
+        Checks if the cookies file exists in the data directory.
+        """
+        cookies_file_path = str(self.data_folder / "cookies.txt")  # Adjust if you use a different name
+        if os.path.exists(cookies_file_path):
+            await ctx.send(f"`Cookies file found at: {cookies_file_path}`")
+        else:
+            await ctx.send("`Cookies file not found. Please ensure it is in the correct directory.`")
