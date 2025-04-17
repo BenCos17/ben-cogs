@@ -137,3 +137,24 @@ class YTDownloader(commands.Cog):
             await ctx.send(f"`Cookies file found at: {cookies_file_path}`")
         else:
             await ctx.send("`Cookies file not found. Please ensure it is in the correct directory.`")
+
+    @commands.command()
+    async def debug_ydl_opts(self, ctx, url, to_mp3: bool = False):
+        """
+        Debugs the ydl_opts variables being passed to yt-dlp.
+        """
+        output_folder = self.data_folder / ("mp3" if to_mp3 else "mp4")
+
+        ydl_opts = {
+            'format': 'bestaudio/best' if to_mp3 else 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'outtmpl': str(output_folder / f"%(id)s.{'mp3' if to_mp3 else 'mp4'}"),
+            'default_search': 'auto',  # Set default search
+            'progress_hooks': [self.my_hook],  # Add progress hook
+        }
+
+        # Add cookies option if the saved preference is True
+        if self.cookie_preference:
+            ydl_opts['cookies'] = str(self.data_folder / "cookies.txt")  # Specify the path to your cookies file
+
+        # Send the ydl_opts to the Discord channel for debugging
+        await ctx.send(f"`ydl_opts: {ydl_opts}`")
