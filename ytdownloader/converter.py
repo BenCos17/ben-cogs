@@ -1,8 +1,7 @@
 import discord
-from redbot.core import commands
+from redbot.core import commands, data_manager
 from yt_dlp import YoutubeDL
 import asyncio
-from redbot.core import data_manager
 from pathlib import Path
 import subprocess
 import os
@@ -12,8 +11,9 @@ import json
 class YTDownloader(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        # Use Redbot's data directory directly
         self.data_folder = data_manager.cog_data_path(cog_instance=self)
-        self.cookie_preference_file = self.data_folder / "cookie_preference.json"
+        self.cookie_preference_file = self.data_folder / "cookies.json"  # Change to cookies.json for clarity
         self.cookie_preference = self.load_cookie_preference()
 
     def load_cookie_preference(self):
@@ -44,7 +44,7 @@ class YTDownloader(commands.Cog):
 
             # Add cookies option if the saved preference is True
             if self.cookie_preference:
-                ydl_opts['cookies'] = 'path/to/your/cookies.txt'  # Specify the path to your cookies file
+                ydl_opts['cookies'] = str(self.data_folder / "cookies.txt")  # Specify the path to your cookies file
 
             conversion_message = await ctx.send(f"`Converting video...`")
 
