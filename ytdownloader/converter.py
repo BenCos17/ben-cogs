@@ -42,9 +42,8 @@ class YTDownloader(commands.Cog):
                 'progress_hooks': [self.my_hook],  # Add progress hook
             }
 
-            # Add cookies option if the saved preference is True
-            if self.cookie_preference:
-                ydl_opts['cookies'] = str(self.data_folder / "cookies.txt")  # Specify the path to your cookies file
+            # Always add cookies option
+            ydl_opts['cookies'] = str(self.data_folder / "cookies.txt")  # Specify the path to your cookies file
 
             conversion_message = await ctx.send(f"`Converting video...`")
 
