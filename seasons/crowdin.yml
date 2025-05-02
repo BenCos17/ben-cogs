@@ -1,4 +1,4 @@
-project_identifier: seasons
+project_identifier: CROWDIN_PROJECT_ID
 api_key_env: CROWDIN_API_KEY
 base_path: .
 files:
@@ -17,3 +17,7 @@ files:
         - ja
         - ko 
         - ie
+
+
+
+
