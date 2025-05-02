@@ -3,7 +3,8 @@ import random
 import datetime
 import discord
 from discord import ui, ButtonStyle, Embed
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Optional, Union
+from functools import lru_cache
 
 class Seasons(commands.Cog):
     """A cog for Christian seasons and holidays like Lent, Easter, and more!"""
@@ -11,6 +12,8 @@ class Seasons(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
+        
+        # Register default member config
         default_member = {
             "total_flips": 0,
             "successful_flips": 0,
@@ -21,6 +24,62 @@ class Seasons(commands.Cog):
             "worst_flip": None
         }
         self.config.register_member(**default_member)
+
+    # Constants for days before/after Easter
+    DAYS_BEFORE_EASTER = {
+        "ash_wednesday": 46,
+        "pancake_tuesday": 47,
+        "good_friday": 2,
+        "palm_sunday": 7,
+        "holy_thursday": 3,
+        "pentecost": 49,
+        "ascension": 39,
+        "corpus_christi": 60
+    }
+
+    @lru_cache(maxsize=128)
+    def calculate_easter(self, year: int) -> datetime.date:
+        """Computes the date of Easter Sunday for a given year using the Gregorian calendar."""
+        try:
+            a = year % 19
+            b = year // 100
+            c = year % 100
+            d = b // 4
+            e = b % 4
+            f = (b + 8) // 25
+            g = (b - f + 1) // 3
+            h = (19 * a + b - d - g + 15) % 30
+            i = c // 4
+            k = c % 4
+            l = (32 + 2 * e + 2 * i - h - k) % 7
+            m = (a + 11 * h + 22 * l) // 451
+            month = (h + l - 7 * m + 114) // 31
+            day = ((h + l - 7 * m + 114) % 31) + 1
+            return datetime.date(year, month, day)
+        except (ValueError, TypeError) as e:
+            raise commands.BadArgument(f"Invalid year for Easter calculation: {year}") from e
+
+    async def get_season_dates(self, year: int) -> Dict[str, datetime.date]:
+        """Calculate all important dates for a given year."""
+        easter = self.calculate_easter(year)
+        
+        return {
+            "easter": easter,
+            "ash_wednesday": easter - datetime.timedelta(days=self.DAYS_BEFORE_EASTER["ash_wednesday"]),
+            "pancake_tuesday": easter - datetime.timedelta(days=self.DAYS_BEFORE_EASTER["pancake_tuesday"]),
+            "good_friday": easter - datetime.timedelta(days=self.DAYS_BEFORE_EASTER["good_friday"]),
+            "palm_sunday": easter - datetime.timedelta(days=self.DAYS_BEFORE_EASTER["palm_sunday"]),
+            "holy_thursday": easter - datetime.timedelta(days=self.DAYS_BEFORE_EASTER["holy_thursday"]),
+            "pentecost": easter + datetime.timedelta(days=self.DAYS_BEFORE_EASTER["pentecost"]),
+            "ascension": easter + datetime.timedelta(days=self.DAYS_BEFORE_EASTER["ascension"]),
+            "corpus_christi": easter + datetime.timedelta(days=self.DAYS_BEFORE_EASTER["corpus_christi"]),
+            "epiphany": datetime.date(year, 1, 6),
+            "assumption_of_mary": datetime.date(year, 8, 15),
+            "all_saints_day": datetime.date(year, 11, 1),
+            "all_souls_day": datetime.date(year, 11, 2),
+            "christmas": datetime.date(year, 12, 25),
+            "advent_start": datetime.date(year, 12, 25) - datetime.timedelta(days=22)
+        }
 
     @commands.command()
     async def pancake(self, ctx):
@@ -146,24 +205,29 @@ class Seasons(commands.Cog):
         today = datetime.date.today()
         year = today.year
         
-        # Calculate this year's Easter
-        this_easter = self.calculate_easter(year)
-        this_ash_wednesday = this_easter - datetime.timedelta(days=46)
-        
-        # Calculate next year's Easter
-        next_easter = self.calculate_easter(year + 1)
-        next_ash_wednesday = next_easter - datetime.timedelta(days=46)
-        
-        # If we're after this year's Easter, show next year's dates
-        if today > this_easter:
-            ash_wednesday = next_ash_wednesday
-            easter = next_easter
-        else:
-            ash_wednesday = this_ash_wednesday
-            easter = this_easter
-        
-        await ctx.send(f"🙏 Lent begins on {ash_wednesday.strftime('%A, %B %d, %Y')} and ends on {easter.strftime('%A, %B %d, %Y')}.\n"
-                      "A time for fasting, prayer, and almsgiving. What are you giving up this year?")
+        try:
+            # Get this year's dates
+            this_year_dates = await self.get_season_dates(year)
+            this_easter = this_year_dates["easter"]
+            this_ash_wednesday = this_year_dates["ash_wednesday"]
+            
+            # Get next year's dates
+            next_year_dates = await self.get_season_dates(year + 1)
+            next_easter = next_year_dates["easter"]
+            next_ash_wednesday = next_year_dates["ash_wednesday"]
+            
+            # Determine which year's dates to show
+            if today > this_easter:
+                ash_wednesday = next_ash_wednesday
+                easter = next_easter
+            else:
+                ash_wednesday = this_ash_wednesday
+                easter = this_easter
+            
+            await ctx.send(f"🙏 Lent begins on {ash_wednesday.strftime('%A, %B %d, %Y')} and ends on {easter.strftime('%A, %B %d, %Y')}.\n"
+                          "A time for fasting, prayer, and almsgiving. What are you giving up this year?")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the Lenten dates: {str(e)}")
 
     @commands.command()
     async def catholic_today(self, ctx):
@@ -171,78 +235,46 @@ class Seasons(commands.Cog):
         today = datetime.date.today()
         year = today.year
 
-        # Calculate dates
-        easter = self.calculate_easter(year)
-        ash_wednesday = easter - datetime.timedelta(days=46)
-        pancake_tuesday = ash_wednesday - datetime.timedelta(days=1)
-        pentecost = easter + datetime.timedelta(days=49)
-        
-        # Calculate Advent (4 Sundays before Christmas)
-        christmas = datetime.date(year, 12, 25)
-        advent_start = christmas - datetime.timedelta(days=22)  # Approximate
+        try:
+            # Get all dates for the year
+            dates = await self.get_season_dates(year)
+            
+            # Define messages for each date
+            special_dates = {
+                dates["christmas"]: "🎄 Merry Christmas! Glory to God in the highest!",
+                dates["good_friday"]: "✝️ Today is Good Friday, commemorating Christ's crucifixion.",
+                dates["palm_sunday"]: "🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.",
+                dates["holy_thursday"]: "🍷🍞 Today is Holy Thursday, commemorating the Last Supper.",
+                dates["pancake_tuesday"]: "🥞 It's Pancake Tuesday! Time to flip some pancakes! Use the pancake command to celebrate!",
+                dates["ash_wednesday"]: self.ashwednesday,
+                dates["easter"]: self.easter,
+                dates["epiphany"]: "✨ Today is Epiphany, celebrating the visit of the Magi to Jesus.",
+                dates["ascension"]: "✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven.",
+                dates["corpus_christi"]: "🍞 Today is Corpus Christi, celebrating the Body of Christ.",
+                dates["assumption_of_mary"]: "🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven.",
+                dates["all_saints_day"]: "✝️ Today is All Saints' Day, honoring all Christian saints and martyrs.",
+                dates["all_souls_day"]: "🕯️ Today is All Souls' Day, remembering and honoring the deceased."
+            }
 
-        # Add more special dates
-        good_friday = easter - datetime.timedelta(days=2)
-        palm_sunday = easter - datetime.timedelta(days=7)
-        holy_thursday = easter - datetime.timedelta(days=3)
-        epiphany = datetime.date(year, 1, 6)  # January 6th
-        ascension = easter + datetime.timedelta(days=39)  # 39 days after Easter
-        corpus_christi = easter + datetime.timedelta(days=60)  # 60 days after Easter
-        assumption_of_mary = datetime.date(year, 8, 15)  # August 15th
-        all_saints_day = datetime.date(year, 11, 1)  # November 1st
-        all_souls_day = datetime.date(year, 11, 2)  # November 2nd
+            # Check if today matches any dates
+            for date, message in special_dates.items():
+                if today == date:
+                    if callable(message):
+                        await message(ctx)
+                    else:
+                        await ctx.send(message)
+                    return
 
-        # Define a dictionary to map dates.
-        special_dates = {
-            christmas: "🎄 Merry Christmas! Glory to God in the highest!",
-            good_friday: "✝️ Today is Good Friday, commemorating Christ's crucifixion.",
-            palm_sunday: "🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.",
-            holy_thursday: "🍷🍞 Today is Holy Thursday, commemorating the Last Supper.",
-            pancake_tuesday: "🥞 It's Pancake Tuesday! Time to flip some pancakes! Use the pancake command to celebrate!",
-            ash_wednesday: self.ashwednesday,
-            easter: self.easter,
-            epiphany: "✨ Today is Epiphany, celebrating the visit of the Magi to Jesus.",
-            ascension: "✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven.",
-            corpus_christi: "🍞 Today is Corpus Christi, celebrating the Body of Christ.",
-            assumption_of_mary: "🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven.",
-            all_saints_day: "✝️ Today is All Saints' Day, honoring all Christian saints and martyrs.",
-            all_souls_day: "🕯️ Today is All Souls' Day, remembering and honoring the deceased."
-        }
-
-        # Check if today matches any dates.
-        for date, message in special_dates.items():
-            if today == date:
-                if callable(message):
-                    await message(ctx)
-                else:
-                    await ctx.send(message)
+            # Check if we're in Lent
+            if today == dates["ash_wednesday"]:
+                await self.lent(ctx)
                 return
 
-        # Lent message - only show on Ash Wednesday
-        if today == ash_wednesday:
-            await self.lent(ctx)
-            return
-
-        # generic matching statemement
-        await ctx.send("📅 No major Christian event today, but every day is a good day for reflection and prayer.")
-
-    def calculate_easter(self, year):
-        """Computes the date of Easter Sunday for a given year using the Gregorian calendar."""
-        a = year % 19
-        b = year // 100
-        c = year % 100
-        d = b // 4
-        e = b % 4
-        f = (b + 8) // 25
-        g = (b - f + 1) // 3
-        h = (19 * a + b - d - g + 15) % 30
-        i = c // 4
-        k = c % 4
-        l = (32 + 2 * e + 2 * i - h - k) % 7
-        m = (a + 11 * h + 22 * l) // 451
-        month = (h + l - 7 * m + 114) // 31
-        day = ((h + l - 7 * m + 114) % 31) + 1
-        return datetime.date(year, month, day)
+            # Generic message if no special date
+            await ctx.send("📅 No major Christian event today, but every day is a good day for reflection and prayer.")
+            
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while checking today's events: {str(e)}")
 
     @commands.command()
     async def advent(self, ctx):
