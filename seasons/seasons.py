@@ -158,6 +158,12 @@ class Seasons(commands.Cog):
         pancake_tuesday = ash_wednesday - datetime.timedelta(days=1)
         pentecost = easter + datetime.timedelta(days=49)
         
+        # Debug logging
+        await ctx.send(f"Debug: Today is {today}\n"
+                      f"Easter is {easter}\n"
+                      f"Ash Wednesday is {ash_wednesday}\n"
+                      f"Pentecost is {pentecost}")
+
         # Calculate Advent (4 Sundays before Christmas)
         christmas = datetime.date(year, 12, 25)
         advent_start = christmas - datetime.timedelta(days=22)  # Approximate
@@ -199,8 +205,8 @@ class Seasons(commands.Cog):
                     await ctx.send(message)
                 return
 
-        # Lent message
-        if today >= ash_wednesday and today <= easter:
+        # Lent message - only show on Ash Wednesday
+        if today == ash_wednesday:
             await self.lent(ctx)
             return
 
@@ -373,5 +379,18 @@ class Seasons(commands.Cog):
                     user_data["total_earnings"] -= abs(credits)
         except ValueError:
             await ctx.send(f"{outcome_text}\nBut you don't have enough {currency_name} to pay for the mishap!")
+
+    @commands.command()
+    async def is_lent(self, ctx):
+        """Check if we are currently in the Lenten season."""
+        today = datetime.date.today()
+        year = today.year
+        easter = self.calculate_easter(year)
+        ash_wednesday = easter - datetime.timedelta(days=46)
+        
+        if today >= ash_wednesday and today <= easter:
+            await ctx.send("🙏 Yes, we are in the Lenten season! A time for fasting, prayer, and almsgiving.")
+        else:
+            await ctx.send("No, we are not currently in the Lenten season.")
 
 
