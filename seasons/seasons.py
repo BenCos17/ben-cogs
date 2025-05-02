@@ -2,8 +2,8 @@ from redbot.core import commands, Config, bank
 import random
 import datetime
 import discord
-from discord import ui, ButtonStyle, Embed
-from typing import List, Tuple, Dict, Optional, Union
+from discord import ui, ButtonStyle, Embed, OptionChoice
+from typing import List, Tuple, Dict, Optional, Union, Sequence
 from functools import lru_cache
 
 class Seasons(commands.Cog):
@@ -727,5 +727,68 @@ class Seasons(commands.Cog):
 
         except Exception as e:
             await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.slash_command(name="holiday", description="Get information about Christian holidays")
+    async def holiday_slash(
+        self,
+        ctx: discord.ApplicationContext,
+        holiday: discord.Option(
+            str,
+            description="The holiday to check",
+            autocomplete=True
+        ),
+        year: discord.Option(
+            int,
+            description="The year to check (defaults to current year)",
+            required=False
+        )
+    ):
+        """Get information about Christian holidays using slash commands."""
+        try:
+            # Convert the holiday name to the internal key
+            holiday_converter = self.HolidayConverter()
+            holiday_key = await holiday_converter.convert(ctx, holiday)
+            
+            # Use the existing holiday command logic
+            await self.holiday(ctx, holiday_key, year)
+        except commands.BadArgument as e:
+            await ctx.respond(str(e), ephemeral=True)
+        except Exception as e:
+            await ctx.respond(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+    @holiday_slash.autocomplete("holiday")
+    async def holiday_autocomplete(
+        self,
+        ctx: discord.ApplicationContext,
+        value: str
+    ) -> list[OptionChoice]:
+        """Autocomplete for holiday names."""
+        holidays = {
+            "Ash Wednesday": "ash wednesday",
+            "Easter": "easter",
+            "Pentecost": "pentecost",
+            "Christmas": "christmas",
+            "Epiphany": "epiphany",
+            "Assumption of Mary": "assumption",
+            "All Saints' Day": "all saints",
+            "All Souls' Day": "all souls",
+            "Corpus Christi": "corpus christi",
+            "Ascension Thursday": "ascension",
+            "Palm Sunday": "palm sunday",
+            "Good Friday": "good friday",
+            "Holy Thursday": "holy thursday"
+        }
+        
+        # Filter holidays based on user input
+        filtered_holidays = {
+            name: key for name, key in holidays.items()
+            if value.lower() in name.lower()
+        }
+        
+        # Return the first 25 matches as OptionChoice objects
+        return [
+            discord.OptionChoice(name=name, value=key)
+            for name, key in filtered_holidays.items()
+        ][:25]
 
 
