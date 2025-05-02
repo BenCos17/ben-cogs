@@ -166,6 +166,12 @@ class Seasons(commands.Cog):
         good_friday = easter - datetime.timedelta(days=2)
         palm_sunday = easter - datetime.timedelta(days=7)
         holy_thursday = easter - datetime.timedelta(days=3)
+        epiphany = datetime.date(year, 1, 6)  # January 6th
+        ascension = easter + datetime.timedelta(days=39)  # 39 days after Easter
+        corpus_christi = easter + datetime.timedelta(days=60)  # 60 days after Easter
+        assumption_of_mary = datetime.date(year, 8, 15)  # August 15th
+        all_saints_day = datetime.date(year, 11, 1)  # November 1st
+        all_souls_day = datetime.date(year, 11, 2)  # November 2nd
 
         # Define a dictionary to map dates.
         special_dates = {
@@ -175,7 +181,13 @@ class Seasons(commands.Cog):
             holy_thursday: "🍷🍞 Today is Holy Thursday, commemorating the Last Supper.",
             pancake_tuesday: self.pancake,
             ash_wednesday: self.ash,
-            easter: self.easter
+            easter: self.easter,
+            epiphany: "✨ Today is Epiphany, celebrating the visit of the Magi to Jesus.",
+            ascension: "✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven.",
+            corpus_christi: "🍞 Today is Corpus Christi, celebrating the Body of Christ.",
+            assumption_of_mary: "🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven.",
+            all_saints_day: "✝️ Today is All Saints' Day, honoring all Christian saints and martyrs.",
+            all_souls_day: "🕯️ Today is All Souls' Day, remembering and honoring the deceased."
         }
 
         # Check if today matches any dates.
