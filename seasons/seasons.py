@@ -144,7 +144,13 @@ class Seasons(commands.Cog):
     @commands.command()
     async def lent(self, ctx):
         """Start of Lent message."""
-        await ctx.send("🙏 Lent has begun! Time for fasting, prayer, and almsgiving. What are you giving up this year?")
+        today = datetime.date.today()
+        year = today.year
+        easter = self.calculate_easter(year)
+        ash_wednesday = easter - datetime.timedelta(days=46)
+        
+        await ctx.send(f"🙏 Lent begins on {ash_wednesday.strftime('%A, %B %d, %Y')} and ends on {easter.strftime('%A, %B %d, %Y')}.\n"
+                      "A time for fasting, prayer, and almsgiving. What are you giving up this year?")
 
     @commands.command()
     async def catholic_today(self, ctx):
@@ -158,12 +164,6 @@ class Seasons(commands.Cog):
         pancake_tuesday = ash_wednesday - datetime.timedelta(days=1)
         pentecost = easter + datetime.timedelta(days=49)
         
-        # Debug logging - send first
-        debug_msg = await ctx.send(f"Debug: Today is {today}\n"
-                      f"Easter is {easter}\n"
-                      f"Ash Wednesday is {ash_wednesday}\n"
-                      f"Pentecost is {pentecost}")
-
         # Calculate Advent (4 Sundays before Christmas)
         christmas = datetime.date(year, 12, 25)
         advent_start = christmas - datetime.timedelta(days=22)  # Approximate
