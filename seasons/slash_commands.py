@@ -39,28 +39,11 @@ class SeasonsSlash(commands.Cog):
             await interaction.response.send_message("❌ The Seasons cog is not loaded.", ephemeral=True)
             return
 
-        # Map the choice to our internal keys
-        holiday_map = {
-            "Ash Wednesday": "ash_wednesday",
-            "Easter": "easter",
-            "Pentecost": "pentecost",
-            "Christmas": "christmas",
-            "Epiphany": "epiphany",
-            "Assumption of Mary": "assumption_of_mary",
-            "All Saints' Day": "all_saints_day",
-            "All Souls' Day": "all_souls_day",
-            "Corpus Christi": "corpus_christi",
-            "Ascension": "ascension",
-            "Palm Sunday": "palm_sunday",
-            "Good Friday": "good_friday",
-            "Holy Thursday": "holy_thursday"
-        }
-
         try:
             if year is None:
                 year = datetime.date.today().year
 
-            holiday_key = holiday_map[holiday.name]
+            holiday_key = holiday.value
             
             if holiday.value == "easter":
                 # Special handling for Easter since it's the base calculation
