@@ -152,7 +152,7 @@ class Seasons(commands.Cog):
         today = datetime.date.today()
         year = today.year
 
-        # Calculate key Christian dates
+        # Calculate dates
         easter = self.calculate_easter(year)
         ash_wednesday = easter - datetime.timedelta(days=46)
         pancake_tuesday = ash_wednesday - datetime.timedelta(days=1)
@@ -166,25 +166,34 @@ class Seasons(commands.Cog):
         good_friday = easter - datetime.timedelta(days=2)
         palm_sunday = easter - datetime.timedelta(days=7)
         holy_thursday = easter - datetime.timedelta(days=3)
-        
-        if today == christmas:
-            await ctx.send("🎄 Merry Christmas! Glory to God in the highest!")
-        elif today == good_friday:
-            await ctx.send("✝️ Today is Good Friday, commemorating Christ's crucifixion.")
-        elif today == palm_sunday:
-            await ctx.send("🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.")
-        elif today == holy_thursday:
-            await ctx.send("🍷🍞 Today is Holy Thursday, commemorating the Last Supper.")
-        elif today == pancake_tuesday:
-            await self.pancake(ctx)
-        elif today == ash_wednesday:
-            await self.ash(ctx)
-        elif today >= ash_wednesday and today < easter:
+
+        # Define a dictionary to map dates.
+        special_dates = {
+            christmas: "🎄 Merry Christmas! Glory to God in the highest!",
+            good_friday: "✝️ Today is Good Friday, commemorating Christ's crucifixion.",
+            palm_sunday: "🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.",
+            holy_thursday: "🍷🍞 Today is Holy Thursday, commemorating the Last Supper.",
+            pancake_tuesday: self.pancake,
+            ash_wednesday: self.ash,
+            easter: self.easter
+        }
+
+        # Check if today matches any dates.
+        for date, message in special_dates.items():
+            if today == date:
+                if callable(message):
+                    await message(ctx)
+                else:
+                    await ctx.send(message)
+                return
+
+        # Lent message
+        if today >= ash_wednesday and today < easter:
             await self.lent(ctx)
-        elif today == easter:
-            await self.easter(ctx)
-        else:
-            await ctx.send("📅 No major Christian event today, but every day is a good day for reflection and prayer.")
+            return
+
+        # generic matching statemement
+        await ctx.send("📅 No major Christian event today, but every day is a good day for reflection and prayer.")
 
     def calculate_easter(self, year):
         """Computes the date of Easter Sunday for a given year using the Gregorian calendar."""
