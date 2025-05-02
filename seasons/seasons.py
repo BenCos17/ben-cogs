@@ -608,4 +608,132 @@ class Seasons(commands.Cog):
         else:
             await ctx.send("No, we are not currently in the Lenten season.")
 
+    @commands.slash_command(name="holiday", description="Get information about Christian holidays")
+    async def holiday_slash(
+        self,
+        ctx,
+        holiday: discord.Option(
+            str,
+            "Choose a holiday",
+            choices=[
+                "Ash Wednesday",
+                "Easter",
+                "Pentecost",
+                "Christmas",
+                "Epiphany",
+                "Assumption of Mary",
+                "All Saints' Day",
+                "All Souls' Day",
+                "Corpus Christi",
+                "Ascension",
+                "Palm Sunday",
+                "Good Friday",
+                "Holy Thursday"
+            ]
+        ),
+        year: discord.Option(int, "Year (optional)", required=False) = None
+    ):
+        """Slash command to get information about any Christian holiday."""
+        # Map the choice to our internal keys
+        holiday_map = {
+            "Ash Wednesday": "ash_wednesday",
+            "Easter": "easter",
+            "Pentecost": "pentecost",
+            "Christmas": "christmas",
+            "Epiphany": "epiphany",
+            "Assumption of Mary": "assumption_of_mary",
+            "All Saints' Day": "all_saints_day",
+            "All Souls' Day": "all_souls_day",
+            "Corpus Christi": "corpus_christi",
+            "Ascension": "ascension",
+            "Palm Sunday": "palm_sunday",
+            "Good Friday": "good_friday",
+            "Holy Thursday": "holy_thursday"
+        }
+
+        # Map the choice to the appropriate message format
+        message_map = {
+            "Ash Wednesday": (
+                "✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday.",
+                "✝️ Ash Wednesday is on {}. Remember, you are dust, and to dust you shall return."
+            ),
+            "Easter": (
+                "🐣🌸 He is risen! Happy Easter! 🎉✨",
+                "Easter in {} is on {}."
+            ),
+            "Pentecost": (
+                "🕊️ Today is Pentecost, celebrating the descent of the Holy Spirit upon the Apostles.",
+                "🕊️ Pentecost is on {}, celebrating the descent of the Holy Spirit upon the Apostles."
+            ),
+            "Christmas": (
+                "🎄✨ Glory to God in the highest! Merry Christmas! Celebrating the birth of our Savior Jesus Christ. 👶⭐",
+                "🎄 Christmas is on {}. Glory to God in the highest! Celebrating the birth of our Savior Jesus Christ. 👶⭐"
+            ),
+            "Epiphany": (
+                "✨ Today is Epiphany, celebrating the visit of the Magi to Jesus.",
+                "✨ Epiphany is on {}, celebrating the visit of the Magi to Jesus."
+            ),
+            "Assumption of Mary": (
+                "🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven.",
+                "🕊️ The Assumption of Mary is on {}, celebrating Mary's ascension into heaven."
+            ),
+            "All Saints' Day": (
+                "✝️ Today is All Saints' Day, honoring all Christian saints and martyrs.",
+                "✝️ All Saints' Day is on {}, honoring all Christian saints and martyrs."
+            ),
+            "All Souls' Day": (
+                "🕯️ Today is All Souls' Day, remembering and honoring the deceased.",
+                "🕯️ All Souls' Day is on {}, remembering and honoring the deceased."
+            ),
+            "Corpus Christi": (
+                "🍞 Today is Corpus Christi, celebrating the Body of Christ.",
+                "🍞 Corpus Christi is on {}, celebrating the Body of Christ."
+            ),
+            "Ascension": (
+                "✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven.",
+                "✝️ Ascension Thursday is on {}, commemorating Jesus's ascension into heaven."
+            ),
+            "Palm Sunday": (
+                "🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.",
+                "🌿 Palm Sunday is on {}, marking Jesus's triumphant entry into Jerusalem."
+            ),
+            "Good Friday": (
+                "✝️ Today is Good Friday, commemorating Christ's crucifixion.",
+                "✝️ Good Friday is on {}, commemorating Christ's crucifixion."
+            ),
+            "Holy Thursday": (
+                "🍷🍞 Today is Holy Thursday, commemorating the Last Supper.",
+                "🍷🍞 Holy Thursday is on {}, commemorating the Last Supper."
+            )
+        }
+
+        try:
+            if year is None:
+                year = datetime.date.today().year
+
+            if holiday == "Easter":
+                # Special handling for Easter since it's the base calculation
+                easter_date = self.calculate_easter(year)
+                today = datetime.date.today()
+                
+                if today == easter_date:
+                    await ctx.respond(message_map["Easter"][0])
+                else:
+                    await ctx.respond(message_map["Easter"][1].format(year, easter_date.strftime('%A, %B %d, %Y')))
+            else:
+                # Use the base holiday command for all other holidays
+                holiday_key = holiday_map[holiday]
+                today_message, future_message = message_map[holiday]
+                
+                dates = await self.get_season_dates(year)
+                holiday_date = dates[holiday_key]
+                
+                if datetime.date.today() == holiday_date:
+                    await ctx.respond(today_message)
+                else:
+                    await ctx.respond(future_message.format(holiday_date.strftime('%A, %B %d, %Y')))
+
+        except Exception as e:
+            await ctx.respond(f"❌ An error occurred while calculating the date: {str(e)}")
+
 
