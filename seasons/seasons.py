@@ -179,8 +179,8 @@ class Seasons(commands.Cog):
             good_friday: "✝️ Today is Good Friday, commemorating Christ's crucifixion.",
             palm_sunday: "🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.",
             holy_thursday: "🍷🍞 Today is Holy Thursday, commemorating the Last Supper.",
-            pancake_tuesday: self.pancake,
-            ash_wednesday: self.ash,
+            pancake_tuesday: "🥞 It's Pancake Tuesday! Time to flip some pancakes! Use the pancake command to celebrate!",
+            ash_wednesday: self.ashwednesday,
             easter: self.easter,
             epiphany: "✨ Today is Epiphany, celebrating the visit of the Magi to Jesus.",
             ascension: "✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven.",
@@ -200,7 +200,7 @@ class Seasons(commands.Cog):
                 return
 
         # Lent message
-        if today >= ash_wednesday and today < easter:
+        if today >= ash_wednesday and today <= easter:
             await self.lent(ctx)
             return
 
