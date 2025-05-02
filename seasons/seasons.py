@@ -279,8 +279,33 @@ class Seasons(commands.Cog):
     @commands.command()
     async def advent(self, ctx):
         """Information about Advent season."""
-        await ctx.send("🕯️ Advent is a time of waiting and preparation for the celebration of Jesus's birth. "
-                      "Each candle on the Advent wreath represents: Hope, Peace, Joy, and Love.")
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            # Get this year's dates
+            this_year_dates = await self.get_season_dates(year)
+            this_advent_start = this_year_dates["advent_start"]
+            this_christmas = this_year_dates["christmas"]
+            
+            # Get next year's dates
+            next_year_dates = await self.get_season_dates(year + 1)
+            next_advent_start = next_year_dates["advent_start"]
+            next_christmas = next_year_dates["christmas"]
+            
+            # Determine which year's Advent to show
+            if today > this_advent_start:
+                advent_start = next_advent_start
+                christmas = next_christmas
+            else:
+                advent_start = this_advent_start
+                christmas = this_christmas
+            
+            await ctx.send(f"🕯️ Advent begins on {advent_start.strftime('%A, %B %d, %Y')} and ends on {christmas.strftime('%A, %B %d, %Y')}.\n"
+                          "A time of waiting and preparation for the celebration of Jesus's birth. "
+                          "Each candle on the Advent wreath represents: Hope, Peace, Joy, and Love.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the Advent dates: {str(e)}")
 
     @commands.command()
     async def christmas(self, ctx):
