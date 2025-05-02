@@ -183,7 +183,16 @@ class Seasons(commands.Cog):
     @commands.command()
     async def ashwednesday(self, ctx):
         """Ash Wednesday reminder."""
-        await ctx.send("✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday.")
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            ash_wednesday = dates["ash_wednesday"]
+            await ctx.send(f"✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday.\n"
+                          f"Ash Wednesday is on {ash_wednesday.strftime('%A, %B %d, %Y')}.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
 
     @commands.command()
     async def easter(self, ctx, year: int = None):
@@ -191,13 +200,16 @@ class Seasons(commands.Cog):
         If year is provided, shows Easter date for that year."""
         if year is None:
             year = datetime.date.today().year
-        easter_date = self.calculate_easter(year)
-        
-        today = datetime.date.today()
-        if today == easter_date:
-            await ctx.send("🐣🌸 He is risen! Happy Easter! 🎉✨")
-        else:
-            await ctx.send(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
+        try:
+            easter_date = self.calculate_easter(year)
+            today = datetime.date.today()
+            
+            if today == easter_date:
+                await ctx.send("🐣🌸 He is risen! Happy Easter! 🎉✨")
+            else:
+                await ctx.send(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
 
     @commands.command()
     async def lent(self, ctx):
@@ -310,17 +322,203 @@ class Seasons(commands.Cog):
     @commands.command()
     async def christmas(self, ctx):
         """Celebrate Christmas!"""
-        await ctx.send("🎄✨ Glory to God in the highest! Merry Christmas! "
-                      "Celebrating the birth of our Savior Jesus Christ. 👶⭐")
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            christmas = dates["christmas"]
+            
+            if today == christmas:
+                await ctx.send("🎄✨ Glory to God in the highest! Merry Christmas! "
+                              "Celebrating the birth of our Savior Jesus Christ. 👶⭐")
+            else:
+                await ctx.send(f"🎄 Christmas is on {christmas.strftime('%A, %B %d, %Y')}.\n"
+                              "Glory to God in the highest! Celebrating the birth of our Savior Jesus Christ. 👶⭐")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
 
     @commands.command()
     async def pentecost(self, ctx, year: int = None):
         """Get the date of Pentecost (50 days after Easter)."""
         if year is None:
             year = datetime.date.today().year
-        easter_date = self.calculate_easter(year)
-        pentecost_date = easter_date + datetime.timedelta(days=49)
-        await ctx.send(f"🕊️ Pentecost in {year} is on {pentecost_date.strftime('%A, %B %d, %Y')}.")
+        try:
+            dates = await self.get_season_dates(year)
+            pentecost_date = dates["pentecost"]
+            await ctx.send(f"🕊️ Pentecost in {year} is on {pentecost_date.strftime('%A, %B %d, %Y')}.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def pancaketuesday(self, ctx):
+        """Get the date of Pancake Tuesday."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            pancake_tuesday = dates["pancake_tuesday"]
+            
+            if today == pancake_tuesday:
+                await ctx.send("🥞 It's Pancake Tuesday! Time to flip some pancakes! Use the pancake command to celebrate!")
+            else:
+                await ctx.send(f"🥞 Pancake Tuesday is on {pancake_tuesday.strftime('%A, %B %d, %Y')}. Time to flip some pancakes!")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def epiphany(self, ctx):
+        """Get the date of Epiphany."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            epiphany = dates["epiphany"]
+            
+            if today == epiphany:
+                await ctx.send("✨ Today is Epiphany, celebrating the visit of the Magi to Jesus.")
+            else:
+                await ctx.send(f"✨ Epiphany is on {epiphany.strftime('%A, %B %d, %Y')}, celebrating the visit of the Magi to Jesus.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def assumption(self, ctx):
+        """Get the date of the Assumption of Mary."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            assumption = dates["assumption_of_mary"]
+            
+            if today == assumption:
+                await ctx.send("🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven.")
+            else:
+                await ctx.send(f"🕊️ The Assumption of Mary is on {assumption.strftime('%A, %B %d, %Y')}, celebrating Mary's ascension into heaven.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def allsaints(self, ctx):
+        """Get the date of All Saints' Day."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            all_saints = dates["all_saints_day"]
+            
+            if today == all_saints:
+                await ctx.send("✝️ Today is All Saints' Day, honoring all Christian saints and martyrs.")
+            else:
+                await ctx.send(f"✝️ All Saints' Day is on {all_saints.strftime('%A, %B %d, %Y')}, honoring all Christian saints and martyrs.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def allsouls(self, ctx):
+        """Get the date of All Souls' Day."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            all_souls = dates["all_souls_day"]
+            
+            if today == all_souls:
+                await ctx.send("🕯️ Today is All Souls' Day, remembering and honoring the deceased.")
+            else:
+                await ctx.send(f"🕯️ All Souls' Day is on {all_souls.strftime('%A, %B %d, %Y')}, remembering and honoring the deceased.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def corpuschristi(self, ctx):
+        """Get the date of Corpus Christi."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            corpus_christi = dates["corpus_christi"]
+            
+            if today == corpus_christi:
+                await ctx.send("🍞 Today is Corpus Christi, celebrating the Body of Christ.")
+            else:
+                await ctx.send(f"🍞 Corpus Christi is on {corpus_christi.strftime('%A, %B %d, %Y')}, celebrating the Body of Christ.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def ascension(self, ctx):
+        """Get the date of Ascension Thursday."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            ascension = dates["ascension"]
+            
+            if today == ascension:
+                await ctx.send("✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven.")
+            else:
+                await ctx.send(f"✝️ Ascension Thursday is on {ascension.strftime('%A, %B %d, %Y')}, commemorating Jesus's ascension into heaven.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def palmsunday(self, ctx):
+        """Get the date of Palm Sunday."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            palm_sunday = dates["palm_sunday"]
+            
+            if today == palm_sunday:
+                await ctx.send("🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.")
+            else:
+                await ctx.send(f"🌿 Palm Sunday is on {palm_sunday.strftime('%A, %B %d, %Y')}, marking Jesus's triumphant entry into Jerusalem.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def goodfriday(self, ctx):
+        """Get the date of Good Friday."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            good_friday = dates["good_friday"]
+            
+            if today == good_friday:
+                await ctx.send("✝️ Today is Good Friday, commemorating Christ's crucifixion.")
+            else:
+                await ctx.send(f"✝️ Good Friday is on {good_friday.strftime('%A, %B %d, %Y')}, commemorating Christ's crucifixion.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+
+    @commands.command()
+    async def holythursday(self, ctx):
+        """Get the date of Holy Thursday."""
+        today = datetime.date.today()
+        year = today.year
+        
+        try:
+            dates = await self.get_season_dates(year)
+            holy_thursday = dates["holy_thursday"]
+            
+            if today == holy_thursday:
+                await ctx.send("🍷🍞 Today is Holy Thursday, commemorating the Last Supper.")
+            else:
+                await ctx.send(f"🍷🍞 Holy Thursday is on {holy_thursday.strftime('%A, %B %d, %Y')}, commemorating the Last Supper.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
 
     class StatsView(ui.View):
         def __init__(self, stats_pages: List[Embed]):
