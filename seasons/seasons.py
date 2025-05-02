@@ -6,7 +6,11 @@ from discord import ui, ButtonStyle, Embed
 from discord.app_commands import Choice
 from typing import List, Tuple, Dict, Optional, Union, Sequence
 from functools import lru_cache
+from redbot.core.i18n import Translator, cog_i18n, set_contextual_locales_from_guild
 
+_ = Translator("Seasons", __file__)
+
+@cog_i18n(_)
 class Seasons(commands.Cog):
     """A cog for Christian seasons and holidays like Lent, Easter, and more!"""
 
@@ -25,6 +29,12 @@ class Seasons(commands.Cog):
             "worst_flip": None
         }
         self.config.register_member(**default_member)
+
+        # Register default guild config for language
+        default_guild = {
+            "language": "en"
+        }
+        self.config.register_guild(**default_guild)
 
     # Constants for days before/after Easter
     DAYS_BEFORE_EASTER = {
@@ -119,6 +129,7 @@ class Seasons(commands.Cog):
     async def easter(self, ctx, year: int = None):
         """Get the date of Easter or celebrate Easter!
         If year is provided, shows Easter date for that year."""
+        await set_contextual_locales_from_guild(ctx.guild)
         if year is None:
             year = datetime.date.today().year
         try:
@@ -648,56 +659,56 @@ class Seasons(commands.Cog):
         # Map the holiday key to the appropriate message format
         message_map = {
             "ash_wednesday": (
-                "✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday.",
-                "✝️ Ash Wednesday is on {}. Remember, you are dust, and to dust you shall return."
+                _("✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday."),
+                _("✝️ Ash Wednesday is on {}. Remember, you are dust, and to dust you shall return.")
             ),
             "easter": (
-                "🐣🌸 He is risen! Happy Easter! 🎉✨",
-                "Easter in {} is on {}."
+                _("🐣🌸 He is risen! Happy Easter! 🎉✨"),
+                _("Easter in {} is on {}.")
             ),
             "pentecost": (
-                "🕊️ Today is Pentecost, celebrating the descent of the Holy Spirit upon the Apostles.",
-                "🕊️ Pentecost is on {}, celebrating the descent of the Holy Spirit upon the Apostles."
+                _("🕊️ Today is Pentecost, celebrating the descent of the Holy Spirit upon the Apostles."),
+                _("🕊️ Pentecost is on {}, celebrating the descent of the Holy Spirit upon the Apostles.")
             ),
             "christmas": (
-                "🎄✨ Glory to God in the highest! Merry Christmas! Celebrating the birth of our Savior Jesus Christ. 👶⭐",
-                "🎄 Christmas is on {}. Glory to God in the highest! Celebrating the birth of our Savior Jesus Christ. 👶⭐"
+                _("🎄✨ Glory to God in the highest! Merry Christmas! Celebrating the birth of our Savior Jesus Christ. 👶⭐"),
+                _("🎄 Christmas is on {}. Glory to God in the highest! Celebrating the birth of our Savior Jesus Christ. 👶⭐")
             ),
             "epiphany": (
-                "✨ Today is Epiphany, celebrating the visit of the Magi to Jesus.",
-                "✨ Epiphany is on {}, celebrating the visit of the Magi to Jesus."
+                _("✨ Today is Epiphany, celebrating the visit of the Magi to Jesus."),
+                _("✨ Epiphany is on {}, celebrating the visit of the Magi to Jesus.")
             ),
             "assumption_of_mary": (
-                "🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven.",
-                "🕊️ The Assumption of Mary is on {}, celebrating Mary's ascension into heaven."
+                _("🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven."),
+                _("🕊️ The Assumption of Mary is on {}, celebrating Mary's ascension into heaven.")
             ),
             "all_saints_day": (
-                "✝️ Today is All Saints' Day, honoring all Christian saints and martyrs.",
-                "✝️ All Saints' Day is on {}, honoring all Christian saints and martyrs."
+                _("✝️ Today is All Saints' Day, honoring all Christian saints and martyrs."),
+                _("✝️ All Saints' Day is on {}, honoring all Christian saints and martyrs.")
             ),
             "all_souls_day": (
-                "🕯️ Today is All Souls' Day, remembering and honoring the deceased.",
-                "🕯️ All Souls' Day is on {}, remembering and honoring the deceased."
+                _("🕯️ Today is All Souls' Day, remembering and honoring the deceased."),
+                _("🕯️ All Souls' Day is on {}, remembering and honoring the deceased.")
             ),
             "corpus_christi": (
-                "🍞 Today is Corpus Christi, celebrating the Body of Christ.",
-                "🍞 Corpus Christi is on {}, celebrating the Body of Christ."
+                _("🍞 Today is Corpus Christi, celebrating the Body of Christ."),
+                _("🍞 Corpus Christi is on {}, celebrating the Body of Christ.")
             ),
             "ascension": (
-                "✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven.",
-                "✝️ Ascension Thursday is on {}, commemorating Jesus's ascension into heaven."
+                _("✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven."),
+                _("✝️ Ascension Thursday is on {}, commemorating Jesus's ascension into heaven.")
             ),
             "palm_sunday": (
-                "🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem.",
-                "🌿 Palm Sunday is on {}, marking Jesus's triumphant entry into Jerusalem."
+                _("🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem."),
+                _("🌿 Palm Sunday is on {}, marking Jesus's triumphant entry into Jerusalem.")
             ),
             "good_friday": (
-                "✝️ Today is Good Friday, commemorating Christ's crucifixion.",
-                "✝️ Good Friday is on {}, commemorating Christ's crucifixion."
+                _("✝️ Today is Good Friday, commemorating Christ's crucifixion."),
+                _("✝️ Good Friday is on {}, commemorating Christ's crucifixion.")
             ),
             "holy_thursday": (
-                "🍷🍞 Today is Holy Thursday, commemorating the Last Supper.",
-                "🍷🍞 Holy Thursday is on {}, commemorating the Last Supper."
+                _("🍷🍞 Today is Holy Thursday, commemorating the Last Supper."),
+                _("🍷🍞 Holy Thursday is on {}, commemorating the Last Supper.")
             )
         }
 
@@ -727,6 +738,34 @@ class Seasons(commands.Cog):
                     await ctx.send(future_message.format(holiday_date.strftime('%A, %B %d, %Y')))
 
         except Exception as e:
-            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}")
+            await ctx.send(_("❌ An error occurred while calculating the date: {}").format(str(e)))
+
+    @commands.command()
+    @commands.admin_or_permissions(manage_guild=True)
+    async def setlanguage(self, ctx, language: str):
+        """Set the language for holiday messages in this guild.
+        
+        Available languages:
+        - en (English)
+        - es (Spanish)
+        - fr (French)
+        - de (German)
+        - it (Italian)
+        - pt (Portuguese)
+        - pl (Polish)
+        - ru (Russian)
+        - uk (Ukrainian)
+        - zh (Chinese)
+        - ja (Japanese)
+        - ko (Korean)
+        """
+        available_languages = ["en", "es", "fr", "de", "it", "pt", "pl", "ru", "uk", "zh", "ja", "ko"]
+        
+        if language.lower() not in available_languages:
+            await ctx.send(_("❌ Invalid language. Available languages are: {}").format(", ".join(available_languages)))
+            return
+            
+        await self.config.guild(ctx.guild).language.set(language.lower())
+        await ctx.send(_("✅ Language set to {}").format(language.upper()))
 
 

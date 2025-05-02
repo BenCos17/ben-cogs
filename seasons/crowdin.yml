@@ -1,0 +1,19 @@
+project_identifier: seasons
+api_key_env: CROWDIN_API_KEY
+base_path: .
+files:
+  - source: /locales/en/LC_MESSAGES/seasons.po
+    translation: /locales/%two_letters_code%/LC_MESSAGES/seasons.po
+    languages_mapping:
+      two_letters_code:
+        - es
+        - fr
+        - de
+        - it
+        - pt
+        - pl
+        - uk
+        - zh
+        - ja
+        - ko 
+        - ie

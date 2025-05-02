@@ -1,0 +1,120 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Seasons\n"
+"POT-Creation-Date: 2024-03-14 12:00+0000\n"
+"PO-Revision-Date: 2024-03-14 12:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+"Language: en\n"
+
+#: seasons.py:100
+msgid "✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday."
+msgstr "✝️ Remember, you are dust, and to dust you shall return. Have a blessed Ash Wednesday."
+
+#: seasons.py:101
+msgid "✝️ Ash Wednesday is on {}. Remember, you are dust, and to dust you shall return."
+msgstr "✝️ Ash Wednesday is on {}. Remember, you are dust, and to dust you shall return."
+
+#: seasons.py:103
+msgid "🐣🌸 He is risen! Happy Easter! 🎉✨"
+msgstr "🐣🌸 He is risen! Happy Easter! 🎉✨"
+
+#: seasons.py:104
+msgid "Easter in {} is on {}."
+msgstr "Easter in {} is on {}."
+
+#: seasons.py:106
+msgid "🕊️ Today is Pentecost, celebrating the descent of the Holy Spirit upon the Apostles."
+msgstr "🕊️ Today is Pentecost, celebrating the descent of the Holy Spirit upon the Apostles."
+
+#: seasons.py:107
+msgid "🕊️ Pentecost is on {}, celebrating the descent of the Holy Spirit upon the Apostles."
+msgstr "🕊️ Pentecost is on {}, celebrating the descent of the Holy Spirit upon the Apostles."
+
+#: seasons.py:109
+msgid "🎄✨ Glory to God in the highest! Merry Christmas! Celebrating the birth of our Savior Jesus Christ. 👶⭐"
+msgstr "🎄✨ Glory to God in the highest! Merry Christmas! Celebrating the birth of our Savior Jesus Christ. 👶⭐"
+
+#: seasons.py:110
+msgid "🎄 Christmas is on {}. Glory to God in the highest! Celebrating the birth of our Savior Jesus Christ. 👶⭐"
+msgstr "🎄 Christmas is on {}. Glory to God in the highest! Celebrating the birth of our Savior Jesus Christ. 👶⭐"
+
+#: seasons.py:112
+msgid "✨ Today is Epiphany, celebrating the visit of the Magi to Jesus."
+msgstr "✨ Today is Epiphany, celebrating the visit of the Magi to Jesus."
+
+#: seasons.py:113
+msgid "✨ Epiphany is on {}, celebrating the visit of the Magi to Jesus."
+msgstr "✨ Epiphany is on {}, celebrating the visit of the Magi to Jesus."
+
+#: seasons.py:115
+msgid "🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven."
+msgstr "🕊️ Today is the Assumption of Mary, celebrating Mary's ascension into heaven."
+
+#: seasons.py:116
+msgid "🕊️ The Assumption of Mary is on {}, celebrating Mary's ascension into heaven."
+msgstr "🕊️ The Assumption of Mary is on {}, celebrating Mary's ascension into heaven."
+
+#: seasons.py:118
+msgid "✝️ Today is All Saints' Day, honoring all Christian saints and martyrs."
+msgstr "✝️ Today is All Saints' Day, honoring all Christian saints and martyrs."
+
+#: seasons.py:119
+msgid "✝️ All Saints' Day is on {}, honoring all Christian saints and martyrs."
+msgstr "✝️ All Saints' Day is on {}, honoring all Christian saints and martyrs."
+
+#: seasons.py:121
+msgid "🕯️ Today is All Souls' Day, remembering and honoring the deceased."
+msgstr "🕯️ Today is All Souls' Day, remembering and honoring the deceased."
+
+#: seasons.py:122
+msgid "🕯️ All Souls' Day is on {}, remembering and honoring the deceased."
+msgstr "🕯️ All Souls' Day is on {}, remembering and honoring the deceased."
+
+#: seasons.py:124
+msgid "🍞 Today is Corpus Christi, celebrating the Body of Christ."
+msgstr "🍞 Today is Corpus Christi, celebrating the Body of Christ."
+
+#: seasons.py:125
+msgid "🍞 Corpus Christi is on {}, celebrating the Body of Christ."
+msgstr "🍞 Corpus Christi is on {}, celebrating the Body of Christ."
+
+#: seasons.py:127
+msgid "✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven."
+msgstr "✝️ Today is Ascension Thursday, commemorating Jesus's ascension into heaven."
+
+#: seasons.py:128
+msgid "✝️ Ascension Thursday is on {}, commemorating Jesus's ascension into heaven."
+msgstr "✝️ Ascension Thursday is on {}, commemorating Jesus's ascension into heaven."
+
+#: seasons.py:130
+msgid "🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem."
+msgstr "🌿 Today is Palm Sunday, marking Jesus's triumphant entry into Jerusalem."
+
+#: seasons.py:131
+msgid "🌿 Palm Sunday is on {}, marking Jesus's triumphant entry into Jerusalem."
+msgstr "🌿 Palm Sunday is on {}, marking Jesus's triumphant entry into Jerusalem."
+
+#: seasons.py:133
+msgid "✝️ Today is Good Friday, commemorating Christ's crucifixion."
+msgstr "✝️ Today is Good Friday, commemorating Christ's crucifixion."
+
+#: seasons.py:134
+msgid "✝️ Good Friday is on {}, commemorating Christ's crucifixion."
+msgstr "✝️ Good Friday is on {}, commemorating Christ's crucifixion."
+
+#: seasons.py:136
+msgid "🍷🍞 Today is Holy Thursday, commemorating the Last Supper."
+msgstr "🍷🍞 Today is Holy Thursday, commemorating the Last Supper."
+
+#: seasons.py:137
+msgid "🍷🍞 Holy Thursday is on {}, commemorating the Last Supper."
+msgstr "🍷🍞 Holy Thursday is on {}, commemorating the Last Supper."
+
+#: seasons.py:139
+msgid "❌ An error occurred while calculating the date: {}"
+msgstr "❌ An error occurred while calculating the date: {}" 
