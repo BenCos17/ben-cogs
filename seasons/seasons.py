@@ -158,8 +158,8 @@ class Seasons(commands.Cog):
         pancake_tuesday = ash_wednesday - datetime.timedelta(days=1)
         pentecost = easter + datetime.timedelta(days=49)
         
-        # Debug logging
-        await ctx.send(f"Debug: Today is {today}\n"
+        # Debug logging - send first
+        debug_msg = await ctx.send(f"Debug: Today is {today}\n"
                       f"Easter is {easter}\n"
                       f"Ash Wednesday is {ash_wednesday}\n"
                       f"Pentecost is {pentecost}")
