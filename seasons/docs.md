@@ -1,17 +1,13 @@
 A cog for Christian seasons and holidays like Lent, Easter, and more!
 
-# [p]pancake
-Flip a pancake! Win currency and track your flipping stats!<br/>
- - Usage: `[p]pancake`
-# [p]pancake_stats
-Check your pancake flipping statistics.<br/>
- - Usage: `[p]pancake_stats [user=None]`
+# [p]is_lent
+Check if we are currently in the Lenten season.<br/>
+ - Usage: `[p]is_lent`
 # [p]ashwednesday
-Ash Wednesday reminder.<br/>
+Remember Ash Wednesday.<br/>
  - Usage: `[p]ashwednesday`
 # [p]easter
-Get the date of Easter or celebrate Easter!<br/>
-If year is provided, shows Easter date for that year.<br/>
+Celebrate Easter or find out when it is this year.<br/>
  - Usage: `[p]easter [year=None]`
 # [p]lent
 Start of Lent message.<br/>
@@ -20,20 +16,26 @@ Start of Lent message.<br/>
 Check if today is a special Christian holiday.<br/>
  - Usage: `[p]catholic_today`
 # [p]advent
-Information about Advent season.<br/>
+Learn about Advent season.<br/>
  - Usage: `[p]advent`
 # [p]christmas
 Celebrate Christmas!<br/>
  - Usage: `[p]christmas`
 # [p]pentecost
-Get the date of Pentecost (50 days after Easter).<br/>
+Find out when Pentecost is this year.<br/>
  - Usage: `[p]pentecost [year=None]`
 # [p]pancake_leaders
-Show detailed pancake leaderboards with multiple categories.<br/>
+View pancake leaderboards.<br/>
  - Usage: `[p]pancake_leaders [top=5]`
 # [p]balance
-Check your balance or someone else's.<br/>
+Check your or someone else's balance.<br/>
  - Usage: `[p]balance [user=None]`
 # [p]competitive_pancake
-Like pancake, but with an entry fee for bigger stakes!<br/>
+Competitive pancake flipping with bigger rewards!<br/>
  - Usage: `[p]competitive_pancake`
+# [p]pancake
+Flip a pancake and win rewards! Track your flipping progress.<br/>
+ - Usage: `[p]pancake`
+# [p]pancake_stats
+View your pancake flipping stats.<br/>
+ - Usage: `[p]pancake_stats [user=None]`
