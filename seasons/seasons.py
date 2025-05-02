@@ -634,8 +634,9 @@ class Seasons(commands.Cog):
             
             raise commands.BadArgument(f"Unknown holiday: {argument}")
 
-    @commands.command(name="holiday")
-    async def holiday_command(self, ctx, holiday: HolidayConverter, year: int = None):
+    @commands.command()
+    @commands.bot_has_permissions(send_messages=True)
+    async def holiday(self, ctx, holiday: HolidayConverter, year: int = None):
         """Get information about Christian holidays.
         
         Example:
