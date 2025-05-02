@@ -9,7 +9,7 @@ class SeasonsSlash(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="holiday", description="Get information about Christian holidays")
+    @commands.hybrid_command(name="holiday", description="Get information about Christian holidays")
     @app_commands.describe(holiday="Choose a holiday", year="Year (optional)")
     @app_commands.choices(holiday=[
         app_commands.Choice(name="Ash Wednesday", value="ash_wednesday"),
@@ -28,7 +28,7 @@ class SeasonsSlash(commands.Cog):
     ])
     async def holiday_slash(
         self,
-        interaction: discord.Interaction,
+        ctx: commands.Context,
         holiday: app_commands.Choice[str],
         year: Optional[int] = None
     ):
@@ -36,7 +36,7 @@ class SeasonsSlash(commands.Cog):
         # Get the main cog instance
         seasons_cog = self.bot.get_cog("Seasons")
         if not seasons_cog:
-            await interaction.response.send_message("❌ The Seasons cog is not loaded.", ephemeral=True)
+            await ctx.send("❌ The Seasons cog is not loaded.")
             return
 
         try:
@@ -51,9 +51,9 @@ class SeasonsSlash(commands.Cog):
                 today = datetime.date.today()
                 
                 if today == easter_date:
-                    await interaction.response.send_message("🐣🌸 He is risen! Happy Easter! 🎉✨")
+                    await ctx.send("🐣🌸 He is risen! Happy Easter! 🎉✨")
                 else:
-                    await interaction.response.send_message(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
+                    await ctx.send(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
             else:
                 # Use the base holiday command for all other holidays
                 dates = await seasons_cog.get_season_dates(year)
@@ -114,9 +114,9 @@ class SeasonsSlash(commands.Cog):
                 today_message, future_message = message_map[holiday_key]
                 
                 if datetime.date.today() == holiday_date:
-                    await interaction.response.send_message(today_message)
+                    await ctx.send(today_message)
                 else:
-                    await interaction.response.send_message(future_message.format(holiday_date.strftime('%A, %B %d, %Y')))
+                    await ctx.send(future_message.format(holiday_date.strftime('%A, %B %d, %Y')))
 
         except Exception as e:
-            await interaction.response.send_message(f"❌ An error occurred while calculating the date: {str(e)}", ephemeral=True) 
+            await ctx.send(f"❌ An error occurred while calculating the date: {str(e)}") 
