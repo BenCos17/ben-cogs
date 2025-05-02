@@ -140,14 +140,27 @@ class Seasons(commands.Cog):
         else:
             await ctx.send(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
 
-
     @commands.command()
     async def lent(self, ctx):
         """Start of Lent message."""
         today = datetime.date.today()
         year = today.year
-        easter = self.calculate_easter(year)
-        ash_wednesday = easter - datetime.timedelta(days=46)
+        
+        # Calculate this year's Easter
+        this_easter = self.calculate_easter(year)
+        this_ash_wednesday = this_easter - datetime.timedelta(days=46)
+        
+        # Calculate next year's Easter
+        next_easter = self.calculate_easter(year + 1)
+        next_ash_wednesday = next_easter - datetime.timedelta(days=46)
+        
+        # If we're after this year's Easter, show next year's dates
+        if today > this_easter:
+            ash_wednesday = next_ash_wednesday
+            easter = next_easter
+        else:
+            ash_wednesday = this_ash_wednesday
+            easter = this_easter
         
         await ctx.send(f"🙏 Lent begins on {ash_wednesday.strftime('%A, %B %d, %Y')} and ends on {easter.strftime('%A, %B %d, %Y')}.\n"
                       "A time for fasting, prayer, and almsgiving. What are you giving up this year?")
