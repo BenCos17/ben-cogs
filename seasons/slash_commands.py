@@ -1,4 +1,4 @@
-from redbot.core import commands
+from redbot.core import commands, app_commands
 import discord
 import datetime
 from typing import Optional
@@ -9,35 +9,34 @@ class SeasonsSlash(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.slash_command(name="holiday", description="Get information about Christian holidays")
+    @app_commands.command(name="holiday", description="Get information about Christian holidays")
+    @app_commands.describe(holiday="Choose a holiday", year="Year (optional)")
+    @app_commands.choices(holiday=[
+        app_commands.Choice(name="Ash Wednesday", value="ash_wednesday"),
+        app_commands.Choice(name="Easter", value="easter"),
+        app_commands.Choice(name="Pentecost", value="pentecost"),
+        app_commands.Choice(name="Christmas", value="christmas"),
+        app_commands.Choice(name="Epiphany", value="epiphany"),
+        app_commands.Choice(name="Assumption of Mary", value="assumption_of_mary"),
+        app_commands.Choice(name="All Saints' Day", value="all_saints_day"),
+        app_commands.Choice(name="All Souls' Day", value="all_souls_day"),
+        app_commands.Choice(name="Corpus Christi", value="corpus_christi"),
+        app_commands.Choice(name="Ascension", value="ascension"),
+        app_commands.Choice(name="Palm Sunday", value="palm_sunday"),
+        app_commands.Choice(name="Good Friday", value="good_friday"),
+        app_commands.Choice(name="Holy Thursday", value="holy_thursday")
+    ])
     async def holiday_slash(
         self,
-        ctx,
-        holiday: str = discord.Option(
-            description="Choose a holiday",
-            choices=[
-                "Ash Wednesday",
-                "Easter",
-                "Pentecost",
-                "Christmas",
-                "Epiphany",
-                "Assumption of Mary",
-                "All Saints' Day",
-                "All Souls' Day",
-                "Corpus Christi",
-                "Ascension",
-                "Palm Sunday",
-                "Good Friday",
-                "Holy Thursday"
-            ]
-        ),
-        year: Optional[int] = discord.Option(description="Year (optional)", required=False)
+        interaction: discord.Interaction,
+        holiday: app_commands.Choice[str],
+        year: Optional[int] = None
     ):
         """Slash command to get information about any Christian holiday."""
         # Get the main cog instance
         seasons_cog = self.bot.get_cog("Seasons")
         if not seasons_cog:
-            await ctx.respond("❌ The Seasons cog is not loaded.", ephemeral=True)
+            await interaction.response.send_message("❌ The Seasons cog is not loaded.", ephemeral=True)
             return
 
         # Map the choice to our internal keys
@@ -61,17 +60,17 @@ class SeasonsSlash(commands.Cog):
             if year is None:
                 year = datetime.date.today().year
 
-            holiday_key = holiday_map[holiday]
+            holiday_key = holiday_map[holiday.name]
             
-            if holiday == "Easter":
+            if holiday.value == "easter":
                 # Special handling for Easter since it's the base calculation
                 easter_date = seasons_cog.calculate_easter(year)
                 today = datetime.date.today()
                 
                 if today == easter_date:
-                    await ctx.respond("🐣🌸 He is risen! Happy Easter! 🎉✨")
+                    await interaction.response.send_message("🐣🌸 He is risen! Happy Easter! 🎉✨")
                 else:
-                    await ctx.respond(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
+                    await interaction.response.send_message(f"Easter in {year} is on {easter_date.strftime('%A, %B %d, %Y')}.")
             else:
                 # Use the base holiday command for all other holidays
                 dates = await seasons_cog.get_season_dates(year)
@@ -132,9 +131,9 @@ class SeasonsSlash(commands.Cog):
                 today_message, future_message = message_map[holiday_key]
                 
                 if datetime.date.today() == holiday_date:
-                    await ctx.respond(today_message)
+                    await interaction.response.send_message(today_message)
                 else:
-                    await ctx.respond(future_message.format(holiday_date.strftime('%A, %B %d, %Y')))
+                    await interaction.response.send_message(future_message.format(holiday_date.strftime('%A, %B %d, %Y')))
 
         except Exception as e:
-            await ctx.respond(f"❌ An error occurred while calculating the date: {str(e)}", ephemeral=True) 
+            await interaction.response.send_message(f"❌ An error occurred while calculating the date: {str(e)}", ephemeral=True) 
