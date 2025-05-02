@@ -2,7 +2,8 @@ from redbot.core import commands, Config, bank
 import random
 import datetime
 import discord
-from discord import ui, ButtonStyle, Embed, OptionChoice
+from discord import ui, ButtonStyle, Embed
+from discord.app_commands import Choice
 from typing import List, Tuple, Dict, Optional, Union, Sequence
 from functools import lru_cache
 
@@ -761,7 +762,7 @@ class Seasons(commands.Cog):
         self,
         ctx: discord.ApplicationContext,
         value: str
-    ) -> list[OptionChoice]:
+    ):
         """Autocomplete for holiday names."""
         holidays = {
             "Ash Wednesday": "ash wednesday",
@@ -785,9 +786,9 @@ class Seasons(commands.Cog):
             if value.lower() in name.lower()
         }
         
-        # Return the first 25 matches as OptionChoice objects
+        # Return the first 25 matches
         return [
-            discord.OptionChoice(name=name, value=key)
+            {"name": name, "value": key}
             for name, key in filtered_holidays.items()
         ][:25]
 
