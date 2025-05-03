@@ -729,32 +729,6 @@ class Seasons(commands.Cog):
         except Exception as e:
             await ctx.send(_("❌ An error occurred while calculating the date: {}").format(str(e)))
 
-    @commands.command()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def setlanguage(self, ctx, language: str):
-        """Set the language for holiday messages in this guild.
-        
-        Available languages:
-        - en (English)
-        - es (Spanish)
-        - fr (French)
-        - de (German)
-        - it (Italian)
-        - pt (Portuguese)
-        - pl (Polish)
-        - ru (Russian)
-        - uk (Ukrainian)
-        - zh (Chinese)
-        - ja (Japanese)
-        - ko (Korean)
-        """
-        available_languages = ["en", "es", "fr", "de", "it", "pt", "pl", "ru", "uk", "zh", "ja", "ko"]
-        
-        if language.lower() not in available_languages:
-            await ctx.send(_("❌ Invalid language. Available languages are: {}").format(", ".join(available_languages)))
-            return
-            
-        await self.config.guild(ctx.guild).language.set(language.lower())
-        await ctx.send(_("✅ Language set to {}").format(language.upper()))
+
 
 
