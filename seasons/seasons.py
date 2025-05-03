@@ -607,18 +607,7 @@ class Seasons(commands.Cog):
         except ValueError:
             await ctx.send(f"{outcome_text}\nBut you don't have enough {currency_name} to pay for the mishap!")
 
-    @commands.command()
-    async def is_lent(self, ctx):
-        """Check if we are currently in the Lenten season."""
-        today = datetime.date.today()
-        year = today.year
-        easter = self.calculate_easter(year)
-        ash_wednesday = easter - datetime.timedelta(days=46)
-        
-        if today >= ash_wednesday and today <= easter:
-            await ctx.send("🙏 Yes, we are in the Lenten season! A time for fasting, prayer, and almsgiving.")
-        else:
-            await ctx.send("No, we are not currently in the Lenten season.")
+
 
     class HolidayConverter(commands.Converter):
         """Converter for holiday names."""
