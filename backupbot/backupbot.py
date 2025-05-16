@@ -39,7 +39,7 @@ class BackupBot(commands.Cog):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_filename = os.path.join(folder, f"backup_{timestamp}.zip")
 
-        data_folder = str(self.bot.data_folder)
+        data_folder = str(self.data_path)
         cog_folder = os.path.dirname(os.path.abspath(__file__))
 
         with zipfile.ZipFile(backup_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
