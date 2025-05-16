@@ -11,7 +11,6 @@ class BackupBot(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)
-        # Global config keys: url for HTTP backup, backup_path for local Samba path
         self.config.register_global(url=None, backup_path=None)
         self.backup_task.start()
 
@@ -31,18 +30,35 @@ class BackupBot(commands.Cog):
         await self.config.backup_path.set(path)
 
     def create_backup_zip(self, folder: str) -> str:
-        folders_to_backup = ["cogs", "data", "config"]
+        """
+        Backup:
+          - Red data folder (self.bot.data_folder)
+          - This cog source folder (__file__)
+        """
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_filename = os.path.join(folder, f"backup_{timestamp}.zip")
 
+        data_folder = str(self.bot.data_folder)
+        cog_folder = os.path.dirname(os.path.abspath(__file__))
+
         with zipfile.ZipFile(backup_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-            for folder_name in folders_to_backup:
-                if not os.path.exists(folder_name):
-                    continue
-                for root, _, files in os.walk(folder_name):
+            # Add Red data folder contents
+            if os.path.exists(data_folder):
+                for root, _, files in os.walk(data_folder):
                     for file in files:
                         filepath = os.path.join(root, file)
-                        arcname = os.path.relpath(filepath, ".")
+                        arcname = os.path.relpath(filepath, data_folder)
+                        arcname = os.path.join("red_data", arcname)
+                        zipf.write(filepath, arcname)
+
+            # Add cog folder contents
+            if os.path.exists(cog_folder):
+                for root, _, files in os.walk(cog_folder):
+                    for file in files:
+                        filepath = os.path.join(root, file)
+                        arcname = os.path.relpath(filepath, cog_folder)
+                        arcname = os.path.join("cog_source", arcname)
                         zipf.write(filepath, arcname)
 
         return backup_filename
@@ -123,7 +139,6 @@ class BackupBot(commands.Cog):
 
         url = await self.get_backup_url()
         if url:
-            # If local path not set, still create zip in temp folder for sending
             if not path:
                 filepath = self.create_backup_zip(".")
             await self.send_backup(filepath)
@@ -142,7 +157,6 @@ class BackupBot(commands.Cog):
 
         url = await self.get_backup_url()
         if url:
-            # If local path not set, create zip in current directory to send
             if not path:
                 filepath = self.create_backup_zip(".")
             await self.send_backup(filepath)
