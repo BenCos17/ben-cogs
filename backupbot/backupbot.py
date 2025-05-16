@@ -1,12 +1,13 @@
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.config import Config
-from redbot.core.utils import cog_data_path
 from discord.ext import tasks
 import aiohttp
 import zipfile
 import os
+import pathlib
 from datetime import datetime
+
 
 class BackupBot(commands.Cog):
     def __init__(self, bot: Red):
@@ -30,17 +31,20 @@ class BackupBot(commands.Cog):
     async def set_backup_path(self, path: str):
         await self.config.backup_path.set(path)
 
+    def get_cog_data_path(self) -> pathlib.Path:
+        # Return path to this cog's data folder
+        return pathlib.Path(self.bot.config.path) / "data" / self.qualified_name.lower()
+
     def create_backup_zip(self, folder: str) -> str:
         """
         Backup:
-          - Red data folder (self.bot.data_folder)
+          - Red data folder for this cog (cog_data_path)
           - This cog source folder (__file__)
         """
-
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_filename = os.path.join(folder, f"backup_{timestamp}.zip")
 
-        data_folder = str(cog_data_path(self))
+        data_folder = str(self.get_cog_data_path())
         cog_folder = os.path.dirname(os.path.abspath(__file__))
 
         with zipfile.ZipFile(backup_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
