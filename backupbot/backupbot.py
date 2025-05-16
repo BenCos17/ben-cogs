@@ -5,8 +5,10 @@ import os
 import io
 from datetime import datetime
 
-from redbot.core import commands, tasks
+from redbot.core import commands
 from redbot.core.bot import Red
+from discord.ext import tasks
+
 
 class BackupBot(commands.Cog):
     def __init__(self, bot: Red):
