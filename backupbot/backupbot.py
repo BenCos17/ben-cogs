@@ -32,8 +32,9 @@ class BackupBot(commands.Cog):
         await self.config.backup_path.set(path)
 
     def get_cog_data_path(self) -> pathlib.Path:
-        # Return path to this cog's data folder
-        return pathlib.Path(self.bot.config.path) / "data" / self.qualified_name.lower()
+    # Red's data folder is self.bot.data_folder
+        return pathlib.Path(self.bot.data_folder) / self.qualified_name.lower()
+
 
     def create_backup_zip(self, folder: str) -> str:
         """
