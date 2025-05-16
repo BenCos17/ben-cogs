@@ -11,7 +11,8 @@ class BackupBot(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)
-        self.config.register_global(url=None)  # Store URL globally
+        # Global config keys: url for HTTP backup, backup_path for local Samba path
+        self.config.register_global(url=None, backup_path=None)
         self.backup_task.start()
 
     def cog_unload(self):
@@ -23,16 +24,22 @@ class BackupBot(commands.Cog):
     async def set_backup_url(self, url: str):
         await self.config.url.set(url)
 
-    def create_backup_zip(self) -> str:
+    async def get_backup_path(self) -> str | None:
+        return await self.config.backup_path()
+
+    async def set_backup_path(self, path: str):
+        await self.config.backup_path.set(path)
+
+    def create_backup_zip(self, folder: str) -> str:
         folders_to_backup = ["cogs", "data", "config"]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_filename = f"backup_{timestamp}.zip"
+        backup_filename = os.path.join(folder, f"backup_{timestamp}.zip")
 
         with zipfile.ZipFile(backup_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-            for folder in folders_to_backup:
-                if not os.path.exists(folder):
+            for folder_name in folders_to_backup:
+                if not os.path.exists(folder_name):
                     continue
-                for root, _, files in os.walk(folder):
+                for root, _, files in os.walk(folder_name):
                     for file in files:
                         filepath = os.path.join(root, file)
                         arcname = os.path.relpath(filepath, ".")
@@ -57,6 +64,12 @@ class BackupBot(commands.Cog):
         except Exception as e:
             print(f"❌ Error sending backup: {e}")
 
+    async def save_backup_locally(self, folder: str) -> str:
+        if not os.path.exists(folder):
+            os.makedirs(folder, exist_ok=True)
+        filepath = self.create_backup_zip(folder)
+        return filepath
+
     @commands.group()
     async def backupbot(self, ctx: commands.Context):
         """Backup bot configuration commands."""
@@ -64,8 +77,9 @@ class BackupBot(commands.Cog):
             await ctx.send_help()
 
     @backupbot.command()
+    @commands.is_owner()
     async def seturl(self, ctx: commands.Context, url: str):
-        """Set the backup server URL."""
+        """Set the backup server URL for HTTP backups."""
         await self.set_backup_url(url)
         await ctx.send(f"Backup URL set to: {url}")
 
@@ -78,17 +92,63 @@ class BackupBot(commands.Cog):
         else:
             await ctx.send("Backup URL is not set.")
 
+    @backupbot.command()
+    @commands.is_owner()
+    async def setlocalpath(self, ctx: commands.Context, *, path: str):
+        """Set local backup folder path (e.g., Samba mount)."""
+        await self.set_backup_path(path)
+        await ctx.send(f"Local backup path set to: `{path}`")
+
+    @backupbot.command()
+    async def getlocalpath(self, ctx: commands.Context):
+        """Get the current local backup folder path."""
+        path = await self.get_backup_path()
+        if path:
+            await ctx.send(f"Local backup path: `{path}`")
+        else:
+            await ctx.send("Local backup path is not set.")
+
     @commands.command()
     async def manualbackup(self, ctx: commands.Context):
-        """Run backup manually"""
-        filepath = self.create_backup_zip()
-        await self.send_backup(filepath)
-        await ctx.send("📦 Backup created and sent.")
+        """Run backup manually, save locally if set, and send over HTTP if URL set."""
+        path = await self.get_backup_path()
+        if path:
+            if not os.path.exists(path):
+                await ctx.send(f"❌ Backup path `{path}` does not exist.")
+                return
+            filepath = await self.save_backup_locally(path)
+            await ctx.send(f"📦 Backup saved locally at `{filepath}`")
+        else:
+            await ctx.send("⚠️ No local backup path set; skipping local save.")
+
+        url = await self.get_backup_url()
+        if url:
+            # If local path not set, still create zip in temp folder for sending
+            if not path:
+                filepath = self.create_backup_zip(".")
+            await self.send_backup(filepath)
+            await ctx.send("📦 Backup sent via HTTP.")
+        else:
+            await ctx.send("⚠️ No backup URL set; skipping HTTP send.")
 
     @tasks.loop(hours=24)
     async def backup_task(self):
-        filepath = self.create_backup_zip()
-        await self.send_backup(filepath)
+        path = await self.get_backup_path()
+        if path and os.path.exists(path):
+            filepath = await self.save_backup_locally(path)
+            print(f"📦 Backup saved locally at {filepath}")
+        else:
+            print("⚠️ Local backup path not set or does not exist; skipping local save.")
+
+        url = await self.get_backup_url()
+        if url:
+            # If local path not set, create zip in current directory to send
+            if not path:
+                filepath = self.create_backup_zip(".")
+            await self.send_backup(filepath)
+            print("📦 Backup sent via HTTP.")
+        else:
+            print("⚠️ Backup URL not set; skipping HTTP send.")
 
     @backup_task.before_loop
     async def before_backup(self):
