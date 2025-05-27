@@ -4,7 +4,7 @@ from redbot.core import commands, Config
 import asyncio
 import aiohttp
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 class Servertools(commands.Cog):
     def __init__(self, bot):
@@ -159,22 +159,37 @@ class Servertools(commands.Cog):
                 image = Image.open(BytesIO(image_bytes))
                 image.thumbnail((64, 64))
                 image = image.convert('RGBA')
-                
-                # Create a new image with the red dot
-                dot_size = 16
-                dot_color = (255, 0, 0, 255)  # Red color with full opacity
-                
-                # Create a new image with the dot
-                dot = Image.new('RGBA', (dot_size, dot_size), (0, 0, 0, 0))
-                for x in range(dot_size):
-                    for y in range(dot_size):
-                        # Create a circular dot
-                        if (x - dot_size/2)**2 + (y - dot_size/2)**2 <= (dot_size/2)**2:
-                            dot.putpixel((x, y), dot_color)
-                
-                # Paste the dot in the top-right corner
-                image.paste(dot, (48, 0), dot)
-                
+
+                # Badge parameters
+                badge_radius = 14
+                badge_center = (image.width - badge_radius, image.height - badge_radius)
+                badge_diameter = badge_radius * 2
+
+                # Draw badge
+                draw = ImageDraw.Draw(image)
+
+                # Draw white border
+                draw.ellipse([
+                    badge_center[0] - badge_radius - 2, badge_center[1] - badge_radius - 2,
+                    badge_center[0] + badge_radius + 2, badge_center[1] + badge_radius + 2
+                ], fill=(255, 255, 255, 255))
+                # Draw red circle
+                draw.ellipse([
+                    badge_center[0] - badge_radius, badge_center[1] - badge_radius,
+                    badge_center[0] + badge_radius, badge_center[1] + badge_radius
+                ], fill=(237, 66, 69, 255))
+
+                # Draw the number '1' in the center of the badge
+                try:
+                    font = ImageFont.truetype("arial.ttf", 20)
+                except Exception:
+                    font = ImageFont.load_default()
+                text = "1"
+                text_width, text_height = draw.textsize(text, font=font)
+                text_x = badge_center[0] - text_width // 2
+                text_y = badge_center[1] - text_height // 2
+                draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255, 255))
+
                 buffer = BytesIO()
                 image.save(buffer, format='PNG')
                 buffer.seek(0)
