@@ -6,6 +6,7 @@ import time
 import typing as t
 import wtforms
 import logging
+from .dashboard_integration import DashboardIntegration
 
 # Set up logging
 logger = logging.getLogger("TalkNotifier")
@@ -37,6 +38,7 @@ class TalkNotifier(DashboardIntegration, commands.Cog):
         if message.author == self.bot.user:
             return
 
+        # Check if the message is in a guild (not a DM)
         if message.guild is None:
             return  # Ignore DMs
 
@@ -56,6 +58,92 @@ class TalkNotifier(DashboardIntegration, commands.Cog):
         cooldown = await self.config.guild(self.bot.get_guild(guild_id)).cooldown()
         last_message_time = self.cooldowns.get(guild_id, {}).get(user_id, 0)
         return time.time() - last_message_time < cooldown  # Return True if still in cooldown
+
+    @commands.group(name='talk', help='Notification related commands.', invoke_without_command=True, aliases=["talknotifier"])
+    async def talk_group(self, ctx):
+        """Notification related commands."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @talk_group.command(name='setmessage', help='Set the notification message for the server.')
+    @commands.admin_or_permissions(manage_guild=True)
+    async def talk_setmessage(self, ctx, *, message: str):
+        """Set the notification message for the server."""
+        await self.config.guild(ctx.guild).notification_message.set(message)
+        await ctx.send("Notification message has been set successfully.")
+
+    @talk_group.command(name='showmessage', help='Display the current notification message.')
+    @commands.admin_or_permissions(manage_guild=True)
+    async def talk_showmessage(self, ctx):
+        """Display the current notification message."""
+        notification_message = await self.config.guild(ctx.guild).notification_message()
+        await ctx.send(f"Current notification message: {notification_message}")
+
+    @talk_group.command(name='adduser', help='Add a user to the target list for notifications.')
+    @commands.admin_or_permissions(manage_guild=True)
+    async def talk_adduser(self, ctx, user: discord.Member):
+        """Add a user to the target list for notifications."""
+        target_users = await self.config.guild(ctx.guild).target_users()
+        if user.id not in target_users:
+            target_users.append(user.id)
+            await self.config.guild(ctx.guild).target_users.set(target_users)
+            await ctx.send(f"{user.display_name} will now receive notifications.")
+        else:
+            await ctx.send(f"{user.display_name} is already set to receive notifications.")
+
+    @talk_group.command(name='removeuser', help='Remove a user from the target list for notifications.')
+    @commands.admin_or_permissions(manage_guild=True)
+    async def talk_removeuser(self, ctx, user: discord.Member):
+        """Remove a user from the target list for notifications."""
+        target_users = await self.config.guild(ctx.guild).target_users()
+        if user.id in target_users:
+            target_users.remove(user.id)
+            await self.config.guild(ctx.guild).target_users.set(target_users)
+            await ctx.send(f"{user.display_name} will no longer receive notifications.")
+        else:
+            await ctx.send(f"{user.display_name} is not set to receive notifications.")
+
+    @talk_group.command(name='clearusers', help='Clear all target users from the notification list.')
+    @commands.admin_or_permissions(manage_guild=True)
+    async def talk_clearusers(self, ctx):
+        """Clear all target users from the notification list."""
+        await self.config.guild(ctx.guild).target_users.set([])
+        await ctx.send("All target users have been cleared.")
+
+    @talk_group.command(name='listusers', help='List all users who are set to receive notifications.')
+    @commands.admin_or_permissions(manage_guild=True)
+    async def talk_listusers(self, ctx):
+        """List all users who are set to receive notifications."""
+        target_users = await self.config.guild(ctx.guild).target_users()
+        if target_users:
+            user_names = []
+            for user_id in target_users:
+                user = ctx.guild.get_member(user_id)
+                if user:
+                    user_names.append(user.display_name)
+            if user_names:
+                await ctx.send("Target users: " + ", ".join(user_names))
+            else:
+                await ctx.send("No target users found.")
+        else:
+            await ctx.send("There are currently no target users set.")
+
+    @talk_group.command(name='setcooldown', help='Set the cooldown period for notifications.')
+    @commands.admin_or_permissions(manage_guild=True)
+    async def talk_setcooldown(self, ctx, cooldown: int):
+        """Set the cooldown period for notifications."""
+        if cooldown < 0:
+            await ctx.send("Cooldown cannot be negative.")
+        else:
+            await self.config.guild(ctx.guild).cooldown.set(cooldown)
+            await ctx.send(f"Cooldown set to {cooldown} seconds.")
+
+    @talk_group.command(name='cleardocs', help='Clear the example message and set a new one that links to the docs.')
+    @commands.is_owner()
+    async def talk_cleardocs(self, ctx):
+        """Clear the example message and set a new one that links to the docs."""
+        await self.config.guild(ctx.guild).example_message.set("Check out the [docs](https://github.com/BenCos17/ben-cogs/blob/main/talknotifier/docs.md) for more information!")
+        await ctx.send("Example message cleared and set to a new one that links to the docs.")
 
     @dashboard_page(name="settings", description="View and modify notification settings.")
     async def settings_page(self, user: discord.User, guild: discord.Guild, **kwargs) -> t.Dict[str, t.Any]:
