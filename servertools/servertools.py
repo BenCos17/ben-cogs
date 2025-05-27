@@ -277,7 +277,7 @@ class Servertools(commands.Cog):
             if after.status == discord.Status.online and before.status in [discord.Status.offline, discord.Status.invisible]:
                 async for user_data in self.config.all_users():
                     user_id = int(user_data)
-                    notifications = await self.config.user_from_id(user_id).online_notifications()J
+                    notifications = await self.config.user_from_id(user_id).online_notifications()
                     
                     if after.id in notifications:
                         user = self.bot.get_user(user_id)
