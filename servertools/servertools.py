@@ -149,7 +149,7 @@ class Servertools(commands.Cog):
     @commands.command(name='fakeping')
     @commands.guild_only()
     async def fake_ping(self, ctx):
-        icon_url = ctx.guild.icon.url if ctx.guild.icon else None  # Updated for d.py 2.0
+        icon_url = ctx.guild.icon.url if ctx.guild.icon else None
         if icon_url is None:
             await ctx.send("Server icon is not set.")
             return
@@ -159,14 +159,22 @@ class Servertools(commands.Cog):
                 image = Image.open(BytesIO(image_bytes))
                 image.thumbnail((64, 64))
                 image = image.convert('RGBA')
-                data = image.getdata()
-                new_data = []
-                for item in data:
-                    if item[3] == 0:
-                        new_data.append((0, 0, 0, 0))
-                    else:
-                        new_data.append(item)
-                image.putdata(new_data)
+                
+                # Create a new image with the red dot
+                dot_size = 16
+                dot_color = (255, 0, 0, 255)  # Red color with full opacity
+                
+                # Create a new image with the dot
+                dot = Image.new('RGBA', (dot_size, dot_size), (0, 0, 0, 0))
+                for x in range(dot_size):
+                    for y in range(dot_size):
+                        # Create a circular dot
+                        if (x - dot_size/2)**2 + (y - dot_size/2)**2 <= (dot_size/2)**2:
+                            dot.putpixel((x, y), dot_color)
+                
+                # Paste the dot in the top-right corner
+                image.paste(dot, (48, 0), dot)
+                
                 buffer = BytesIO()
                 image.save(buffer, format='PNG')
                 buffer.seek(0)
