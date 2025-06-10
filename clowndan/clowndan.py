@@ -72,11 +72,10 @@ class Clowndan(commands.Cog):
             draw = ImageDraw.Draw(img)
             
             # Get font and wrap text
-            font = self.get_font() # Using default size from get_font now
-            wrapped_text = textwrap.fill(text, width=15)  # Reduced width for better multi-line handling
+            font = self.get_font()
+            wrapped_text = textwrap.fill(text, width=15)
             
             # Calculate text position for centering
-            # Get text size using getbbox for more accurate results in newer Pillow versions
             text_bbox = draw.textbbox((0, 0), wrapped_text, font=font)
             text_width = text_bbox[2] - text_bbox[0]
             text_height = text_bbox[3] - text_bbox[1]
@@ -84,16 +83,12 @@ class Clowndan(commands.Cog):
             
             # Center the text horizontally
             x = (img.width - text_width) // 2
-            # Center the text vertically within the white area (900 to img.height)
-            # The white area is 900 to img.height. Midpoint is (900 + img.height) / 2
-            # y is the top-left of the text, so it's midpoint - half of text height
-            y = 900 + (img.height - 900 - text_height) // 2
+            # Position the text vertically at a fixed point near the bottom
+            y = 950  # Adjust this value to move the text up or down
             
             self.logger.info(f"Text position: ({x}, {y})")
             
-            # Draw white background for text area
-            # Ensure the rectangle covers the desired area properly
-            draw.rectangle([0, 900, img.width, img.height], fill=(255, 255, 255))
+            # Removed: Draw white background for text area
             
             # Draw the text
             draw.text((x, y), wrapped_text, font=font, fill="black")
