@@ -25,7 +25,7 @@ class Clowndan(commands.Cog):
         self.logger.info(f"Template path: {self.template_path}")
         self.logger.info(f"Font path: {self.font_path}")
 
-    def get_font(self, size=70):
+    def get_font(self, size=100):
         """Get font with fallback to default if custom font not found."""
         try:
             return ImageFont.truetype(self.font_path, size)
