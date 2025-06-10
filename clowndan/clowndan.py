@@ -17,30 +17,10 @@ class Clowndan(commands.Cog):
         self.logger = logging.getLogger("red.clowndan")
         self.logger.info("Clowndan cog initialized")
 
-    def get_font(self, size=40):
-        """Get font with fallback to default if custom font not found."""
-        try:
-            return ImageFont.truetype(self.font_path, size)
-        except Exception as e:
-            self.logger.warning(f"Failed to load custom font: {e}")
-            return ImageFont.load_default()
-
-    def cleanup_old_images(self, save_directory):
-        """Clean up images older than 1 hour."""
-        import time
-        current_time = time.time()
-        for filename in os.listdir(save_directory):
-            filepath = os.path.join(save_directory, filename)
-            if os.path.getmtime(filepath) < current_time - 3600:  # 1 hour
-                try:
-                    os.remove(filepath)
-                except Exception as e:
-                    self.logger.error(f"Failed to remove old image {filepath}: {e}")
-
-    @commands.command(name="memegen")
+    @commands.command(name="clowndan")
     async def clowndan(self, ctx, *, text: str):
         """Generates a clowndan image with custom text."""
-        self.logger.info(f"memegen command called by {ctx.author} with text: {text}")
+        self.logger.info(f"clowndan command called by {ctx.author} with text: {text}")
         
         if not text:
             await ctx.send("Please provide text for the image.")
@@ -98,17 +78,33 @@ class Clowndan(commands.Cog):
                 self.logger.error(f"Failed to clean up temporary file {save_path}: {e}")
 
         except Exception as e:
-            self.logger.error(f"Error in memegen command: {e}", exc_info=True)
+            self.logger.error(f"Error in clowndan command: {e}", exc_info=True)
             await ctx.send(f"An error occurred: {str(e)}")
 
-    @commands.command(name="memetemplate")
-    async def memetemplate(self, ctx):
-        """Sends the meme template without any text."""
+    @commands.command(name="clowntest")
+    async def clowntest(self, ctx):
+        """Test command to verify the cog is working."""
+        await ctx.send("Clowndan cog is working!")
+
+    def get_font(self, size=40):
+        """Get font with fallback to default if custom font not found."""
         try:
-            await ctx.send(file=discord.File(self.template_path, "template.png"))
+            return ImageFont.truetype(self.font_path, size)
         except Exception as e:
-            self.logger.error(f"Error in memetemplate command: {e}", exc_info=True)
-            await ctx.send(f"Error sending template: {str(e)}")
+            self.logger.warning(f"Failed to load custom font: {e}")
+            return ImageFont.load_default()
+
+    def cleanup_old_images(self, save_directory):
+        """Clean up images older than 1 hour."""
+        import time
+        current_time = time.time()
+        for filename in os.listdir(save_directory):
+            filepath = os.path.join(save_directory, filename)
+            if os.path.getmtime(filepath) < current_time - 3600:  # 1 hour
+                try:
+                    os.remove(filepath)
+                except Exception as e:
+                    self.logger.error(f"Failed to remove old image {filepath}: {e}")
 
 def setup(bot):
     bot.add_cog(Clowndan(bot))
