@@ -67,24 +67,29 @@ class Clowndan(commands.Cog):
                 return
                 
             img = Image.open(self.template_path)
+            self.logger.info(f"Image size: {img.size}")
+            
             draw = ImageDraw.Draw(img)
             
             # Get font and wrap text
-            font = self.get_font()
-            wrapped_text = textwrap.fill(text, width=30)  # Adjust width as needed
+            font = self.get_font(size=60)  # Increased font size
+            wrapped_text = textwrap.fill(text, width=20)  # Reduced width for larger font
             
             # Calculate text position for centering
             # Get text size using getsize
             text_width, text_height = font.getsize(wrapped_text)
+            self.logger.info(f"Text size: {text_width}x{text_height}")
             
             # Center the text
             x = (img.width - text_width) // 2
-            y = 930  # Keep y position as is
+            y = img.height - 150  # Position from bottom
+            
+            self.logger.info(f"Text position: ({x}, {y})")
             
             # Draw white background for text area
             # Use a fixed height for the text area
-            text_area_height = 100
-            draw.rectangle([0, 900, img.width, 900 + text_area_height], fill=(255, 255, 255))
+            text_area_height = 150
+            draw.rectangle([0, y - 20, img.width, y + text_height + 20], fill=(255, 255, 255))
             
             # Draw the text
             draw.text((x, y), wrapped_text, font=font, fill="black")
