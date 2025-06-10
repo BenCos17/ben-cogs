@@ -25,12 +25,12 @@ class Clowndan(commands.Cog):
         self.logger.info(f"Template path: {self.template_path}")
         self.logger.info(f"Font path: {self.font_path}")
 
-    def get_font(self, size=40):
+    def get_font(self, size=70):
         """Get font with fallback to default if custom font not found."""
         try:
             return ImageFont.truetype(self.font_path, size)
         except Exception as e:
-            self.logger.warning(f"Failed to load custom font: {e}")
+            self.logger.warning(f"Failed to load custom font: {e}. Using default font.")
             return ImageFont.load_default()
 
     def cleanup_old_images(self, save_directory):
@@ -72,24 +72,28 @@ class Clowndan(commands.Cog):
             draw = ImageDraw.Draw(img)
             
             # Get font and wrap text
-            font = self.get_font(size=60)  # Increased font size
-            wrapped_text = textwrap.fill(text, width=20)  # Reduced width for larger font
+            font = self.get_font() # Using default size from get_font now
+            wrapped_text = textwrap.fill(text, width=15)  # Reduced width for better multi-line handling
             
             # Calculate text position for centering
-            # Get text size using getsize
-            text_width, text_height = font.getsize(wrapped_text)
+            # Get text size using getbbox for more accurate results in newer Pillow versions
+            text_bbox = draw.textbbox((0, 0), wrapped_text, font=font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
             self.logger.info(f"Text size: {text_width}x{text_height}")
             
-            # Center the text
+            # Center the text horizontally
             x = (img.width - text_width) // 2
-            y = img.height - 150  # Position from bottom
+            # Center the text vertically within the white area (900 to img.height)
+            # The white area is 900 to img.height. Midpoint is (900 + img.height) / 2
+            # y is the top-left of the text, so it's midpoint - half of text height
+            y = 900 + (img.height - 900 - text_height) // 2
             
             self.logger.info(f"Text position: ({x}, {y})")
             
             # Draw white background for text area
-            # Use a fixed height for the text area
-            text_area_height = 150
-            draw.rectangle([0, y - 20, img.width, y + text_height + 20], fill=(255, 255, 255))
+            # Ensure the rectangle covers the desired area properly
+            draw.rectangle([0, 900, img.width, img.height], fill=(255, 255, 255))
             
             # Draw the text
             draw.text((x, y), wrapped_text, font=font, fill="black")
