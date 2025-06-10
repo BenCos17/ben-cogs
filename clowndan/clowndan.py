@@ -83,15 +83,15 @@ class Clowndan(commands.Cog):
             
             # Center the text horizontally
             x = (img.width - text_width) // 2
-            # Position the text vertically at a fixed point (adjust as needed)
-            y = 880  # Moved up from 950
+            # Position the text vertically (adjust as needed)
+            y = img.height - text_height - 30 # Position from the bottom, with some padding
             
             self.logger.info(f"Text position: ({x}, {y})")
             
             # Removed: Draw white background for text area
             
-            # Draw the text
-            draw.text((x, y), wrapped_text, font=font, fill="black")
+            # Draw the text in white color
+            draw.text((x, y), wrapped_text, font=font, fill="white")
 
             # Save directory setup
             save_directory = os.path.join(os.path.dirname(__file__), "saved_memes")
