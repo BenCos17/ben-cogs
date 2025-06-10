@@ -83,8 +83,8 @@ class Clowndan(commands.Cog):
             
             # Center the text horizontally
             x = (img.width - text_width) // 2
-            # Position the text vertically at a fixed point near the bottom
-            y = 950  # Adjust this value to move the text up or down
+            # Position the text vertically at a fixed point (adjust as needed)
+            y = 880  # Moved up from 950
             
             self.logger.info(f"Text position: ({x}, {y})")
             
