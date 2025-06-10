@@ -74,15 +74,17 @@ class Clowndan(commands.Cog):
             wrapped_text = textwrap.fill(text, width=30)  # Adjust width as needed
             
             # Calculate text position for centering
-            # Get text size using getsize instead of textbbox
+            # Get text size using getsize
             text_width, text_height = font.getsize(wrapped_text)
             
             # Center the text
             x = (img.width - text_width) // 2
             y = 930  # Keep y position as is
             
-            # Draw white background for text
-            draw.rectangle(((0, 900), (img.width, img.height)), fill=(255, 255, 255))
+            # Draw white background for text area
+            # Use a fixed height for the text area
+            text_area_height = 100
+            draw.rectangle([0, 900, img.width, 900 + text_area_height], fill=(255, 255, 255))
             
             # Draw the text
             draw.text((x, y), wrapped_text, font=font, fill="black")
@@ -125,6 +127,9 @@ class Clowndan(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error in memetemplate command: {e}", exc_info=True)
             await ctx.send(f"Error sending template: {str(e)}")
+
+def setup(bot):
+    bot.add_cog(Clowndan(bot))
 
 
 
