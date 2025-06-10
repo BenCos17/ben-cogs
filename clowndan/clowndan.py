@@ -74,9 +74,8 @@ class Clowndan(commands.Cog):
             wrapped_text = textwrap.fill(text, width=30)  # Adjust width as needed
             
             # Calculate text position for centering
-            text_bbox = draw.textbbox((0, 0), wrapped_text, font=font)
-            text_width = text_bbox[2] - text_bbox[0]
-            text_height = text_bbox[3] - text_bbox[1]
+            # Get text size using getsize instead of textbbox
+            text_width, text_height = font.getsize(wrapped_text)
             
             # Center the text
             x = (img.width - text_width) // 2
