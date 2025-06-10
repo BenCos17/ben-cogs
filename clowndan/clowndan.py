@@ -127,13 +127,6 @@ class Clowndan(commands.Cog):
             self.logger.error(f"Error in memetemplate command: {e}", exc_info=True)
             await ctx.send(f"Error sending template: {str(e)}")
 
-def setup(bot):
-    try:
-        cog = Clowndan(bot)
-        bot.add_cog(cog)
-        cog.logger.info("Clowndan cog loaded successfully")
-    except Exception as e:
-        logging.getLogger("red").error(f"Failed to load Clowndan cog: {e}")
-        raise
+
 
 

@@ -2,8 +2,8 @@ from .clowndan import Clowndan
 
 __red_end_user_data_statement__ = "This cog does not store any end user data."
 
-def setup(bot):
-    bot.add_cog(Clowndan(bot))
+async def setup(bot):
+    await bot.add_cog(Clowndan(bot))
 
 # Add this check to ensure the setup function is called when the module is loaded
 if __name__ == "__main__":
