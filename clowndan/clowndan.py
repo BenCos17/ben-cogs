@@ -4,6 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import os
 import textwrap
+import logging
 
 class Clowndan(commands.Cog):
     """A cog to generate clowndan images."""
@@ -13,12 +14,15 @@ class Clowndan(commands.Cog):
         self.template_path = os.path.join(os.path.dirname(__file__), "clown_image_template.png")
         self.font_path = os.path.join(os.path.dirname(__file__), "font.ttf")
         self.max_text_length = 100  # Maximum characters per line
+        self.logger = logging.getLogger("red.clowndan")
+        self.logger.info("Clowndan cog initialized")
 
     def get_font(self, size=40):
         """Get font with fallback to default if custom font not found."""
         try:
             return ImageFont.truetype(self.font_path, size)
-        except Exception:
+        except Exception as e:
+            self.logger.warning(f"Failed to load custom font: {e}")
             return ImageFont.load_default()
 
     def cleanup_old_images(self, save_directory):
@@ -30,12 +34,13 @@ class Clowndan(commands.Cog):
             if os.path.getmtime(filepath) < current_time - 3600:  # 1 hour
                 try:
                     os.remove(filepath)
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.logger.error(f"Failed to remove old image {filepath}: {e}")
 
     @commands.command(name="memegen")
     async def clowndan(self, ctx, *, text: str):
         """Generates a clowndan image with custom text."""
+        self.logger.info(f"memegen command called by {ctx.author} with text: {text}")
         
         if not text:
             await ctx.send("Please provide text for the image.")
@@ -47,6 +52,7 @@ class Clowndan(commands.Cog):
 
         try:
             # Load the template image
+            self.logger.info(f"Loading template from: {self.template_path}")
             img = Image.open(self.template_path)
             draw = ImageDraw.Draw(img)
             
@@ -78,6 +84,7 @@ class Clowndan(commands.Cog):
 
             # Save and send
             save_path = os.path.join(save_directory, f"meme_{ctx.author.id}.png")
+            self.logger.info(f"Saving image to: {save_path}")
             img.save(save_path, format="PNG")
             
             file = discord.File(fp=save_path)
@@ -86,10 +93,12 @@ class Clowndan(commands.Cog):
             # Clean up the file after sending
             try:
                 os.remove(save_path)
-            except Exception:
-                pass
+                self.logger.info(f"Cleaned up temporary file: {save_path}")
+            except Exception as e:
+                self.logger.error(f"Failed to clean up temporary file {save_path}: {e}")
 
         except Exception as e:
+            self.logger.error(f"Error in memegen command: {e}", exc_info=True)
             await ctx.send(f"An error occurred: {str(e)}")
 
     @commands.command(name="memetemplate")
@@ -98,6 +107,7 @@ class Clowndan(commands.Cog):
         try:
             await ctx.send(file=discord.File(self.template_path, "template.png"))
         except Exception as e:
+            self.logger.error(f"Error in memetemplate command: {e}", exc_info=True)
             await ctx.send(f"Error sending template: {str(e)}")
 
 def setup(bot):
