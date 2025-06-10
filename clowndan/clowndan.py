@@ -15,7 +15,15 @@ class Clowndan(commands.Cog):
         self.font_path = os.path.join(os.path.dirname(__file__), "font.ttf")
         self.max_text_length = 100  # Maximum characters per line
         self.logger = logging.getLogger("red.clowndan")
+        
+        # Check if required files exist
+        if not os.path.exists(self.template_path):
+            self.logger.error(f"Template image not found at: {self.template_path}")
+            raise FileNotFoundError(f"Template image not found at: {self.template_path}")
+        
         self.logger.info("Clowndan cog initialized")
+        self.logger.info(f"Template path: {self.template_path}")
+        self.logger.info(f"Font path: {self.font_path}")
 
     def get_font(self, size=40):
         """Get font with fallback to default if custom font not found."""
@@ -53,6 +61,11 @@ class Clowndan(commands.Cog):
         try:
             # Load the template image
             self.logger.info(f"Loading template from: {self.template_path}")
+            if not os.path.exists(self.template_path):
+                await ctx.send("Error: Template image not found. Please contact the bot owner.")
+                self.logger.error(f"Template image not found at: {self.template_path}")
+                return
+                
             img = Image.open(self.template_path)
             draw = ImageDraw.Draw(img)
             
@@ -105,14 +118,22 @@ class Clowndan(commands.Cog):
     async def memetemplate(self, ctx):
         """Sends the meme template without any text."""
         try:
+            if not os.path.exists(self.template_path):
+                await ctx.send("Error: Template image not found. Please contact the bot owner.")
+                self.logger.error(f"Template image not found at: {self.template_path}")
+                return
             await ctx.send(file=discord.File(self.template_path, "template.png"))
         except Exception as e:
             self.logger.error(f"Error in memetemplate command: {e}", exc_info=True)
             await ctx.send(f"Error sending template: {str(e)}")
 
 def setup(bot):
-    cog = Clowndan(bot)
-    bot.add_cog(cog)
-    cog.logger.info("Clowndan cog loaded successfully")
+    try:
+        cog = Clowndan(bot)
+        bot.add_cog(cog)
+        cog.logger.info("Clowndan cog loaded successfully")
+    except Exception as e:
+        logging.getLogger("red").error(f"Failed to load Clowndan cog: {e}")
+        raise
 
 
