@@ -5,6 +5,12 @@ from io import BytesIO
 import os
 import textwrap
 import logging
+import aiohttp
+
+# --- CONFIGURATION FOR FONT DOWNLOAD ---
+# REPLACE THIS WITH THE ACTUAL RAW GITHUB URL TO YOUR FONT.TTF FILE
+GITHUB_FONT_URL = "https://raw.githubusercontent.com/BenCos17/ben-cogs/main/clowndan/Lucette-Regular.ttf"
+# ----------------------------------------
 
 class Clowndan(commands.Cog):
     """A cog to generate clowndan images."""
@@ -25,7 +31,7 @@ class Clowndan(commands.Cog):
         self.logger.info(f"Template path: {self.template_path}")
         self.logger.info(f"Font path: {self.font_path}")
 
-    def get_font(self, size=300):
+    def get_font(self, size=100):
         """Get font with fallback to default if custom font not found."""
         try:
             return ImageFont.truetype(self.font_path, size)
@@ -132,8 +138,36 @@ class Clowndan(commands.Cog):
             self.logger.error(f"Error in memetemplate command: {e}", exc_info=True)
             await ctx.send(f"Error sending template: {str(e)}")
 
+async def download_font_if_missing(bot, font_path, logger):
+    if os.path.exists(font_path):
+        logger.info(f"Font file already exists at {font_path}. Skipping download.")
+        return
+
+    if GITHUB_FONT_URL == "YOUR_GITHUB_RAW_FONT_URL_HERE":
+        logger.error("GITHUB_FONT_URL is not set. Please set the actual URL to your font file.")
+        return
+
+    logger.info(f"Attempting to download font from {GITHUB_FONT_URL}...")
+    try:
+        async with bot.http_session.get(GITHUB_FONT_URL) as resp:
+            resp.raise_for_status() # Raise an exception for bad status codes
+            font_content = await resp.read()
+        with open(font_path, "wb") as f:
+            f.write(font_content)
+        logger.info(f"Successfully downloaded font to {font_path}")
+    except aiohttp.ClientError as e:
+        logger.error(f"Failed to download font (ClientError): {e}")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during font download: {e}")
+
 def setup(bot):
-    bot.add_cog(Clowndan(bot))
+    async def setup_coroutine():
+        cog = Clowndan(bot)
+        await download_font_if_missing(bot, cog.font_path, cog.logger)
+        await bot.add_cog(cog)
+        cog.logger.info("Clowndan cog loaded successfully")
+    
+    bot.loop.create_task(setup_coroutine())
 
 
 
