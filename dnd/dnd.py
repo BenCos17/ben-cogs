@@ -1,7 +1,65 @@
 import random
 from redbot.core import commands, Config
 import re
+import asyncio
+from typing import Dict, List, Optional
 
+
+class Character:
+    def __init__(self, name: str, char_class: str, level: int = 1):
+        self.name = name
+        self.char_class = char_class
+        self.level = level
+        self.xp = 0
+        
+        # Base stats by class
+        class_stats = {
+            "warrior": {"hp": 20, "attack": 15, "defense": 12, "abilities": ["Shield Block", "Heavy Strike"]},
+            "mage": {"hp": 12, "attack": 18, "defense": 8, "abilities": ["Fireball", "Magic Shield"]},
+            "rogue": {"hp": 15, "attack": 16, "defense": 10, "abilities": ["Backstab", "Dodge"]},
+            "cleric": {"hp": 16, "attack": 14, "defense": 11, "abilities": ["Heal", "Smite"]}
+        }
+        
+        stats = class_stats.get(char_class.lower(), class_stats["warrior"])
+        self.max_hp = stats["hp"] + (level - 1) * 5
+        self.hp = self.max_hp
+        self.attack = stats["attack"] + (level - 1) * 2
+        self.defense = stats["defense"] + (level - 1)
+        self.abilities = stats["abilities"]
+        self.inventory = []
+
+    def use_ability(self, ability_name: str) -> tuple[str, int]:
+        ability_effects = {
+            "Shield Block": ("increases defense for one turn", 5),
+            "Heavy Strike": ("deals heavy damage", 20),
+            "Fireball": ("deals area damage", 25),
+            "Magic Shield": ("creates a magical barrier", 8),
+            "Backstab": ("deals critical damage", 30),
+            "Dodge": ("increases evasion for one turn", 7),
+            "Heal": ("restores health", 15),
+            "Smite": ("deals holy damage", 22)
+        }
+        return ability_effects.get(ability_name, ("does nothing", 0))
+
+class Enemy:
+    def __init__(self, name: str, level: int):
+        self.name = name
+        self.level = level
+        
+        # Enemy types with base stats
+        enemy_types = {
+            "Goblin": {"hp": 12, "attack": 8, "defense": 5},
+            "Orc": {"hp": 20, "attack": 12, "defense": 8},
+            "Dragon": {"hp": 50, "attack": 20, "defense": 15},
+            "Skeleton": {"hp": 15, "attack": 10, "defense": 6},
+            "Troll": {"hp": 30, "attack": 15, "defense": 10}
+        }
+        
+        stats = enemy_types.get(name, enemy_types["Goblin"])
+        self.max_hp = stats["hp"] + (level - 1) * 3
+        self.hp = self.max_hp
+        self.attack = stats["attack"] + (level - 1) * 2
+        self.defense = stats["defense"] + (level - 1)
 
 class DnD(commands.Cog):
     def __init__(self, bot):
@@ -17,71 +75,228 @@ class DnD(commands.Cog):
             session_notes=[]  # list of (author, note)
         )
 
-    @commands.command(name='dndadventure', help='A fun DnD adventure simulation!')
+    @commands.command(name='dndadventure', help='Start a DnD adventure!')
     @commands.cooldown(1, 60, commands.BucketType.user)
     async def dndadventure(self, ctx):
-        import discord
-        embed = discord.Embed(title='DnD Command', description='A complex DnD command with dice rolling', color=discord.Color.blue())
-        dice_roll = random.randint(1, 20)
-        embed.add_field(name='Dice Roll', value=f'Rolling a D20... Result: {dice_roll}', inline=False)
-        await ctx.send(embed=embed)
-
-        embed_info = discord.Embed(title='Additional Information', description='This is just the beginning of a grand adventure!', color=discord.Color.green())
-        await ctx.send(embed=embed_info)
+        # Character creation
+        await ctx.send("Welcome to the adventure! Choose your class:\n1. Warrior\n2. Mage\n3. Rogue\n4. Cleric")
         
-        # todo game logic, combat system, and character creation
-        player_hp = 100
-        player_attack = 15
-        player_defense = 10
-        enemy_hp = 80
-        enemy_attack = 12
-        enemy_defense = 8
-        player_embed = discord.Embed(title='Player Stats', description=f'HP: {player_hp}, Attack: {player_attack}, Defense: {player_defense}', color=discord.Color.gold())
-        enemy_embed = discord.Embed(title='Enemy Stats', description=f'HP: {enemy_hp}, Attack: {enemy_attack}, Defense: {enemy_defense}', color=discord.Color.red())
-        await ctx.send(embed=player_embed)
-        await ctx.send(embed=enemy_embed)
-        await ctx.send('Combat begins!')
-
-        # Custom boss added based on player's remaining stats
-        boss_hp = player_hp * 2
-        boss_attack = player_attack + 5
-        boss_defense = player_defense + 5
-        boss_embed = discord.Embed(title='Boss Stats', description=f'HP: {boss_hp}, Attack: {boss_attack}, Defense: {boss_defense}', color=discord.Color.dark_red())
-        await ctx.send(embed=boss_embed)
-        await ctx.send('Boss appears! Prepare for a tough battle!')
-
-        while player_hp > 0 and (enemy_hp > 0 or boss_hp > 0):
-            if enemy_hp > 0:
-                player_damage = max(0, player_attack - enemy_defense)
-                enemy_damage = max(0, enemy_attack - player_defense)
-                player_hp -= enemy_damage
-                enemy_hp -= player_damage
-                await ctx.send(f'Player takes {random.randint(1, 20)} damage. Enemy takes {random.randint(1, 20)} damage.')
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
+        
+        try:
+            msg = await self.bot.wait_for('message', timeout=30.0, check=check)
+            class_choice = msg.content.lower()
+            
+            class_map = {
+                "1": "warrior", "warrior": "warrior",
+                "2": "mage", "mage": "mage",
+                "3": "rogue", "rogue": "rogue",
+                "4": "cleric", "cleric": "cleric"
+            }
+            
+            if class_choice not in class_map and class_choice not in class_map.values():
+                await ctx.send("Invalid class choice. Defaulting to Warrior.")
+                class_choice = "warrior"
             else:
-                player_damage = max(0, player_attack - boss_defense)
-                boss_damage = max(0, boss_attack - player_defense)
-                player_hp -= boss_damage
-                boss_hp -= player_damage
-                await ctx.send(f'Player takes {random.randint(1, 20)} damage. Boss takes {random.randint(1, 20)} damage.')
+                class_choice = class_map.get(class_choice, class_choice)
+            
+            player = Character(ctx.author.display_name, class_choice)
+            await ctx.send(f"A new {class_choice.title()} begins their journey!")
+            
+            # Game loop
+            await self._adventure_loop(ctx, player)
+            
+        except asyncio.TimeoutError:
+            await ctx.send("Character creation timed out.")
+            return
 
-        if player_hp <= 0:
-            await ctx.send('Player has been defeated!')
-        elif enemy_hp <= 0 and boss_hp <= 0:
-            await ctx.send('All enemies have been defeated! Victory!')
-        else:
-            await ctx.send('Boss has been defeated! Victory!')
+    async def _adventure_loop(self, ctx, player: Character):
+        locations = ["Forest", "Dungeon", "Cave", "Castle", "Ruins"]
+        current_location = random.choice(locations)
+        
+        embed = discord.Embed(title="Adventure Begins!", description=f"You find yourself in a mysterious {current_location}.", color=discord.Color.green())
+        embed.add_field(name="Your Stats", value=f"HP: {player.hp}/{player.max_hp}\nAttack: {player.attack}\nDefense: {player.defense}", inline=False)
+        embed.add_field(name="Abilities", value="\n".join(player.abilities), inline=False)
+        await ctx.send(embed=embed)
+        
+        # Adventure phases
+        while player.hp > 0:
+            # Random encounter
+            if random.random() < 0.7:  # 70% chance of combat
+                enemy_types = ["Goblin", "Orc", "Skeleton", "Troll"]
+                if player.level >= 5:
+                    enemy_types.append("Dragon")
+                
+                enemy = Enemy(random.choice(enemy_types), max(1, player.level - 1))
+                await self._combat_loop(ctx, player, enemy)
+                
+                if player.hp <= 0:
+                    await ctx.send("Game Over! Your adventure ends here...")
+                    break
+                
+                # Reward
+                xp_gain = enemy.level * 50
+                player.xp += xp_gain
+                await ctx.send(f"You gained {xp_gain} XP!")
+                
+                # Level up check
+                if player.xp >= player.level * 100:
+                    player.level += 1
+                    player.max_hp += 5
+                    player.hp = player.max_hp
+                    player.attack += 2
+                    player.defense += 1
+                    await ctx.send(f"Level Up! You are now level {player.level}!")
+                
+                # Loot
+                if random.random() < 0.4:  # 40% chance of loot
+                    loot = self._generate_loot(enemy.level)
+                    player.inventory.append(loot)
+                    await ctx.send(f"You found: {loot}!")
+            
+            else:  # Rest spot
+                await ctx.send("You find a safe spot to rest...")
+                healing = min(player.max_hp - player.hp, player.max_hp // 2)
+                player.hp += healing
+                await ctx.send(f"You recovered {healing} HP! Current HP: {player.hp}/{player.max_hp}")
+            
+            # Continue adventure?
+            await ctx.send("Continue the adventure? (yes/no)")
+            try:
+                msg = await self.bot.wait_for('message', timeout=30.0, check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
+                if msg.content.lower() not in ['yes', 'y', 'continue']:
+                    await ctx.send("You decide to end your adventure here.")
+                    break
+            except asyncio.TimeoutError:
+                await ctx.send("No response received. Ending adventure.")
+                break
+            
+            # Change location
+            current_location = random.choice([loc for loc in locations if loc != current_location])
+            await ctx.send(f"You travel to a new location: {current_location}")
 
-        # todo better stuff and also improve the code
-        await ctx.send('The dungeon reveals its secrets...')
-        await ctx.send('You encounter a mysterious wizard who offers to teach you powerful spells.')
-        await ctx.send('Using machine learning algorithms, you learn new spells and enhance your abilities.')
-        await ctx.send('Your character evolves with the true essence of magic, unlocking unlimited potential.')
-        await ctx.send('The world trembles at your newfound power as you rewrite the rules of reality.')
+    async def _combat_loop(self, ctx, player: Character, enemy: Enemy):
+        embed = discord.Embed(title="Combat Begins!", description=f"A {enemy.name} appears!", color=discord.Color.red())
+        embed.add_field(name="Enemy Stats", value=f"HP: {enemy.hp}/{enemy.max_hp}\nAttack: {enemy.attack}\nDefense: {enemy.defense}", inline=False)
+        await ctx.send(embed=embed)
+        
+        # Initiative roll
+        player_init = random.randint(1, 20)
+        enemy_init = random.randint(1, 20)
+        player_first = player_init >= enemy_init
+        
+        while player.hp > 0 and enemy.hp > 0:
+            if player_first:
+                # Player turn
+                await self._player_turn(ctx, player, enemy)
+                if enemy.hp <= 0:
+                    await ctx.send(f"You defeated the {enemy.name}!")
+                    break
+                
+                # Enemy turn
+                await self._enemy_turn(ctx, player, enemy)
+                if player.hp <= 0:
+                    await ctx.send("You have been defeated!")
+                    break
+            else:
+                # Enemy turn
+                await self._enemy_turn(ctx, player, enemy)
+                if player.hp <= 0:
+                    await ctx.send("You have been defeated!")
+                    break
+                
+                # Player turn
+                await self._player_turn(ctx, player, enemy)
+                if enemy.hp <= 0:
+                    await ctx.send(f"You defeated the {enemy.name}!")
+                    break
 
-        # Custom items added for later use once I get round to it
-        await ctx.send('You discover a hidden chest containing magical artifacts.')
-        await ctx.send('These items will prove invaluable in your future adventures.')
-        await ctx.send('Remember to use them wisely to overcome the greatest challenges.')
+    async def _player_turn(self, ctx, player: Character, enemy: Enemy):
+        # Show combat options
+        options = ["1. Attack", "2. Use Ability", "3. Check Stats", "4. Use Item"]
+        await ctx.send("Your turn! Choose your action:\n" + "\n".join(options))
+        
+        try:
+            msg = await self.bot.wait_for('message', timeout=30.0, check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
+            choice = msg.content.lower()
+            
+            if choice in ['1', 'attack']:
+                damage = max(0, player.attack - enemy.defense)
+                enemy.hp -= damage
+                await ctx.send(f"You deal {damage} damage to the {enemy.name}!")
+            
+            elif choice in ['2', 'ability']:
+                if not player.abilities:
+                    await ctx.send("You have no abilities available!")
+                    return
+                
+                await ctx.send("Choose an ability:\n" + "\n".join(f"{i+1}. {ability}" for i, ability in enumerate(player.abilities)))
+                try:
+                    msg = await self.bot.wait_for('message', timeout=30.0, check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
+                    ability_idx = int(msg.content) - 1
+                    if 0 <= ability_idx < len(player.abilities):
+                        ability = player.abilities[ability_idx]
+                        effect, value = player.use_ability(ability)
+                        if "damage" in effect:
+                            enemy.hp -= value
+                            await ctx.send(f"You use {ability} and deal {value} damage!")
+                        elif "defense" in effect or "barrier" in effect:
+                            player.defense += value
+                            await ctx.send(f"You use {ability} and gain {value} defense!")
+                        elif "health" in effect:
+                            healing = min(value, player.max_hp - player.hp)
+                            player.hp += healing
+                            await ctx.send(f"You use {ability} and heal for {healing} HP!")
+                except (ValueError, IndexError):
+                    await ctx.send("Invalid ability choice. Turn skipped.")
+            
+            elif choice in ['3', 'stats']:
+                embed = discord.Embed(title="Combat Stats", color=discord.Color.blue())
+                embed.add_field(name="Your Stats", value=f"HP: {player.hp}/{player.max_hp}\nAttack: {player.attack}\nDefense: {player.defense}", inline=True)
+                embed.add_field(name="Enemy Stats", value=f"HP: {enemy.hp}/{enemy.max_hp}\nAttack: {enemy.attack}\nDefense: {enemy.defense}", inline=True)
+                await ctx.send(embed=embed)
+                await self._player_turn(ctx, player, enemy)  # Let player choose another action
+            
+            elif choice in ['4', 'item']:
+                if not player.inventory:
+                    await ctx.send("You have no items!")
+                    return
+                
+                await ctx.send("Choose an item to use:\n" + "\n".join(f"{i+1}. {item}" for i, item in enumerate(player.inventory)))
+                try:
+                    msg = await self.bot.wait_for('message', timeout=30.0, check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
+                    item_idx = int(msg.content) - 1
+                    if 0 <= item_idx < len(player.inventory):
+                        item = player.inventory.pop(item_idx)
+                        if "Potion" in item:
+                            healing = 20
+                            player.hp = min(player.max_hp, player.hp + healing)
+                            await ctx.send(f"You use {item} and heal for {healing} HP!")
+                        elif "Scroll" in item:
+                            enemy.hp -= 25
+                            await ctx.send(f"You use {item} and deal 25 magic damage!")
+                except (ValueError, IndexError):
+                    await ctx.send("Invalid item choice. Turn skipped.")
+            
+        except asyncio.TimeoutError:
+            await ctx.send("Turn skipped due to timeout.")
+
+    async def _enemy_turn(self, ctx, player: Character, enemy: Enemy):
+        damage = max(0, enemy.attack - player.defense)
+        player.hp -= damage
+        await ctx.send(f"The {enemy.name} attacks you for {damage} damage!")
+
+    def _generate_loot(self, enemy_level: int) -> str:
+        loot_table = [
+            "Health Potion",
+            "Mana Potion",
+            "Scroll of Fireball",
+            "Scroll of Lightning",
+            "Healing Salve",
+            "Magic Shield Scroll"
+        ]
+        return random.choice(loot_table)
 
     @commands.group(name='dndtools', invoke_without_command=True, aliases=["dndt", "dtools"], help='DnD session tools: character sheets, dice, initiative, inventory, and more.')
     async def dndtools(self, ctx):
