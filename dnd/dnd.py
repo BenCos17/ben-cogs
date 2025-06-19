@@ -84,7 +84,7 @@ class DnD(commands.Cog):
         await ctx.send('These items will prove invaluable in your future adventures.')
         await ctx.send('Remember to use them wisely to overcome the greatest challenges.')
 
-    @commands.command(name='roll', help='Roll dice using standard notation, e.g. 2d6+3')
+    @commands.command(name='dndroll', help='Roll dice using standard notation, e.g. 2d6+3')
     async def roll(self, ctx, *, dice: str):
         match = re.fullmatch(r"(\d*)d(\d+)([+-]\d+)?", dice.replace(" ", ""))
         if not match:
