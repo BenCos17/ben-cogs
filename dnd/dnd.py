@@ -17,9 +17,9 @@ class DnD(commands.Cog):
             session_notes=[]  # list of (author, note)
         )
 
-    @commands.command(name='dndtools', help='A complex DnD command with dice rolling')
+    @commands.command(name='dndadventure', help='A fun DnD adventure simulation!')
     @commands.cooldown(1, 60, commands.BucketType.user)
-    async def dndtools(self, ctx):
+    async def dndadventure(self, ctx):
         import discord
         embed = discord.Embed(title='DnD Command', description='A complex DnD command with dice rolling', color=discord.Color.blue())
         dice_roll = random.randint(1, 20)
@@ -28,7 +28,6 @@ class DnD(commands.Cog):
 
         embed_info = discord.Embed(title='Additional Information', description='This is just the beginning of a grand adventure!', color=discord.Color.green())
         await ctx.send(embed=embed_info)
-        
         
         # todo game logic, combat system, and character creation
         player_hp = 100
@@ -84,7 +83,12 @@ class DnD(commands.Cog):
         await ctx.send('These items will prove invaluable in your future adventures.')
         await ctx.send('Remember to use them wisely to overcome the greatest challenges.')
 
-    @commands.command(name='dndroll', help='Roll dice using standard notation, e.g. 2d6+3')
+    @commands.group(name='dndtools', invoke_without_command=True, aliases=["dndt", "dtools"], help='DnD session tools: character sheets, dice, initiative, inventory, and more.')
+    async def dndtools(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send("Use a subcommand: roll, createchar, viewchar, initiative, nextturn, clearinitiative, additem, viewitems, clearitems, addnote, viewnotes, clearnotes.")
+
+    @dndtools.command(name='roll', aliases=["dice"], help='Roll dice using standard notation, e.g. 2d6+3')
     async def roll(self, ctx, *, dice: str):
         match = re.fullmatch(r"(\d*)d(\d+)([+-]\d+)?", dice.replace(" ", ""))
         if not match:
@@ -94,11 +98,14 @@ class DnD(commands.Cog):
         n = int(n) if n else 1
         die = int(die)
         mod = int(mod) if mod else 0
+        if n < 1 or die < 1 or n > 100:
+            await ctx.send("Invalid dice parameters. Max 100 dice, min 1.")
+            return
         rolls = [random.randint(1, die) for _ in range(n)]
         total = sum(rolls) + mod
         await ctx.send(f"Rolling {dice}: {rolls} {'+'+str(mod) if mod else ''} = **{total}**")
 
-    @commands.command(name='createchar', help='Create your DnD character: !createchar <name> <class> <hp> <str> <dex> <con> <int> <wis> <cha>')
+    @dndtools.command(name='createchar', help='Create your DnD character: dndtools createchar <name> <class> <hp> <str> <dex> <con> <int> <wis> <cha>')
     async def createchar(self, ctx, name: str, char_class: str, hp: int, str_: int, dex: int, con: int, int_: int, wis: int, cha: int):
         char = {
             'name': name,
@@ -114,11 +121,11 @@ class DnD(commands.Cog):
         await self.config.user(ctx.author).character.set(char)
         await ctx.send(f"Character created for {ctx.author.display_name}: {name} the {char_class} (HP: {hp})")
 
-    @commands.command(name='viewchar', help='View your DnD character sheet')
+    @dndtools.command(name='viewchar', help='View your DnD character sheet')
     async def viewchar(self, ctx):
         char = await self.config.user(ctx.author).character()
         if not char:
-            await ctx.send("No character found. Use !createchar to make one.")
+            await ctx.send("No character found. Use dndtools createchar to make one.")
             return
         embed = self._char_embed(char, ctx.author.display_name)
         await ctx.send(embed=embed)
@@ -135,35 +142,47 @@ class DnD(commands.Cog):
         embed.add_field(name="CHA", value=char['cha'])
         return embed
 
-    @commands.command(name='initiative', help='Start initiative order: !initiative @player1 @player2 ...')
+    @dndtools.command(name='initiative', help='Start initiative order: dndtools initiative @player1 @player2 ...')
     async def initiative(self, ctx, *players: commands.MemberConverter):
+        if not players:
+            await ctx.send("You must mention at least one player.")
+            return
         user_ids = [p.id for p in players]
         await self.config.guild(ctx.guild).initiative_order.set(user_ids)
         await self.config.guild(ctx.guild).current_turn.set(0)
         names = ', '.join(p.display_name for p in players)
         await ctx.send(f"Initiative order set: {names}. {players[0].display_name} goes first!")
 
-    @commands.command(name='nextturn', help='Advance to the next turn in initiative order')
+    @dndtools.command(name='nextturn', help='Advance to the next turn in initiative order')
     async def nextturn(self, ctx):
         order = await self.config.guild(ctx.guild).initiative_order()
         if not order:
-            await ctx.send("No initiative order set. Use !initiative first.")
+            await ctx.send("No initiative order set. Use dndtools initiative first.")
             return
         turn = await self.config.guild(ctx.guild).current_turn()
         turn = (turn + 1) % len(order)
         await self.config.guild(ctx.guild).current_turn.set(turn)
         user_id = order[turn]
         member = ctx.guild.get_member(user_id)
+        if not member:
+            await ctx.send(f"User with ID {user_id} not found in this server.")
+            return
         await ctx.send(f"It's now {member.display_name}'s turn!")
 
-    @commands.command(name='additem', help='Add an item to your inventory: !additem <item>')
+    @dndtools.command(name='clearinitiative', help='Clear the initiative order for this server.')
+    async def clearinitiative(self, ctx):
+        await self.config.guild(ctx.guild).initiative_order.set([])
+        await self.config.guild(ctx.guild).current_turn.set(0)
+        await ctx.send("Initiative order cleared.")
+
+    @dndtools.command(name='additem', help='Add an item to your inventory: dndtools additem <item>')
     async def additem(self, ctx, *, item: str):
         inv = await self.config.user(ctx.author).inventory()
         inv.append(item)
         await self.config.user(ctx.author).inventory.set(inv)
         await ctx.send(f"Added '{item}' to your inventory.")
 
-    @commands.command(name='viewitems', help='View your inventory')
+    @dndtools.command(name='viewitems', help='View your inventory')
     async def viewitems(self, ctx):
         inv = await self.config.user(ctx.author).inventory()
         if not inv:
@@ -171,14 +190,19 @@ class DnD(commands.Cog):
             return
         await ctx.send(f"Your inventory: {', '.join(inv)}")
 
-    @commands.command(name='addnote', help='Add a session note: !addnote <note>')
+    @dndtools.command(name='clearitems', help='Clear your inventory.')
+    async def clearitems(self, ctx):
+        await self.config.user(ctx.author).inventory.set([])
+        await ctx.send("Your inventory has been cleared.")
+
+    @dndtools.command(name='addnote', help='Add a session note: dndtools addnote <note>')
     async def addnote(self, ctx, *, note: str):
         notes = await self.config.guild(ctx.guild).session_notes()
         notes.append((ctx.author.display_name, note))
         await self.config.guild(ctx.guild).session_notes.set(notes)
         await ctx.send("Note added.")
 
-    @commands.command(name='viewnotes', help='View all session notes')
+    @dndtools.command(name='viewnotes', help='View all session notes')
     async def viewnotes(self, ctx):
         notes = await self.config.guild(ctx.guild).session_notes()
         if not notes:
@@ -186,3 +210,8 @@ class DnD(commands.Cog):
             return
         notes_str = '\n'.join([f"{author}: {note}" for author, note in notes])
         await ctx.send(f"Session Notes:\n{notes_str}")
+
+    @dndtools.command(name='clearnotes', help='Clear all session notes for this server.')
+    async def clearnotes(self, ctx):
+        await self.config.guild(ctx.guild).session_notes.set([])
+        await ctx.send("All session notes have been cleared.")
