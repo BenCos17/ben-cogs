@@ -17,9 +17,9 @@ class DnD(commands.Cog):
             session_notes=[]  # list of (author, note)
         )
 
-    @commands.command(name='dnd', help='A complex DnD command with dice rolling')
+    @commands.command(name='dndtools', help='A complex DnD command with dice rolling')
     @commands.cooldown(1, 60, commands.BucketType.user)
-    async def dnd(self, ctx):
+    async def dndtools(self, ctx):
         import discord
         embed = discord.Embed(title='DnD Command', description='A complex DnD command with dice rolling', color=discord.Color.blue())
         dice_roll = random.randint(1, 20)
