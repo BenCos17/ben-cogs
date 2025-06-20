@@ -3,6 +3,7 @@ from redbot.core import commands, Config
 import re
 import asyncio
 from typing import Dict, List, Optional
+import discord
 
 
 class Character:
@@ -46,13 +47,20 @@ class Enemy:
         self.name = name
         self.level = level
         
-        # Enemy types with base stats
+        # Expanded enemy types with base stats
         enemy_types = {
-            "Goblin": {"hp": 12, "attack": 8, "defense": 5},
-            "Orc": {"hp": 20, "attack": 12, "defense": 8},
-            "Dragon": {"hp": 50, "attack": 20, "defense": 15},
-            "Skeleton": {"hp": 15, "attack": 10, "defense": 6},
-            "Troll": {"hp": 30, "attack": 15, "defense": 10}
+            "Goblin": {"hp": 12, "attack": 8, "defense": 5, "xp": 50, "loot_chance": 0.3},
+            "Orc": {"hp": 20, "attack": 12, "defense": 8, "xp": 100, "loot_chance": 0.4},
+            "Dragon": {"hp": 50, "attack": 20, "defense": 15, "xp": 500, "loot_chance": 0.8},
+            "Skeleton": {"hp": 15, "attack": 10, "defense": 6, "xp": 75, "loot_chance": 0.3},
+            "Troll": {"hp": 30, "attack": 15, "defense": 10, "xp": 200, "loot_chance": 0.5},
+            "Bandit": {"hp": 18, "attack": 11, "defense": 7, "xp": 80, "loot_chance": 0.6},
+            "Wolf": {"hp": 14, "attack": 12, "defense": 5, "xp": 60, "loot_chance": 0.2},
+            "Giant Spider": {"hp": 16, "attack": 13, "defense": 6, "xp": 90, "loot_chance": 0.3},
+            "Undead Knight": {"hp": 25, "attack": 14, "defense": 12, "xp": 150, "loot_chance": 0.5},
+            "Dark Mage": {"hp": 22, "attack": 16, "defense": 7, "xp": 180, "loot_chance": 0.7},
+            "Demon": {"hp": 35, "attack": 18, "defense": 13, "xp": 300, "loot_chance": 0.6},
+            "Ancient Dragon": {"hp": 60, "attack": 25, "defense": 18, "xp": 800, "loot_chance": 1.0}
         }
         
         stats = enemy_types.get(name, enemy_types["Goblin"])
@@ -60,6 +68,43 @@ class Enemy:
         self.hp = self.max_hp
         self.attack = stats["attack"] + (level - 1) * 2
         self.defense = stats["defense"] + (level - 1)
+        self.xp = stats["xp"] * level
+        self.loot_chance = stats["loot_chance"]
+
+    def _generate_loot(self, enemy_level: int) -> str:
+        loot_table = [
+            "Health Potion",
+            "Mana Potion",
+            "Scroll of Fireball",
+            "Scroll of Lightning",
+            "Healing Salve",
+            "Magic Shield Scroll",
+            "Ring of Protection",
+            "Amulet of Power",
+            "Elixir of Strength",
+            "Boots of Speed",
+            "Cloak of Stealth",
+            "Bracers of Defense",
+            "Wand of Magic Missiles",
+            "Staff of Healing",
+            "Sword of Sharpness",
+            "Armor of Resistance"
+        ]
+        
+        rare_loot = [
+            "Dragon Scale Armor",
+            "Flaming Sword",
+            "Staff of Power",
+            "Ring of Invisibility",
+            "Amulet of Life",
+            "Boots of Flying",
+            "Cloak of Displacement",
+            "Gauntlets of Ogre Power"
+        ]
+        
+        if enemy_level >= 5 and random.random() < 0.2:  # 20% chance for rare loot at higher levels
+            return random.choice(rare_loot)
+        return random.choice(loot_table)
 
 class DnD(commands.Cog):
     def __init__(self, bot):
@@ -67,17 +112,20 @@ class DnD(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
         self.config.register_user(
             character=None,  # dict or None
-            inventory=[]
+            inventory=[],
+            active_effects=[]  # for tracking ongoing effects in campaigns
         )
         self.config.register_guild(
             initiative_order=[],  # list of user_ids
             current_turn=0,
-            session_notes=[]  # list of (author, note)
+            session_notes=[],  # list of (author, note)
+            campaign_state={},  # for tracking campaign progress
+            custom_npcs=[]  # for storing custom NPCs
         )
 
-    @commands.command(name='dndadventure', help='Start a DnD adventure!')
+    @commands.command(name='dndgame', help='Start a DnD adventure game!')
     @commands.cooldown(1, 60, commands.BucketType.user)
-    async def dndadventure(self, ctx):
+    async def dndgame(self, ctx):
         # Character creation
         await ctx.send("Welcome to the adventure! Choose your class:\n1. Warrior\n2. Mage\n3. Rogue\n4. Cleric")
         
@@ -294,31 +342,126 @@ class DnD(commands.Cog):
             "Scroll of Fireball",
             "Scroll of Lightning",
             "Healing Salve",
-            "Magic Shield Scroll"
+            "Magic Shield Scroll",
+            "Ring of Protection",
+            "Amulet of Power",
+            "Elixir of Strength",
+            "Boots of Speed",
+            "Cloak of Stealth",
+            "Bracers of Defense",
+            "Wand of Magic Missiles",
+            "Staff of Healing",
+            "Sword of Sharpness",
+            "Armor of Resistance"
         ]
+        
+        rare_loot = [
+            "Dragon Scale Armor",
+            "Flaming Sword",
+            "Staff of Power",
+            "Ring of Invisibility",
+            "Amulet of Life",
+            "Boots of Flying",
+            "Cloak of Displacement",
+            "Gauntlets of Ogre Power"
+        ]
+        
+        if enemy_level >= 5 and random.random() < 0.2:  # 20% chance for rare loot at higher levels
+            return random.choice(rare_loot)
         return random.choice(loot_table)
 
-    @commands.group(name='dndtools', invoke_without_command=True, aliases=["dndt", "dtools"], help='DnD session tools: character sheets, dice, initiative, inventory, and more.')
+    @commands.group(name='dndtools', invoke_without_command=True, aliases=["dndt", "dtools"], help='DnD Dungeon Master tools for running campaigns')
     async def dndtools(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send("Use a subcommand: roll, createchar, viewchar, initiative, nextturn, clearinitiative, additem, viewitems, clearitems, addnote, viewnotes, clearnotes.")
+            commands_list = [
+                "**Dice Commands:**",
+                "`roll <dice>` - Roll any dice (e.g., d20, 2d6+3)",
+                "`advantage` - Roll with advantage (2d20, take highest)",
+                "`disadvantage` - Roll with disadvantage (2d20, take lowest)",
+                "`stats` - Roll 4d6 drop lowest for character stats",
+                "`rollset <dice> <count>` - Roll multiple sets (e.g., rollset 2d6 4)",
+                "\n**Campaign Tools:**",
+                "`createchar` - Create character sheet",
+                "`viewchar` - View character sheet",
+                "`initiative` - Manage combat initiative",
+                "`addnpc` - Add custom NPC",
+                "`viewnpc` - View custom NPCs",
+                "`additem/viewitems` - Manage inventory",
+                "`addnote/viewnotes` - Session notes"
+            ]
+            await ctx.send("\n".join(commands_list))
 
-    @dndtools.command(name='roll', aliases=["dice"], help='Roll dice using standard notation, e.g. 2d6+3')
-    async def roll(self, ctx, *, dice: str):
-        match = re.fullmatch(r"(\d*)d(\d+)([+-]\d+)?", dice.replace(" ", ""))
-        if not match:
-            await ctx.send("Invalid dice notation. Use NdM+X, e.g. 2d6+3.")
+    @dndtools.command(name='advantage', help='Roll with advantage (2d20, take highest)')
+    async def advantage(self, ctx):
+        roll1 = random.randint(1, 20)
+        roll2 = random.randint(1, 20)
+        result = max(roll1, roll2)
+        await ctx.send(f"Rolling with advantage: [{roll1}, {roll2}] = **{result}**")
+
+    @dndtools.command(name='disadvantage', help='Roll with disadvantage (2d20, take lowest)')
+    async def disadvantage(self, ctx):
+        roll1 = random.randint(1, 20)
+        roll2 = random.randint(1, 20)
+        result = min(roll1, roll2)
+        await ctx.send(f"Rolling with disadvantage: [{roll1}, {roll2}] = **{result}**")
+
+    @dndtools.command(name='stats', help='Roll 4d6 drop lowest for character stats')
+    async def rollstats(self, ctx):
+        stats = []
+        rolls_detail = []
+        for _ in range(6):
+            rolls = sorted([random.randint(1, 6) for _ in range(4)])
+            total = sum(rolls[1:])  # Drop lowest
+            stats.append(total)
+            rolls_detail.append(f"{rolls} → {total}")
+        
+        embed = discord.Embed(title="Character Stat Rolls", description="4d6 drop lowest", color=discord.Color.blue())
+        embed.add_field(name="Detailed Rolls", value="\n".join(rolls_detail), inline=False)
+        embed.add_field(name="Final Stats", value=", ".join(map(str, stats)), inline=False)
+        await ctx.send(embed=embed)
+
+    @dndtools.command(name='rollset', help='Roll multiple sets of dice')
+    async def rollset(self, ctx, dice: str, count: int = 1):
+        if count > 10:
+            await ctx.send("Maximum 10 sets at once.")
             return
-        n, die, mod = match.groups()
-        n = int(n) if n else 1
-        die = int(die)
-        mod = int(mod) if mod else 0
-        if n < 1 or die < 1 or n > 100:
-            await ctx.send("Invalid dice parameters. Max 100 dice, min 1.")
+        
+        results = []
+        for i in range(count):
+            match = re.fullmatch(r"(\d*)d(\d+)([+-]\d+)?", dice.replace(" ", ""))
+            if not match:
+                await ctx.send("Invalid dice notation. Use NdM+X, e.g. 2d6+3")
+                return
+            
+            n, die, mod = match.groups()
+            n = int(n) if n else 1
+            die = int(die)
+            mod = int(mod) if mod else 0
+            
+            rolls = [random.randint(1, die) for _ in range(n)]
+            total = sum(rolls) + mod
+            results.append(f"Set {i+1}: {rolls} {'+'+str(mod) if mod else ''} = **{total}**")
+        
+        await ctx.send("\n".join(results))
+
+    @dndtools.command(name='addnpc', help='Add a custom NPC to the campaign')
+    async def addnpc(self, ctx, name: str, *, description: str):
+        npcs = await self.config.guild(ctx.guild).custom_npcs()
+        npcs.append({"name": name, "description": description})
+        await self.config.guild(ctx.guild).custom_npcs.set(npcs)
+        await ctx.send(f"NPC {name} added to the campaign.")
+
+    @dndtools.command(name='viewnpc', help='View all custom NPCs')
+    async def viewnpc(self, ctx):
+        npcs = await self.config.guild(ctx.guild).custom_npcs()
+        if not npcs:
+            await ctx.send("No custom NPCs found.")
             return
-        rolls = [random.randint(1, die) for _ in range(n)]
-        total = sum(rolls) + mod
-        await ctx.send(f"Rolling {dice}: {rolls} {'+'+str(mod) if mod else ''} = **{total}**")
+        
+        embed = discord.Embed(title="Campaign NPCs", color=discord.Color.green())
+        for npc in npcs:
+            embed.add_field(name=npc["name"], value=npc["description"], inline=False)
+        await ctx.send(embed=embed)
 
     @dndtools.command(name='createchar', help='Create your DnD character: dndtools createchar <name> <class> <hp> <str> <dex> <con> <int> <wis> <cha>')
     async def createchar(self, ctx, name: str, char_class: str, hp: int, str_: int, dex: int, con: int, int_: int, wis: int, cha: int):
@@ -346,7 +489,6 @@ class DnD(commands.Cog):
         await ctx.send(embed=embed)
 
     def _char_embed(self, char, owner):
-        import discord
         embed = discord.Embed(title=f"{char['name']} the {char['class']}", description=f"Owner: {owner}", color=discord.Color.purple())
         embed.add_field(name="HP", value=char['hp'])
         embed.add_field(name="STR", value=char['str'])
@@ -430,3 +572,20 @@ class DnD(commands.Cog):
     async def clearnotes(self, ctx):
         await self.config.guild(ctx.guild).session_notes.set([])
         await ctx.send("All session notes have been cleared.")
+
+    @dndtools.command(name='roll', aliases=["dice"], help='Roll dice using standard notation, e.g. 2d6+3')
+    async def roll(self, ctx, *, dice: str):
+        match = re.fullmatch(r"(\d*)d(\d+)([+-]\d+)?", dice.replace(" ", ""))
+        if not match:
+            await ctx.send("Invalid dice notation. Use NdM+X, e.g. 2d6+3.")
+            return
+        n, die, mod = match.groups()
+        n = int(n) if n else 1
+        die = int(die)
+        mod = int(mod) if mod else 0
+        if n < 1 or die < 1 or n > 100:
+            await ctx.send("Invalid dice parameters. Max 100 dice, min 1.")
+            return
+        rolls = [random.randint(1, die) for _ in range(n)]
+        total = sum(rolls) + mod
+        await ctx.send(f"Rolling {dice}: {rolls} {'+'+str(mod) if mod else ''} = **{total}**")
