@@ -4,12 +4,12 @@ This cog provides a set of commands for a Discord bot to facilitate a Dungeons &
 
 ## Commands
 
-### `dndadventure`
+### `dndgame`
 
 * **Description:** A fun, standalone DnD adventure simulation with dice rolling and narrative.
 * **Cooldown:** 1 minute per user.
-* **Usage:** `!dndadventure`
-* **Functionality:** Rolls a D20, displays player and enemy stats, simulates combat, and provides a narrative for the adventure.
+* **Usage:** `!dndgame`
+* **Functionality:** A mini-game where you choose a class and fight monsters.
 
 ---
 
@@ -23,6 +23,26 @@ This cog provides a set of commands for a Discord bot to facilitate a Dungeons &
 * **Description:** Roll dice using standard notation, e.g., 2d6+3.
 * **Usage:** `!dndtools roll <dice notation>`
 * **Functionality:** Parses the dice notation, rolls the dice, and displays the result.
+
+#### `advantage`
+* **Description:** Roll with advantage (2d20, take highest).
+* **Usage:** `!dndtools advantage`
+* **Functionality:** Rolls two d20s and returns the highest result.
+
+#### `disadvantage`
+* **Description:** Roll with disadvantage (2d20, take lowest).
+* **Usage:** `!dndtools disadvantage`
+* **Functionality:** Rolls two d20s and returns the lowest result.
+
+#### `stats`
+* **Description:** Roll 4d6 and drop the lowest die, repeated 6 times for character stats.
+* **Usage:** `!dndtools stats`
+* **Functionality:** Generates a standard set of 6 ability scores for a new character.
+
+#### `rollset`
+* **Description:** Roll multiple sets of dice.
+* **Usage:** `!dndtools rollset <dice> <count>`
+* **Functionality:** Rolls a specified dice notation a given number of times.
 
 #### `createchar`
 * **Description:** Create your DnD character.
@@ -48,6 +68,16 @@ This cog provides a set of commands for a Discord bot to facilitate a Dungeons &
 * **Description:** Clear the initiative order for this server.
 * **Usage:** `!dndtools clearinitiative`
 * **Functionality:** Removes all players from the initiative order and resets the turn counter.
+
+#### `addnpc`
+* **Description:** Add a custom NPC to the campaign.
+* **Usage:** `!dndtools addnpc <name> <description>`
+* **Functionality:** Stores a custom NPC with a name and description for the current server.
+
+#### `viewnpc`
+* **Description:** View all custom NPCs for the campaign.
+* **Usage:** `!dndtools viewnpc`
+* **Functionality:** Displays a list of all custom NPCs saved for the server.
 
 #### `additem`
 * **Description:** Add an item to your inventory.

@@ -463,12 +463,13 @@ class DnD(commands.Cog):
             embed.add_field(name=npc["name"], value=npc["description"], inline=False)
         await ctx.send(embed=embed)
 
-    @dndtools.command(name='createchar', help='Create your DnD character: dndtools createchar <name> <class> <hp> <str> <dex> <con> <int> <wis> <cha>')
+    @dndtools.command(name='createchar', help='Create a character. Provide Name, Class, HP, and 6 ability scores (Str, Dex, Con, Int, Wis, Cha).')
     async def createchar(self, ctx, name: str, char_class: str, hp: int, str_: int, dex: int, con: int, int_: int, wis: int, cha: int):
         char = {
             'name': name,
             'class': char_class,
-            'hp': hp,
+            'max_hp': hp,
+            'current_hp': hp,
             'str': str_,
             'dex': dex,
             'con': con,
@@ -477,7 +478,7 @@ class DnD(commands.Cog):
             'cha': cha
         }
         await self.config.user(ctx.author).character.set(char)
-        await ctx.send(f"Character created for {ctx.author.display_name}: {name} the {char_class} (HP: {hp})")
+        await ctx.send(f"Character created for {ctx.author.display_name}: {name} the {char_class} (HP: {hp}/{hp})")
 
     @dndtools.command(name='viewchar', help='View your DnD character sheet')
     async def viewchar(self, ctx):
@@ -488,9 +489,69 @@ class DnD(commands.Cog):
         embed = self._char_embed(char, ctx.author.display_name)
         await ctx.send(embed=embed)
 
+    @dndtools.group(name='hp', invoke_without_command=True)
+    async def dnd_hp(self, ctx):
+        """Manage your character's health points."""
+        char = await self.config.user(ctx.author).character()
+        if not char:
+            await ctx.send("No character found. Use `dndtools createchar` to make one.")
+            return
+
+        max_hp = char.get('max_hp', char.get('hp'))
+        current_hp = char.get('current_hp', char.get('hp'))
+        await ctx.send(f"Your current HP is {current_hp}/{max_hp}.")
+
+    @dnd_hp.command(name='set', help='Set current HP for your character.')
+    async def hp_set(self, ctx, hp: int):
+        char = await self.config.user(ctx.author).character()
+        if not char:
+            await ctx.send("No character found. Use `dndtools createchar` to make one.")
+            return
+        
+        if 'max_hp' not in char:
+            char['max_hp'] = char['hp']
+        
+        char['current_hp'] = min(hp, char['max_hp'])
+        await self.config.user(ctx.author).character.set(char)
+        await ctx.send(f"HP set to {char['current_hp']}/{char['max_hp']}.")
+
+    @dnd_hp.command(name='damage', help='Apply damage to your character.')
+    async def hp_damage(self, ctx, amount: int):
+        char = await self.config.user(ctx.author).character()
+        if not char:
+            await ctx.send("No character found. Use `dndtools createchar` to make one.")
+            return
+            
+        if 'current_hp' not in char:
+            char['current_hp'] = char['hp']
+            
+        char['current_hp'] -= amount
+        await self.config.user(ctx.author).character.set(char)
+        
+        max_hp = char.get('max_hp', char.get('hp'))
+        await ctx.send(f"Took {amount} damage. Current HP: {char['current_hp']}/{max_hp}.")
+
+    @dnd_hp.command(name='heal', help='Heal your character.')
+    async def hp_heal(self, ctx, amount: int):
+        char = await self.config.user(ctx.author).character()
+        if not char:
+            await ctx.send("No character found. Use `dndtools createchar` to make one.")
+            return
+            
+        if 'max_hp' not in char:
+            char['max_hp'] = char['hp']
+        if 'current_hp' not in char:
+            char['current_hp'] = char['hp']
+        
+        new_hp = char['current_hp'] + amount
+        char['current_hp'] = min(new_hp, char['max_hp'])
+        
+        await self.config.user(ctx.author).character.set(char)
+        await ctx.send(f"Healed for {amount}. Current HP: {char['current_hp']}/{char['max_hp']}.")
+
     def _char_embed(self, char, owner):
         embed = discord.Embed(title=f"{char['name']} the {char['class']}", description=f"Owner: {owner}", color=discord.Color.purple())
-        embed.add_field(name="HP", value=char['hp'])
+        embed.add_field(name="HP", value=f"{char.get('current_hp', char.get('hp'))}/{char.get('max_hp', char.get('hp'))}")
         embed.add_field(name="STR", value=char['str'])
         embed.add_field(name="DEX", value=char['dex'])
         embed.add_field(name="CON", value=char['con'])
