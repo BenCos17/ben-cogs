@@ -48,11 +48,35 @@ This cog provides a set of commands for a Discord bot to facilitate a Dungeons &
 * **Description:** Create your DnD character.
 * **Usage:** `!dndtools createchar <name> <class> <hp> <str> <dex> <con> <int> <wis> <cha>`
 * **Functionality:** Creates a character with the specified attributes and stores it in the user's configuration.
+* **Parameters:**
+    - `<name>`: Your character's name. If it has spaces, wrap it in double quotes (e.g., "Bilbo Baggins").
+    - `<class>`: Your character's class (e.g., Rogue, Fighter, Wizard).
+    - `<hp>`: Your character's maximum Hit Points.
+    - `<str>`: Strength score.
+    - `<dex>`: Dexterity score.
+    - `<con>`: Constitution score.
+    - `<int>`: Intelligence score.
+    - `<wis>`: Wisdom score.
+    - `<cha>`: Charisma score.
+* **Example:**
+  ```
+  !dndtools createchar "Gimli" "Warrior" 25 18 14 16 10 12 9
+  ```
+* **Tip:** You can use `!dndtools stats` to generate ability scores for your character.
 
 #### `viewchar`
 * **Description:** View your DnD character sheet.
 * **Usage:** `!dndtools viewchar`
 * **Functionality:** Retrieves the user's character from their configuration and displays it in an embed.
+
+#### `hp` (Command Group)
+* **Description:** Manage your character's health points.
+* **Usage:** `!dndtools hp [subcommand] [amount]`
+* **Functionality:**
+    - `!dndtools hp`: Shows current and max HP.
+    - `!dndtools hp set <amount>`: Sets current HP to the specified amount.
+    - `!dndtools hp damage <amount>`: Reduces HP by the specified amount.
+    - `!dndtools hp heal <amount>`: Increases HP by the specified amount, up to the maximum.
 
 #### `initiative`
 * **Description:** Start initiative order.
