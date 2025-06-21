@@ -27,8 +27,7 @@ class AlwaysReply(commands.Cog):
                 ctx.prefix = ''
             await self.bot.invoke(ctx)
 
-def setup(bot: Red):
-    bot.add_cog(AlwaysReply(bot))
+
 
 
 
