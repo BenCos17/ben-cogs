@@ -8,12 +8,12 @@ class AutoChannel(commands.Cog):
         self.reply_channels = {}
 
     @commands.group()
-    async def alwaysreply(self, ctx: commands.Context):
+    async def autochannel(self, ctx: commands.Context):
         """Manage always reply settings"""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @alwaysreply.command()
+    @autochannel.command()
     async def set(self, ctx: commands.Context, channel: discord.TextChannel):
         """Set a channel to always reply"""
         self.reply_channels[channel.id] = True
