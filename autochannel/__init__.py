@@ -1,5 +1,5 @@
 from .autochannel import AutoChannel
 
-def setup(bot):
-    bot.add_cog(AutoChannel(bot))
+async def setup(bot):
+    await bot.add_cog(AutoChannel(bot))
 
