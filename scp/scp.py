@@ -98,27 +98,6 @@ class scpLookup(commands.Cog):
         """List SCP articles by category or a specific range."""
         base_url = "https://scp-data.tedivm.com/data/scp/items/index.json"  # Updated to use SCP Data API
         
-        cancel_flag = {"cancelled": False}
-        # Send initial message and add cancel reaction
-        initial_message = await ctx.send("Preparing SCP list... React with 🛑 to cancel.")
-        await initial_message.add_reaction("🛑")
-
-        # Background task to listen for cancel reaction
-        async def wait_for_cancel():
-            def check(reaction, user):
-                return (
-                    user == ctx.author
-                    and str(reaction.emoji) == "🛑"
-                    and reaction.message.id == initial_message.id
-                )
-            try:
-                await self.bot.wait_for("reaction_add", timeout=120, check=check)
-                cancel_flag["cancelled"] = True
-            except asyncio.TimeoutError:
-                pass  # No cancel, just continue
-
-        asyncio.create_task(wait_for_cancel())
-
         # Fetch SCP articles from the API
         async with aiohttp.ClientSession() as session:
             async with session.get(base_url) as response:
@@ -131,31 +110,57 @@ class scpLookup(commands.Cog):
                         if category is None or category in article.get('tags', []):
                             article_titles.append(article['title'])
 
-                    if article_titles:
-                        # Prepare the message
-                        message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join(article_titles)
+                    if not article_titles:
+                        await ctx.send(f"No SCPs found in category: {category}.")
+                        return
+
+                    # PAGINATION if more than 50 results
+                    if len(article_titles) > 50:
+                        # Split into pages of 50
+                        pages = [article_titles[i:i+50] for i in range(0, len(article_titles), 50)]
+                        total_pages = len(pages)
+                        current_page = 0
+                        cancel_flag = {"cancelled": False}
                         
-                        # Split the message into chunks if it exceeds 2000 characters
-                        sent_first = False
-                        for i in range(0, len(message), 2000):
-                            if cancel_flag["cancelled"]:
-                                await ctx.send("Listing cancelled by user.")
-                                break
+                        def make_page_content(page_idx):
+                            page = pages[page_idx]
+                            header = f"Listing SCPs in category: {category if category else 'all'} (Page {page_idx+1}/{total_pages})\n"
+                            return header + "\n".join(page)
+                        
+                        # Send first page
+                        message = await ctx.send(make_page_content(current_page))
+                        await message.add_reaction("⬅️")
+                        await message.add_reaction("➡️")
+                        await message.add_reaction("🛑")
+                        
+                        def check(reaction, user):
+                            return (
+                                user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ["⬅️", "➡️", "🛑"]
+                            )
+                        
+                        while True:
                             try:
-                                if not sent_first:
-                                    await ctx.send(message[i:i + 2000])
-                                    sent_first = True
-                                else:
-                                    # For hybrid commands, use followup for subsequent messages if possible
-                                    if hasattr(ctx, "interaction") and ctx.interaction:
-                                        await ctx.interaction.followup.send(message[i:i + 2000])
-                                    else:
-                                        await ctx.send(message[i:i + 2000])
-                            except NotFound:
-                                # Interaction expired or unknown, stop sending further messages
+                                reaction, user = await self.bot.wait_for("reaction_add", timeout=120, check=check)
+                                if str(reaction.emoji) == "🛑":
+                                    await ctx.send("Listing cancelled by user.")
+                                    break
+                                elif str(reaction.emoji) == "➡️":
+                                    if current_page < total_pages - 1:
+                                        current_page += 1
+                                        await message.edit(content=make_page_content(current_page))
+                                elif str(reaction.emoji) == "⬅️":
+                                    if current_page > 0:
+                                        current_page -= 1
+                                        await message.edit(content=make_page_content(current_page))
+                                # Remove user's reaction
+                                await message.remove_reaction(reaction, user)
+                            except asyncio.TimeoutError:
+                                await ctx.send("Pagination timed out.")
                                 break
                     else:
-                        await ctx.send(f"No SCPs found in category: {category}.")
+                        # If 50 or fewer, send as before
+                        message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join(article_titles)
+                        await ctx.send(message)
                 else:
                     await ctx.send("Failed to fetch SCP articles. Please try again later.")
 
