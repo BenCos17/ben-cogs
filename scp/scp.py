@@ -184,8 +184,21 @@ class scpLookup(commands.Cog):
                                 series = article.get('series', 'N/A')
                                 article_links.append((key, title, link, author, rating, tags, series))
 
-                        # Split into pages of 50
-                        pages = [article_links[i:i+50] for i in range(0, len(article_links), 50)]
+                        # Dynamically split pages so each embed description is <= 4096 chars
+                        pages = []
+                        current_page = []
+                        current_length = 0
+                        for entry in article_links:
+                            line = f"[{entry[0].upper()}: {entry[1]}]({entry[2]})\nAuthor: {entry[3]} | Rating: {entry[4]} | Tags: {entry[5]} | Series: {entry[6]}\n"
+                            if current_length + len(line) > 4096:
+                                pages.append(current_page)
+                                current_page = []
+                                current_length = 0
+                            current_page.append(entry)
+                            current_length += len(line)
+                        if current_page:
+                            pages.append(current_page)
+
                         view = SCPListView(pages, ctx, category)
                         embed = view.make_embed()
                         view.message = await ctx.send(embed=embed, view=view)
