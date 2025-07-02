@@ -2,6 +2,7 @@ from redbot.core import commands
 import aiohttp
 from bs4 import BeautifulSoup
 import asyncio
+from discord.errors import NotFound
 
 # Define the maximum SCP number here
 MAX_SCP_NUMBER = 8999  
@@ -114,8 +115,21 @@ class scpLookup(commands.Cog):
                         message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join(article_titles)
                         
                         # Split the message into chunks if it exceeds 2000 characters
+                        sent_first = False
                         for i in range(0, len(message), 2000):
-                            await ctx.send(message[i:i + 2000])
+                            try:
+                                if not sent_first:
+                                    await ctx.send(message[i:i + 2000])
+                                    sent_first = True
+                                else:
+                                    # For hybrid commands, use followup for subsequent messages if possible
+                                    if hasattr(ctx, "interaction") and ctx.interaction:
+                                        await ctx.interaction.followup.send(message[i:i + 2000])
+                                    else:
+                                        await ctx.send(message[i:i + 2000])
+                            except NotFound:
+                                # Interaction expired or unknown, stop sending further messages
+                                break
                     else:
                         await ctx.send(f"No SCPs found in category: {category}.")
                 else:
