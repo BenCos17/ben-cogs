@@ -8,6 +8,59 @@ import discord
 # Define the maximum SCP number here
 MAX_SCP_NUMBER = 8999  
 
+class SCPListView(discord.ui.View):
+    def __init__(self, pages, ctx, category):
+        super().__init__(timeout=120)
+        self.pages = pages
+        self.ctx = ctx
+        self.category = category
+        self.current_page = 0
+        self.total_pages = len(pages)
+        self.message = None
+
+    def make_embed(self):
+        page = self.pages[self.current_page]
+        desc = "\n".join([f"[{key.upper()}: {title}]({link})" for key, title, link in page])
+        embed = discord.Embed(
+            title=f"SCPs in category: {self.category if self.category else 'all'} (Page {self.current_page+1}/{self.total_pages})",
+            description=desc,
+            color=discord.Color.blue()
+        )
+        return embed
+
+    async def update(self, interaction):
+        await interaction.response.edit_message(embed=self.make_embed(), view=self)
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.ctx.author:
+            await interaction.response.send_message("You can't control this pagination.", ephemeral=True)
+            return
+        if self.current_page > 0:
+            self.current_page -= 1
+            await self.update(interaction)
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.ctx.author:
+            await interaction.response.send_message("You can't control this pagination.", ephemeral=True)
+            return
+        if self.current_page < self.total_pages - 1:
+            self.current_page += 1
+            await self.update(interaction)
+
+    @discord.ui.button(emoji="🛑", style=discord.ButtonStyle.danger)
+    async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.ctx.author:
+            await interaction.response.send_message("You can't control this pagination.", ephemeral=True)
+            return
+        await interaction.response.edit_message(content="Listing cancelled by user.", embed=None, view=None)
+        self.stop()
+
+    async def on_timeout(self):
+        if self.message:
+            await self.message.edit(content="Pagination timed out.", embed=None, view=None)
+
 class scpLookup(commands.Cog):
     """A cog for looking up SCP articles with more detailed information."""
 
@@ -124,54 +177,16 @@ class scpLookup(commands.Cog):
                                 title = article['title']
                                 # Use the key as the slug (e.g., 'scp-001')
                                 link = f"https://scpwiki.com/{key}"
-                                article_links.append((title, link))
+                                article_links.append((key, title, link))
 
                         # Split into pages of 50
                         pages = [article_links[i:i+50] for i in range(0, len(article_links), 50)]
-                        total_pages = len(pages)
-                        current_page = 0
-
-                        def make_embed(page_idx):
-                            page = pages[page_idx]
-                            desc = "\n".join([f"[{title}]({link})" for title, link in page])
-                            embed = discord.Embed(
-                                title=f"SCPs in category: {category if category else 'all'} (Page {page_idx+1}/{total_pages})",
-                                description=desc,
-                                color=discord.Color.blue()
-                            )
-                            return embed
-
-                        message = await ctx.send(embed=make_embed(current_page))
-                        await message.add_reaction("⬅️")
-                        await message.add_reaction("➡️")
-                        await message.add_reaction("🛑")
-
-                        def check(reaction, user):
-                            return (
-                                user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ["⬅️", "➡️", "🛑"]
-                            )
-
-                        while True:
-                            try:
-                                reaction, user = await self.bot.wait_for("reaction_add", timeout=120, check=check)
-                                if str(reaction.emoji) == "🛑":
-                                    await ctx.send("Listing cancelled by user.")
-                                    break
-                                elif str(reaction.emoji) == "➡️":
-                                    if current_page < total_pages - 1:
-                                        current_page += 1
-                                        await message.edit(embed=make_embed(current_page))
-                                elif str(reaction.emoji) == "⬅️":
-                                    if current_page > 0:
-                                        current_page -= 1
-                                        await message.edit(embed=make_embed(current_page))
-                                await message.remove_reaction(reaction, user)
-                            except asyncio.TimeoutError:
-                                await ctx.send("Pagination timed out.")
-                                break
+                        view = SCPListView(pages, ctx, category)
+                        embed = view.make_embed()
+                        view.message = await ctx.send(embed=embed, view=view)
                     else:
                         # If 50 or fewer, send as before
-                        message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join(article_titles)
+                        message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join([f"[{key.upper()}: {title}](https://scpwiki.com/{key})" for key, title, link in article_links])
                         await ctx.send(message)
                 else:
                     await ctx.send("Failed to fetch SCP articles. Please try again later.")
