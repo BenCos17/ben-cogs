@@ -20,7 +20,9 @@ class SCPListView(discord.ui.View):
 
     def make_embed(self):
         page = self.pages[self.current_page]
-        desc = "\n".join([f"[{key.upper()}: {title}]({link})" for key, title, link in page])
+        desc = "\n".join([
+            f"[{key.upper()}: {title}]({link})\n{desc}" for key, title, link, desc in page
+        ])
         embed = discord.Embed(
             title=f"SCPs in category: {self.category if self.category else 'all'} (Page {self.current_page+1}/{self.total_pages})",
             description=desc,
@@ -170,14 +172,14 @@ class scpLookup(commands.Cog):
 
                     # PAGINATION if more than 50 results
                     if len(article_titles) > 50:
-                        # Build a list of (title, link) tuples
+                        # Build a list of (key, title, link, desc) tuples
                         article_links = []
                         for key, article in articles.items():
                             if category is None or category in article.get('tags', []):
                                 title = article['title']
-                                # Use the key as the slug (e.g., 'scp-001')
                                 link = f"https://scpwiki.com/{key}"
-                                article_links.append((key, title, link))
+                                desc = article.get('description', 'No description available.').split('\n')[0][:100]
+                                article_links.append((key, title, link, desc))
 
                         # Split into pages of 50
                         pages = [article_links[i:i+50] for i in range(0, len(article_links), 50)]
