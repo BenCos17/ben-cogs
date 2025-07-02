@@ -3,6 +3,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 import asyncio
 from discord.errors import NotFound
+import discord
 
 # Define the maximum SCP number here
 MAX_SCP_NUMBER = 8999  
@@ -116,28 +117,40 @@ class scpLookup(commands.Cog):
 
                     # PAGINATION if more than 50 results
                     if len(article_titles) > 50:
+                        # Build a list of (title, link) tuples
+                        article_links = []
+                        for key, article in articles.items():
+                            if category is None or category in article.get('tags', []):
+                                title = article['title']
+                                # Use the key as the slug (e.g., 'scp-001')
+                                link = f"https://scpwiki.com/{key}"
+                                article_links.append((title, link))
+
                         # Split into pages of 50
-                        pages = [article_titles[i:i+50] for i in range(0, len(article_titles), 50)]
+                        pages = [article_links[i:i+50] for i in range(0, len(article_links), 50)]
                         total_pages = len(pages)
                         current_page = 0
-                        cancel_flag = {"cancelled": False}
-                        
-                        def make_page_content(page_idx):
+
+                        def make_embed(page_idx):
                             page = pages[page_idx]
-                            header = f"Listing SCPs in category: {category if category else 'all'} (Page {page_idx+1}/{total_pages})\n"
-                            return header + "\n".join(page)
-                        
-                        # Send first page
-                        message = await ctx.send(make_page_content(current_page))
+                            desc = "\n".join([f"[{title}]({link})" for title, link in page])
+                            embed = discord.Embed(
+                                title=f"SCPs in category: {category if category else 'all'} (Page {page_idx+1}/{total_pages})",
+                                description=desc,
+                                color=discord.Color.blue()
+                            )
+                            return embed
+
+                        message = await ctx.send(embed=make_embed(current_page))
                         await message.add_reaction("⬅️")
                         await message.add_reaction("➡️")
                         await message.add_reaction("🛑")
-                        
+
                         def check(reaction, user):
                             return (
                                 user == ctx.author and reaction.message.id == message.id and str(reaction.emoji) in ["⬅️", "➡️", "🛑"]
                             )
-                        
+
                         while True:
                             try:
                                 reaction, user = await self.bot.wait_for("reaction_add", timeout=120, check=check)
@@ -147,12 +160,11 @@ class scpLookup(commands.Cog):
                                 elif str(reaction.emoji) == "➡️":
                                     if current_page < total_pages - 1:
                                         current_page += 1
-                                        await message.edit(content=make_page_content(current_page))
+                                        await message.edit(embed=make_embed(current_page))
                                 elif str(reaction.emoji) == "⬅️":
                                     if current_page > 0:
                                         current_page -= 1
-                                        await message.edit(content=make_page_content(current_page))
-                                # Remove user's reaction
+                                        await message.edit(embed=make_embed(current_page))
                                 await message.remove_reaction(reaction, user)
                             except asyncio.TimeoutError:
                                 await ctx.send("Pagination timed out.")
