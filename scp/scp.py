@@ -21,7 +21,7 @@ class SCPListView(discord.ui.View):
     def make_embed(self):
         page = self.pages[self.current_page]
         desc = "\n".join([
-            f"[{key.upper()}: {title}]({link})" for key, title, link in page
+            f"[{key.upper()}: {title}]({link})\nAuthor: {author} | Rating: {rating} | Tags: {tags} | Series: {series}" for key, title, link, author, rating, tags, series in page
         ])
         embed = discord.Embed(
             title=f"SCPs in category: {self.category if self.category else 'all'} (Page {self.current_page+1}/{self.total_pages})",
@@ -172,13 +172,17 @@ class scpLookup(commands.Cog):
 
                     # PAGINATION if more than 50 results
                     if len(article_titles) > 50:
-                        # Build a list of (key, title, link) tuples
+                        # Build a list of (key, title, link, author, rating, tags, series) tuples
                         article_links = []
                         for key, article in articles.items():
                             if category is None or category in article.get('tags', []):
                                 title = article['title']
                                 link = article.get('url', f"https://scpwiki.com/{key}")
-                                article_links.append((key, title, link))
+                                author = article.get('creator', 'Unknown')
+                                rating = article.get('rating', 'N/A')
+                                tags = ", ".join(article.get('tags', []))
+                                series = article.get('series', 'N/A')
+                                article_links.append((key, title, link, author, rating, tags, series))
 
                         # Split into pages of 50
                         pages = [article_links[i:i+50] for i in range(0, len(article_links), 50)]
@@ -187,7 +191,7 @@ class scpLookup(commands.Cog):
                         view.message = await ctx.send(embed=embed, view=view)
                     else:
                         # If 50 or fewer, send as before
-                        message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join([f"[{key.upper()}: {title}](https://scpwiki.com/{key})" for key, title, link in article_links])
+                        message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join([f"[{key.upper()}: {title}](https://scpwiki.com/{key})" for key, title, link, author, rating, tags, series in article_links])
                         await ctx.send(message)
                 else:
                     await ctx.send("Failed to fetch SCP articles. Please try again later.")
