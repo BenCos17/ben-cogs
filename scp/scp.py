@@ -191,7 +191,13 @@ class scpLookup(commands.Cog):
                         view.message = await ctx.send(embed=embed, view=view)
                     else:
                         # If 50 or fewer, send as before
-                        message = f"Listing SCPs in category: {category if category else 'all'}\n" + "\n".join([f"[{key.upper()}: {title}](https://scpwiki.com/{key})" for key, title, link, author, rating, tags, series in article_links])
+                        message = (
+                            f"Listing SCPs in category: {category if category else 'all'}\n"
+                            + "\n".join([
+                                f"[{key.upper()}: {title}]({link})\nAuthor: {author} | Rating: {rating} | Tags: {tags} | Series: {series}"
+                                for key, title, link, author, rating, tags, series in article_links
+                            ])
+                        )
                         await ctx.send(message)
                 else:
                     await ctx.send("Failed to fetch SCP articles. Please try again later.")
