@@ -25,6 +25,7 @@ class DashboardIntegration:
         dashboard_cog.rpc.third_parties_handler.add_third_party(self)
 
 class TalkNotifier(DashboardIntegration, commands.Cog):
+    """Cog for notifying when target users send messages, with cooldown and dashboard integration."""
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
@@ -35,6 +36,7 @@ class TalkNotifier(DashboardIntegration, commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        """Send a notification in the channel when a target user sends a message, respecting cooldowns."""
         if message.author == self.bot.user:
             return
 
@@ -55,13 +57,14 @@ class TalkNotifier(DashboardIntegration, commands.Cog):
                 self.cooldowns.setdefault(guild_id, {})[message.author.id] = time.time()  # Update cooldown time
 
     async def check_cooldown(self, user_id, guild_id):
+        """Check if the user is still in cooldown for notifications in the given guild."""
         cooldown = await self.config.guild(self.bot.get_guild(guild_id)).cooldown()
         last_message_time = self.cooldowns.get(guild_id, {}).get(user_id, 0)
         return time.time() - last_message_time < cooldown  # Return True if still in cooldown
 
     @commands.group(name='talk', help='Notification related commands.', invoke_without_command=True, aliases=["talknotifier"])
     async def talk_group(self, ctx):
-        """Notification related commands."""
+        """Notification-related commands for managing message notifications in the server."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
@@ -75,7 +78,7 @@ class TalkNotifier(DashboardIntegration, commands.Cog):
     @talk_group.command(name='showmessage', help='Display the current notification message.')
     @commands.admin_or_permissions(manage_guild=True)
     async def talk_showmessage(self, ctx):
-        """Display the current notification message."""
+        """Display the current notification message for the server."""
         notification_message = await self.config.guild(ctx.guild).notification_message()
         await ctx.send(f"Current notification message: {notification_message}")
 
@@ -131,7 +134,7 @@ class TalkNotifier(DashboardIntegration, commands.Cog):
     @talk_group.command(name='setcooldown', help='Set the cooldown period for notifications.')
     @commands.admin_or_permissions(manage_guild=True)
     async def talk_setcooldown(self, ctx, cooldown: int):
-        """Set the cooldown period for notifications."""
+        """Set the cooldown period for notifications in seconds."""
         if cooldown < 0:
             await ctx.send("Cooldown cannot be negative.")
         else:

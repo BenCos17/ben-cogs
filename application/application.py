@@ -3,7 +3,7 @@ import asyncio
 from redbot.core import commands, Config
 
 class Application(commands.Cog):
-    """Cog for handling applications."""
+    """Cog for handling application processes, including questions, submissions, and reviews."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -17,12 +17,12 @@ class Application(commands.Cog):
 
     @commands.group()
     async def appset(self, ctx):
-        """Subcommands for setting up roles."""
+        """Subcommands for setting up application roles and questions."""
 
     @appset.command()
     @commands.guild_only()
     async def add(self, ctx, role: discord.Role, *, question: str):
-        """Add a question for a specific role."""
+        """Add a question for a specific role to the application process."""
         async with self.config.guild(ctx.guild).questions() as questions:
             questions.setdefault(str(role.id), []).append(question)
         await ctx.send(f"Question added for {role.name}.")
@@ -30,14 +30,14 @@ class Application(commands.Cog):
     @appset.command()
     @commands.guild_only()
     async def set(self, ctx, channel: discord.TextChannel):
-        """Set the application channel."""
+        """Set the application channel where applications will be sent."""
         await self.config.guild(ctx.guild).application_channel.set(channel.id)
         await ctx.send(f"Application channel set to {channel.mention}.")
 
     @appset.command()
     @commands.guild_only()
     async def listroles(self, ctx):
-        """List roles available for application."""
+        """List roles available for application in this server."""
         questions = await self.config.guild(ctx.guild).questions()
         roles = [ctx.guild.get_role(int(role_id)).name for role_id in questions if ctx.guild.get_role(int(role_id))]
         if roles:
@@ -49,7 +49,7 @@ class Application(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def apply(self, ctx, *, role_name: str):
-        """Apply for a specific role."""
+        """Apply for a specific role by answering configured questions via DM."""
         role = discord.utils.get(ctx.guild.roles, name=role_name)
         if not role:
             return await ctx.send("Role not found.")

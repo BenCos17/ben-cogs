@@ -6,10 +6,9 @@ import aiohttp
 import asyncio
 
 class AmputatorBot(commands.Cog):
-    """A cog to convert AMP URLs to their canonical forms using AmputatorBot API.
+    """Cog to convert AMP URLs to canonical forms using the AmputatorBot API.
     
-    This cog provides functionality to automatically detect and convert AMP URLs in messages,
-    with opt-in/opt-out capabilities for servers and users.
+    Supports opt-in/out for servers and users, and automatic conversion in messages.
     """
     
     def __init__(self, bot):
@@ -19,38 +18,17 @@ class AmputatorBot(commands.Cog):
         self.opted_in_users = set()
 
     async def initialize_config(self, guild):
-        """Initialize the configuration for the server.
-        
-        Parameters
-        ----------
-        guild : discord.Guild
-            The guild to initialize configuration for
-            
-        Returns
-        -------
-        bool
-            The opted-in status for the guild
-        """
+        """Initialize the configuration for the server and return opted-in status."""
         return await self.config.guild(guild).opted_in()
 
     @commands.group(name='amputator', invoke_without_command=True)
     async def amputator(self, ctx):
-        """Base command for AmputatorBot operations.
-        
-        If no subcommand is provided, displays the available commands.
-        
-        Subcommands
-        -----------
-        optin : Opt-in to the service
-        optout : Opt-out from the service
-        convert : Convert AMP URLs in a message
-        settings : Display current settings
-        """
+        """Base command for AmputatorBot operations. Use subcommands to opt-in, opt-out, convert, or view settings."""
         await ctx.send("Use `[p]amputator optin`, `[p]amputator optout`, or `[p]amputator convert`.")
 
     @amputator.command(name='optin')
     async def opt_in(self, ctx):
-        """Opt-in to use the AmputatorBot service"""
+        """Opt-in to use the AmputatorBot service for this server."""
         if ctx.guild:
             await self.config.guild(ctx.guild).opted_in.set(True)
             await ctx.send("Successfully opted in to use the AmputatorBot service.")
@@ -59,7 +37,7 @@ class AmputatorBot(commands.Cog):
 
     @amputator.command(name='optout')
     async def opt_out(self, ctx):
-        """Opt-out from using the AmputatorBot service"""
+        """Opt-out from using the AmputatorBot service for this server."""
         if ctx.guild:
             await self.config.guild(ctx.guild).opted_in.set(False)
             await ctx.send("Successfully opted out from using the AmputatorBot service.")
@@ -68,7 +46,7 @@ class AmputatorBot(commands.Cog):
 
     @amputator.command(name='convert')
     async def convert_amp(self, ctx, *, message: str):
-        """Converts AMP URLs to canonical URLs using AmputatorBot API"""
+        """Convert AMP URLs in a message to canonical URLs using AmputatorBot API."""
         urls = self.extract_urls(message)
         if not urls:
             await ctx.send("No URLs found in the message.")
@@ -84,37 +62,11 @@ class AmputatorBot(commands.Cog):
             await ctx.send("No canonical URLs found.")
 
     def extract_urls(self, message: str):
-        """Extracts URLs from a given message.
-        
-        Parameters
-        ----------
-        message : str
-            The message to extract URLs from
-            
-        Returns
-        -------
-        list
-            A list of URLs found in the message
-            
-        Note
-        ----
-        Uses regex pattern to match http:// and https:// URLs
-        """
+        """Extract URLs from a given message using regex."""
         return re.findall(r'(https?://\S+)', message)
 
     async def fetch_canonical_links(self, urls):
-        """Fetches canonical links for a list of URLs using the AmputatorBot API.
-        
-        Parameters
-        ----------
-        urls : list
-            List of URLs to convert
-            
-        Returns
-        -------
-        list
-            List of canonical URLs found
-        """
+        """Fetch canonical links for a list of URLs using the AmputatorBot API."""
         canonical_links = []
         async with aiohttp.ClientSession() as session:
             for url in urls:
@@ -132,21 +84,7 @@ class AmputatorBot(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Automatically detects and converts AMP links in messages.
-        
-        This event listener triggers when a message is sent in:
-        - A guild channel where the server has opted in
-        - DMs where the user has opted in
-        
-        Parameters
-        ----------
-        message : discord.Message
-            The message to process
-            
-        Note
-        ----
-        Will only respond if valid canonical URLs are found
-        """
+        """Detect and convert AMP links in messages if the server or user is opted in."""
         if message.guild:  # Check if the message is in a guild
             if await self.config.guild(message.guild).opted_in():  # Check if the server is opted in
                 urls = self.extract_urls(message.content)
@@ -164,20 +102,7 @@ class AmputatorBot(commands.Cog):
 
     @amputator.command(name='settings')
     async def show_settings(self, ctx):
-        """Displays the current configuration settings for the AmputatorBot.
-        
-        Shows the opted-in status for the current guild using an embedded message.
-        
-        Parameters
-        ----------
-        ctx : commands.Context
-            The command context
-            
-        Note
-        ----
-        Can only be used in guild channels, not in DMs
-        Uses color-coding: Green for opted-in, Red for opted-out
-        """
+        """Display the current configuration settings for the AmputatorBot in this guild."""
         if ctx.guild:  # Check if the command is invoked in a guild
             opted_in = await self.config.guild(ctx.guild).opted_in()  # Get opted-in status
             status_color = "✅" if opted_in else "❌"  # Use checkmark for Yes and cross for No

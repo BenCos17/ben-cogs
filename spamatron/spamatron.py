@@ -4,6 +4,10 @@ import asyncio
 import random
 
 class Spamatron(commands.Cog):
+    """Cog for typo watching and ghostping features.
+    
+    Provides commands to watch for common typos and respond, as well as ghostping utilities for server admins.
+    """
     def __init__(self, bot):
         self.bot = bot
         self.ghostping_tasks = {}
@@ -23,7 +27,10 @@ class Spamatron(commands.Cog):
     @commands.group()
     @commands.admin_or_permissions(administrator=True)
     async def typowatch(self, ctx):
-        """Configure the typo watch settings"""
+        """Configure typo watch settings for this server.
+        
+        Use subcommands to add, remove, or list watched words and their responses.
+        """
         if ctx.invoked_subcommand is None:
             settings = await self.config.guild(ctx.guild).typo_watch()
             enabled = "enabled" if settings["enabled"] else "disabled"
@@ -39,7 +46,7 @@ class Spamatron(commands.Cog):
 
     @typowatch.command(name="toggle")
     async def typowatch_toggle(self, ctx):
-        """Toggle typo watching on/off"""
+        """Toggle typo watching on or off for this server."""
         async with self.config.guild(ctx.guild).typo_watch() as settings:
             settings["enabled"] = not settings["enabled"]
             state = "enabled" if settings["enabled"] else "disabled"
@@ -47,10 +54,11 @@ class Spamatron(commands.Cog):
 
     @typowatch.command(name="add")
     async def typowatch_add(self, ctx, correct_word: str, typo_word: str, *, first_response: str):
-        """Add a new word to watch for with its first response
+        """Add a new word to watch for with its first response.
         
         Example:
-        [p]typowatch add available availablew Did you mean 'available'?"""
+            [p]typowatch add available availablew Did you mean 'available'?
+        """
         async with self.config.guild(ctx.guild).typo_watch() as settings:
             settings["words"][correct_word] = {
                 "typo": typo_word,
@@ -60,10 +68,11 @@ class Spamatron(commands.Cog):
 
     @typowatch.command(name="remove")
     async def typowatch_remove(self, ctx, correct_word: str):
-        """Remove a word from the watch list
+        """Remove a word from the typo watch list for this server.
         
         Example:
-        [p]typowatch remove available"""
+            [p]typowatch remove available
+        """
         async with self.config.guild(ctx.guild).typo_watch() as settings:
             if correct_word in settings["words"]:
                 del settings["words"][correct_word]
@@ -73,10 +82,11 @@ class Spamatron(commands.Cog):
 
     @typowatch.command(name="responses")
     async def typowatch_responses(self, ctx, correct_word: str, *, responses: str):
-        """Set custom responses for a word. Separate responses with |
+        """Set custom responses for a watched word. Separate responses with '|'.
         
         Example:
-        [p]typowatch responses available Did you mean 'available'? | That's not how you spell it! | *available"""
+            [p]typowatch responses available Did you mean 'available'? | That's not how you spell it! | *available
+        """
         async with self.config.guild(ctx.guild).typo_watch() as settings:
             if correct_word not in settings["words"]:
                 return await ctx.send(f"'{correct_word}' is not in the watch list. Add it first!")
@@ -90,7 +100,7 @@ class Spamatron(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Listen for messages containing the configured typos"""
+        """Listen for messages containing configured typos and respond if found."""
         if message.author.bot or not message.guild:
             return
 
@@ -108,7 +118,7 @@ class Spamatron(commands.Cog):
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def spam(self, ctx, channel: discord.TextChannel, amount: int, *, message: str):
-        """Spam a message in a channel a specified number of times."""
+        """Spam a message in a channel a specified number of times after confirmation."""
         if amount <= 0:
             return await ctx.send("Please provide a positive number for the amount.")
 
@@ -136,7 +146,7 @@ class Spamatron(commands.Cog):
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def ghostping(self, ctx, member: discord.Member, channel: discord.TextChannel, amount: int = 1, interval: int = 1):
-        """Ghostping a member in a specified channel."""
+        """Ghostping a member in a specified channel a given number of times at a set interval."""
         if amount <= 0:
             return await ctx.send("Please provide a positive number for the amount.")
         if interval <= 0:
@@ -159,7 +169,7 @@ class Spamatron(commands.Cog):
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def stopghostping(self, ctx):
-        """Stop the ghostping task."""
+        """Stop the currently running ghostping task for the command author."""
         if ctx.author.id not in self.ghostping_tasks:
             return await ctx.send("You don't have a ghostping task running.")
 
@@ -169,11 +179,12 @@ class Spamatron(commands.Cog):
 
     @typowatch.command(name="list")
     async def typowatch_list(self, ctx, word: str = None):
-        """List all watched words or details about a specific word
+        """List all watched words or details about a specific word.
         
         Example:
-        [p]typowatch list
-        [p]typowatch list available"""
+            [p]typowatch list
+            [p]typowatch list available
+        """
         settings = await self.config.guild(ctx.guild).typo_watch()
         
         if word:
@@ -199,10 +210,7 @@ class Spamatron(commands.Cog):
 
     @typowatch.command(name="edit")
     async def typowatch_edit(self, ctx, word: str, new_typo: str):
-        """Edit the typo for a watched word
-        
-        Example:
-        [p]typowatch edit available availible"""
+        """Edit the typo for a watched word."""
         async with self.config.guild(ctx.guild).typo_watch() as settings:
             if word not in settings["words"]:
                 return await ctx.send(f"'{word}' is not in the watch list")

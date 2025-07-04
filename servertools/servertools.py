@@ -7,6 +7,7 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
 class Servertools(commands.Cog):
+    """Cog providing various server management utilities, such as mod DMs, voice moves, and auto-reactions."""
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  # Initialize config with a unique identifier
@@ -16,6 +17,7 @@ class Servertools(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_guild=True)
     async def moddm(self, ctx, user: discord.User, *, message):
+        """Send a direct message to a user as a moderator, with confirmation prompt."""
         if ctx.guild:
             if ctx.guild.get_member(user.id):
                 # Prompt for confirmation before sending dm
@@ -52,6 +54,7 @@ class Servertools(commands.Cog):
     @commands.command()
     @commands.has_permissions(move_members=True)
     async def voicemove(self, ctx, user: discord.Member, channel: discord.VoiceChannel):
+        """Move a member to a specified voice channel."""
         if ctx.guild:
             if ctx.guild.get_member(user.id):
                 try:
@@ -69,6 +72,7 @@ class Servertools(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def ld(self, ctx, channel: discord.TextChannel, *, permissions: str):
+        """Lock down a text channel for everyone by changing permissions."""
         if ctx.guild:
             try:
                 await channel.set_permissions(ctx.guild.roles[0], send_messages=False)
@@ -81,6 +85,7 @@ class Servertools(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def purge(self, ctx, amount: int):
+        """Delete a specified number of messages in the current channel."""
         if ctx.channel:
             try:
                 await ctx.channel.purge(limit=amount)
@@ -95,6 +100,7 @@ class Servertools(commands.Cog):
     @commands.command()
     @commands.has_permissions(view_audit_log=True)
     async def auditlog(self, ctx, amount: int):
+        """Display the most recent audit log entries for the server."""
         if ctx.guild:
             try:
                 async for log in ctx.guild.audit_logs(limit=amount):
@@ -118,6 +124,7 @@ class Servertools(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def set_server_icon(self, ctx, url: str = None):
+        """Set the server icon using a provided image URL or attachment."""
         if url is None and len(ctx.message.attachments) == 0:
             await ctx.send('Error: You must provide either an image URL or upload an image.')
             return
@@ -149,6 +156,7 @@ class Servertools(commands.Cog):
     @commands.command(name='fakeping')
     @commands.guild_only()
     async def fake_ping(self, ctx):
+        """Send a fake ping image resembling a Discord notification badge."""
         icon_url = ctx.guild.icon.url if ctx.guild.icon else None
         if icon_url is None:
             await ctx.send("Server icon is not set.")
@@ -198,7 +206,7 @@ class Servertools(commands.Cog):
 
     @commands.group()
     async def autoreact(self, ctx):
-        """Manage auto reactions"""
+        """Manage automatic reactions for users and channels."""
         if ctx.invoked_subcommand is None:
             await ctx.send("Use subcommands: add, remove, list")
 

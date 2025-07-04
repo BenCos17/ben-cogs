@@ -6,6 +6,7 @@ import re
 import logging
 
 class Ports(commands.Cog):
+    """Cog for scanning and searching open ports on a given host."""
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.log = logging.getLogger("redbot.cogs.Ports")
@@ -13,6 +14,7 @@ class Ports(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        """React to bot mentions and process commands in messages."""
         if message.author == self.bot.user:
             return
         if self.bot.user.mentioned_in(message):
@@ -23,7 +25,7 @@ class Ports(commands.Cog):
     @commands.is_owner()
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def scanports(self, ctx, host: str, start_port: int, end_port: int):
-        """Scan a range of ports on a host"""
+        """Scan a range of ports on a host and report which are open."""
         if not re.match(r"^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.[a-zA-Z]{2,})$", host):
             await ctx.send("Invalid host format.")
             return
@@ -56,6 +58,7 @@ class Ports(commands.Cog):
             await ctx.send(f'No open ports found on {host}.')
 
     async def scan_port(self, ctx, host, port):
+        """Attempt to connect to a port and return if it is open or an error message."""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1)
@@ -78,7 +81,7 @@ class Ports(commands.Cog):
     @commands.is_owner()
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def searchports(self, ctx, host: str):
-        """Search for open ports on a host"""
+        """Search for open ports on a host from 1 to 65535 and report which are open."""
         if not re.match(r"^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.[a-zA-Z]{2,})$", host):
             await ctx.send("Invalid host format.")
             return
