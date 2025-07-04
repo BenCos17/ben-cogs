@@ -1,41 +1,46 @@
-Command: add_question
+# Application Cog Documentation
 
-    Description: Add a question for a specific role.
-    Usage: [p]add_question <role_mention> <question>
-    Example: [p]add_question @Moderator What experience do you have moderating Discord servers?
+## Overview
 
-Command: set_application_channel
+The `Application` cog allows server administrators to set up application processes for specific roles. Users can apply for roles by answering custom questions via DM, and admins can review applications.
 
-    Description: Set the application channel where users will submit their applications.
-    Usage: [p]set_application_channel <channel_mention>
-    Example: [p]set_application_channel #applications
+## Commands
 
-Command: list_roles
+### 1. `[p]appset add <role_mention> <question>`
+- **Description**: Add a question for a specific role to the application process.
+- **Permissions**: Manage Server
+- **Example**: `[p]appset add @Moderator What experience do you have moderating Discord servers?`
 
-    Description: List roles available for application.
-    Usage: [p]list_roles
-    Example: [p]list_roles
+### 2. `[p]appset set <channel_mention>`
+- **Description**: Set the application channel where applications will be sent.
+- **Permissions**: Manage Server
+- **Example**: `[p]appset set #applications`
 
-Command: apply
+### 3. `[p]appset listroles`
+- **Description**: List roles available for application in this server.
+- **Permissions**: Manage Server
+- **Example**: `[p]appset listroles`
 
-    Description: Apply for a specific role by answering questions.
-    Usage: [p]apply <role_name>
-    Example: [p]apply Moderator
+### 4. `[p]apply <role_name>`
+- **Description**: Apply for a specific role by answering configured questions via DM.
+- **Permissions**: None
+- **Example**: `[p]apply Moderator`
 
-Command: review_application
+### 5. `[p]appset review <role_name> <member_mention>`
+- **Description**: Review a member's application for a specific role.
+- **Permissions**: Manage Server
+- **Example**: `[p]appset review Moderator @user`
 
-    Description: Review a member's application for a specific role.
-    Usage: [p]review_application <role_name> <member_mention>
-    Example: [p]review_application Moderator @user
+### 6. `[p]appset removeq <role_mention> <question>`
+- **Description**: Remove a question for a specific role.
+- **Permissions**: Manage Server
+- **Example**: `[p]appset removeq @Moderator What experience do you have moderating Discord servers?`
 
-Command: remove_question
+### 7. `[p]appset clearq <role_mention>`
+- **Description**: Clear all questions for a specific role.
+- **Permissions**: Manage Server
+- **Example**: `[p]appset clearq @Moderator`
 
-    Description: Remove a question for a specific role.
-    Usage: [p]remove_question <role_mention> <question>
-    Example: [p]remove_question @Moderator What experience do you have moderating Discord servers?
-
-Command: clear_questions
-
-    Description: Clear all questions for a specific role.
-    Usage: [p]clear_questions <role_mention>
-    Example: [p]clear_questions @Moderator
+## Notes
+- Only users with Manage Server permissions can configure application questions and channels.
+- Users apply for roles via DM and their responses are sent to the configured application channel.

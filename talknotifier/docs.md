@@ -1,38 +1,48 @@
 # TalkNotifier Documentation
 
-The `TalkNotifier` cog provides notification-related commands for Discord servers.
+## Overview
+
+The `TalkNotifier` cog provides notification-related commands for Discord servers. It can notify the server when specific users send messages, with customizable messages and cooldowns.
 
 ## Commands
 
-- `[p]talk setmessage`: Set the notification message for the server.
-- `[p]talk showmessage`: Display the current notification message.
-- `[p]talk adduser`: Add a user to the target list for notifications.
-- `[p]talk removeuser`: Remove a user from the target list for notifications.
-- `[p]talk clearusers`: Clear all target users from the notification list.
-- `[p]talk listusers`: List all users who are set to receive notifications.
-- `[p]talk setcooldown`: Set the cooldown period for notifications.
+### 1. `[p]talk setmessage <message>`
+- **Description**: Set the notification message for the server.
+- **Permissions**: Manage Server
+- **Example**: `[p]talk setmessage {author} said: {content}`
 
-## Usage
+### 2. `[p]talk showmessage`
+- **Description**: Display the current notification message.
+- **Permissions**: Manage Server
+- **Example**: `[p]talk showmessage`
 
-To set the notification message:
+### 3. `[p]talk adduser <@user>`
+- **Description**: Add a user to the target list for notifications.
+- **Permissions**: Manage Server
+- **Example**: `[p]talk adduser @username`
 
-1. Use the command `[p]talk setmessage` followed by the desired message enclosed in double quotes. For example:
-   ```
-   [p]talk setmessage "New notification message here"
-   ```
+### 4. `[p]talk removeuser <@user>`
+- **Description**: Remove a user from the target list for notifications.
+- **Permissions**: Manage Server
+- **Example**: `[p]talk removeuser @username`
 
-2. To display the current notification message, use the command `[p]talk showmessage`. This will show the current message set for notifications.
+### 5. `[p]talk clearusers`
+- **Description**: Clear all target users from the notification list.
+- **Permissions**: Manage Server
+- **Example**: `[p]talk clearusers`
 
-3. Add a user to the notification target list by using the command `[p]talk adduser` followed by mentioning the user. For instance:
-   ```
-   [p]talk adduser @username
-   ```
+### 6. `[p]talk listusers`
+- **Description**: List all users who are set to receive notifications.
+- **Permissions**: Manage Server
+- **Example**: `[p]talk listusers`
 
-4. Remove a user from the notification target list with the command `[p]talk removeuser` followed by mentioning the user to be removed.
+### 7. `[p]talk setcooldown <seconds>`
+- **Description**: Set the cooldown period for notifications.
+- **Permissions**: Manage Server
+- **Example**: `[p]talk setcooldown 30`
 
-5. Clear all target users from the notification list using the command `[p]talk clearusers`.
-
-6. To list all users set to receive notifications, utilize the command `[p]talk listusers`.
-
-7. Set the cooldown period for notifications using the command `[p]talk setcooldown` followed by the desired cooldown time in seconds.
+## Notes
+- Only users with Manage Server permissions can configure notification settings and users.
+- The notification message can use `{author}` and `{content}` as placeholders.
+- Cooldown prevents repeated notifications from the same user in a short period.
 

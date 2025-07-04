@@ -1,25 +1,24 @@
-# Commands
+# Bell Cog Documentation
 
-## 1. ringbell(ctx)
-- **Aliases**: ['bell']
-- **Description**: Rings a bell and increases the user's bell count in this server.
-- **Parameters**:
-  - `ctx`: The context in which the command was invoked.
-- **Behavior**:
-  - Retrieves the user's current bell count from the config.
-  - Prepares a response message indicating the user's previous bell count if applicable.
-  - Increments the user's bell count.
-  - Updates the count for the user in the config.
-  - Sends a message with the updated bell count.
-  - Sends a bell ringing gif.
+## Overview
 
-## 2. reset_bell(ctx)
-- **Aliases**: ['resetbell']
-- **Description**: Resets the user's bell count in this server after confirmation.
-- **Parameters**:
-  - `ctx`: The context in which the command was invoked.
-- **Behavior**:
-  - Asks the user for confirmation to reset their bell count.
-  - Waits for the user's response (yes/no).
-  - If the user confirms, resets the user's bell count in the config and sends a confirmation message.
-  - If the user cancels or takes too long to respond, sends a cancellation message.
+The `Bell` cog lets users ring a bell in the server, tracking how many times each user has rung the bell. Users can also reset their bell count (with confirmation).
+
+## Commands
+
+### 1. `[p]ringbell` or `[p]bell`
+- **Description**: Ring the bell and increment your bell count in this server.
+- **Usage**: `[p]ringbell`
+- **Permissions**: None (must be used in a server, not DMs)
+- **Example**: `[p]ringbell`
+
+### 2. `[p]reset_bell` or `[p]resetbell`
+- **Description**: Reset your bell count in this server after confirmation.
+- **Usage**: `[p]reset_bell`
+- **Permissions**: None (only resets your own count, must be used in a server)
+- **Example**: `[p]reset_bell`
+
+## Notes
+- The bell count is tracked per user per server.
+- A bell ringing GIF is sent with each ring.
+- Commands must be used in a server (not in DMs).
