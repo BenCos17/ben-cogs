@@ -686,7 +686,7 @@ class Skysearch(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             if file_format not in ["csv", "pdf", "txt", "html"]:
                 embed = discord.Embed(title="Error", description="Invalid file format specified. Use one of: csv, pdf, txt, or html.", color=0xfa4545)
@@ -770,7 +770,7 @@ class Skysearch(commands.Cog):
     async def scroll_planes(self, ctx):
         url = f"{self.api_url}/mil"
         try:
-            response = await self._make_request(url)
+            response = await self._make_request(url, ctx)
             if response and 'ac' in response:
                 for index, aircraft_info in enumerate(response['ac']):
                     await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
