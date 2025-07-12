@@ -57,7 +57,10 @@ class Skysearch(commands.Cog):
             self._http_client = aiohttp.ClientSession()
         try:
             headers = await self._get_headers()  # Get headers with API key if available
+            print(f"Making request to: {url}")
+            print(f"Headers: {headers}")
             async with self._http_client.get(url, headers=headers) as response:
+                print(f"Response status: {response.status}")
                 if response.status == 401:
                     print("API key authentication failed. Please check your API key.")
                     return None
@@ -68,7 +71,9 @@ class Skysearch(commands.Cog):
                     print("Rate limit exceeded. Please wait before making more requests.")
                     return None
                 response.raise_for_status()
-                return await response.json()
+                data = await response.json()
+                print(f"Response data keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+                return data
         except aiohttp.ClientError as e:
             print(f"Error making request: {e}")
             return None
