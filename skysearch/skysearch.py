@@ -108,9 +108,9 @@ class Skysearch(commands.Cog):
             return None
 
     async def _send_aircraft_info(self, ctx, response):
-        if 'ac' in response and response['ac']:
+        if 'aircraft' in response and response['aircraft']:
             await ctx.typing()
-            aircraft_data = response['ac'][0]
+            aircraft_data = response['aircraft'][0]
             emergency_squawk_codes = ['7500', '7600', '7700']
             hex_id = aircraft_data.get('hex', '')                                      
             image_url, photographer = await self._get_photo_by_hex(hex_id)
@@ -410,9 +410,9 @@ class Skysearch(commands.Cog):
         url = f"{self.api_url}/?find_hex={hex_id}"
         response = await self._make_request(url, ctx)
         if response:
-            if 'ac' in response and len(response['ac']) > 1:
-                for aircraft_info in response['ac']:
-                    await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
+            if 'aircraft' in response and len(response['aircraft']) > 1:
+                for aircraft_info in response['aircraft']:
+                    await self._send_aircraft_info(ctx, {'aircraft': [aircraft_info]})
             else:
                 await self._send_aircraft_info(ctx, response)
         else:
@@ -474,7 +474,7 @@ class Skysearch(commands.Cog):
         url = f"{self.api_url}/?all_with_pos&filter_mil"
         response = await self._make_request(url, ctx)
         if response:
-            aircraft_list = response.get('ac', [])
+            aircraft_list = response.get('aircraft', [])
             if aircraft_list:
                 page_index = 0
 
@@ -553,8 +553,8 @@ class Skysearch(commands.Cog):
         url = f"{self.api_url}/?all_with_pos&filter_ladd"
         response = await self._make_request(url, ctx)
         if response:
-            if 'ac' in response and len(response['ac']) > 1:
-                pages = [response['ac'][i:i + 10] for i in range(0, len(response['ac']), 10)]  # Split aircraft list into pages of 10
+            if 'aircraft' in response and len(response['aircraft']) > 1:
+                pages = [response['aircraft'][i:i + 10] for i in range(0, len(response['aircraft']), 10)]  # Split aircraft list into pages of 10
                 for page_index, page in enumerate(pages):
                     embed = discord.Embed(title=f"Limited Aircraft Data Displayed (Page {page_index + 1}/{len(pages)})", color=0xfffffe)
                     embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
@@ -606,8 +606,8 @@ class Skysearch(commands.Cog):
         url = f"{self.api_url}/?all_with_pos&filter_pia"
         response = await self._make_request(url, ctx)
         if response:
-            if 'ac' in response and len(response['ac']) > 1:
-                pages = [response['ac'][i:i + 10] for i in range(0, len(response['ac']), 10)]  # Split aircraft list into pages of 10
+            if 'aircraft' in response and len(response['aircraft']) > 1:
+                pages = [response['aircraft'][i:i + 10] for i in range(0, len(response['aircraft']), 10)]  # Split aircraft list into pages of 10
                 for page_index, page in enumerate(pages):
                     embed = discord.Embed(title=f"Private ICAO Aircraft Data Displayed (Page {page_index + 1}/{len(pages)})", color=0xfffffe)
                     embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
@@ -693,7 +693,7 @@ class Skysearch(commands.Cog):
                 await ctx.send(embed=embed)
                 return
 
-            if not response.get('ac'):
+            if not response.get('aircraft'):
                 embed = discord.Embed(title="Error", description="No aircraft data found.", color=0xfa4545)
                 await ctx.send(embed=embed)
                 return
@@ -705,9 +705,9 @@ class Skysearch(commands.Cog):
                 if file_format.lower() == "csv":
                     with open(file_path, "w", newline='', encoding='utf-8') as file:
                         writer = csv.writer(file)
-                        aircraft_keys = list(response['ac'][0].keys())
+                        aircraft_keys = list(response['aircraft'][0].keys())
                         writer.writerow([key.upper() for key in aircraft_keys])
-                        for aircraft in response['ac']:
+                        for aircraft in response['aircraft']:
                             aircraft_values = list(map(str, aircraft.values()))
                             writer.writerow(aircraft_values)
                 elif file_format.lower() == "pdf":
@@ -719,11 +719,11 @@ class Skysearch(commands.Cog):
                     flowables.append(Paragraph(f"<u>{search_type.capitalize()} {search_value}</u>", styles['Normal-Bold'])) 
                     flowables.append(Spacer(1, 24)) 
 
-                    aircraft_keys = list(response['ac'][0].keys())
+                    aircraft_keys = list(response['aircraft'][0].keys())
                     data = [Paragraph(f"<b>{key}</b>", styles['Normal-Bold']) for key in aircraft_keys]
                     flowables.extend(data)
 
-                    for aircraft in response['ac']:
+                    for aircraft in response['aircraft']:
                         aircraft_values = list(map(str, aircraft.values()))
                         data = [Paragraph(value, styles['Normal']) for value in aircraft_values]
                         flowables.extend(data)
@@ -732,20 +732,20 @@ class Skysearch(commands.Cog):
                     doc.build(flowables)
                 elif file_format.lower() in ["txt"]:
                     with open(file_path, "w", newline='', encoding='utf-8') as file:
-                        aircraft_keys = list(response['ac'][0].keys())
+                        aircraft_keys = list(response['aircraft'][0].keys())
                         file.write(' '.join([key.upper() for key in aircraft_keys]) + '\n')
-                        for aircraft in response['ac']:
+                        for aircraft in response['aircraft']:
                             aircraft_values = list(map(str, aircraft.values()))
                             file.write(' '.join(aircraft_values) + '\n')
                 elif file_format.lower() == "html":
                     with open(file_path, "w", newline='', encoding='utf-8') as file:
-                        aircraft_keys = list(response['ac'][0].keys())
+                        aircraft_keys = list(response['aircraft'][0].keys())
                         file.write('<table>\n')
                         file.write('<tr>\n')
                         for key in aircraft_keys:
                             file.write(f'<th>{key.upper()}</th>\n')
                         file.write('</tr>\n')
-                        for aircraft in response['ac']:
+                        for aircraft in response['aircraft']:
                             aircraft_values = list(map(str, aircraft.values()))
                             file.write('<tr>\n')
                             for value in aircraft_values:
