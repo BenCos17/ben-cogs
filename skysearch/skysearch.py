@@ -539,10 +539,13 @@ class Skysearch(commands.Cog):
         if response:
             if 'aircraft' in response and len(response['aircraft']) > 1:
                 pages = [response['aircraft'][i:i + 10] for i in range(0, len(response['aircraft']), 10)]  # Split aircraft list into pages of 10
-                for page_index, page in enumerate(pages):
+                page_index = 0
+                
+                while True:
                     embed = discord.Embed(title=f"Limited Aircraft Data Displayed (Page {page_index + 1}/{len(pages)})", color=0xfffffe)
                     embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
-                    for aircraft in page:
+                    
+                    for aircraft in pages[page_index]:
                         aircraft_description = aircraft.get('desc', 'N/A')  # Aircraft Description
                         aircraft_squawk = aircraft.get('squawk', 'N/A')  # Squawk
                         aircraft_lat = aircraft.get('lat', 'N/A')  # Latitude
@@ -561,19 +564,28 @@ class Skysearch(commands.Cog):
 
                     message = await ctx.send(embed=embed)
                     await message.add_reaction("⬅️")  # Adding a reaction to scroll to the previous page
+                    await message.add_reaction("❌")  # Adding a reaction to close
                     await message.add_reaction("➡️")  # Adding a reaction to scroll to the next page
 
                     def check(reaction, user):
-                        return user == ctx.author and str(reaction.emoji) in ['⬅️', '➡️']
+                        return user == ctx.author and str(reaction.emoji) in ['⬅️', '❌', '➡️']
 
                     try:
                         reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
-                        if str(reaction.emoji) == '⬅️' and page_index > 0:  # Check if the previous page reaction was added and it's not the first page
+                        await message.remove_reaction(reaction, user)
+                        
+                        if str(reaction.emoji) == '⬅️' and page_index > 0:
                             await message.delete()
                             page_index -= 1
-                        elif str(reaction.emoji) == '➡️' and page_index < len(pages) - 1:  # Check if the next page reaction was added and it's not the last page
+                        elif str(reaction.emoji) == '➡️' and page_index < len(pages) - 1:
                             await message.delete()
                             page_index += 1
+                        elif str(reaction.emoji) == '❌':
+                            await message.delete()
+                            break
+                        else:
+                            await message.delete()
+                            break
                     except asyncio.TimeoutError:
                         await message.delete()
                         break
@@ -592,10 +604,13 @@ class Skysearch(commands.Cog):
         if response:
             if 'aircraft' in response and len(response['aircraft']) > 1:
                 pages = [response['aircraft'][i:i + 10] for i in range(0, len(response['aircraft']), 10)]  # Split aircraft list into pages of 10
-                for page_index, page in enumerate(pages):
+                page_index = 0
+                
+                while True:
                     embed = discord.Embed(title=f"Private ICAO Aircraft Data Displayed (Page {page_index + 1}/{len(pages)})", color=0xfffffe)
                     embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
-                    for aircraft in page:
+                    
+                    for aircraft in pages[page_index]:
                         aircraft_description = aircraft.get('desc', 'N/A')  # Aircraft Description
                         aircraft_squawk = aircraft.get('squawk', 'N/A')  # Squawk
                         aircraft_lat = aircraft.get('lat', 'N/A')  # Latitude
@@ -614,19 +629,28 @@ class Skysearch(commands.Cog):
 
                     message = await ctx.send(embed=embed)
                     await message.add_reaction("⬅️")  # Adding a reaction to scroll to the previous page
+                    await message.add_reaction("❌")  # Adding a reaction to close
                     await message.add_reaction("➡️")  # Adding a reaction to scroll to the next page
 
                     def check(reaction, user):
-                        return user == ctx.author and str(reaction.emoji) in ['⬅️', '➡️']
+                        return user == ctx.author and str(reaction.emoji) in ['⬅️', '❌', '➡️']
 
                     try:
                         reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
-                        if str(reaction.emoji) == '⬅️' and page_index > 0:  # Check if the previous page reaction was added and it's not the first page
+                        await message.remove_reaction(reaction, user)
+                        
+                        if str(reaction.emoji) == '⬅️' and page_index > 0:
                             await message.delete()
                             page_index -= 1
-                        elif str(reaction.emoji) == '➡️' and page_index < len(pages) - 1:  # Check if the next page reaction was added and it's not the last page
+                        elif str(reaction.emoji) == '➡️' and page_index < len(pages) - 1:
                             await message.delete()
                             page_index += 1
+                        elif str(reaction.emoji) == '❌':
+                            await message.delete()
+                            break
+                        else:
+                            await message.delete()
+                            break
                     except asyncio.TimeoutError:
                         await message.delete()
                         break
@@ -1357,8 +1381,8 @@ class Skysearch(commands.Cog):
                 response = await self._make_request(url)  # No ctx for background task
                 if response and 'aircraft' in response:
                     for aircraft_info in response['aircraft']:
-                        # Ignore aircraft with the callsign 00000000
-                        if aircraft_info.get('icao') == '00000000':
+                        # Ignore aircraft with the hex 00000000
+                        if aircraft_info.get('hex') == '00000000':
                             continue
                         guilds = self.bot.guilds
                         for guild in guilds:
@@ -1377,12 +1401,12 @@ class Skysearch(commands.Cog):
                                     
                                     # Check if aircraft has landed
                                     if aircraft_info.get('altitude') is not None and aircraft_info.get('altitude') < 25:
-                                        embed = discord.Embed(title="Aircraft landed", description=f"Aircraft {aircraft_info.get('icao')} has landed while squawking {squawk_code}.", color=0x00ff00)
+                                        embed = discord.Embed(title="Aircraft landed", description=f"Aircraft {aircraft_info.get('hex')} has landed while squawking {squawk_code}.", color=0x00ff00)
                                         await alert_channel.send(embed=embed)
                                 else:
-                                    print(f"Error: Alert channel not found for guild {guild.name}")
-                            else:
-                                print(f"Error: No alert channel set for guild {guild.name}")
+                                    # Only log if channel was set but not found (actual error)
+                                    print(f"Warning: Alert channel {alert_channel_id} not found for guild {guild.name} - channel may have been deleted")
+                            # Removed the "No alert channel set" message - this is normal behavior
                 await asyncio.sleep(2)  # Add a delay to respect API rate limit
         except Exception as e:
             print(f"Error checking emergency squawks: {e}")
@@ -1460,7 +1484,7 @@ class Skysearch(commands.Cog):
         try:
             # Check if we can DM the user
             try:
-                await ctx.author.send("🔧 **SkySearch API Debug Test**\n\nStarting comprehensive API diagnostics...")
+                await ctx.author.send("🔧 **airplanes.live API Debug Test**\n\nStarting comprehensive API diagnostics...")
             except discord.Forbidden:
                 await ctx.send("❌ **Error:** I cannot send you a DM. Please enable DMs from server members and try again.")
                 return
