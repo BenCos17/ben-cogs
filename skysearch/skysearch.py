@@ -52,30 +52,59 @@ class Skysearch(commands.Cog):
             headers['auth'] = api_key  # Use 'auth' header as specified in API docs
         return headers
 
-    async def _make_request(self, url):
+    async def _make_request(self, url, ctx=None):
         if not hasattr(self, '_http_client'):
             self._http_client = aiohttp.ClientSession()
         try:
             headers = await self._get_headers()  # Get headers with API key if available
-            print(f"Making request to: {url}")
-            print(f"Headers: {headers}")
+            debug_info = f"Making request to: {url}\nHeaders: {headers}"
+            if ctx:
+                await ctx.send(f"🔍 **Debug Info:**\n```{debug_info}```")
+            else:
+                print(debug_info)
+            
             async with self._http_client.get(url, headers=headers) as response:
-                print(f"Response status: {response.status}")
+                status_info = f"Response status: {response.status}"
+                if ctx:
+                    await ctx.send(f"📡 **Status:** {status_info}")
+                else:
+                    print(status_info)
+                    
                 if response.status == 401:
-                    print("API key authentication failed. Please check your API key.")
+                    error_msg = "API key authentication failed. Please check your API key."
+                    if ctx:
+                        await ctx.send(f"❌ **Error:** {error_msg}")
+                    else:
+                        print(error_msg)
                     return None
                 elif response.status == 403:
-                    print("API key does not have permission for this endpoint.")
+                    error_msg = "API key does not have permission for this endpoint."
+                    if ctx:
+                        await ctx.send(f"❌ **Error:** {error_msg}")
+                    else:
+                        print(error_msg)
                     return None
                 elif response.status == 429:
-                    print("Rate limit exceeded. Please wait before making more requests.")
+                    error_msg = "Rate limit exceeded. Please wait before making more requests."
+                    if ctx:
+                        await ctx.send(f"❌ **Error:** {error_msg}")
+                    else:
+                        print(error_msg)
                     return None
                 response.raise_for_status()
                 data = await response.json()
-                print(f"Response data keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+                data_info = f"Response data keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}"
+                if ctx:
+                    await ctx.send(f"📊 **Data:** {data_info}")
+                else:
+                    print(data_info)
                 return data
         except aiohttp.ClientError as e:
-            print(f"Error making request: {e}")
+            error_msg = f"Error making request: {e}"
+            if ctx:
+                await ctx.send(f"❌ **Error:** {error_msg}")
+            else:
+                print(error_msg)
             return None
 
     async def _send_aircraft_info(self, ctx, response):
@@ -379,7 +408,7 @@ class Skysearch(commands.Cog):
     async def aircraft_by_icao(self, ctx, hex_id: str):
         # Use new REST API endpoint for ICAO hex lookup
         url = f"{self.api_url}/?find_hex={hex_id}"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             if 'ac' in response and len(response['ac']) > 1:
                 for aircraft_info in response['ac']:
@@ -395,7 +424,7 @@ class Skysearch(commands.Cog):
     async def aircraft_by_callsign(self, ctx, callsign: str):
         # Use new REST API endpoint for callsign lookup
         url = f"{self.api_url}/?find_callsign={callsign}"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
@@ -407,7 +436,7 @@ class Skysearch(commands.Cog):
     async def aircraft_by_reg(self, ctx, registration: str):
         # Use new REST API endpoint for registration lookup
         url = f"{self.api_url}/?find_reg={registration}"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
@@ -419,7 +448,7 @@ class Skysearch(commands.Cog):
     async def aircraft_by_type(self, ctx, aircraft_type: str):
         # Use new REST API endpoint for type lookup
         url = f"{self.api_url}/?find_type={aircraft_type}"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
@@ -431,7 +460,7 @@ class Skysearch(commands.Cog):
     async def aircraft_by_squawk(self, ctx, squawk_value: str):
         # Use new REST API endpoint for squawk filter
         url = f"{self.api_url}/?filter_squawk={squawk_value}"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
@@ -443,7 +472,7 @@ class Skysearch(commands.Cog):
     async def show_military_aircraft(self, ctx):
         # Use new REST API endpoint for military aircraft
         url = f"{self.api_url}/?filter_mil"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             aircraft_list = response.get('ac', [])
             if aircraft_list:
@@ -522,7 +551,7 @@ class Skysearch(commands.Cog):
     async def ladd_aircraft(self, ctx):
         # Use new REST API endpoint for LADD aircraft
         url = f"{self.api_url}/?filter_ladd"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             if 'ac' in response and len(response['ac']) > 1:
                 pages = [response['ac'][i:i + 10] for i in range(0, len(response['ac']), 10)]  # Split aircraft list into pages of 10
@@ -575,7 +604,7 @@ class Skysearch(commands.Cog):
     async def pia_aircraft(self, ctx):
         # Use new REST API endpoint for PIA aircraft
         url = f"{self.api_url}/?filter_pia"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             if 'ac' in response and len(response['ac']) > 1:
                 pages = [response['ac'][i:i + 10] for i in range(0, len(response['ac']), 10)]  # Split aircraft list into pages of 10
@@ -628,7 +657,7 @@ class Skysearch(commands.Cog):
     async def aircraft_within_radius(self, ctx, lat: str, lon: str, radius: str):
         # Use new REST API endpoint for circle search
         url = f"{self.api_url}/?circle={lat},{lon},{radius}"
-        response = await self._make_request(url)
+        response = await self._make_request(url, ctx)
         if response:
             await self._send_aircraft_info(ctx, response)
         else:
