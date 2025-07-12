@@ -57,19 +57,8 @@ class Skysearch(commands.Cog):
             self._http_client = aiohttp.ClientSession()
         try:
             headers = await self._get_headers()  # Get headers with API key if available
-            debug_info = f"Making request to: {url}\nHeaders: {headers}"
-            if ctx:
-                await ctx.send(f"🔍 **Debug Info:**\n```{debug_info}```")
-            else:
-                print(debug_info)
             
             async with self._http_client.get(url, headers=headers) as response:
-                status_info = f"Response status: {response.status}"
-                if ctx:
-                    await ctx.send(f"📡 **Status:** {status_info}")
-                else:
-                    print(status_info)
-                    
                 if response.status == 401:
                     error_msg = "API key authentication failed. Please check your API key."
                     if ctx:
@@ -93,11 +82,6 @@ class Skysearch(commands.Cog):
                     return None
                 response.raise_for_status()
                 data = await response.json()
-                data_info = f"Response data keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}"
-                if ctx:
-                    await ctx.send(f"📊 **Data:** {data_info}")
-                else:
-                    print(data_info)
                 return data
         except aiohttp.ClientError as e:
             error_msg = f"Error making request: {e}"
@@ -1468,5 +1452,128 @@ class Skysearch(commands.Cog):
         embed.add_field(name="Status", value="❌ API key removed", inline=True)
         embed.add_field(name="Note", value="Some features may be limited without an API key", inline=True)
         await ctx.send(embed=embed)
+
+    @commands.is_owner()
+    @commands.command(name='debugapi', help='Debug API key and connection issues (DM only)')
+    async def debug_api(self, ctx):
+        """Debug API key and connection issues - sends detailed info via DM."""
+        try:
+            # Check if we can DM the user
+            try:
+                await ctx.author.send("🔧 **SkySearch API Debug Test**\n\nStarting comprehensive API diagnostics...")
+            except discord.Forbidden:
+                await ctx.send("❌ **Error:** I cannot send you a DM. Please enable DMs from server members and try again.")
+                return
+
+            # Get API key status
+            api_key = await self.config.airplanesliveapi()
+            debug_info = f"**API Key Status:**\n"
+            if api_key:
+                debug_info += f"✅ **Configured:** `{api_key[:8]}...`\n"
+                debug_info += f"📏 **Length:** {len(api_key)} characters\n"
+            else:
+                debug_info += f"❌ **Not configured**\n"
+            
+            debug_info += f"\n**Headers being sent:**\n"
+            headers = await self._get_headers()
+            debug_info += f"```{headers}```\n"
+
+            # Test basic connectivity
+            debug_info += f"**Testing basic connectivity...**\n"
+            try:
+                if not hasattr(self, '_http_client'):
+                    self._http_client = aiohttp.ClientSession()
+                
+                # Test without API key first
+                test_url = f"{self.api_url}/?all_with_pos"
+                debug_info += f"🔗 **Test URL:** `{test_url}`\n"
+                
+                async with self._http_client.get(test_url) as response:
+                    debug_info += f"📡 **Response Status:** {response.status}\n"
+                    debug_info += f"📋 **Response Headers:** `{dict(response.headers)}`\n"
+                    
+                    if response.status == 200:
+                        debug_info += f"✅ **Basic connectivity:** Working\n"
+                    else:
+                        debug_info += f"❌ **Basic connectivity:** Failed (Status {response.status})\n"
+                        
+            except Exception as e:
+                debug_info += f"❌ **Connectivity Error:** {str(e)}\n"
+
+            # Test with API key if available
+            if api_key:
+                debug_info += f"\n**Testing with API key...**\n"
+                try:
+                    test_url_with_key = f"{self.api_url}/?all_with_pos"
+                    async with self._http_client.get(test_url_with_key, headers=headers) as response:
+                        debug_info += f"📡 **Authenticated Status:** {response.status}\n"
+                        
+                        if response.status == 200:
+                            debug_info += f"✅ **Authentication:** Working\n"
+                            try:
+                                data = await response.json()
+                                debug_info += f"📊 **Response Keys:** `{list(data.keys())}`\n"
+                                if 'aircraft' in data:
+                                    debug_info += f"✈️ **Aircraft Count:** {len(data['aircraft'])} aircraft\n"
+                                debug_info += f"⏱️ **Response Time:** {response.headers.get('X-RateLimit-Remaining', 'Unknown')} requests remaining\n"
+                            except Exception as e:
+                                debug_info += f"❌ **JSON Parse Error:** {str(e)}\n"
+                        elif response.status == 401:
+                            debug_info += f"❌ **Authentication:** Failed - Invalid API key\n"
+                        elif response.status == 403:
+                            debug_info += f"❌ **Authentication:** Failed - Insufficient permissions\n"
+                        elif response.status == 429:
+                            debug_info += f"❌ **Rate Limit:** Exceeded\n"
+                        else:
+                            debug_info += f"❌ **Authentication:** Failed - Status {response.status}\n"
+                            
+                except Exception as e:
+                    debug_info += f"❌ **API Test Error:** {str(e)}\n"
+
+            # Test specific endpoints
+            debug_info += f"\n**Testing specific endpoints...**\n"
+            test_endpoints = [
+                ("Military aircraft", f"{self.api_url}/?all_with_pos&filter_mil"),
+                ("LADD aircraft", f"{self.api_url}/?all_with_pos&filter_ladd"),
+                ("PIA aircraft", f"{self.api_url}/?all_with_pos&filter_pia"),
+                ("Emergency squawk 7700", f"{self.api_url}/?all_with_pos&filter_squawk=7700")
+            ]
+            
+            for endpoint_name, endpoint_url in test_endpoints:
+                try:
+                    async with self._http_client.get(endpoint_url, headers=headers) as response:
+                        debug_info += f"🔗 **{endpoint_name}:** Status {response.status}\n"
+                        if response.status == 200:
+                            try:
+                                data = await response.json()
+                                if 'aircraft' in data:
+                                    debug_info += f"   ✈️ Found {len(data['aircraft'])} aircraft\n"
+                            except:
+                                pass
+                except Exception as e:
+                    debug_info += f"❌ **{endpoint_name}:** Error - {str(e)}\n"
+
+            # Final summary
+            debug_info += f"\n**📋 Summary:**\n"
+            debug_info += f"• **API Base URL:** `{self.api_url}`\n"
+            debug_info += f"• **API Key:** {'✅ Configured' if api_key else '❌ Not configured'}\n"
+            debug_info += f"• **Session:** {'✅ Active' if hasattr(self, '_http_client') else '❌ Not initialized'}\n"
+            
+            # Send the debug info in chunks if it's too long
+            if len(debug_info) > 2000:
+                chunks = [debug_info[i:i+1900] for i in range(0, len(debug_info), 1900)]
+                for i, chunk in enumerate(chunks):
+                    await ctx.author.send(f"**Debug Info (Part {i+1}/{len(chunks)}):**\n```{chunk}```")
+            else:
+                await ctx.author.send(f"**Debug Info:**\n```{debug_info}```")
+
+            await ctx.send("✅ **Debug complete!** Check your DMs for detailed information.")
+
+        except Exception as e:
+            try:
+                await ctx.author.send(f"❌ **Debug Error:** {str(e)}")
+            except:
+                await ctx.send(f"❌ **Debug Error:** {str(e)}")
+            await ctx.send("❌ **Debug failed!** Check your DMs for error details.")
         
         
