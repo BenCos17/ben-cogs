@@ -26,6 +26,7 @@ class Skysearch(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
+        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, last_emergency_squawk_time=None)
         self.api_url = "https://rest.api.airplanes.live"  # Updated to new REST API base URL
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color(0xfffffe)
@@ -262,7 +263,12 @@ class Skysearch(commands.Cog):
 
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
-            ground_speed_mph = ground_speed_mph if 'ground_speed_mph' in locals() else 'unknown'
+            
+            # Ensure ground_speed_mph is defined
+            ground_speed_mph = 'unknown'
+            if ground_speed_knots != 'N/A':
+                ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+            
             squawk_code = aircraft_data.get('squawk', 'N/A')
             if squawk_code in emergency_squawk_codes:
                 tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
