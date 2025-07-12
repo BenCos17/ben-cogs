@@ -679,6 +679,155 @@ class Skysearch(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.guild_only()
+    @aircraft_group.command(name='closest', help='Find the closest aircraft to specified coordinates.')
+    async def closest_aircraft(self, ctx, lat: str, lon: str, radius: str = "100"):
+        # Validate input parameters
+        try:
+            lat_float = float(lat)
+            lon_float = float(lon)
+            radius_float = float(radius)
+            
+            if not (-90 <= lat_float <= 90):
+                embed = discord.Embed(title="Error", description="Latitude must be between -90 and 90 degrees.", color=0xff4545)
+                await ctx.send(embed=embed)
+                return
+                
+            if not (-180 <= lon_float <= 180):
+                embed = discord.Embed(title="Error", description="Longitude must be between -180 and 180 degrees.", color=0xff4545)
+                await ctx.send(embed=embed)
+                return
+                
+            if radius_float <= 0 or radius_float > 500:
+                embed = discord.Embed(title="Error", description="Radius must be between 0 and 500 nautical miles.", color=0xff4545)
+                await ctx.send(embed=embed)
+                return
+                
+        except ValueError:
+            embed = discord.Embed(title="Error", description="Invalid coordinates or radius. Please provide valid numbers.", color=0xff4545)
+            await ctx.send(embed=embed)
+            return
+
+        # Use new REST API endpoint for closest aircraft search
+        url = f"{self.api_url}/?closest={lat},{lon},{radius}"
+        response = await self._make_request(url, ctx)
+        
+        if response and 'aircraft' in response and response['aircraft']:
+            aircraft_data = response['aircraft'][0]
+            
+            # Create a custom embed for closest aircraft with distance info
+            embed = discord.Embed(title="Closest Aircraft Found", color=0xfffffe)
+            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            
+            # Add distance information if available
+            distance_nmi = aircraft_data.get('dst', 'Unknown')
+            direction_deg = aircraft_data.get('dir', 'Unknown')
+            
+            if distance_nmi != 'Unknown' and direction_deg != 'Unknown':
+                embed.description = f"**Distance:** {distance_nmi:.1f} nautical miles\n**Direction:** {direction_deg}° from your location"
+            
+            # Aircraft description
+            description = f"{aircraft_data.get('desc', 'N/A')}"
+            if aircraft_data.get('year', None) is not None:
+                description += f" ({aircraft_data.get('year')})"
+            embed.add_field(name="Aircraft", value=description, inline=False)
+            
+            # Basic aircraft info
+            callsign = aircraft_data.get('flight', 'N/A').strip()
+            if not callsign or callsign == 'N/A':
+                callsign = 'BLOCKED'
+            embed.add_field(name="Callsign", value=f"{callsign}", inline=True)
+            
+            registration = aircraft_data.get('reg', None)
+            if registration is not None:
+                registration = registration.upper()
+                embed.add_field(name="Registration", value=f"{registration}", inline=True)
+            
+            icao = aircraft_data.get('hex', 'N/A').upper()
+            embed.add_field(name="ICAO", value=f"{icao}", inline=True)
+            
+            # Position
+            lat_pos = aircraft_data.get('lat', 'N/A')
+            lon_pos = aircraft_data.get('lon', 'N/A')
+            if lat_pos != 'N/A' and lon_pos != 'N/A':
+                lat_formatted = round(float(lat_pos), 4)
+                lon_formatted = round(float(lon_pos), 4)
+                embed.add_field(name="Position", value=f"{lat_formatted}, {lon_formatted}", inline=True)
+            
+            # Altitude
+            altitude = aircraft_data.get('alt_baro', 'N/A')
+            if altitude == 'ground':
+                embed.add_field(name="Status", value="On ground", inline=True)
+            elif altitude != 'N/A':
+                if isinstance(altitude, int):
+                    altitude = "{:,}".format(altitude)
+                altitude_feet = f"{altitude} ft"
+                embed.add_field(name="Altitude", value=f"{altitude_feet}", inline=True)
+            
+            # Speed
+            ground_speed_knots = aircraft_data.get('gs', 'N/A')
+            if ground_speed_knots != 'N/A':
+                ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+                embed.add_field(name="Speed", value=f"{ground_speed_mph} mph", inline=True)
+            
+            # Squawk
+            squawk_code = aircraft_data.get('squawk', 'N/A')
+            embed.add_field(name="Squawk", value=f"{squawk_code}", inline=True)
+            
+            # Emergency status
+            emergency_squawk_codes = ['7500', '7600', '7700']
+            if squawk_code in emergency_squawk_codes:
+                if squawk_code == '7500':
+                    emergency_status = "🚨 Aircraft reports it's been hijacked"
+                elif squawk_code == '7600':
+                    emergency_status = "🚨 Aircraft has lost radio contact"
+                elif squawk_code == '7700':
+                    emergency_status = "🚨 Aircraft has declared a general emergency"
+                embed.add_field(name="Emergency Status", value=emergency_status, inline=False)
+            
+            # Asset intelligence
+            if icao and icao.upper() in self.law_enforcement_icao_set:
+                embed.add_field(name="Asset intelligence", value=":police_officer: Known for use by **state law enforcement**", inline=False)
+            if icao and icao.upper() in self.military_icao_set:
+                embed.add_field(name="Asset intelligence", value=":military_helmet: Known for use in **military** and **government**", inline=False)
+            if icao and icao.upper() in self.medical_icao_set:
+                embed.add_field(name="Asset intelligence", value=":hospital: Known for use in **medical response** and **transport**", inline=False)
+            if icao and icao.upper() in self.suspicious_icao_set:
+                embed.add_field(name="Asset intelligence", value=":warning: Exhibits suspicious flight or **surveillance** activity", inline=False)
+            if icao and icao.upper() in self.global_prior_known_accident_set:
+                embed.add_field(name="Asset intelligence", value=":boom: Prior involved in one or more **documented accidents**", inline=False)
+            if icao and icao.upper() in self.ukr_conflict_set:
+                embed.add_field(name="Asset intelligence", value=":flag_ua: Utilized within the **[Russo-Ukrainian conflict](https://en.wikipedia.org/wiki/Russian-occupied_territories_of_Ukraine)**", inline=False)
+            if icao and icao.upper() in self.newsagency_icao_set:
+                embed.add_field(name="Asset intelligence", value=":newspaper: Used by **news** or **media** organization", inline=False)
+            if icao and icao.upper() in self.balloons_icao_set:
+                embed.add_field(name="Asset intelligence", value=":balloon: Aircraft is a **balloon**", inline=False)
+            if icao and icao.upper() in self.agri_utility_set:
+                embed.add_field(name="Asset intelligence", value=":corn: Used for **agriculture surveys, easement validation, or land inspection**", inline=False)
+            
+            # Add photo if available
+            image_url, photographer = await self._get_photo_by_hex(icao)
+            if image_url and photographer:
+                embed.set_thumbnail(url=image_url)
+                embed.set_footer(text=f"Photo by {photographer}")
+            
+            # Create view with buttons
+            view = discord.ui.View()
+            link = f"https://globe.airplanes.live/?icao={icao}"
+            view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
+            
+            # Add tracking button
+            view.add_item(discord.ui.Button(label="Track Live", emoji="✈️", url=link, style=discord.ButtonStyle.link))
+            
+            await ctx.send(embed=embed, view=view)
+            
+        elif response and 'aircraft' in response and not response['aircraft']:
+            embed = discord.Embed(title="No Aircraft Found", description=f"No aircraft found within {radius} nautical miles of the specified location.", color=0xff4545)
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving closest aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
     @aircraft_group.command(name='export', help='Search aircraft by ICAO, callsign, squawk, or type and export the results.')
     async def export_aircraft(self, ctx, search_type: str, search_value: str, file_format: str):
         # Map search_type to new REST API query parameters
