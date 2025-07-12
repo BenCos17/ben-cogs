@@ -772,10 +772,10 @@ class Skysearch(commands.Cog):
         url = f"{self.api_url}/?all_with_pos&filter_mil"
         try:
             response = await self._make_request(url, ctx)
-            if response and 'ac' in response:
-                for index, aircraft_info in enumerate(response['ac']):
-                    await self._send_aircraft_info(ctx, {'ac': [aircraft_info]})
-                    embed = discord.Embed(description=f"Plane {index + 1}/{len(response['ac'])}. React with ➡️ to view the next plane or ⏹️ to stop.")
+            if response and 'aircraft' in response:
+                for index, aircraft_info in enumerate(response['aircraft']):
+                    await self._send_aircraft_info(ctx, {'aircraft': [aircraft_info]})
+                    embed = discord.Embed(description=f"Plane {index + 1}/{len(response['aircraft'])}. React with ➡️ to view the next plane or ⏹️ to stop.")
                     message = await ctx.send(embed=embed)
                     await message.add_reaction("➡️")
                     await message.add_reaction("⏹️") 
@@ -1371,8 +1371,8 @@ class Skysearch(commands.Cog):
                 # Use new REST API endpoint for squawk filter - must combine with base query
                 url = f"{self.api_url}/?all_with_pos&filter_squawk={squawk_code}"
                 response = await self._make_request(url)  # No ctx for background task
-                if response and 'ac' in response:
-                    for aircraft_info in response['ac']:
+                if response and 'aircraft' in response:
+                    for aircraft_info in response['aircraft']:
                         # Ignore aircraft with the callsign 00000000
                         if aircraft_info.get('icao') == '00000000':
                             continue
@@ -1389,7 +1389,7 @@ class Skysearch(commands.Cog):
                                     # Send the new alert with role mention if available
                                     if alert_role_mention:
                                         await alert_channel.send(alert_role_mention, allowed_mentions=discord.AllowedMentions(roles=True))
-                                    await self._send_aircraft_info(alert_channel, {'ac': [aircraft_info]})
+                                    await self._send_aircraft_info(alert_channel, {'aircraft': [aircraft_info]})
                                     
                                     # Check if aircraft has landed
                                     if aircraft_info.get('altitude') is not None and aircraft_info.get('altitude') < 25:
