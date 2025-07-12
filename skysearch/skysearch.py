@@ -458,8 +458,8 @@ class Skysearch(commands.Cog):
     @commands.guild_only()
     @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
     async def aircraft_by_squawk(self, ctx, squawk_value: str):
-        # Use new REST API endpoint for squawk filter
-        url = f"{self.api_url}/?filter_squawk={squawk_value}"
+        # Use new REST API endpoint for squawk filter - must combine with base query
+        url = f"{self.api_url}/?all_with_pos&filter_squawk={squawk_value}"
         response = await self._make_request(url, ctx)
         if response:
             await self._send_aircraft_info(ctx, response)
@@ -470,8 +470,8 @@ class Skysearch(commands.Cog):
     @commands.guild_only()
     @aircraft_group.command(name='military', help='Get information about military aircraft.')
     async def show_military_aircraft(self, ctx):
-        # Use new REST API endpoint for military aircraft
-        url = f"{self.api_url}/?filter_mil"
+        # Use new REST API endpoint for military aircraft - must combine with base query
+        url = f"{self.api_url}/?all_with_pos&filter_mil"
         response = await self._make_request(url, ctx)
         if response:
             aircraft_list = response.get('ac', [])
@@ -549,8 +549,8 @@ class Skysearch(commands.Cog):
     @commands.guild_only()
     @aircraft_group.command(name='ladd', help='Get information on LADD-restricted aircraft')
     async def ladd_aircraft(self, ctx):
-        # Use new REST API endpoint for LADD aircraft
-        url = f"{self.api_url}/?filter_ladd"
+        # Use new REST API endpoint for LADD aircraft - must combine with base query
+        url = f"{self.api_url}/?all_with_pos&filter_ladd"
         response = await self._make_request(url, ctx)
         if response:
             if 'ac' in response and len(response['ac']) > 1:
@@ -602,8 +602,8 @@ class Skysearch(commands.Cog):
     @commands.guild_only()
     @aircraft_group.command(name='pia', help='View live aircraft using private ICAO addresses')
     async def pia_aircraft(self, ctx):
-        # Use new REST API endpoint for PIA aircraft
-        url = f"{self.api_url}/?filter_pia"
+        # Use new REST API endpoint for PIA aircraft - must combine with base query
+        url = f"{self.api_url}/?all_with_pos&filter_pia"
         response = await self._make_request(url, ctx)
         if response:
             if 'ac' in response and len(response['ac']) > 1:
@@ -678,7 +678,7 @@ class Skysearch(commands.Cog):
         elif search_type == "callsign":
             url = f"{self.api_url}/?find_callsign={search_value}"
         elif search_type == "squawk":
-            url = f"{self.api_url}/?filter_squawk={search_value}"
+            url = f"{self.api_url}/?all_with_pos&filter_squawk={search_value}"
         elif search_type == "type":
             url = f"{self.api_url}/?find_type={search_value}"
         else:
@@ -768,7 +768,8 @@ class Skysearch(commands.Cog):
     @commands.guild_only()
     @aircraft_group.command(name='scroll', help='Scroll through available planes.')
     async def scroll_planes(self, ctx):
-        url = f"{self.api_url}/mil"
+        # Use new REST API endpoint for military aircraft - must combine with base query
+        url = f"{self.api_url}/?all_with_pos&filter_mil"
         try:
             response = await self._make_request(url, ctx)
             if response and 'ac' in response:
@@ -1367,8 +1368,9 @@ class Skysearch(commands.Cog):
         try:
             emergency_squawk_codes = ['7500', '7600', '7700']
             for squawk_code in emergency_squawk_codes:
-                url = f"{self.api_url}/squawk/{squawk_code}"
-                response = await self._make_request(url)
+                # Use new REST API endpoint for squawk filter - must combine with base query
+                url = f"{self.api_url}/?all_with_pos&filter_squawk={squawk_code}"
+                response = await self._make_request(url)  # No ctx for background task
                 if response and 'ac' in response:
                     for aircraft_info in response['ac']:
                         # Ignore aircraft with the callsign 00000000
