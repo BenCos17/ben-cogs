@@ -44,7 +44,7 @@ class AirportCommands:
             lat = airport_data.get('latitude', 'N/A')
             lon = airport_data.get('longitude', 'N/A')
             if lat != 'N/A' and lon != 'N/A':
-                embed.add_field(name="Coordinates", value=f"{lat}, {lon}", inline=True)
+                embed.add_field(name="Coordinates", value=f"{lat}, {lon}", inline=False)
             
             # Elevation
             elevation = airport_data.get('elevation', 'N/A')
