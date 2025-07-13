@@ -121,17 +121,17 @@ class Skysearch(red_commands.Cog):
 
     # Aircraft commands
     @red_commands.guild_only()
-    @red_commands.group(name='aircraft', help='Command center for aircraft related commands')
+    @red_commands.group(name='aircraft', help='Command center for aircraft related commands', invoke_without_command=True)
     async def aircraft_group(self, ctx):
         """Command center for aircraft related commands"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(title="Aircraft Commands", description="Available aircraft-related commands:", color=0xfffffe)
-            embed.add_field(name="Search Commands", value="`icao` `callsign` `reg` `type` `squawk` `radius` `closest`", inline=False)
-            embed.add_field(name="Special Aircraft", value="`military` `ladd` `pia`", inline=False)
-            embed.add_field(name="Export", value="`export` - Export aircraft data to CSV, PDF, TXT, or HTML", inline=False)
-            embed.add_field(name="Configuration", value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel`", inline=False)
-            embed.add_field(name="Other", value="`scroll` - Scroll through available planes", inline=False)
-            await ctx.send(embed=embed)
+        embed = discord.Embed(title="Aircraft Commands", description="Available aircraft-related commands:", color=0xfffffe)
+        embed.add_field(name="Search Commands", value="`icao` `callsign` `reg` `type` `squawk` `radius` `closest`", inline=False)
+        embed.add_field(name="Special Aircraft", value="`military` `ladd` `pia`", inline=False)
+        embed.add_field(name="Export", value="`export` - Export aircraft data to CSV, PDF, TXT, or HTML", inline=False)
+        embed.add_field(name="Configuration", value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel`", inline=False)
+        embed.add_field(name="Other", value="`scroll` - Scroll through available planes", inline=False)
+        embed.add_field(name="Detailed Help", value="Use `*help aircraft` for detailed command information", inline=False)
+        await ctx.send(embed=embed)
 
     # Delegate aircraft commands to the aircraft module
     @aircraft_group.command(name='icao')
@@ -222,14 +222,14 @@ class Skysearch(red_commands.Cog):
 
     # Airport commands
     @red_commands.guild_only()
-    @red_commands.group(name='airport', help='Command center for airport related commands')
+    @red_commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)
     async def airport_group(self, ctx):
         """Command center for airport related commands"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(title="Airport Commands", description="Available airport-related commands:", color=0xfffffe)
-            embed.add_field(name="Information", value="`info` - Get airport information by ICAO/IATA code", inline=False)
-            embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast", inline=False)
-            await ctx.send(embed=embed)
+        embed = discord.Embed(title="Airport Commands", description="Available airport-related commands:", color=0xfffffe)
+        embed.add_field(name="Information", value="`info` - Get airport information by ICAO/IATA code", inline=False)
+        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast", inline=False)
+        embed.add_field(name="Detailed Help", value="Use `*help airport` for detailed command information", inline=False)
+        await ctx.send(embed=embed)
 
     # Delegate airport commands to the airport module
     @airport_group.command(name='info')
