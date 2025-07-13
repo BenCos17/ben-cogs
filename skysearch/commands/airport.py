@@ -196,6 +196,7 @@ class AirportCommands:
                     data1 = await response1.json()
                     latitude, longitude = data1.get('latitude'), data1.get('longitude')
                     country_code = data1.get('country_code')
+                    airport_name = data1.get('name')
                     if not latitude or not longitude:
                         await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch latitude and longitude for the provided code.", color=0xff4545))
                         return
@@ -299,13 +300,49 @@ class AirportCommands:
                             icon = weather.get('icon', '')
                             wind_speed = wind.get('speed')
                             wind_deg = wind.get('deg')
-                            embed = discord.Embed(title=f"Weather forecast for {city}, {country}", description=f"{dt_txt}", color=0x1e90ff)
+                            # Emoji logic for temperature
+                            if temp is not None:
+                                if temp >= 32:
+                                    emoji = '🔥'
+                                elif temp <= 0:
+                                    emoji = '❄️'
+                                else:
+                                    emoji = '🌡️'
+                            else:
+                                emoji = '🌡️'
+                            # Wind speed emoji
+                            try:
+                                speed_value = float(wind_speed) if wind_speed is not None else 0
+                                if speed_value >= 13.4:  # ~30 mph
+                                    wind_emoji = '💨'
+                                elif speed_value >= 6.7:  # ~15 mph
+                                    wind_emoji = '🌬️'
+                                else:
+                                    wind_emoji = '🍃'
+                            except Exception:
+                                wind_emoji = '🍃'
+                            # Wind direction emoji
+                            def deg_to_compass(deg):
+                                if deg is None:
+                                    return '❓'
+                                dirs = ['⬆️', '⬆️↗️', '↗️', '↗️➡️', '➡️', '➡️↘️', '↘️', '↘️⬇️', '⬇️', '⬇️↙️', '↙️', '↙️⬅️', '⬅️', '⬅️↖️', '↖️', '↖️⬆️']
+                                ix = int((float(deg) + 11.25) / 22.5) % 16
+                                return dirs[ix]
+                            direction_emoji = deg_to_compass(wind_deg)
+                            embed = discord.Embed(
+                                title=f"Weather forecast for {airport_name or code.upper()}",
+                                description=dt_txt,
+                                color=0xfffffe
+                            )
                             if icon:
                                 embed.set_thumbnail(url=f"https://openweathermap.org/img/wn/{icon}@2x.png")
                             embed.add_field(name="Description", value=description, inline=False)
-                            embed.add_field(name="Temperature", value=f"{temp}°C (feels like {feels_like}°C)", inline=True)
-                            embed.add_field(name="Humidity", value=f"{humidity}%", inline=True)
-                            embed.add_field(name="Wind", value=f"{wind_speed} m/s, {wind_deg}°", inline=True)
+                            embed.add_field(name="Temperature", value=f"{emoji} **`{temp}°C (feels like {feels_like}°C)`**", inline=True)
+                            embed.add_field(name="Wind speed", value=f"{wind_emoji} **`{wind_speed} m/s`**", inline=True)
+                            embed.add_field(name="Wind direction", value=f"{direction_emoji} **`{wind_deg}°`**", inline=True)
+                            embed.add_field(name="Humidity", value=f"**`{humidity}%`**", inline=True)
+                            # OWM forecast does not provide probability of precipitation or dewpoint in this endpoint
+                            embed.add_field(name="Forecast", value=f"**`{description}`**", inline=False)
                             combined_pages.append(embed)
                         await self.paginate_embed(ctx, combined_pages)
         except Exception as e:
