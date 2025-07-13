@@ -7,6 +7,7 @@ import aiohttp
 import asyncio
 from discord.ext import commands
 from redbot.core import commands as red_commands
+from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
@@ -180,6 +181,9 @@ class AirportCommands:
             embed = discord.Embed(title="Airport Not Found", description=f"No airport found with code {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed) 
 
+    async def paginate_embed(self, ctx, embeds):
+        await menu(ctx, embeds, DEFAULT_CONTROLS)
+
     async def forecast(self, ctx, code: str):
         code_type = 'icao' if len(code) == 4 else 'iata' if len(code) == 3 else None
         if not code_type:
@@ -266,11 +270,6 @@ class AirportCommands:
                     embed.add_field(name="Dewpoint", value=f"**`{dewpoint_fahrenheit:.1f}°F`**", inline=True)
                 embed.add_field(name="Forecast", value=f"**`{period['detailedForecast']}`**", inline=False)
                 combined_pages.append(embed)
-            # Paginate if possible, else send all
-            if hasattr(self, 'paginate_embed'):
-                await self.paginate_embed(ctx, combined_pages)
-            else:
-                for embed in combined_pages:
-                    await ctx.send(embed=embed)
+            await self.paginate_embed(ctx, combined_pages)
         except Exception as e:
             await ctx.send(embed=discord.Embed(title="Error", description=str(e), color=0xff4545)) 
