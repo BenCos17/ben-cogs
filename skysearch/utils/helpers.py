@@ -20,94 +20,60 @@ class HelperUtils:
         
         # First try to get photo by hex ICAO directly (this is the correct endpoint)
         try:
-            hex_url = f'https://api.planespotters.net/pub/photos/hex/{hex_id}'
-            print(f"DEBUG: Trying hex endpoint: {hex_url}")
-            async with self.cog._http_client.get(hex_url) as response:
-                print(f"DEBUG: Hex endpoint response status: {response.status}")
+            async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}') as response:
                 if response.status == 200:
                     json_out = await response.json()
-                    print(f"DEBUG: Hex endpoint JSON response: {json_out}")
                     if 'photos' in json_out and json_out['photos']:
                         photo = json_out['photos'][0]
                         url = photo.get('thumbnail_large', {}).get('src', '')
                         photographer = photo.get('photographer', '')
-                        print(f"DEBUG: Found photo URL: {url}")
                         if url:  # Only return if we got a valid URL
                             return url, photographer
-                    else:
-                        print(f"DEBUG: No photos found in hex response")
-                else:
-                    print(f"DEBUG: Hex endpoint failed with status {response.status}")
-        except Exception as e:
-            print(f"DEBUG: Hex endpoint error: {e}")
+        except (KeyError, IndexError, aiohttp.ClientError):
+            pass
 
         # If no photo found by hex, try by registration if provided
         if registration:
             try:
-                reg_url = f'https://api.planespotters.net/pub/photos/reg/{registration}'
-                print(f"DEBUG: Trying registration endpoint: {reg_url}")
-                async with self.cog._http_client.get(reg_url) as response:
-                    print(f"DEBUG: Registration endpoint response status: {response.status}")
+                async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/reg/{registration}') as response:
                     if response.status == 200:
                         json_out = await response.json()
-                        print(f"DEBUG: Registration endpoint JSON response: {json_out}")
                         if 'photos' in json_out and json_out['photos']:
                             photo = json_out['photos'][0]
                             url = photo.get('thumbnail_large', {}).get('src', '')
                             photographer = photo.get('photographer', '')
-                            print(f"DEBUG: Found photo URL: {url}")
                             if url:  # Only return if we got a valid URL
                                 return url, photographer
-                        else:
-                            print(f"DEBUG: No photos found in registration response")
-                    else:
-                        print(f"DEBUG: Registration endpoint failed with status {response.status}")
-            except Exception as e:
-                print(f"DEBUG: Registration endpoint error: {e}")
+            except (KeyError, IndexError, aiohttp.ClientError):
+                pass
 
         # If still no photo found, try to get aircraft data to find registration and try again
         try:
             # Get aircraft data from airplanes.live to find registration
             url = f"{self.cog.api.api_url}/?find_hex={hex_id}"
-            print(f"DEBUG: Getting aircraft data from: {url}")
             response = await self.cog.api.make_request(url)
             
             if response and 'aircraft' in response and response['aircraft']:
                 aircraft_data = response['aircraft'][0]
                 reg = aircraft_data.get('reg')
-                print(f"DEBUG: Found registration: {reg}")
                 
                 if reg:
                     # Now try to get photo using the registration
                     try:
-                        reg_url = f'https://api.planespotters.net/pub/photos/reg/{reg}'
-                        print(f"DEBUG: Trying registration endpoint with found reg: {reg_url}")
-                        async with self.cog._http_client.get(reg_url) as response:
-                            print(f"DEBUG: Registration endpoint response status: {response.status}")
+                        async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/reg/{reg}') as response:
                             if response.status == 200:
                                 json_out = await response.json()
-                                print(f"DEBUG: Registration endpoint JSON response: {json_out}")
                                 if 'photos' in json_out and json_out['photos']:
                                     photo = json_out['photos'][0]
                                     url = photo.get('thumbnail_large', {}).get('src', '')
                                     photographer = photo.get('photographer', '')
-                                    print(f"DEBUG: Found photo URL: {url}")
                                     if url:  # Only return if we got a valid URL
                                         return url, photographer
-                                else:
-                                    print(f"DEBUG: No photos found in registration response")
-                            else:
-                                print(f"DEBUG: Registration endpoint failed with status {response.status}")
-                    except Exception as e:
-                        print(f"DEBUG: Registration endpoint error: {e}")
-                else:
-                    print(f"DEBUG: No registration found in aircraft data")
-            else:
-                print(f"DEBUG: No aircraft data found")
-        except Exception as e:
-            print(f"DEBUG: Aircraft data error: {e}")
+                    except (KeyError, IndexError, aiohttp.ClientError):
+                        pass
+        except Exception:
+            pass
 
-        print(f"DEBUG: No photo found for hex {hex_id}")
         return None, None  # Return None if no photo found
     
     def create_aircraft_embed(self, aircraft_data, image_url=None, photographer=None):
