@@ -260,6 +260,10 @@ class Skysearch(commands.Cog):
             if image_url and photographer:
                 embed.set_thumbnail(url=image_url)
                 embed.set_footer(text=f"Photo by {photographer}")
+            else:
+                # Set default aircraft image when no photo is available
+                embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                embed.set_footer(text="No photo available")
 
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
@@ -809,6 +813,10 @@ class Skysearch(commands.Cog):
             if image_url and photographer:
                 embed.set_thumbnail(url=image_url)
                 embed.set_footer(text=f"Photo by {photographer}")
+            else:
+                # Set default aircraft image when no photo is available
+                embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                embed.set_footer(text="No photo available")
             
             # Create view with buttons
             view = discord.ui.View()
