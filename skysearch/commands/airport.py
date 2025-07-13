@@ -4,9 +4,12 @@ Airport commands for SkySearch cog
 
 import discord
 import aiohttp
-import io
 import asyncio
 from discord.ext import commands
+from redbot.core import commands as red_commands
+
+from ..utils.api import APIManager
+from ..utils.helpers import HelperUtils
 
 
 class AirportCommands:
@@ -14,451 +17,179 @@ class AirportCommands:
     
     def __init__(self, cog):
         self.cog = cog
+        self.api = APIManager(cog)
+        self.helpers = HelperUtils(cog)
     
-    async def paginate_embed(self, ctx, pages):
-        """Paginate through multiple embeds."""
-        message = await ctx.send(embed=pages[0])
-        await message.add_reaction("⬅️")
-        await message.add_reaction("❌")
-        await message.add_reaction("➡️")
-
-        def check(reaction, user):
-            return user == ctx.author and str(reaction.emoji) in ["⬅️", "❌", "➡️"]
-
-        i = 0
-        reaction = None
-        while True:
-            if str(reaction) == "⬅️":
-                if i > 0:
-                    i -= 1
-                    await message.edit(embed=pages[i])
-            elif str(reaction) == "➡️":
-                if i < len(pages) - 1:
-                    i += 1
-                    await message.edit(embed=pages[i])
-            elif str(reaction) == "❌":
-                await message.delete()
-                break
-            try:
-                reaction, user = await self.cog.bot.wait_for("reaction_add", timeout=30.0, check=check)
-                await asyncio.sleep(1)
-                await message.remove_reaction(reaction, user)
-            except asyncio.TimeoutError:
-                await message.clear_reactions()
-                break
-
-    @commands.guild_only()
-    @commands.group(name='airport', help='Command center for airport related commands')
+    @red_commands.guild_only()
+    @red_commands.group(name='airport', help='Command center for airport related commands')
     async def airport_group(self, ctx):
         """Command center for airport related commands"""
         # This will be handled by the main cog
 
-    @commands.guild_only()
-    @airport_group.command(name='info')
-    async def airportinfo(self, ctx, code: str = None):
-        """Query airport information by ICAO or IATA code."""
-        if code is None:
-            embed = discord.Embed(title="Error", description="Please provide an ICAO or IATA code.", color=0xff4545)
-            await ctx.send(embed=embed)
-            return
-
-        # Determine if the code is ICAO or IATA based on length
-        if len(code) == 4:
-            code_type = 'icao'
-        elif len(code) == 3:
-            code_type = 'iata'
-        else:
-            embed = discord.Embed(title="Error", description="Invalid ICAO or IATA code. ICAO codes are 4 characters long and IATA codes are 3 characters long.", color=0xff4545)
-            await ctx.send(embed=embed)
-            return
-
-        try:
-            async with ctx.typing():
-                url1 = f"https://airport-data.com/api/ap_info.json?{code_type}={code}"
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url1) as response1:
-                        data1 = await response1.json()
-                
-                if 'error' in data1 or not data1 or 'name' not in data1:
-                    embed = discord.Embed(title="Error", description="No airport found with the provided code.", color=0xff4545)
-                    await ctx.send(embed=embed)
-                    return
-
-                embed = discord.Embed(title=f"{data1.get('name', 'Unknown Airport')}", color=0xfffffe)
-
-                # Check for OpenAI API key and use it to generate a summary if available
-                openai_api_key = await self.cog.bot.get_shared_api_tokens("openai")
-                if openai_api_key and 'api_key' in openai_api_key:
-                    openai_api_key = openai_api_key['api_key']
-                    airport_name = data1.get('name', 'Unknown Airport')
-                    openai_payload = {
-                        "model": "gpt-4o-mini",
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": "You are an AI summarizer inside a Discord bot feature. Produce text without titles or headings, and use markdown for styling like - bulletpoints where appropriate. Don't mention terrorist attacks or other world terrorism events. Don't mention the airport's name, ICAO or IATA."
-                            },
-                            {
-                                "role": "user",
-                                "content": f"Generate a summary of the airport named {airport_name}. Include 3 links as bulletpoints where I can read more about the airport"
-                            }
-                        ]
-                    }
-                    headers = {
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {openai_api_key}"
-                    }
-                    async with aiohttp.ClientSession() as session:
-                        async with session.post("https://api.openai.com/v1/chat/completions", headers=headers, json=openai_payload) as openai_response:
-                            if openai_response.status == 200:
-                                openai_data = await openai_response.json()
-                                summary = openai_data.get('choices', [{}])[0].get('message', {}).get('content', '')
-                                embed.description = summary
-                                embed.set_footer(text="Summary generated using AI, check factual accuracy")
-
-                googlemaps_tokens = await self.cog.bot.get_shared_api_tokens("googlemaps")
-                google_street_view_api_key = googlemaps_tokens.get("api_key", "YOUR_API_KEY")
-                
-                file = None  # Initialize file to None to handle cases where no image is available
-                if google_street_view_api_key != "YOUR_API_KEY":
-                    street_view_base_url = "https://maps.googleapis.com/maps/api/staticmap"
-                    street_view_params = {
-                        "size": "1920x1080", # Width x Height
-                        "zoom": "12",
-                        "scale": "2", 
-                        "center": f"{data1['latitude']},{data1['longitude']}",  # Latitude and Longitude as comma-separated string
-                        "maptype": "hybrid",
-                        "key": google_street_view_api_key
-                    }
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(street_view_base_url, params=street_view_params) as street_view_response:
-                            if street_view_response.status == 200:
-                                # Save the raw binary that the API returns as an image to set in embed.set_image
-                                street_view_image_url = "attachment://street_view_image.png"
-                                embed.set_image(url=street_view_image_url)
-                                street_view_image_stream = io.BytesIO(await street_view_response.read())
-                                file = discord.File(fp=street_view_image_stream, filename="street_view_image.png")
-                            else:
-                                # Handle the error accordingly, e.g., log it or send a message to the user
-                                pass
-
-                view = discord.ui.View(timeout=180)  # Initialize view outside of the else block
-                if 'icao' in data1:
-                    embed.add_field(name='ICAO', value=f"{data1['icao']}", inline=True)
-                if 'iata' in data1:
-                    embed.add_field(name='IATA', value=f"{data1['iata']}", inline=True)
-                if 'country_code' in data1:
-                    embed.add_field(name='Country code', value=f":flag_{data1['country_code'].lower()}: {data1['country_code']}", inline=True)
-                if 'location' in data1:
-                    embed.add_field(name='Location', value=f"{data1['location']}", inline=True)
-                if 'country' in data1:
-                    embed.add_field(name='Country', value=f"{data1['country']}", inline=True)
-                if 'longitude' in data1:
-                    embed.add_field(name='Longitude', value=f"{data1['longitude']}", inline=True)
-                if 'latitude' in data1:
-                    embed.add_field(name='Latitude', value=f"{data1['latitude']}", inline=True)
-                
-                # Check if 'link' is in data1 and add it to the view
-                if 'link' in data1:
-                    link = data1['link']
-                    if not (link.startswith('http://') or link.startswith('https://')):
-                        link = 'https://airport-data.com' + link
-                    # URL button
-                    view_airport = discord.ui.Button(label=f"More info about {data1['icao']}", url=link, style=discord.ButtonStyle.link)
-                    view.add_item(view_airport)
-
-            # Send the message with the embed, view, and file (if available)
-            await ctx.send(embed=embed, view=view, file=file)
-        except Exception as e:
-            embed = discord.Embed(title="Error", description=str(e), color=0xff4545)
-            await ctx.send(embed=embed)
-
-    @commands.guild_only()
-    @airport_group.command(name='runway')
-    async def runwayinfo(self, ctx, code: str):
-        """Query runway information by ICAO code."""
-        if len(code) != 4:
-            if len(code) == 3:
-                code_type = 'iata'
-            else:
-                embed = discord.Embed(title="Error", description="Invalid ICAO or IATA code. ICAO codes are 4 characters long and IATA codes are 3 characters long.", color=0xff4545)
-                await ctx.send(embed=embed)
-                return
-        else:
-            code_type = 'icao'
-
-        try:
-            if code_type == 'iata':
-                url1 = f"https://airport-data.com/api/ap_info.json?iata={code}"
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url1) as response1:
-                        data1 = await response1.json()
-                        if 'icao' in data1:
-                            code = data1['icao']
-                        else:
-                            embed = discord.Embed(title="Error", description="No ICAO code found for the provided IATA code.", color=0xff4545)
-                            await ctx.send(embed=embed)
-                            return
-
-            api_token = await self.cog.bot.get_shared_api_tokens("airportdbio")
-            if api_token and 'api_token' in api_token:
-                url2 = f"https://airportdb.io/api/v1/airport/{code}?apiToken={api_token['api_token']}"
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url2) as response2:
-                        data2 = await response2.json()
-
-                if 'error' in data2:
-                    error_message = data2['error']
-                    if len(error_message) > 1024:
-                        error_message = error_message[:1021] + "..."
-                    embed = discord.Embed(title="Error", description=error_message, color=0xff4545)
-                    await ctx.send(embed=embed)
-                elif not data2 or 'name' not in data2:
-                    embed = discord.Embed(title="Error", description="No airport found with the provided code.", color=0xff4545)
-                    await ctx.send(embed=embed)
-                else:
-                    combined_pages = []
-                    if 'runways' in data2:
-                        embed = discord.Embed(title=f"Runway information for {code.upper()}", color=0xfffffe)
-                        embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/layers.png")
-                        runways = data2['runways']
-                        for runway in runways:
-                            if 'id' in runway:
-                                embed.add_field(name="Runway ID", value=f"**`{runway['id']}`**", inline=True)
-
-                            if 'surface' in runway:
-                                embed.add_field(name="Surface", value=f"**`{runway['surface']}`**", inline=True)
-
-                            if 'length_ft' in runway and 'width_ft' in runway:
-                                embed.add_field(name="Dimensions", value=f"**`{runway['length_ft']}ft long`\n`{runway['width_ft']}ft wide`**", inline=True)
-
-                            if 'le_ident' in runway or 'he_ident' in runway:
-                                ils_value = ""
-                                if 'le_ident' in runway:
-                                    ils_info = runway.get('le_ils', {})
-                                    ils_freq = ils_info.get('freq', 'N/A')
-                                    ils_course = ils_info.get('course', 'N/A')
-                                    ils_value += f"**{runway['le_ident']}** *`{ils_freq} MHz @ {ils_course}°`*\n"
-                                if 'he_ident' in runway:
-                                    ils_info = runway.get('he_ils', {})
-                                    ils_freq = ils_info.get('freq', 'N/A')
-                                    ils_course = ils_info.get('course', 'N/A')
-                                    ils_value += f"**{runway['he_ident']}** *`{ils_freq} MHz @ {ils_course}°`*\n"
-                                embed.add_field(name="Landing assistance", value=ils_value.strip(), inline=True)
-
-                            runway_status = ":white_check_mark: **`Open`**" if str(runway.get('closed', 0)) == '0' else ":x: **`Closed`**"
-                            embed.add_field(name="Runway status", value=runway_status, inline=True)
-
-                            lighted_status = ":bulb: **`Lighted`**" if str(runway.get('lighted', 0)) == '1' else ":x: **`Not Lighted`**"
-                            embed.add_field(name="Lighting", value=lighted_status, inline=True)
-
-                            combined_pages.append(embed)
-                            embed = discord.Embed(title=f"Runway information for {code.upper()}", color=0xfffffe)
-                            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/layers.png")
-
-                    await self.paginate_embed(ctx, combined_pages)
-            else:
-                embed = discord.Embed(title="Error", description="API token for airportdb.io not configured.", color=0xff4545)
-                await ctx.send(embed=embed)
-        except Exception as e:
-            embed = discord.Embed(title="Error", description=str(e), color=0xff4545)
-            await ctx.send(embed=embed)
-
-    @commands.guild_only()
-    @airport_group.command(name='navaid')
-    async def navaidinfo(self, ctx, code: str):
-        """Query navaid information by ICAO code."""
-        if len(code) != 4:
-            if len(code) == 3:
-                code_type = 'iata'
-            else:
-                embed = discord.Embed(title="Error", description="Invalid ICAO or IATA code. ICAO codes are 4 characters long and IATA codes are 3 characters long.", color=0xff4545)
-                await ctx.send(embed=embed)
-                return
-        else:
-            code_type = 'icao'
-
-        try:
-            if code_type == 'iata':
-                url1 = f"https://airport-data.com/api/ap_info.json?iata={code}"
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url1) as response1:
-                        data1 = await response1.json()
-                        if 'icao' in data1:
-                            code = data1['icao']
-                        else:
-                            embed = discord.Embed(title="Error", description="No ICAO code found for the provided IATA code.", color=0xff4545)
-                            await ctx.send(embed=embed)
-                            return
-
-            api_token = await self.cog.bot.get_shared_api_tokens("airportdbio")
-            if api_token and 'api_token' in api_token:
-                url = f"https://airportdb.io/api/v1/airport/{code}?apiToken={api_token['api_token']}"
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as response:
-                        data = await response.json()
-
-                if 'error' in data:
-                    error_message = data['error']
-                    if len(error_message) > 1024:
-                        error_message = error_message[:1021] + "..."
-                    embed = discord.Embed(title="Error", description=error_message, color=0xff4545)
-                    await ctx.send(embed=embed)
-                elif not data or 'name' not in data:
-                    embed = discord.Embed(title="Error", description="No airport found with the provided code.", color=0xff4545)
-                    await ctx.send(embed=embed)
-                else:
-                    combined_pages = []
-                    if 'navaids' in data:
-                        embed = discord.Embed(title=f"Navigational aids at {code.upper()}", color=0xfffffe)
-                        embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/navigate.png")
-                        navaids = data['navaids']
-                        for navaid in navaids:
-                            if 'ident' in navaid and navaid['ident']:
-                                embed.add_field(name="Ident", value=f"**`{navaid['ident']}`**", inline=True)
-
-                            if 'name' in navaid and navaid['name']:
-                                embed.add_field(name="Name", value=f"**`{navaid['name']}`**", inline=True)
-
-                            if 'type' in navaid and navaid['type']:
-                                embed.add_field(name="Type", value=f"**`{navaid['type']}`**", inline=True)
-
-                            if 'frequency_khz' in navaid and navaid['frequency_khz']:
-                                embed.add_field(name="Frequency", value=f"**`{navaid['frequency_khz']}khz`**", inline=True)
-
-                            if 'latitude_deg' in navaid and 'longitude_deg' in navaid and navaid['latitude_deg'] and navaid['longitude_deg']:
-                                latitude = "{:.6f}".format(float(navaid['latitude_deg']))
-                                longitude = "{:.6f}".format(float(navaid['longitude_deg']))
-                                embed.add_field(name="Coordinates", value="**`{}°, {}°`**".format(latitude, longitude), inline=True)
-
-                            if 'elevation_ft' in navaid and navaid['elevation_ft']:
-                                embed.add_field(name="Elevation", value=f"**`{navaid['elevation_ft']}ft`**", inline=True)
-
-                            if 'usageType' in navaid and navaid['usageType']:
-                                embed.add_field(name="Usage", value=f"**`{navaid['usageType']}`**", inline=True)
-
-                            if 'power' in navaid and navaid['power']:
-                                embed.add_field(name="Signal power", value=f"**`{navaid['power']}`**", inline=True)
-
-                            if 'associated_airport' in navaid and navaid['associated_airport']:
-                                embed.add_field(name="Airport", value=f"**`{navaid['associated_airport']}`**", inline=True)
-
-                            combined_pages.append(embed)
-                            embed = discord.Embed(title=f"Navaid information for {code.upper()}", color=0xfffffe)
-                            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/navigate.png")
-
-                    await self.paginate_embed(ctx, combined_pages)
-            else:
-                embed = discord.Embed(title="Error", description="API token for airportdb.io not configured.", color=0xff4545)
-                await ctx.send(embed=embed)
-        except Exception as e:
-            embed = discord.Embed(title="Error", description=str(e), color=0xff4545)
-            await ctx.send(embed=embed)
-
-    @commands.guild_only()
-    @airport_group.command(name='forecast', help='Get the weather for an airport by ICAO or IATA code.')
-    async def get_forecast(self, ctx, code: str):
-        """Fetch the latitude and longitude of an airport via IATA or ICAO code, then show the forecast"""
-        code_type = 'icao' if len(code) == 4 else 'iata' if len(code) == 3 else None
-        if not code_type:
-            await ctx.send(embed=discord.Embed(title="Error", description="Invalid ICAO or IATA code. ICAO codes are 4 characters long and IATA codes are 3 characters long.", color=0xff4545))
-            return
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"https://airport-data.com/api/ap_info.json?{code_type}={code}") as response1:
-                    data1 = await response1.json()
-                    latitude, longitude = data1.get('latitude'), data1.get('longitude')
-                    if not latitude or not longitude:
-                        await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch latitude and longitude for the provided code.", color=0xff4545))
-                        return
-                    if data1.get('country_code') != 'US':
-                        await ctx.send(embed=discord.Embed(title="Error", description="Weather forecasts are currently only available for airports in the United States.", color=0xff4545))
-                        return
-
-                async with session.get(f"https://api.weather.gov/points/{latitude},{longitude}") as response2:
-                    data2 = await response2.json()
-                    forecast_url = data2.get('properties', {}).get('forecast')
-                    if not forecast_url:
-                        await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch forecast URL.", color=0xff4545))
-                        return
-
-                async with session.get(forecast_url) as response3:
-                    data3 = await response3.json()
-                    periods = data3.get('properties', {}).get('periods')
-                    if not periods:
-                        await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch forecast details.", color=0xff4545))
-                        return
-
-            combined_pages = []
+    @red_commands.guild_only()
+    @airport_group.command(name='info', help='Get information about an airport by its ICAO or IATA code.')
+    async def airport_info(self, ctx, airport_code: str):
+        """Get airport information by ICAO or IATA code."""
+        airport_code = airport_code.upper()
+        
+        # Try to get airport data
+        airport_data = await self.helpers.get_airport_data(airport_code)
+        
+        if airport_data:
+            embed = discord.Embed(title=f"Airport Information - {airport_code}", color=0xfffffe)
+            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
             
-            for period in periods:
-                timeemoji = "☀️" if period.get('isDaytime') else "🌙"
-                description = f" # {timeemoji} {period['name']}"
-                embed = discord.Embed(title=f"Weather forecast for {code.upper()}", description=description, color=0xfffffe)
+            # Basic airport information
+            name = airport_data.get('name', 'N/A')
+            city = airport_data.get('city', 'N/A')
+            country = airport_data.get('country', 'N/A')
+            
+            embed.add_field(name="Name", value=name, inline=True)
+            embed.add_field(name="City", value=city, inline=True)
+            embed.add_field(name="Country", value=country, inline=True)
+            
+            # Coordinates
+            lat = airport_data.get('latitude', 'N/A')
+            lon = airport_data.get('longitude', 'N/A')
+            if lat != 'N/A' and lon != 'N/A':
+                embed.add_field(name="Coordinates", value=f"{lat}, {lon}", inline=True)
+            
+            # Elevation
+            elevation = airport_data.get('elevation', 'N/A')
+            if elevation != 'N/A':
+                embed.add_field(name="Elevation", value=f"{elevation} ft", inline=True)
+            
+            # Timezone
+            timezone = airport_data.get('timezone', 'N/A')
+            if timezone != 'N/A':
+                embed.add_field(name="Timezone", value=timezone, inline=True)
+            
+            # Get airport image
+            image_url = await self.helpers.get_airport_image(lat, lon)
+            if image_url:
+                embed.set_image(url=image_url)
+            
+            # Add view with buttons
+            view = discord.ui.View()
+            if lat != 'N/A' and lon != 'N/A':
+                google_maps_url = f"https://www.google.com/maps?q={lat},{lon}"
+                view.add_item(discord.ui.Button(label="View on Google Maps", emoji="🗺️", url=google_maps_url, style=discord.ButtonStyle.link))
+            
+            await ctx.send(embed=embed, view=view)
+        else:
+            embed = discord.Embed(title="Airport Not Found", description=f"No airport found with code {airport_code}.", color=0xff4545)
+            await ctx.send(embed=embed)
 
-                temperature = period['temperature']
-                temperature_unit = period['temperatureUnit']
+    @red_commands.guild_only()
+    @airport_group.command(name='runway', help='Get runway information for an airport.')
+    async def runway_info(self, ctx, airport_code: str):
+        """Get runway information for an airport."""
+        airport_code = airport_code.upper()
+        
+        # Get runway data
+        runway_data = await self.helpers.get_runway_data(airport_code)
+        
+        if runway_data and runway_data.get('runways'):
+            embed = discord.Embed(title=f"Runway Information - {airport_code}", color=0xfffffe)
+            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            
+            runways = runway_data['runways']
+            for runway in runways:
+                runway_name = runway.get('name', 'N/A')
+                length = runway.get('length', 'N/A')
+                width = runway.get('width', 'N/A')
+                surface = runway.get('surface', 'N/A')
                 
-                # Determine the emoji based on temperature
-                if temperature_unit == 'F':
-                    if temperature >= 90:
-                        emoji = '🔥'  # Hot
-                    elif temperature <= 32:
-                        emoji = '❄️'  # Cold
-                    else:
-                        emoji = '🌡️'  # Moderate
-                else:  # Assuming Celsius
-                    if temperature >= 32:
-                        emoji = '🔥'  # Hot
-                    elif temperature <= 0:
-                        emoji = '❄️'  # Cold
-                    else:
-                        emoji = '🌡️'  # Moderate
-
-                embed.add_field(name="Temperature", value=f"{emoji} **`{temperature}° {temperature_unit}`**", inline=True)
-
-                wind_speed = period['windSpeed']
-                wind_direction = period['windDirection']
-
-                # Determine the emoji based on wind speed
-                try:
-                    speed_value = int(wind_speed.split()[0])
-                    if speed_value >= 30:
-                        wind_emoji = '💨'  # Strong wind
-                    elif speed_value >= 15:
-                        wind_emoji = '🌬️'  # Moderate wind
-                    else:
-                        wind_emoji = '🍃'  # Light wind
-                except ValueError:
-                    wind_emoji = '🍃'  # Default to light wind if parsing fails
-
-                # Determine the emoji based on wind direction
-                direction_emoji = {
-                    'N': '⬆️', 'NNE': '⬆️↗️', 'NE': '↗️', 'ENE': '↗️➡️', 'E': '➡️',
-                    'ESE': '➡️↘️', 'SE': '↘️', 'SSE': '↘️⬇️', 'S': '⬇️', 'SSW': '⬇️↙️',
-                    'SW': '↙️', 'WSW': '↙️⬅️', 'W': '⬅️', 'WNW': '⬅️↖️', 'NW': '↖️', 'NNW': '↖️⬆️'
-                }.get(wind_direction, '❓')  # Default to question mark if direction is unknown
+                runway_info = f"**Length:** {length} ft\n"
+                runway_info += f"**Width:** {width} ft\n"
+                runway_info += f"**Surface:** {surface}"
                 
-                embed.add_field(name="Wind speed", value=f"{wind_emoji} **`{wind_speed}`**", inline=True)
-                embed.add_field(name="Wind direction", value=f"{direction_emoji} **`{wind_direction}`**", inline=True)
-                
-                if 'relativeHumidity' in period and period['relativeHumidity']['value'] is not None:
-                    embed.add_field(name="Humidity", value=f"**`{period['relativeHumidity']['value']}%`**", inline=True)
+                embed.add_field(name=f"Runway {runway_name}", value=runway_info, inline=False)
+            
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(title="No Runway Data", description=f"No runway information found for {airport_code}.", color=0xff4545)
+            await ctx.send(embed=embed)
 
-                if 'probabilityOfPrecipitation' in period and period['probabilityOfPrecipitation']['value'] is not None:
-                    embed.add_field(name="Chance of precipitation", value=f"**`{period['probabilityOfPrecipitation']['value']}%`**", inline=True)
+    @red_commands.guild_only()
+    @airport_group.command(name='navaid', help='Get navigational aids for an airport.')
+    async def navaid_info(self, ctx, airport_code: str):
+        """Get navigational aids for an airport."""
+        airport_code = airport_code.upper()
+        
+        # Get navaid data
+        navaid_data = await self.helpers.get_navaid_data(airport_code)
+        
+        if navaid_data and navaid_data.get('navaids'):
+            embed = discord.Embed(title=f"Navigational Aids - {airport_code}", color=0xfffffe)
+            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            
+            navaids = navaid_data['navaids']
+            for navaid in navaids:
+                navaid_name = navaid.get('name', 'N/A')
+                navaid_type = navaid.get('type', 'N/A')
+                frequency = navaid.get('frequency', 'N/A')
+                
+                navaid_info = f"**Type:** {navaid_type}\n"
+                navaid_info += f"**Frequency:** {frequency}"
+                
+                embed.add_field(name=navaid_name, value=navaid_info, inline=True)
+            
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(title="No Navaid Data", description=f"No navigational aid information found for {airport_code}.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @red_commands.guild_only()
+    @airport_group.command(name='forecast', help='Get weather forecast for an airport.')
+    async def weather_forecast(self, ctx, airport_code: str):
+        """Get weather forecast for an airport."""
+        airport_code = airport_code.upper()
+        
+        # Get airport coordinates first
+        airport_data = await self.helpers.get_airport_data(airport_code)
+        
+        if airport_data:
+            lat = airport_data.get('latitude', 'N/A')
+            lon = airport_data.get('longitude', 'N/A')
+            
+            if lat != 'N/A' and lon != 'N/A':
+                # Get weather forecast
+                weather_data = await self.helpers.get_weather_forecast(lat, lon)
+                
+                if weather_data:
+                    embed = discord.Embed(title=f"Weather Forecast - {airport_code}", color=0xfffffe)
+                    embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
                     
-                if 'dewpoint' in period and period['dewpoint']['value'] is not None:
-                    dewpoint_celsius = period['dewpoint']['value']
-                    dewpoint_fahrenheit = (dewpoint_celsius * 9/5) + 32
-                    embed.add_field(name="Dewpoint", value=f"**`{dewpoint_fahrenheit:.1f}°F`**", inline=True)
-                
-                embed.add_field(name="Forecast", value=f"**`{period['detailedForecast']}`**", inline=False)
-
-                combined_pages.append(embed)
-
-            await self.paginate_embed(ctx, combined_pages)
-
-        except Exception as e:
-            await ctx.send(embed=discord.Embed(title="Error", description=str(e), color=0xff4545)) 
+                    # Current weather
+                    current = weather_data.get('current', {})
+                    if current:
+                        temp = current.get('temp', 'N/A')
+                        condition = current.get('condition', {}).get('text', 'N/A')
+                        wind_speed = current.get('wind_kph', 'N/A')
+                        humidity = current.get('humidity', 'N/A')
+                        
+                        embed.add_field(name="Current Weather", value=f"**Temperature:** {temp}°C\n**Condition:** {condition}\n**Wind:** {wind_speed} km/h\n**Humidity:** {humidity}%", inline=False)
+                    
+                    # Forecast
+                    forecast = weather_data.get('forecast', {}).get('forecastday', [])
+                    if forecast:
+                        for day in forecast[:3]:  # Show next 3 days
+                            date = day.get('date', 'N/A')
+                            max_temp = day.get('day', {}).get('maxtemp_c', 'N/A')
+                            min_temp = day.get('day', {}).get('mintemp_c', 'N/A')
+                            condition = day.get('day', {}).get('condition', {}).get('text', 'N/A')
+                            
+                            day_info = f"**Max:** {max_temp}°C\n**Min:** {min_temp}°C\n**Condition:** {condition}"
+                            embed.add_field(name=date, value=day_info, inline=True)
+                    
+                    await ctx.send(embed=embed)
+                else:
+                    embed = discord.Embed(title="Weather Data Unavailable", description=f"Weather forecast data is not available for {airport_code}.", color=0xff4545)
+                    await ctx.send(embed=embed)
+            else:
+                embed = discord.Embed(title="Invalid Coordinates", description=f"Could not get coordinates for {airport_code}.", color=0xff4545)
+                await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(title="Airport Not Found", description=f"No airport found with code {airport_code}.", color=0xff4545)
+            await ctx.send(embed=embed) 

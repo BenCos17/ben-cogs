@@ -8,7 +8,7 @@ import re
 import datetime
 import aiohttp
 from discord.ext import tasks, commands
-from redbot.core import commands, Config
+from redbot.core import commands as red_commands, Config
 
 from .data.icao_codes import (
     law_enforcement_icao_set, military_icao_set, medical_icao_set, 
@@ -23,7 +23,7 @@ from .commands.airport import AirportCommands
 from .commands.admin import AdminCommands
 
 
-class Skysearch(commands.Cog):
+class Skysearch(red_commands.Cog):
     """SkySearch - Aircraft tracking and information cog."""
     
     def __init__(self, bot):
@@ -60,8 +60,8 @@ class Skysearch(commands.Cog):
         """Clean up when the cog is unloaded."""
         await self.api.close()
 
-    @commands.guild_only()
-    @commands.group(name='skysearch', help='Core menu for the cog', invoke_without_command=True)
+    @red_commands.guild_only()
+    @red_commands.group(name='skysearch', help='Core menu for the cog', invoke_without_command=True)
     async def skysearch(self, ctx):
         """SkySearch command group"""
         embed = discord.Embed(title="Thanks for using SkySearch", description="SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft.", color=0xfffffe)
@@ -69,7 +69,7 @@ class Skysearch(commands.Cog):
         embed.add_field(name="airport", value="Use `airport` to show available commands to fetch information and imagery of airports around the world.", inline=False)
         await ctx.send(embed=embed)
     
-    @commands.guild_only()
+    @red_commands.guild_only()
     @skysearch.command(name='stats', help='Get statistics about SkySearch and the data used here')
     async def stats(self, ctx):
         """Get SkySearch statistics."""
@@ -120,8 +120,8 @@ class Skysearch(commands.Cog):
             await ctx.send(embed=embed)
 
     # Aircraft commands
-    @commands.guild_only()
-    @commands.group(name='aircraft', help='Command center for aircraft related commands')
+    @red_commands.guild_only()
+    @red_commands.group(name='aircraft', help='Command center for aircraft related commands')
     async def aircraft_group(self, ctx):
         """Command center for aircraft related commands"""
         if ctx.invoked_subcommand is None:
@@ -134,8 +134,8 @@ class Skysearch(commands.Cog):
             await ctx.send(embed=embed)
 
     # Airport commands
-    @commands.guild_only()
-    @commands.group(name='airport', help='Command center for airport related commands')
+    @red_commands.guild_only()
+    @red_commands.group(name='airport', help='Command center for airport related commands')
     async def airport_group(self, ctx):
         """Command center for airport related commands"""
         if ctx.invoked_subcommand is None:
@@ -190,7 +190,7 @@ class Skysearch(commands.Cog):
         """Wait for bot to be ready before starting the task."""
         await self.bot.wait_until_ready()
 
-    @commands.Cog.listener()
+    @red_commands.Cog.listener()
     async def on_message(self, message):
         """Handle automatic ICAO lookup."""
         if message.author == self.bot.user:
