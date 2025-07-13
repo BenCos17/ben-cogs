@@ -873,7 +873,8 @@ class Skysearch(commands.Cog):
                 await ctx.send(embed=embed)
                 return
 
-            file_name = f"{search_type}_{search_value}.{file_format.lower()}"
+            aircraft_count = len(response['aircraft'])
+            file_name = f"{search_type}_{search_value}_{aircraft_count}_aircraft.{file_format.lower()}"
             file_path = os.path.join(tempfile.gettempdir(), file_name)
 
             try:
@@ -891,19 +892,37 @@ class Skysearch(commands.Cog):
                     styles.add(ParagraphStyle(name='Normal-Bold', fontName='Helvetica-Bold', fontSize=14, leading=16, alignment=1)) 
                     flowables = []
 
-                    flowables.append(Paragraph(f"<u>{search_type.capitalize()} {search_value}</u>", styles['Normal-Bold'])) 
+                    # Add title and summary
+                    flowables.append(Paragraph(f"<u>Aircraft Export Report</u>", styles['Normal-Bold'])) 
+                    flowables.append(Spacer(1, 12))
+                    flowables.append(Paragraph(f"Search Type: {search_type.capitalize()}", styles['Normal']))
+                    flowables.append(Paragraph(f"Search Value: {search_value}", styles['Normal']))
+                    flowables.append(Paragraph(f"Total Aircraft: {aircraft_count}", styles['Normal']))
+                    flowables.append(Paragraph(f"Export Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
                     flowables.append(Spacer(1, 24)) 
 
+                    # Create table with all aircraft data
                     aircraft_keys = list(response['aircraft'][0].keys())
-                    data = [Paragraph(f"<b>{key}</b>", styles['Normal-Bold']) for key in aircraft_keys]
-                    flowables.extend(data)
-
+                    table_data = [[Paragraph(f"<b>{key.upper()}</b>", styles['Normal-Bold']) for key in aircraft_keys]]
+                    
                     for aircraft in response['aircraft']:
                         aircraft_values = list(map(str, aircraft.values()))
-                        data = [Paragraph(value, styles['Normal']) for value in aircraft_values]
-                        flowables.extend(data)
-                        flowables.append(PageBreak())
+                        table_data.append([Paragraph(value, styles['Normal']) for value in aircraft_values])
 
+                    # Create table
+                    table = Table(table_data)
+                    table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 12),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                    ]))
+                    
+                    flowables.append(table)
                     doc.build(flowables)
                 elif file_format.lower() in ["txt"]:
                     with open(file_path, "w", newline='', encoding='utf-8') as file:
@@ -934,7 +953,15 @@ class Skysearch(commands.Cog):
                     os.remove(file_path)
 
             with open(file_path, 'rb') as fp:
-                await ctx.send(file=discord.File(fp, filename=os.path.basename(file_path)))
+                # Create success embed showing export details
+                embed = discord.Embed(title="Export Complete", description=f"Successfully exported {aircraft_count} aircraft to {file_format.upper()} format.", color=0x2BBD8E)
+                embed.add_field(name="Search Type", value=search_type.capitalize(), inline=True)
+                embed.add_field(name="Search Value", value=search_value, inline=True)
+                embed.add_field(name="File Format", value=file_format.upper(), inline=True)
+                embed.add_field(name="Aircraft Count", value=f"{aircraft_count} aircraft", inline=True)
+                embed.add_field(name="File Name", value=os.path.basename(file_path), inline=True)
+                
+                await ctx.send(embed=embed, file=discord.File(fp, filename=os.path.basename(file_path)))
         else:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
