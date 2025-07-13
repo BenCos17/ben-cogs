@@ -1,0 +1,645 @@
+"""
+Aircraft commands for SkySearch cog
+"""
+
+import discord
+import asyncio
+import urllib
+import os
+from discord.ext import commands
+from discord.ext import tasks
+from urllib.parse import quote_plus
+
+from ..utils.api import APIManager
+from ..utils.helpers import HelperUtils
+from ..utils.export import ExportManager
+
+
+class AircraftCommands:
+    """Aircraft-related commands for SkySearch."""
+    
+    def __init__(self, cog):
+        self.cog = cog
+        self.api = APIManager(cog)
+        self.helpers = HelperUtils(cog)
+        self.export = ExportManager(cog)
+    
+    async def send_aircraft_info(self, ctx, response):
+        """Send aircraft information as an embed."""
+        if 'aircraft' in response and response['aircraft']:
+            await ctx.typing()
+            aircraft_data = response['aircraft'][0]
+            
+            # Get photo for the aircraft
+            icao = aircraft_data.get('hex', None).upper()
+            image_url, photographer = await self.helpers.get_photo_by_hex(icao)
+            
+            # Create embed
+            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+            
+            # Create view with buttons
+            view = discord.ui.View()
+            link = f"https://globe.airplanes.live/?icao={icao}"
+            view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
+            
+            # Add social media buttons
+            ground_speed_knots = aircraft_data.get('gs', 'N/A')
+            ground_speed_mph = 'unknown'
+            if ground_speed_knots != 'N/A':
+                ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+            
+            squawk_code = aircraft_data.get('squawk', 'N/A')
+            emergency_squawk_codes = ['7500', '7600', '7700']
+            
+            lat = aircraft_data.get('lat', 'N/A')
+            lon = aircraft_data.get('lon', 'N/A')
+            if lat != 'N/A':
+                lat = round(float(lat), 2)
+                lat_dir = "N" if lat >= 0 else "S"
+                lat = f"{abs(lat)}{lat_dir}"
+            if lon != 'N/A':
+                lon = round(float(lon), 2)
+                lon_dir = "E" if lon >= 0 else "W"
+                lon = f"{abs(lon)}{lon_dir}"
+            
+            if squawk_code in emergency_squawk_codes:
+                tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+            else:
+                tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+            tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+            view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
+            
+            whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
+            whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
+            view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+            
+            await ctx.send(embed=embed, view=view)
+        else:
+            embed = discord.Embed(title='No results found for your query', color=discord.Colour(0xff4545))
+            embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
+            message = await ctx.send(embed=embed)
+            
+            # Check if auto-delete is enabled for this guild
+            auto_delete_enabled = await self.cog.config.guild(ctx.guild).auto_delete_not_found()
+            if auto_delete_enabled:
+                await asyncio.sleep(5)
+                try:
+                    await ctx.message.delete()
+                except discord.errors.Forbidden:
+                    pass
+                try:
+                    await message.delete()
+                except discord.errors.Forbidden:
+                    pass
+
+    @commands.guild_only()
+    @commands.group(name='aircraft', help='Command center for aircraft related commands')
+    async def aircraft_group(self, ctx):
+        """Command center for aircraft related commands"""
+        # This will be handled by the main cog
+
+    @commands.guild_only()
+    @aircraft_group.command(name='icao', help='Get information about an aircraft by its 24-bit ICAO Address')
+    async def aircraft_by_icao(self, ctx, hex_id: str):
+        """Get aircraft information by ICAO hex code."""
+        url = f"{self.api.api_url}/?find_hex={hex_id}"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            if 'aircraft' in response and len(response['aircraft']) > 1:
+                for aircraft_info in response['aircraft']:
+                    await self.send_aircraft_info(ctx, {'aircraft': [aircraft_info]})
+            else:
+                await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='callsign', help='Get information about an aircraft by its callsign.')
+    async def aircraft_by_callsign(self, ctx, callsign: str):
+        """Get aircraft information by callsign."""
+        url = f"{self.api.api_url}/?find_callsign={callsign}"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="No aircraft found with the specified callsign.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='reg', help='Get information about an aircraft by its registration.')
+    async def aircraft_by_reg(self, ctx, registration: str):
+        """Get aircraft information by registration."""
+        url = f"{self.api.api_url}/?find_reg={registration}"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='type', help='Get information about aircraft by its type.')
+    async def aircraft_by_type(self, ctx, aircraft_type: str):
+        """Get aircraft information by type."""
+        url = f"{self.api.api_url}/?find_type={aircraft_type}"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
+    async def aircraft_by_squawk(self, ctx, squawk_value: str):
+        """Get aircraft information by squawk code."""
+        url = f"{self.api.api_url}/?all_with_pos&filter_squawk={squawk_value}"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='export', help='Search aircraft by ICAO, callsign, squawk, or type and export the results.')
+    async def export_aircraft(self, ctx, search_type: str, search_value: str, file_format: str):
+        """Export aircraft data to various formats."""
+        # Map search_type to new REST API query parameters
+        if search_type not in ["icao", "callsign", "squawk", "type"]:
+            embed = discord.Embed(title="Error", description="Invalid search type specified. Use one of: icao, callsign, squawk, or type.", color=0xfa4545)
+            await ctx.send(embed=embed)
+            return
+
+        if file_format not in ["csv", "pdf", "txt", "html"]:
+            embed = discord.Embed(title="Error", description="Invalid file format specified. Use one of: csv, pdf, txt, or html.", color=0xfa4545)
+            await ctx.send(embed=embed)
+            return
+
+        # Handle multiple ICAO codes for ICAO search type
+        all_aircraft = []
+        if search_type == "icao":
+            # Split by spaces and clean up each ICAO code
+            icao_codes = [code.strip() for code in search_value.split() if code.strip()]
+            
+            if not icao_codes:
+                embed = discord.Embed(title="Error", description="No valid ICAO codes provided.", color=0xfa4545)
+                await ctx.send(embed=embed)
+                return
+            
+            # Make separate API calls for each ICAO code
+            for icao_code in icao_codes:
+                url = f"{self.api.api_url}/?find_hex={icao_code}"
+                response = await self.api.make_request(url, ctx)
+                if response and response.get('aircraft'):
+                    all_aircraft.extend(response['aircraft'])
+        else:
+            # For other search types, use the original logic
+            if search_type == "callsign":
+                url = f"{self.api.api_url}/?find_callsign={search_value}"
+            elif search_type == "squawk":
+                url = f"{self.api.api_url}/?all_with_pos&filter_squawk={search_value}"
+            elif search_type == "type":
+                url = f"{self.api.api_url}/?find_type={search_value}"
+            else:
+                embed = discord.Embed(title="Error", description="Invalid search type specified.", color=0xfa4545)
+                await ctx.send(embed=embed)
+                return
+
+            response = await self.api.make_request(url, ctx)
+            if response and response.get('aircraft'):
+                all_aircraft = response['aircraft']
+
+        if not all_aircraft:
+            embed = discord.Embed(title="Error", description="No aircraft data found.", color=0xfa4545)
+            await ctx.send(embed=embed)
+            return
+
+        # Export the data
+        file_path, aircraft_count = await self.export.export_aircraft_data(
+            all_aircraft, search_type, search_value, file_format, ctx
+        )
+        
+        if file_path:
+            with open(file_path, 'rb') as fp:
+                # Create success embed showing export details
+                embed = discord.Embed(title="Export Complete", description=f"Successfully exported {aircraft_count} aircraft to {file_format.upper()} format.", color=0x2BBD8E)
+                embed.add_field(name="Search Type", value=search_type.capitalize(), inline=True)
+                embed.add_field(name="Search Value", value=search_value, inline=True)
+                embed.add_field(name="File Format", value=file_format.upper(), inline=True)
+                embed.add_field(name="Aircraft Count", value=f"{aircraft_count} aircraft", inline=True)
+                embed.add_field(name="File Name", value=os.path.basename(file_path), inline=True)
+                
+                await ctx.send(embed=embed, file=discord.File(fp, filename=os.path.basename(file_path)))
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='military', help='Get information about military aircraft.')
+    async def show_military_aircraft(self, ctx):
+        """Get information about military aircraft."""
+        url = f"{self.api.api_url}/?all_with_pos&filter_mil"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            aircraft_list = response.get('aircraft', [])
+            if aircraft_list:
+                page_index = 0
+
+                async def create_embed(aircraft):
+                    embed = discord.Embed(title=f"Live military aircraft ({page_index + 1} of {len(aircraft_list)})", color=0xfffffe)
+                    embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                    aircraft_description = aircraft.get('desc', 'N/A')  # Aircraft Description
+                    aircraft_squawk = aircraft.get('squawk', 'N/A')  # Squawk
+                    aircraft_lat = aircraft.get('lat', 'N/A')  # Latitude
+                    aircraft_lon = aircraft.get('lon', 'N/A')  # Longitude
+                    aircraft_heading = aircraft.get('heading', 'N/A')  # Heading
+                    aircraft_speed = aircraft.get('spd', 'N/A')  # Speed
+                    aircraft_hex = aircraft.get('hex', 'N/A').upper()  # Hex 
+
+                    embed.description = f"# {aircraft_description}"
+                    embed.add_field(name="Squawk", value=f"**`{aircraft_squawk}`**", inline=True)
+                    embed.add_field(name="Latitude", value=f"**`{aircraft_lat}`**", inline=True)
+                    embed.add_field(name="Longitude", value=f"**`{aircraft_lon}`**", inline=True)
+                    embed.add_field(name="Heading", value=f"**`{aircraft_heading}`**", inline=True)
+                    embed.add_field(name="Speed", value=f"**`{aircraft_speed}`**", inline=True)
+                    embed.add_field(name="ICAO", value=f"**`{aircraft_hex}`**", inline=True)
+
+                    photo_url, photographer = await self.helpers.get_photo_by_hex(aircraft_hex)
+                    if photo_url:
+                        embed.set_image(url=photo_url)
+                    if photographer:
+                        embed.set_footer(text=f"Photo by {photographer}")
+
+                    view = discord.ui.View()
+                    view.add_item(discord.ui.Button(label=f"Track {aircraft_hex} live", url=f"https://globe.airplanes.live/?icao={aircraft_hex}"))
+
+                    return embed, view
+
+                async def update_message(message, page_index):
+                    embed, view = await create_embed(aircraft_list[page_index])
+                    await message.edit(embed=embed, view=view)
+
+                embed, view = await create_embed(aircraft_list[page_index])
+                message = await ctx.send(embed=embed, view=view)
+
+                await message.add_reaction("⬅️")
+                await message.add_reaction("❌")
+                await message.add_reaction("➡️")
+                
+                def check(reaction, user):
+                    return user == ctx.author and str(reaction.emoji) in ["⬅️", "❌", "➡️"]
+
+                while True:
+                    try:
+                        reaction, user = await self.cog.bot.wait_for("reaction_add", timeout=60.0, check=check)
+
+                        if str(reaction.emoji) == "⬅️" and page_index > 0:
+                            page_index -= 1
+                            await update_message(message, page_index)
+                        elif str(reaction.emoji) == "➡️" and page_index < len(aircraft_list) - 1:
+                            page_index += 1
+                            await update_message(message, page_index)
+                        elif str(reaction.emoji) == "❌":
+                            await message.delete()
+                            break
+
+                        await message.remove_reaction(reaction, user)
+                    except asyncio.TimeoutError:
+                        await message.clear_reactions()
+                        break
+            else:
+                await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='ladd', help='Get information on LADD-restricted aircraft')
+    async def ladd_aircraft(self, ctx):
+        """Get information on LADD-restricted aircraft."""
+        url = f"{self.api.api_url}/?all_with_pos&filter_ladd"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            if 'aircraft' in response and len(response['aircraft']) > 1:
+                pages = [response['aircraft'][i:i + 10] for i in range(0, len(response['aircraft']), 10)]  # Split aircraft list into pages of 10
+                page_index = 0
+                
+                while True:
+                    embed = discord.Embed(title=f"Limited Aircraft Data Displayed (Page {page_index + 1}/{len(pages)})", color=0xfffffe)
+                    embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                    
+                    for aircraft in pages[page_index]:
+                        aircraft_description = aircraft.get('desc', 'N/A')  # Aircraft Description
+                        aircraft_squawk = aircraft.get('squawk', 'N/A')  # Squawk
+                        aircraft_lat = aircraft.get('lat', 'N/A')  # Latitude
+                        aircraft_lon = aircraft.get('lon', 'N/A')  # Longitude
+                        aircraft_heading = aircraft.get('heading', 'N/A')  # Heading
+                        aircraft_speed = aircraft.get('spd', 'N/A')  # Speed
+                        aircraft_hex = aircraft.get('hex', 'N/A')  # Hex
+
+                        aircraft_info = f"**Squawk:** {aircraft_squawk}\n"
+                        aircraft_info += f"**Coordinates:** Lat: {aircraft_lat}, Lon: {aircraft_lon}\n"
+                        aircraft_info += f"**Heading:** {aircraft_heading}\n"
+                        aircraft_info += f"**Speed:** {aircraft_speed}\n"
+                        aircraft_info += f"**ICAO:** {aircraft_hex}"
+
+                        embed.add_field(name=aircraft_description, value=aircraft_info, inline=False)
+
+                    message = await ctx.send(embed=embed)
+                    await message.add_reaction("⬅️")  # Adding a reaction to scroll to the previous page
+                    await message.add_reaction("❌")  # Adding a reaction to close
+                    await message.add_reaction("➡️")  # Adding a reaction to scroll to the next page
+
+                    def check(reaction, user):
+                        return user == ctx.author and str(reaction.emoji) in ['⬅️', '❌', '➡️']
+
+                    try:
+                        reaction, user = await self.cog.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                        await message.remove_reaction(reaction, user)
+                        
+                        if str(reaction.emoji) == '⬅️' and page_index > 0:
+                            await message.delete()
+                            page_index -= 1
+                        elif str(reaction.emoji) == '➡️' and page_index < len(pages) - 1:
+                            await message.delete()
+                            page_index += 1
+                        elif str(reaction.emoji) == '❌':
+                            await message.delete()
+                            break
+                        else:
+                            await message.delete()
+                            break
+                    except asyncio.TimeoutError:
+                        await message.delete()
+                        break
+            else:
+                await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='pia', help='View live aircraft using private ICAO addresses')
+    async def pia_aircraft(self, ctx):
+        """View live aircraft using private ICAO addresses."""
+        url = f"{self.api.api_url}/?all_with_pos&filter_pia"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            if 'aircraft' in response and len(response['aircraft']) > 1:
+                pages = [response['aircraft'][i:i + 10] for i in range(0, len(response['aircraft']), 10)]  # Split aircraft list into pages of 10
+                page_index = 0
+                
+                while True:
+                    embed = discord.Embed(title=f"Private ICAO Aircraft Data Displayed (Page {page_index + 1}/{len(pages)})", color=0xfffffe)
+                    embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                    
+                    for aircraft in pages[page_index]:
+                        aircraft_description = aircraft.get('desc', 'N/A')  # Aircraft Description
+                        aircraft_squawk = aircraft.get('squawk', 'N/A')  # Squawk
+                        aircraft_lat = aircraft.get('lat', 'N/A')  # Latitude
+                        aircraft_lon = aircraft.get('lon', 'N/A')  # Longitude
+                        aircraft_heading = aircraft.get('heading', 'N/A')  # Heading
+                        aircraft_speed = aircraft.get('spd', 'N/A')  # Speed
+                        aircraft_hex = aircraft.get('hex', 'N/A')  # Hex
+
+                        aircraft_info = f"**Squawk:** {aircraft_squawk}\n"
+                        aircraft_info += f"**Coordinates:** Lat: {aircraft_lat}, Lon: {aircraft_lon}\n"
+                        aircraft_info += f"**Heading:** {aircraft_heading}\n"
+                        aircraft_info += f"**Speed:** {aircraft_speed}\n"
+                        aircraft_info += f"**ICAO:** {aircraft_hex}"
+
+                        embed.add_field(name=aircraft_description, value=aircraft_info, inline=False)
+
+                    message = await ctx.send(embed=embed)
+                    await message.add_reaction("⬅️")  # Adding a reaction to scroll to the previous page
+                    await message.add_reaction("❌")  # Adding a reaction to close
+                    await message.add_reaction("➡️")  # Adding a reaction to scroll to the next page
+
+                    def check(reaction, user):
+                        return user == ctx.author and str(reaction.emoji) in ['⬅️', '❌', '➡️']
+
+                    try:
+                        reaction, user = await self.cog.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                        await message.remove_reaction(reaction, user)
+                        
+                        if str(reaction.emoji) == '⬅️' and page_index > 0:
+                            await message.delete()
+                            page_index -= 1
+                        elif str(reaction.emoji) == '➡️' and page_index < len(pages) - 1:
+                            await message.delete()
+                            page_index += 1
+                        elif str(reaction.emoji) == '❌':
+                            await message.delete()
+                            break
+                        else:
+                            await message.delete()
+                            break
+                    except asyncio.TimeoutError:
+                        await message.delete()
+                        break
+            else:
+                await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='radius', help='Get information about aircraft within a specified radius.')
+    async def aircraft_within_radius(self, ctx, lat: str, lon: str, radius: str):
+        """Get information about aircraft within a specified radius."""
+        url = f"{self.api.api_url}/?circle={lat},{lon},{radius}"
+        response = await self.api.make_request(url, ctx)
+        if response:
+            await self.send_aircraft_info(ctx, response)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving aircraft information for aircraft within the specified radius.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='closest', help='Find the closest aircraft to specified coordinates.')
+    async def closest_aircraft(self, ctx, lat: str, lon: str, radius: str = "100"):
+        """Find the closest aircraft to specified coordinates."""
+        # Validate input parameters
+        try:
+            lat_float = float(lat)
+            lon_float = float(lon)
+            radius_float = float(radius)
+            
+            if not (-90 <= lat_float <= 90):
+                embed = discord.Embed(title="Error", description="Latitude must be between -90 and 90 degrees.", color=0xff4545)
+                await ctx.send(embed=embed)
+                return
+                
+            if not (-180 <= lon_float <= 180):
+                embed = discord.Embed(title="Error", description="Longitude must be between -180 and 180 degrees.", color=0xff4545)
+                await ctx.send(embed=embed)
+                return
+                
+            if radius_float <= 0 or radius_float > 500:
+                embed = discord.Embed(title="Error", description="Radius must be between 0 and 500 nautical miles.", color=0xff4545)
+                await ctx.send(embed=embed)
+                return
+                
+        except ValueError:
+            embed = discord.Embed(title="Error", description="Invalid coordinates or radius. Please provide valid numbers.", color=0xff4545)
+            await ctx.send(embed=embed)
+            return
+
+        # Use new REST API endpoint for closest aircraft search
+        url = f"{self.api.api_url}/?closest={lat},{lon},{radius}"
+        response = await self.api.make_request(url, ctx)
+        
+        if response and 'aircraft' in response and response['aircraft']:
+            aircraft_data = response['aircraft'][0]
+            
+            # Create a custom embed for closest aircraft with distance info
+            embed = discord.Embed(title="Closest Aircraft Found", color=0xfffffe)
+            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            
+            # Add distance information if available
+            distance_nmi = aircraft_data.get('dst', 'Unknown')
+            direction_deg = aircraft_data.get('dir', 'Unknown')
+            
+            if distance_nmi != 'Unknown' and direction_deg != 'Unknown':
+                embed.description = f"**Distance:** {distance_nmi:.1f} nautical miles\n**Direction:** {direction_deg}° from your location"
+            
+            # Aircraft description
+            description = f"{aircraft_data.get('desc', 'N/A')}"
+            if aircraft_data.get('year', None) is not None:
+                description += f" ({aircraft_data.get('year')})"
+            embed.add_field(name="Aircraft", value=description, inline=False)
+            
+            # Basic aircraft info
+            callsign = aircraft_data.get('flight', 'N/A').strip()
+            if not callsign or callsign == 'N/A':
+                callsign = 'BLOCKED'
+            embed.add_field(name="Callsign", value=f"{callsign}", inline=True)
+            
+            registration = aircraft_data.get('reg', None)
+            if registration is not None:
+                registration = registration.upper()
+                embed.add_field(name="Registration", value=f"{registration}", inline=True)
+            
+            icao = aircraft_data.get('hex', 'N/A').upper()
+            embed.add_field(name="ICAO", value=f"{icao}", inline=True)
+            
+            # Position
+            lat_pos = aircraft_data.get('lat', 'N/A')
+            lon_pos = aircraft_data.get('lon', 'N/A')
+            if lat_pos != 'N/A' and lon_pos != 'N/A':
+                lat_formatted = round(float(lat_pos), 4)
+                lon_formatted = round(float(lon_pos), 4)
+                embed.add_field(name="Position", value=f"{lat_formatted}, {lon_formatted}", inline=True)
+            
+            # Altitude
+            altitude = aircraft_data.get('alt_baro', 'N/A')
+            if altitude == 'ground':
+                embed.add_field(name="Status", value="On ground", inline=True)
+            elif altitude != 'N/A':
+                if isinstance(altitude, int):
+                    altitude = "{:,}".format(altitude)
+                altitude_feet = f"{altitude} ft"
+                embed.add_field(name="Altitude", value=f"{altitude_feet}", inline=True)
+            
+            # Speed
+            ground_speed_knots = aircraft_data.get('gs', 'N/A')
+            if ground_speed_knots != 'N/A':
+                ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+                embed.add_field(name="Speed", value=f"{ground_speed_mph} mph", inline=True)
+            
+            # Squawk
+            squawk_code = aircraft_data.get('squawk', 'N/A')
+            embed.add_field(name="Squawk", value=f"{squawk_code}", inline=True)
+            
+            # Emergency status
+            emergency_squawk_codes = ['7500', '7600', '7700']
+            if squawk_code in emergency_squawk_codes:
+                if squawk_code == '7500':
+                    emergency_status = "🚨 Aircraft reports it's been hijacked"
+                elif squawk_code == '7600':
+                    emergency_status = "🚨 Aircraft has lost radio contact"
+                elif squawk_code == '7700':
+                    emergency_status = "🚨 Aircraft has declared a general emergency"
+                embed.add_field(name="Emergency Status", value=emergency_status, inline=False)
+            
+            # Asset intelligence
+            if icao and icao.upper() in self.cog.law_enforcement_icao_set:
+                embed.add_field(name="Asset intelligence", value=":police_officer: Known for use by **state law enforcement**", inline=False)
+            if icao and icao.upper() in self.cog.military_icao_set:
+                embed.add_field(name="Asset intelligence", value=":military_helmet: Known for use in **military** and **government**", inline=False)
+            if icao and icao.upper() in self.cog.medical_icao_set:
+                embed.add_field(name="Asset intelligence", value=":hospital: Known for use in **medical response** and **transport**", inline=False)
+            if icao and icao.upper() in self.cog.suspicious_icao_set:
+                embed.add_field(name="Asset intelligence", value=":warning: Exhibits suspicious flight or **surveillance** activity", inline=False)
+            if icao and icao.upper() in self.cog.global_prior_known_accident_set:
+                embed.add_field(name="Asset intelligence", value=":boom: Prior involved in one or more **documented accidents**", inline=False)
+            if icao and icao.upper() in self.cog.ukr_conflict_set:
+                embed.add_field(name="Asset intelligence", value=":flag_ua: Utilized within the **[Russo-Ukrainian conflict](https://en.wikipedia.org/wiki/Russian-occupied_territories_of_Ukraine)**", inline=False)
+            if icao and icao.upper() in self.cog.newsagency_icao_set:
+                embed.add_field(name="Asset intelligence", value=":newspaper: Used by **news** or **media** organization", inline=False)
+            if icao and icao.upper() in self.cog.balloons_icao_set:
+                embed.add_field(name="Asset intelligence", value=":balloon: Aircraft is a **balloon**", inline=False)
+            if icao and icao.upper() in self.cog.agri_utility_set:
+                embed.add_field(name="Asset intelligence", value=":corn: Used for **agriculture surveys, easement validation, or land inspection**", inline=False)
+            
+            # Add photo if available
+            image_url, photographer = await self.helpers.get_photo_by_hex(icao)
+            if image_url and photographer:
+                embed.set_thumbnail(url=image_url)
+                embed.set_footer(text=f"Photo by {photographer}")
+            else:
+                # Set default aircraft image when no photo is available
+                embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                embed.set_footer(text="No photo available")
+            
+            # Create view with buttons
+            view = discord.ui.View()
+            link = f"https://globe.airplanes.live/?icao={icao}"
+            view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
+            
+            # Add tracking button
+            view.add_item(discord.ui.Button(label="Track Live", emoji="✈️", url=link, style=discord.ButtonStyle.link))
+            
+            await ctx.send(embed=embed, view=view)
+            
+        elif response and 'aircraft' in response and not response['aircraft']:
+            embed = discord.Embed(title="No Aircraft Found", description=f"No aircraft found within {radius} nautical miles of the specified location.", color=0xff4545)
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(title="Error", description="Error retrieving closest aircraft information.", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='scroll', help='Scroll through available planes.')
+    async def scroll_planes(self, ctx):
+        """Scroll through available planes."""
+        url = f"{self.api.api_url}/?all_with_pos&filter_mil"
+        try:
+            response = await self.api.make_request(url, ctx)
+            if response and 'aircraft' in response:
+                for index, aircraft_info in enumerate(response['aircraft']):
+                    await self.send_aircraft_info(ctx, {'aircraft': [aircraft_info]})
+                    embed = discord.Embed(description=f"Plane {index + 1}/{len(response['aircraft'])}. React with ➡️ to view the next plane or ⏹️ to stop.")
+                    message = await ctx.send(embed=embed)
+                    await message.add_reaction("➡️")
+                    await message.add_reaction("⏹️") 
+
+                    def check(reaction, user):
+                        return user == ctx.author and str(reaction.emoji) == '➡️' or str(reaction.emoji) == '⏹️'
+
+                    try:
+                        reaction, user = await self.cog.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                        await message.remove_reaction(reaction.emoji, ctx.author)
+                        if str(reaction.emoji) == '⏹️':
+                            embed = discord.Embed(description="Stopping.")
+                            await ctx.send(embed=embed)
+                            break
+                    except asyncio.TimeoutError:
+                        embed = discord.Embed(description="No reaction received. Stopping.")
+                        await ctx.send(embed=embed)
+                        break
+        except Exception as e:
+            embed = discord.Embed(description=f"An error occurred during scrolling: {e}.")
+            await ctx.send(embed=embed) 

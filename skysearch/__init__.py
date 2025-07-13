@@ -1,7 +1,9 @@
-from redbot.core.bot import Red #type: ignore
+"""
+SkySearch - A powerful aircraft tracking and information Discord bot cog
+"""
 
 from .skysearch import Skysearch
 
-async def setup(bot: Red):
-    cog = Skysearch(bot)
-    await bot.add_cog(cog)
+def setup(bot):
+    """Add the Skysearch cog to the bot."""
+    bot.add_cog(Skysearch(bot))

@@ -1,149 +1,210 @@
-# SkySearch
-SkySearch is a cog for Red-Discordbot that makes getting information about airplanes, helicopters, blimps, drones, and nearly any other airborne item that can be tracked via radio formats like ADS-B, MLAT, and others, as well as airport information, runway status and related information, airport weather forecasts, and more.
+# SkySearch - Aircraft Tracking Discord Bot Cog
 
-[Leave a donation to support development efforts in any amount that works for you!](https://donate.stripe.com/eVag0y2kI9BI36McNa)
+A powerful, modular Discord bot cog for tracking aircraft and airport information using real-time data from airplanes.live and other aviation APIs.
 
-# Configuration
-Before SkySearch functions properly on your own instance of Red, you'll need to set a few specific API keys to make sure all data is accessible to the cog as designed. Since Red is, inherrently, free, we've tried to target as many "Free" or "Freemium" API's here as possible compared to adding paid-only API's. That being said, some of these API's can be somewhat complex to interact with and actually configure. Ideally, any of these are optional - but, then this cog will be somewhat boring, less technical, you know the deal.
+## 🏗️ New Modular Structure
 
-### Google Maps integration
+The codebase has been refactored into a clean, modular structure for better maintainability, readability, and collaboration:
 
-**Price** - **FREE** for up to 28,500 maploads per month (919/day in a 31 day month)
+```
+skysearch/
+├── __init__.py                 # Main cog setup
+├── skysearch.py               # Main cog class and core functionality
+├── data/
+│   ├── __init__.py
+│   └── icao_codes.py          # ICAO code sets and intelligence data
+├── utils/
+│   ├── __init__.py
+│   ├── api.py                 # API management and HTTP client
+│   ├── helpers.py             # Helper utilities and embed creation
+│   └── export.py              # Export functionality (CSV, PDF, TXT, HTML)
+└── commands/
+    ├── __init__.py
+    ├── aircraft.py            # Aircraft-related commands
+    ├── airport.py             # Airport-related commands
+    └── admin.py               # Admin and configuration commands
+```
 
-**Function** - The cog will fetch down a static map image of the airport queried using `airport about`. 
+## 📦 Module Overview
 
-**Requirement** - You must set a `googlemaps` `api_key` within your Red instance.
+### Core Modules
 
-**API in use** - [Maps Static API](https://developers.google.com/maps/documentation/maps-static)
+- **`skysearch.py`**: Main cog class that orchestrates all components
+- **`__init__.py`**: Cog setup and bot integration
 
-**Command** - `[p]set api googlemaps api_key YOURAPIKEYHERE`
+### Data Layer
 
+- **`data/icao_codes.py`**: Contains all ICAO code sets for intelligence data:
+  - Law enforcement aircraft
+  - Military and government aircraft
+  - Medical response aircraft
+  - Suspicious aircraft
+  - News/media aircraft
+  - Balloons
+  - Accident history
+  - Conflict zone aircraft
+  - Agricultural/utility aircraft
 
-### airportdb.io integration
+### Utility Layer
 
-**Price** - **FREE** for up to 5,000 queries / month
+- **`utils/api.py`**: 
+  - HTTP client management
+  - API request handling
+  - Error handling and rate limiting
+  - Authentication management
 
-**Function** - The cog will fetch information about airports, like runway details, using `airport runway`
+- **`utils/helpers.py`**:
+  - Aircraft photo fetching
+  - Embed creation and formatting
+  - Data processing utilities
 
-**Requirement** - You must set a `airportdbio` `api_token` within your Red instance.
+- **`utils/export.py`**:
+  - CSV export functionality
+  - PDF export with proper formatting
+  - TXT and HTML export options
+  - File management and cleanup
 
-**API in use** - [airportdb.io api](https://airportdb.io/#)
+### Command Layer
 
-**Command** - `[p]set api airportdbio api_token YOURAPITOKENHERE`
+- **`commands/aircraft.py`**: All aircraft-related commands:
+  - `icao` - Search by ICAO hex code
+  - `callsign` - Search by flight callsign
+  - `reg` - Search by registration
+  - `type` - Search by aircraft type
+  - `squawk` - Search by squawk code
+  - `military` - View military aircraft
+  - `ladd` - View LADD-restricted aircraft
+  - `pia` - View private ICAO aircraft
+  - `radius` - Search within radius
+  - `closest` - Find closest aircraft
+  - `export` - Export data to various formats
+  - `scroll` - Scroll through aircraft
 
-# Commands
-# aircraft
- - Usage: `[p]aircraft `
- - Aliases: `skysearch`
- - Checks: `server_only`
+- **`commands/airport.py`**: All airport-related commands:
+  - `info` - Airport information
+  - `runway` - Runway details
+  - `navaid` - Navigational aids
+  - `forecast` - Weather forecasts
 
-Summon the aircraft panel
+- **`commands/admin.py`**: Admin and configuration commands:
+  - `alertchannel` - Set emergency alert channel
+  - `alertrole` - Set emergency alert role
+  - `autoicao` - Configure automatic ICAO lookup
+  - `autodelete` - Configure auto-deletion of "not found" messages
+  - `showalertchannel` - Show alert status
+  - `setapikey` - Set API key (owner only)
+  - `apikey` - Check API key status (owner only)
+  - `clearapikey` - Clear API key (owner only)
+  - `debugapi` - Debug API issues (owner only)
 
-## aircraft squawk
- - Usage: `[p]aircraft squawk <squawk_value> `
- - Checks: `server_only`
+## 🚀 Benefits of the New Structure
 
-Get information about an aircraft by its squawk code.
+### 1. **Maintainability**
+- Clear separation of concerns
+- Easy to locate and modify specific functionality
+- Reduced code duplication
+- Better error handling
 
-## aircraft stats
- - Usage: `[p]aircraft stats `
- - Checks: `server_only`
+### 2. **Readability**
+- Logical organization by functionality
+- Consistent naming conventions
+- Clear module responsibilities
+- Better documentation
 
-Get statistics about SkySearch and the data used here
+### 3. **Collaboration**
+- Multiple developers can work on different modules
+- Reduced merge conflicts
+- Clear ownership of code sections
+- Easier code reviews
 
-## aircraft callsign
- - Usage: `[p]aircraft callsign <callsign> `
- - Checks: `server_only`
+### 4. **Extensibility**
+- Easy to add new command categories
+- Simple to add new utility functions
+- Modular API integration
+- Flexible export formats
 
-Get information about an aircraft by its callsign.
+### 5. **Testing**
+- Isolated components for unit testing
+- Clear interfaces between modules
+- Easier to mock dependencies
+- Better test coverage
 
-## aircraft pia
- - Usage: `[p]aircraft pia `
- - Checks: `server_only`
+## 🔧 Setup and Installation
 
-View live aircraft using private ICAO addresses
+1. **Install Dependencies**:
+   ```bash
+   pip install discord.py aiohttp reportlab
+   ```
 
-## aircraft showalertchannel
- - Usage: `[p]aircraft showalertchannel `
- - Checks: `server_only`
+2. **Configure API Keys**:
+   - Set up airplanes.live API key: `[p]setapikey <your-api-key>`
+   - Optional: Configure Google Maps API for airport imagery
+   - Optional: Configure OpenAI API for airport summaries
+   - Optional: Configure airportdb.io API for runway data
 
-Show alert task status and output if set
+3. **Load the Cog**:
+   ```bash
+   [p]load skysearch
+   ```
 
-## aircraft alertchannel
- - Usage: `[p]aircraft alertchannel <channel> `
- - Checks: `server_only`
+## 📋 Available Commands
 
-Set a channel to send emergency squawk alerts to.
+### Aircraft Commands
+- `[p]aircraft icao <hex>` - Search by ICAO hex code
+- `[p]aircraft callsign <callsign>` - Search by flight callsign
+- `[p]aircraft reg <registration>` - Search by registration
+- `[p]aircraft type <type>` - Search by aircraft type
+- `[p]aircraft squawk <code>` - Search by squawk code
+- `[p]aircraft military` - View military aircraft
+- `[p]aircraft ladd` - View LADD-restricted aircraft
+- `[p]aircraft pia` - View private ICAO aircraft
+- `[p]aircraft radius <lat> <lon> <radius>` - Search within radius
+- `[p]aircraft closest <lat> <lon> [radius]` - Find closest aircraft
+- `[p]aircraft export <type> <value> <format>` - Export data
+- `[p]aircraft scroll` - Scroll through aircraft
 
-## aircraft radius
- - Usage: `[p]aircraft radius <lat> <lon> <radius> `
- - Checks: `server_only`
+### Airport Commands
+- `[p]airport info <code>` - Get airport information
+- `[p]airport runway <code>` - Get runway information
+- `[p]airport navaid <code>` - Get navigational aids
+- `[p]airport forecast <code>` - Get weather forecast
 
-Get information about aircraft within a specified radius.
+### Admin Commands
+- `[p]aircraft alertchannel [#channel]` - Set alert channel
+- `[p]aircraft alertrole [@role]` - Set alert role
+- `[p]aircraft autoicao [true/false]` - Configure auto ICAO lookup
+- `[p]aircraft autodelete [true/false]` - Configure auto-deletion
+- `[p]aircraft showalertchannel` - Show alert status
 
-## aircraft scroll
- - Usage: `[p]aircraft scroll `
- - Checks: `server_only`
+### Owner Commands
+- `[p]setapikey <key>` - Set airplanes.live API key
+- `[p]apikey` - Check API key status
+- `[p]clearapikey` - Clear API key
+- `[p]debugapi` - Debug API issues
 
-Scroll through available planes.
+## 🔄 Migration from Old Structure
 
-## aircraft reg
- - Usage: `[p]aircraft reg <registration> `
- - Checks: `server_only`
+The new modular structure maintains full backward compatibility. All existing commands and functionality work exactly the same way. The only changes are internal organization and improved maintainability.
 
-Get information about an aircraft by its registration.
+## 🤝 Contributing
 
-## aircraft military
- - Usage: `[p]aircraft military `
- - Checks: `server_only`
+When contributing to the codebase:
 
-Get information about military aircraft.
+1. **Follow the modular structure** - Place new code in appropriate modules
+2. **Use the utility classes** - Leverage existing helpers and API managers
+3. **Maintain consistency** - Follow existing naming and formatting conventions
+4. **Add documentation** - Document new functions and classes
+5. **Test thoroughly** - Ensure new features work with existing functionality
 
-## aircraft type
- - Usage: `[p]aircraft type <aircraft_type> `
- - Checks: `server_only`
+## 📝 License
 
-Get information about aircraft by its type.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## aircraft ladd
- - Usage: `[p]aircraft ladd `
- - Checks: `server_only`
+## 🙏 Acknowledgments
 
-Get information on LADD-restricted aircraft
-
-## aircraft icao
- - Usage: `[p]aircraft icao <hex_id> `
- - Checks: `server_only`
-
-Get information about an aircraft by its 24-bit ICAO Address
-
-## aircraft export
- - Usage: `[p]aircraft export <search_type> <search_value> <file_format> `
- - Checks: `server_only`
-
-Search aircraft by ICAO, callsign, squawk, or type and export the results.
-
-## aircraft autoicao
- - Usage: `[p]aircraft autoicao [state=None] `
- - Checks: `server_only`
-
-Enable or disable automatic ICAO lookup.
-
-# airport
- - Usage: `[p]airport `
- - Aliases: `groundsearch`
- - Checks: `server_only`
-
-Summon SkySearch ground search panel
-
-## airport runway
- - Usage: `[p]airport runway <code> `
- - Checks: `server_only`
-
-Query runway information by ICAO code.
-
-## airport about
- - Usage: `[p]airport about [code=None] `
- - Checks: `server_only`
-
-Query airport information by ICAO or IATA code.
+- **airplanes.live** - Real-time aircraft data
+- **planespotters.net** - Aircraft photography
+- **airport-data.com** - Airport information
+- **airportdb.io** - Runway and navaid data
+- **Google Maps** - Mapping and imagery
+- **OpenAI** - AI-powered summaries
