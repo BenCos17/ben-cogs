@@ -130,6 +130,11 @@ class Skysearch(red_commands.Cog):
         embed.add_field(name="Export", value="`export` - Export aircraft data to CSV, PDF, TXT, or HTML", inline=False)
         embed.add_field(name="Configuration", value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel`", inline=False)
         embed.add_field(name="Other", value="`scroll` - Scroll through available planes", inline=False)
+        
+        # Only show debug command to bot owners
+        if await ctx.bot.is_owner(ctx.author):
+            embed.add_field(name="Debug", value="`debugapi` - Debug API issues (owner only)", inline=False)
+        
         embed.add_field(name="Detailed Help", value="Use `*help aircraft` for detailed command information", inline=False)
         await ctx.send(embed=embed)
 
@@ -220,6 +225,12 @@ class Skysearch(red_commands.Cog):
         """Show alert task status and output if set."""
         await self.admin_commands.list_alert_channels(ctx)
 
+    @red_commands.is_owner()
+    @aircraft_group.command(name='debugapi')
+    async def aircraft_debugapi(self, ctx):
+        """Debug API key and connection issues (DM only)."""
+        await self.admin_commands.debug_api(ctx)
+
     # Airport commands
     @red_commands.guild_only()
     @red_commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)
@@ -270,12 +281,6 @@ class Skysearch(red_commands.Cog):
     async def clearapikey(self, ctx):
         """Clear the API key configuration."""
         await self.admin_commands.clear_api_key(ctx)
-
-    @red_commands.is_owner()
-    @red_commands.command(name='debugapi')
-    async def debugapi(self, ctx):
-        """Debug API key and connection issues (DM only)."""
-        await self.admin_commands.debug_api(ctx)
 
     @tasks.loop(minutes=2)
     async def check_emergency_squawks(self):
