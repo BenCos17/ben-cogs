@@ -133,6 +133,93 @@ class Skysearch(red_commands.Cog):
             embed.add_field(name="Other", value="`scroll` - Scroll through available planes", inline=False)
             await ctx.send(embed=embed)
 
+    # Delegate aircraft commands to the aircraft module
+    @aircraft_group.command(name='icao')
+    async def aircraft_icao(self, ctx, hex_id: str):
+        """Get aircraft information by ICAO hex code."""
+        await self.aircraft_commands.aircraft_by_icao(ctx, hex_id)
+
+    @aircraft_group.command(name='callsign')
+    async def aircraft_callsign(self, ctx, callsign: str):
+        """Get aircraft information by callsign."""
+        await self.aircraft_commands.aircraft_by_callsign(ctx, callsign)
+
+    @aircraft_group.command(name='reg')
+    async def aircraft_reg(self, ctx, registration: str):
+        """Get aircraft information by registration."""
+        await self.aircraft_commands.aircraft_by_reg(ctx, registration)
+
+    @aircraft_group.command(name='type')
+    async def aircraft_type(self, ctx, aircraft_type: str):
+        """Get aircraft information by type."""
+        await self.aircraft_commands.aircraft_by_type(ctx, aircraft_type)
+
+    @aircraft_group.command(name='squawk')
+    async def aircraft_squawk(self, ctx, squawk_value: str):
+        """Get aircraft information by squawk code."""
+        await self.aircraft_commands.aircraft_by_squawk(ctx, squawk_value)
+
+    @aircraft_group.command(name='export')
+    async def aircraft_export(self, ctx, search_type: str, search_value: str, file_format: str):
+        """Export aircraft data to various formats."""
+        await self.aircraft_commands.export_aircraft(ctx, search_type, search_value, file_format)
+
+    @aircraft_group.command(name='military')
+    async def aircraft_military(self, ctx):
+        """Get information about military aircraft."""
+        await self.aircraft_commands.show_military_aircraft(ctx)
+
+    @aircraft_group.command(name='ladd')
+    async def aircraft_ladd(self, ctx):
+        """Get information on LADD-restricted aircraft."""
+        await self.aircraft_commands.ladd_aircraft(ctx)
+
+    @aircraft_group.command(name='pia')
+    async def aircraft_pia(self, ctx):
+        """View live aircraft using private ICAO addresses."""
+        await self.aircraft_commands.pia_aircraft(ctx)
+
+    @aircraft_group.command(name='radius')
+    async def aircraft_radius(self, ctx, lat: str, lon: str, radius: str):
+        """Get information about aircraft within a specified radius."""
+        await self.aircraft_commands.aircraft_within_radius(ctx, lat, lon, radius)
+
+    @aircraft_group.command(name='closest')
+    async def aircraft_closest(self, ctx, lat: str, lon: str, radius: str = "100"):
+        """Find the closest aircraft to specified coordinates."""
+        await self.aircraft_commands.closest_aircraft(ctx, lat, lon, radius)
+
+    @aircraft_group.command(name='scroll')
+    async def aircraft_scroll(self, ctx):
+        """Scroll through available planes."""
+        await self.aircraft_commands.scroll_planes(ctx)
+
+    # Admin commands
+    @aircraft_group.command(name='alertchannel')
+    async def aircraft_alertchannel(self, ctx, channel: discord.TextChannel = None):
+        """Set or clear a channel to send emergency squawk alerts to."""
+        await self.admin_commands.set_alert_channel(ctx, channel)
+
+    @aircraft_group.command(name='alertrole')
+    async def aircraft_alertrole(self, ctx, role: discord.Role = None):
+        """Set or clear a role to mention when new emergency squawks occur."""
+        await self.admin_commands.set_alert_role(ctx, role)
+
+    @aircraft_group.command(name='autoicao')
+    async def aircraft_autoicao(self, ctx, state: bool = None):
+        """Enable or disable automatic ICAO lookup."""
+        await self.admin_commands.autoicao(ctx, state)
+
+    @aircraft_group.command(name='autodelete', aliases=['autodel'])
+    async def aircraft_autodelete(self, ctx, state: bool = None):
+        """Enable or disable automatic deletion of 'not found' messages."""
+        await self.admin_commands.autodelete(ctx, state)
+
+    @aircraft_group.command(name='showalertchannel')
+    async def aircraft_showalertchannel(self, ctx):
+        """Show alert task status and output if set."""
+        await self.admin_commands.list_alert_channels(ctx)
+
     # Airport commands
     @red_commands.guild_only()
     @red_commands.group(name='airport', help='Command center for airport related commands')
@@ -143,6 +230,52 @@ class Skysearch(red_commands.Cog):
             embed.add_field(name="Information", value="`info` - Get airport information by ICAO/IATA code", inline=False)
             embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast", inline=False)
             await ctx.send(embed=embed)
+
+    # Delegate airport commands to the airport module
+    @airport_group.command(name='info')
+    async def airport_info(self, ctx, airport_code: str):
+        """Get airport information by ICAO or IATA code."""
+        await self.airport_commands.airport_info(ctx, airport_code)
+
+    @airport_group.command(name='runway')
+    async def airport_runway(self, ctx, airport_code: str):
+        """Get runway information for an airport."""
+        await self.airport_commands.runway_info(ctx, airport_code)
+
+    @airport_group.command(name='navaid')
+    async def airport_navaid(self, ctx, airport_code: str):
+        """Get navigational aids for an airport."""
+        await self.airport_commands.navaid_info(ctx, airport_code)
+
+    @airport_group.command(name='forecast')
+    async def airport_forecast(self, ctx, airport_code: str):
+        """Get weather forecast for an airport."""
+        await self.airport_commands.weather_forecast(ctx, airport_code)
+
+    # Owner commands
+    @red_commands.is_owner()
+    @red_commands.command(name='setapikey')
+    async def setapikey(self, ctx, api_key: str):
+        """Set the airplanes.live API key."""
+        await self.admin_commands.set_api_key(ctx, api_key)
+
+    @red_commands.is_owner()
+    @red_commands.command(name='apikey')
+    async def apikey(self, ctx):
+        """Check the status of the API key configuration."""
+        await self.admin_commands.check_api_key(ctx)
+
+    @red_commands.is_owner()
+    @red_commands.command(name='clearapikey')
+    async def clearapikey(self, ctx):
+        """Clear the API key configuration."""
+        await self.admin_commands.clear_api_key(ctx)
+
+    @red_commands.is_owner()
+    @red_commands.command(name='debugapi')
+    async def debugapi(self, ctx):
+        """Debug API key and connection issues (DM only)."""
+        await self.admin_commands.debug_api(ctx)
 
     @tasks.loop(minutes=2)
     async def check_emergency_squawks(self):
@@ -216,14 +349,5 @@ class Skysearch(red_commands.Cog):
             self.check_emergency_squawks.cancel()
         except Exception as e:
             print(f"Error unloading cog: {e}")
-
-    # Delegate commands to appropriate modules
-    def __getattr__(self, name):
-        """Delegate attribute access to command modules."""
-        # Check if the attribute exists in any of the command modules
-        for module in [self.aircraft_commands, self.airport_commands, self.admin_commands]:
-            if hasattr(module, name):
-                return getattr(module, name)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
         
         
