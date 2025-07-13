@@ -252,3 +252,121 @@ class HelperUtils:
             embed.set_footer(text="No photo available")
 
         return embed 
+
+    async def get_airport_data(self, airport_code: str):
+        """Get airport information by ICAO or IATA code."""
+        if not hasattr(self.cog, '_http_client'):
+            self.cog._http_client = aiohttp.ClientSession()
+        
+        try:
+            # Try airport-data.com API
+            url = f"https://airport-data.com/api/ap_info.json?icao={airport_code}"
+            async with self.cog._http_client.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data and not isinstance(data, list):  # Valid airport data
+                        return {
+                            'name': data.get('name', 'N/A'),
+                            'city': data.get('city', 'N/A'),
+                            'country': data.get('country', 'N/A'),
+                            'latitude': data.get('latitude', 'N/A'),
+                            'longitude': data.get('longitude', 'N/A'),
+                            'elevation': data.get('elevation', 'N/A'),
+                            'timezone': data.get('timezone', 'N/A')
+                        }
+        except (aiohttp.ClientError, KeyError, ValueError):
+            pass
+        
+        return None
+
+    async def get_airport_image(self, lat: str, lon: str):
+        """Get airport satellite image using Google Maps Static API."""
+        if lat == 'N/A' or lon == 'N/A':
+            return None
+        
+        try:
+            # Note: This would require a Google Maps API key for production use
+            # For now, return a placeholder or use a free alternative
+            # url = f"https://maps.googleapis.com/maps/api/staticmap?center={lat},{lon}&zoom=15&size=600x400&maptype=satellite&key=YOUR_API_KEY"
+            
+            # Return a placeholder for now
+            return "https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png"
+        except Exception:
+            return None
+
+    async def get_runway_data(self, airport_code: str):
+        """Get runway information for an airport."""
+        if not hasattr(self.cog, '_http_client'):
+            self.cog._http_client = aiohttp.ClientSession()
+        
+        try:
+            # Try airportdb.io API
+            url = f"https://airportdb.io/api/v1/airports/{airport_code}"
+            async with self.cog._http_client.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data and 'runways' in data:
+                        return {
+                            'runways': data['runways']
+                        }
+        except (aiohttp.ClientError, KeyError, ValueError):
+            pass
+        
+        return None
+
+    async def get_navaid_data(self, airport_code: str):
+        """Get navigational aids for an airport."""
+        if not hasattr(self.cog, '_http_client'):
+            self.cog._http_client = aiohttp.ClientSession()
+        
+        try:
+            # Try airportdb.io API for navaids
+            url = f"https://airportdb.io/api/v1/airports/{airport_code}/navaids"
+            async with self.cog._http_client.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data and 'navaids' in data:
+                        return {
+                            'navaids': data['navaids']
+                        }
+        except (aiohttp.ClientError, KeyError, ValueError):
+            pass
+        
+        return None
+
+    async def get_weather_forecast(self, lat: str, lon: str):
+        """Get weather forecast for coordinates."""
+        if lat == 'N/A' or lon == 'N/A':
+            return None
+        
+        if not hasattr(self.cog, '_http_client'):
+            self.cog._http_client = aiohttp.ClientSession()
+        
+        try:
+            # Try weatherapi.com (free tier available)
+            # Note: This would require an API key for production use
+            # url = f"http://api.weatherapi.com/v1/forecast.json?key=YOUR_API_KEY&q={lat},{lon}&days=3"
+            
+            # Return placeholder data for now
+            return {
+                'current': {
+                    'temp': 'N/A',
+                    'condition': {'text': 'N/A'},
+                    'wind_kph': 'N/A',
+                    'humidity': 'N/A'
+                },
+                'forecast': {
+                    'forecastday': [
+                        {
+                            'date': 'N/A',
+                            'day': {
+                                'maxtemp_c': 'N/A',
+                                'mintemp_c': 'N/A',
+                                'condition': {'text': 'N/A'}
+                            }
+                        }
+                    ]
+                }
+            }
+        except Exception:
+            return None 

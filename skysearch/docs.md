@@ -1,361 +1,231 @@
-# SkySearch Cog Documentation
+# How to Use SkySearch
 
-## Overview
-SkySearch is a powerful aircraft tracking and information Discord bot cog that provides real-time aircraft data, airport information, and emergency squawk monitoring. It integrates with multiple aviation APIs to deliver comprehensive aircraft intelligence.
+## Getting Started
 
-## Installation
+### First Time Setup
+1. **Load the cog** in your Red-DiscordBot
+2. **Set up an API key** (optional but recommended):
+   ```
+   *setapikey YOUR_API_KEY_HERE
+   ```
+   Get a free API key from [airplanes.live](https://airplanes.live/)
 
-### Prerequisites
-- Red-DiscordBot installed and configured
-- Python 3.8 or higher
-- Internet connection for API access
+### Basic Commands
+- `*skysearch` - Main menu
+- `*aircraft` - Aircraft commands
+- `*airport` - Airport commands
 
-### Setup Steps
-1. **Download the cog files** to your Red-DiscordBot cogs directory
-2. **Load the cog** using Red-DiscordBot's cog manager or manually
-3. **Set up API key** (optional but recommended for full functionality)
-4. **Configure alert channels** for emergency squawk monitoring
+## Finding Aircraft
 
-## API Configuration
-
-### Setting Up API Key
-```bash
-# Set the airplanes.live API key (owner only)
-*setapikey YOUR_API_KEY_HERE
-
-# Check API key status
-*apikey
-
-# Clear API key if needed
-*clearapikey
+### Quick Aircraft Lookup
+**By ICAO Code** (most common):
+```
+*aircraft icao a03b67
 ```
 
-**Note**: While the cog works without an API key, some features may be limited. Get your free API key from [airplanes.live](https://airplanes.live/).
-
-## Core Commands
-
-### Main Menu
+**By Flight Number**:
 ```
-*skysearch
+*aircraft callsign DAL460
 ```
-Displays the main SkySearch menu with links to aircraft and airport commands.
 
-### Statistics
+**By Registration**:
 ```
-*skysearch stats
+*aircraft reg N12345
 ```
-Shows comprehensive statistics about data sources, tracked aircraft, and categorized aircraft counts.
 
-## Aircraft Commands
+### What You'll See
+Each aircraft lookup shows:
+- Aircraft type and year
+- Current position and altitude
+- Speed and heading
+- Flight status
+- Aircraft photo (if available)
+- Links to track live
 
-### Search Commands
+### Emergency Aircraft
+Look for aircraft with emergency squawk codes:
+- **7700** = General emergency
+- **7600** = Radio failure
+- **7500** = Hijacking
 
-#### ICAO Lookup
-```
-*aircraft icao <hex_code>
-```
-Get detailed information about an aircraft by its 24-bit ICAO address.
-
-**Example**: `*aircraft icao a03b67`
-
-#### Callsign Search
-```
-*aircraft callsign <callsign>
-```
-Find aircraft by their flight callsign.
-
-**Example**: `*aircraft callsign DAL460`
-
-#### Registration Search
-```
-*aircraft reg <registration>
-```
-Search for aircraft by their registration number.
-
-**Example**: `*aircraft reg N12345`
-
-#### Aircraft Type Search
-```
-*aircraft type <type>
-```
-Find aircraft by their type/model.
-
-**Example**: `*aircraft type A321`
-
-#### Squawk Code Search
-```
-*aircraft squawk <squawk>
-```
-Find aircraft by their transponder squawk code.
-
-**Example**: `*aircraft squawk 7700`
-
-#### Radius Search
-```
-*aircraft radius <lat> <lon> <radius>
-```
-Find aircraft within a specified radius of coordinates.
-
-**Example**: `*aircraft radius 40.7128 -74.0060 50`
-
-#### Closest Aircraft
-```
-*aircraft closest <lat> <lon> [radius]
-```
-Find the closest aircraft to specified coordinates.
-
-**Example**: `*aircraft closest 40.7128 -74.0060 100`
-
-### Special Aircraft Commands
-
-#### Military Aircraft
-```
-*aircraft military
-```
-View live military aircraft with detailed information and photos.
-
-#### LADD-Restricted Aircraft
-```
-*aircraft ladd
-```
-View aircraft with Limited Aircraft Data Display restrictions.
-
-#### Private ICAO Aircraft
-```
-*aircraft pia
-```
-View aircraft using private ICAO addresses.
-
-### Export Functionality
-```
-*aircraft export <search_type> <search_value> <format>
-```
-Export aircraft data to various formats.
-
-**Search Types**: `icao`, `callsign`, `squawk`, `type`
-**Formats**: `csv`, `pdf`, `txt`, `html`
-
-**Examples**:
-- `*aircraft export icao "a03b67 a1ef6a" pdf`
-- `*aircraft export callsign DAL460 csv`
-- `*aircraft export squawk 7700 html`
-
-### Utility Commands
-
-#### Scroll Through Aircraft
-```
-*aircraft scroll
-```
-Browse through available aircraft with interactive navigation.
-
-## Airport Commands
+## Finding Airports
 
 ### Airport Information
 ```
-*airport info <code>
+*airport info KLAX
 ```
-Get comprehensive airport information by ICAO or IATA code.
-
-**Example**: `*airport info KLAX`
+Shows:
+- Airport name and location
+- Basic details
+- Airport photo
+- Google Maps link
 
 ### Runway Information
 ```
-*airport runway <code>
+*airport runway KLAX
 ```
-Get detailed runway information for an airport.
+Shows runway details like length, width, and surface type.
 
-**Example**: `*airport runway KLAX`
-
-### Navigational Aids
+### Weather at Airports
 ```
-*airport navaid <code>
+*airport forecast KLAX
 ```
-Get navigational aids information for an airport.
+Shows current weather and 3-day forecast.
 
-**Example**: `*airport navaid KLAX`
+## Advanced Aircraft Search
 
-### Weather Forecast
+### Find Aircraft Near You
 ```
-*airport forecast <code>
+*aircraft closest 40.7128 -74.0060 100
 ```
-Get weather forecast for an airport.
+Finds the closest aircraft to your coordinates (latitude, longitude, radius in miles).
 
-**Example**: `*airport forecast KLAX`
-
-## Configuration Commands
-
-### Alert Channel Setup
+### Find Aircraft in an Area
 ```
-*aircraft alertchannel [#channel]
+*aircraft radius 40.7128 -74.0060 50
 ```
-Set or clear the channel for emergency squawk alerts.
+Shows all aircraft within 50 miles of the coordinates.
 
-**Examples**:
-- `*aircraft alertchannel #alerts` - Set alert channel
-- `*aircraft alertchannel` - Clear alert channel
-
-### Alert Role Setup
+### Special Aircraft Types
 ```
-*aircraft alertrole @role
+*aircraft military    # Military aircraft
+*aircraft ladd        # Restricted aircraft
+*aircraft pia         # Private aircraft
 ```
-Set or clear the role to mention during emergency squawks.
 
-**Examples**:
-- `*aircraft alertrole @AircraftAlerts` - Set alert role
-- `*aircraft alertrole` - Clear alert role
+## Exporting Data
+
+### Export Aircraft Information
+```
+*aircraft export icao "a03b67 a1ef6a" pdf
+*aircraft export callsign DAL460 csv
+*aircraft export squawk 7700 html
+```
+
+**Formats available**: PDF, CSV, TXT, HTML
+
+## Setting Up Alerts
+
+### Emergency Squawk Alerts
+1. **Set alert channel**:
+   ```
+   *aircraft alertchannel #alerts
+   ```
+
+2. **Set alert role** (optional):
+   ```
+   *aircraft alertrole @AircraftAlerts
+   ```
+
+3. **Check status**:
+   ```
+   *aircraft showalertchannel
+   ```
+
+### What Happens During Emergencies
+- Bot mentions the alert role
+- Shows aircraft information
+- Notifies when aircraft lands
+- Runs automatically every 2 minutes
+
+## Convenience Features
 
 ### Auto ICAO Lookup
+Enable automatic aircraft lookup when someone types a 6-character hex code:
 ```
-*aircraft autoicao [true/false]
+*aircraft autoicao true
 ```
-Enable or disable automatic ICAO lookup when users type 6-character hex codes.
 
-**Examples**:
-- `*aircraft autoicao true` - Enable auto lookup
-- `*aircraft autoicao false` - Disable auto lookup
-- `*aircraft autoicao` - Check current status
-
-### Auto-Delete Settings
+### Auto-Delete "Not Found" Messages
 ```
-*aircraft autodelete [true/false]
+*aircraft autodelete true
 ```
-Control automatic deletion of "not found" messages.
+Automatically removes "no aircraft found" messages after 5 seconds.
 
-**Examples**:
-- `*aircraft autodelete true` - Enable auto-delete
-- `*aircraft autodelete false` - Disable auto-delete
-- `*aircraft autodelete` - Check current status
+## Server Management
 
-### Alert Status
+### Check Settings
 ```
-*aircraft showalertchannel
+*aircraft autoicao     # Check auto ICAO status
+*aircraft autodelete   # Check auto-delete status
 ```
-Check the status of emergency squawk monitoring and alert channels.
 
-## Owner Commands
-
-### API Debugging
+### Clear Settings
 ```
-*aircraft debugapi
+*aircraft alertchannel    # Remove alert channel
+*aircraft alertrole       # Remove alert role
 ```
-Debug API connectivity and configuration issues (sends detailed report via DM).
-
-**Note**: Owner only command.
-
-### API Key Management
-```
-*setapikey <key>     # Set API key
-*apikey              # Check API status
-*clearapikey         # Clear API key
-```
-Manage the airplanes.live API key.
-
-**Note**: Owner only commands.
-
-## Emergency Squawk Monitoring
-
-### Automatic Monitoring
-SkySearch automatically monitors for emergency squawk codes:
-- **7500**: Aircraft hijacking
-- **7600**: Radio communication failure
-- **7700**: General emergency
-
-### Alert System
-When emergency squawks are detected:
-1. **Role mention** (if configured)
-2. **Aircraft information** with emergency status
-3. **Landing notifications** when aircraft descend below 25 feet
-
-### Background Task
-The monitoring runs every 2 minutes and respects API rate limits.
-
-## Data Sources
-
-### Primary APIs
-- **airplanes.live**: Real-time aircraft tracking data
-- **Planespotters.net**: Aircraft photos and information
-- **airport-data.com**: Airport information
-- **airportdb.io**: Runway and navaid data
-- **Google Maps**: Airport imagery and mapping
-
-### Categorized Aircraft
-SkySearch includes intelligence on:
-- Law enforcement aircraft
-- Military and government aircraft
-- Medical response aircraft
-- Media/news aircraft
-- Damaged aircraft
-- Wartime conflict aircraft
-- Utility/agricultural aircraft
-- Balloons and special craft
-- Suspicious surveillance aircraft
 
 ## Troubleshooting
 
-### Common Issues
-
-#### No Aircraft Found
-- Check if the aircraft is currently transmitting
-- Verify the search parameters are correct
+### No Aircraft Found?
 - Try different search methods (ICAO vs callsign)
+- Check if the aircraft is currently transmitting
+- Some aircraft may be blocked for privacy
 
-#### No Photos Available
-- Photos depend on community contributions to Planespotters.net
+### No Photos?
+- Photos depend on community contributions
 - Not all aircraft have photos available
-- Default aircraft icon is shown when no photo exists
+- Default icon is shown when no photo exists
 
-#### API Errors
-- Use `*aircraft debugapi` to diagnose connectivity issues
-- Check your API key configuration
-- Verify internet connectivity
+### Alerts Not Working?
+- Check channel permissions
+- Verify the alert role exists
+- Use `*aircraft showalertchannel` to check status
 
-#### Alert System Not Working
-- Check alert channel configuration with `*aircraft showalertchannel`
-- Ensure the bot has permissions in the alert channel
-- Verify the alert role exists and is mentionable
-
-### Debug Commands
+### API Issues?
+If you're the bot owner, use:
 ```
 *aircraft debugapi
 ```
-Provides comprehensive debugging information including:
-- API key status
-- Connectivity tests
-- Response validation
-- Rate limit information
+This sends detailed debugging information to your DMs.
 
-## Best Practices
+## Tips for Best Results
 
-### Server Setup
-1. **Create dedicated channels** for aircraft alerts
-2. **Set up appropriate roles** for different alert levels
-3. **Configure auto-delete** based on your server's needs
-4. **Use auto ICAO lookup** for convenience
+### Search Tips
+- **ICAO codes** are usually the most reliable
+- **Flight numbers** work best for commercial flights
+- **Registration numbers** work for most aircraft
+- Use **quotes** for multi-word searches
 
-### Command Usage
-1. **Use specific search terms** for better results
-2. **Combine search methods** when one doesn't work
-3. **Export data** for analysis and record-keeping
-4. **Monitor emergency squawks** for safety awareness
+### Alert Setup Tips
+- Create a dedicated #alerts channel
+- Set up an @AircraftAlerts role
+- Test with `*aircraft showalertchannel`
+- Monitor the channel for emergency squawks
 
-### Performance
-1. **Respect API rate limits** - the cog handles this automatically
-2. **Use appropriate radius** for area searches
-3. **Limit export sizes** for large datasets
-4. **Monitor background tasks** for system health
+### Export Tips
+- Use **PDF** for reports and sharing
+- Use **CSV** for data analysis
+- Use **HTML** for web viewing
+- Multiple ICAO codes work: `"a03b67 a1ef6a"`
 
-## Support
+## Common Use Cases
 
-### Getting Help
-- Check this documentation first
-- Use the built-in help system: `*help aircraft` or `*help airport`
-- Review the README.md file for technical details
-- Use debug commands for troubleshooting
+### Aviation Enthusiasts
+- Track specific aircraft: `*aircraft icao a03b67`
+- Monitor military flights: `*aircraft military`
+- Export flight data: `*aircraft export callsign DAL460 pdf`
 
-### Contributing
-- Report issues with detailed information
-- Include debug output when possible
-- Test with different aircraft types and scenarios
+### Server Administrators
+- Set up emergency alerts
+- Configure auto ICAO lookup
+- Monitor aircraft activity
 
-## Version Information
-This documentation covers SkySearch cog version as of the latest update. For the most current information, refer to the cog's README.md file and built-in help system. 
+### Researchers
+- Export data for analysis
+- Track specific aircraft types
+- Monitor emergency situations
+
+## Getting Help
+
+### Built-in Help
+- `*help aircraft` - Detailed aircraft commands
+- `*help airport` - Detailed airport commands
+- `*aircraft` - Quick aircraft command overview
+- `*airport` - Quick airport command overview
+
+### Support
+- Check this guide first
+- Use the built-in help system
+- Contact the bot owner for technical issues 
