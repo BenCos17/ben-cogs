@@ -180,8 +180,6 @@ class AirportCommands:
             embed = discord.Embed(title="Airport Not Found", description=f"No airport found with code {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed) 
 
-    @red_commands.guild_only()
-    @airport_group.command(name='forecast', help='Get the weather for an airport by ICAO or IATA code (US airports only).')
     async def forecast(self, ctx, code: str):
         code_type = 'icao' if len(code) == 4 else 'iata' if len(code) == 3 else None
         if not code_type:
