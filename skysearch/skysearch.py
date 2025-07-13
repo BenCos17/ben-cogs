@@ -26,7 +26,7 @@ class Skysearch(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
-        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, last_emergency_squawk_time=None)
+        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, last_emergency_squawk_time=None, auto_delete_not_found=True)
         self.api_url = "https://rest.api.airplanes.live"  # Updated to new REST API base URL
         self.max_requests_per_user = 10
         self.EMBED_COLOR = discord.Color(0xfffffe)
@@ -289,15 +289,19 @@ class Skysearch(commands.Cog):
             embed = discord.Embed(title='No results found for your query', color=discord.Colour(0xff4545))
             embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
             message = await ctx.send(embed=embed)
-            await asyncio.sleep(5)
-            try:
-                await ctx.message.delete()
-            except discord.errors.Forbidden:
-                pass
-            try:
-                await message.delete()
-            except discord.errors.Forbidden:
-                pass
+            
+            # Check if auto-delete is enabled for this guild
+            auto_delete_enabled = await self.config.guild(ctx.guild).auto_delete_not_found()
+            if auto_delete_enabled:
+                await asyncio.sleep(5)
+                try:
+                    await ctx.message.delete()
+                except discord.errors.Forbidden:
+                    pass
+                try:
+                    await message.delete()
+                except discord.errors.Forbidden:
+                    pass
 
     async def _get_photo_by_hex(self, hex_id, registration=None):
         if not hasattr(self, '_http_client'):
@@ -1059,13 +1063,22 @@ class Skysearch(commands.Cog):
     async def autoicao(self, ctx, state: bool = None):
         """Enable or disable automatic ICAO lookup."""
         if state is None:
-            state = await self.config.guild(ctx.guild).auto_icao()
-            if state:
-                embed = discord.Embed(title="ICAO Lookup Status", description="Automatic ICAO lookup is currently enabled.", color=0x2BBD8E)
-                await ctx.send(embed=embed)
+            auto_icao_state = await self.config.guild(ctx.guild).auto_icao()
+            auto_delete_state = await self.config.guild(ctx.guild).auto_delete_not_found()
+            
+            embed = discord.Embed(title="Auto Settings Status", color=0x2BBD8E)
+            
+            if auto_icao_state:
+                embed.add_field(name="ICAO Lookup", value="✅ **Enabled** - Automatic ICAO lookup is active", inline=False)
             else:
-                embed = discord.Embed(title="ICAO Lookup Status", description="Automatic ICAO lookup is currently disabled.", color=0xff4545)
-                await ctx.send(embed=embed)
+                embed.add_field(name="ICAO Lookup", value="❌ **Disabled** - Automatic ICAO lookup is inactive", inline=False)
+                
+            if auto_delete_state:
+                embed.add_field(name="Auto-Delete", value="✅ **Enabled** - 'Not found' messages will be deleted after 5 seconds", inline=False)
+            else:
+                embed.add_field(name="Auto-Delete", value="❌ **Disabled** - 'Not found' messages will remain visible", inline=False)
+                
+            await ctx.send(embed=embed)
         else:
             await self.config.guild(ctx.guild).auto_icao.set(state)
             if state:
@@ -1073,6 +1086,32 @@ class Skysearch(commands.Cog):
                 await ctx.send(embed=embed)
             else:
                 embed = discord.Embed(title="ICAO Lookup Status", description="Automatic ICAO lookup has been disabled.", color=0xff4545)
+                await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @aircraft_group.command(name='autodelete', aliases=['autodel'], help='Enable or disable automatic deletion of "not found" messages.')
+    async def autodelete(self, ctx, state: bool = None):
+        """Enable or disable automatic deletion of 'not found' messages."""
+        if state is None:
+            state = await self.config.guild(ctx.guild).auto_delete_not_found()
+            if state:
+                embed = discord.Embed(title="Auto-Delete Status", description="Automatic deletion of 'not found' messages is currently enabled.", color=0x2BBD8E)
+                embed.add_field(name="Behavior", value="Messages will be automatically deleted after 5 seconds when no aircraft is found.", inline=False)
+                await ctx.send(embed=embed)
+            else:
+                embed = discord.Embed(title="Auto-Delete Status", description="Automatic deletion of 'not found' messages is currently disabled.", color=0xff4545)
+                embed.add_field(name="Behavior", value="Messages will remain visible when no aircraft is found.", inline=False)
+                await ctx.send(embed=embed)
+        else:
+            await self.config.guild(ctx.guild).auto_delete_not_found.set(state)
+            if state:
+                embed = discord.Embed(title="Auto-Delete Status", description="Automatic deletion of 'not found' messages has been enabled.", color=0x2BBD8E)
+                embed.add_field(name="Behavior", value="Messages will be automatically deleted after 5 seconds when no aircraft is found.", inline=False)
+                await ctx.send(embed=embed)
+            else:
+                embed = discord.Embed(title="Auto-Delete Status", description="Automatic deletion of 'not found' messages has been disabled.", color=0xff4545)
+                embed.add_field(name="Behavior", value="Messages will remain visible when no aircraft is found.", inline=False)
                 await ctx.send(embed=embed)
 
     @commands.guild_only()
