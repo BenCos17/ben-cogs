@@ -280,17 +280,15 @@ class HelperUtils:
         return None
 
     async def get_airport_image(self, lat: str, lon: str):
-        """Get airport satellite image using Google Maps Static API."""
+        """Get airport satellite image using OpenStreetMap static maps."""
         if lat == 'N/A' or lon == 'N/A':
             return None
         
         try:
-            # Note: This would require a Google Maps API key for production use
-            # For now, return a placeholder or use a free alternative
-            # url = f"https://maps.googleapis.com/maps/api/staticmap?center={lat},{lon}&zoom=15&size=600x400&maptype=satellite&key=YOUR_API_KEY"
-            
-            # Return a placeholder for now
-            return "https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png"
+            # Use OpenStreetMap static maps (free, no API key required)
+            # This provides satellite imagery via OpenStreetMap's tile servers
+            url = f"https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lon}&zoom=14&size=600x400&maptype=mapnik&markers={lat},{lon},red"
+            return url
         except Exception:
             return None
 
