@@ -30,6 +30,7 @@ class Skysearch(red_commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
+        self.config.register_global(openweathermap_api=None)  # OWM API key
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, last_emergency_squawk_time=None, auto_delete_not_found=True)
         
         # Initialize utility managers
@@ -281,6 +282,30 @@ class Skysearch(red_commands.Cog):
     async def clearapikey(self, ctx):
         """Clear the API key configuration."""
         await self.admin_commands.clear_api_key(ctx)
+
+    @red_commands.is_owner()
+    @red_commands.command(name='setowmkey')
+    async def set_owm_key(self, ctx, api_key: str):
+        """Set the OpenWeatherMap API key."""
+        await self.config.openweathermap_api.set(api_key)
+        await ctx.send("OpenWeatherMap API key set.")
+
+    @red_commands.is_owner()
+    @red_commands.command(name='owmkey')
+    async def show_owm_key(self, ctx):
+        """Show the current OpenWeatherMap API key (partially masked)."""
+        key = await self.config.openweathermap_api()
+        if key:
+            await ctx.send(f"OpenWeatherMap API key: `{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}`")
+        else:
+            await ctx.send("No OpenWeatherMap API key set.")
+
+    @red_commands.is_owner()
+    @red_commands.command(name='clearowmkey')
+    async def clear_owm_key(self, ctx):
+        """Clear the OpenWeatherMap API key."""
+        await self.config.openweathermap_api.set(None)
+        await ctx.send("OpenWeatherMap API key cleared.")
 
     @tasks.loop(minutes=2)
     async def check_emergency_squawks(self):
