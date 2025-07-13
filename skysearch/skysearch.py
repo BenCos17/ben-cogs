@@ -848,42 +848,61 @@ class Skysearch(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        if search_type == "icao":
-            url = f"{self.api_url}/?find_hex={search_value}"
-        elif search_type == "callsign":
-            url = f"{self.api_url}/?find_callsign={search_value}"
-        elif search_type == "squawk":
-            url = f"{self.api_url}/?all_with_pos&filter_squawk={search_value}"
-        elif search_type == "type":
-            url = f"{self.api_url}/?find_type={search_value}"
-        else:
-            embed = discord.Embed(title="Error", description="Invalid search type specified.", color=0xfa4545)
+        if file_format not in ["csv", "pdf", "txt", "html"]:
+            embed = discord.Embed(title="Error", description="Invalid file format specified. Use one of: csv, pdf, txt, or html.", color=0xfa4545)
             await ctx.send(embed=embed)
             return
 
-        response = await self._make_request(url, ctx)
-        if response:
-            if file_format not in ["csv", "pdf", "txt", "html"]:
-                embed = discord.Embed(title="Error", description="Invalid file format specified. Use one of: csv, pdf, txt, or html.", color=0xfa4545)
+        # Handle multiple ICAO codes for ICAO search type
+        all_aircraft = []
+        if search_type == "icao":
+            # Split by spaces and clean up each ICAO code
+            icao_codes = [code.strip() for code in search_value.split() if code.strip()]
+            
+            if not icao_codes:
+                embed = discord.Embed(title="Error", description="No valid ICAO codes provided.", color=0xfa4545)
+                await ctx.send(embed=embed)
+                return
+            
+            # Make separate API calls for each ICAO code
+            for icao_code in icao_codes:
+                url = f"{self.api_url}/?find_hex={icao_code}"
+                response = await self._make_request(url, ctx)
+                if response and response.get('aircraft'):
+                    all_aircraft.extend(response['aircraft'])
+        else:
+            # For other search types, use the original logic
+            if search_type == "callsign":
+                url = f"{self.api_url}/?find_callsign={search_value}"
+            elif search_type == "squawk":
+                url = f"{self.api_url}/?all_with_pos&filter_squawk={search_value}"
+            elif search_type == "type":
+                url = f"{self.api_url}/?find_type={search_value}"
+            else:
+                embed = discord.Embed(title="Error", description="Invalid search type specified.", color=0xfa4545)
                 await ctx.send(embed=embed)
                 return
 
-            if not response.get('aircraft'):
-                embed = discord.Embed(title="Error", description="No aircraft data found.", color=0xfa4545)
-                await ctx.send(embed=embed)
-                return
+            response = await self._make_request(url, ctx)
+            if response and response.get('aircraft'):
+                all_aircraft = response['aircraft']
 
-            aircraft_count = len(response['aircraft'])
-            file_name = f"{search_type}_{search_value}_{aircraft_count}_aircraft.{file_format.lower()}"
-            file_path = os.path.join(tempfile.gettempdir(), file_name)
+        if not all_aircraft:
+            embed = discord.Embed(title="Error", description="No aircraft data found.", color=0xfa4545)
+            await ctx.send(embed=embed)
+            return
 
-            try:
+        aircraft_count = len(all_aircraft)
+        file_name = f"{search_type}_{search_value.replace(' ', '_')}_{aircraft_count}_aircraft.{file_format.lower()}"
+        file_path = os.path.join(tempfile.gettempdir(), file_name)
+
+        try:
                 if file_format.lower() == "csv":
                     with open(file_path, "w", newline='', encoding='utf-8') as file:
                         writer = csv.writer(file)
-                        aircraft_keys = list(response['aircraft'][0].keys())
+                        aircraft_keys = list(all_aircraft[0].keys())
                         writer.writerow([key.upper() for key in aircraft_keys])
-                        for aircraft in response['aircraft']:
+                        for aircraft in all_aircraft:
                             aircraft_values = list(map(str, aircraft.values()))
                             writer.writerow(aircraft_values)
                 elif file_format.lower() == "pdf":
@@ -902,10 +921,10 @@ class Skysearch(commands.Cog):
                     flowables.append(Spacer(1, 24)) 
 
                     # Create table with all aircraft data
-                    aircraft_keys = list(response['aircraft'][0].keys())
+                    aircraft_keys = list(all_aircraft[0].keys())
                     table_data = [[Paragraph(f"<b>{key.upper()}</b>", styles['Normal-Bold']) for key in aircraft_keys]]
                     
-                    for aircraft in response['aircraft']:
+                    for aircraft in all_aircraft:
                         aircraft_values = list(map(str, aircraft.values()))
                         table_data.append([Paragraph(value, styles['Normal']) for value in aircraft_values])
 
@@ -926,20 +945,20 @@ class Skysearch(commands.Cog):
                     doc.build(flowables)
                 elif file_format.lower() in ["txt"]:
                     with open(file_path, "w", newline='', encoding='utf-8') as file:
-                        aircraft_keys = list(response['aircraft'][0].keys())
+                        aircraft_keys = list(all_aircraft[0].keys())
                         file.write(' '.join([key.upper() for key in aircraft_keys]) + '\n')
-                        for aircraft in response['aircraft']:
+                        for aircraft in all_aircraft:
                             aircraft_values = list(map(str, aircraft.values()))
                             file.write(' '.join(aircraft_values) + '\n')
                 elif file_format.lower() == "html":
                     with open(file_path, "w", newline='', encoding='utf-8') as file:
-                        aircraft_keys = list(response['aircraft'][0].keys())
+                        aircraft_keys = list(all_aircraft[0].keys())
                         file.write('<table>\n')
                         file.write('<tr>\n')
                         for key in aircraft_keys:
                             file.write(f'<th>{key.upper()}</th>\n')
                         file.write('</tr>\n')
-                        for aircraft in response['aircraft']:
+                        for aircraft in all_aircraft:
                             aircraft_values = list(map(str, aircraft.values()))
                             file.write('<tr>\n')
                             for value in aircraft_values:
