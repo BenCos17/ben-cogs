@@ -258,10 +258,10 @@ class Skysearch(red_commands.Cog):
         """Get navigational aids for an airport."""
         await self.airport_commands.navaid_info(ctx, airport_code)
 
-    @airport_group.command(name='forecast')
-    async def airport_forecast(self, ctx, airport_code: str):
-        """Get weather forecast for an airport."""
-        await self.airport_commands.weather_forecast(ctx, airport_code)
+    @airport_group.command(name='forecast', help='Get the weather for an airport by ICAO or IATA code (US airports only).')
+    async def airport_forecast(self, ctx, code: str):
+        """Get the weather for an airport by ICAO or IATA code (US airports only)."""
+        await self.airport_commands.forecast(ctx, code)
 
     # Owner commands
     @red_commands.is_owner()
