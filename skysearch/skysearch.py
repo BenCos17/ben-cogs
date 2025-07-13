@@ -908,40 +908,65 @@ class Skysearch(commands.Cog):
             elif file_format.lower() == "pdf":
                 doc = SimpleDocTemplate(file_path, pagesize=landscape(A4)) 
                 styles = getSampleStyleSheet()
-                styles.add(ParagraphStyle(name='Normal-Bold', fontName='Helvetica-Bold', fontSize=14, leading=16, alignment=1)) 
+                styles.add(ParagraphStyle(name='Normal-Bold', fontName='Helvetica-Bold', fontSize=8, leading=10, alignment=1)) 
+                styles.add(ParagraphStyle(name='Normal-Small', fontName='Helvetica', fontSize=6, leading=8, alignment=1))
                 flowables = []
 
                 # Add title and summary
                 flowables.append(Paragraph(f"<u>Aircraft Export Report</u>", styles['Normal-Bold'])) 
                 flowables.append(Spacer(1, 12))
-                flowables.append(Paragraph(f"Search Type: {search_type.capitalize()}", styles['Normal']))
-                flowables.append(Paragraph(f"Search Value: {search_value}", styles['Normal']))
-                flowables.append(Paragraph(f"Total Aircraft: {aircraft_count}", styles['Normal']))
-                flowables.append(Paragraph(f"Export Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+                flowables.append(Paragraph(f"Search Type: {search_type.capitalize()}", styles['Normal-Small']))
+                flowables.append(Paragraph(f"Search Value: {search_value}", styles['Normal-Small']))
+                flowables.append(Paragraph(f"Total Aircraft: {aircraft_count}", styles['Normal-Small']))
+                flowables.append(Paragraph(f"Export Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal-Small']))
                 flowables.append(Spacer(1, 24)) 
 
-                # Create table with all aircraft data
-                aircraft_keys = list(all_aircraft[0].keys())
-                table_data = [[Paragraph(f"<b>{key.upper()}</b>", styles['Normal-Bold']) for key in aircraft_keys]]
+                # Select only the most important columns for PDF to avoid layout issues
+                important_keys = ['hex', 'flight', 'reg', 't', 'alt_baro', 'lat', 'lon', 'squawk', 'gs', 'seen']
+                available_keys = [key for key in important_keys if key in all_aircraft[0].keys()]
+                
+                # If we have too many columns, use only the most essential ones
+                if len(all_aircraft[0].keys()) > 15:
+                    essential_keys = ['hex', 'flight', 'reg', 't', 'alt_baro', 'lat', 'lon']
+                    available_keys = [key for key in essential_keys if key in all_aircraft[0].keys()]
+                
+                # Create table with selected aircraft data
+                table_data = [[Paragraph(f"<b>{key.upper()}</b>", styles['Normal-Bold']) for key in available_keys]]
                 
                 for aircraft in all_aircraft:
-                    aircraft_values = list(map(str, aircraft.values()))
-                    table_data.append([Paragraph(value, styles['Normal']) for value in aircraft_values])
+                    aircraft_values = []
+                    for key in available_keys:
+                        value = str(aircraft.get(key, 'N/A'))
+                        # Truncate long values to prevent layout issues
+                        if len(value) > 20:
+                            value = value[:17] + "..."
+                        aircraft_values.append(Paragraph(value, styles['Normal-Small']))
+                    table_data.append(aircraft_values)
 
-                # Create table
-                table = Table(table_data)
+                # Create table with smaller font and tighter spacing
+                table = Table(table_data, repeatRows=1)
                 table.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                     ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, 0), 12),
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('FONTSIZE', (0, 0), (-1, 0), 8),
+                    ('FONTSIZE', (0, 1), (-1, -1), 6),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                    ('TOPPADDING', (0, 0), (-1, -1), 3),
+                    ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
                     ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ]))
                 
                 flowables.append(table)
+                
+                # Add note about truncated data if we limited columns
+                if len(all_aircraft[0].keys()) > 15:
+                    flowables.append(Spacer(1, 12))
+                    flowables.append(Paragraph(f"Note: Only essential columns shown due to space constraints. Full data available in CSV format.", styles['Normal-Small']))
+                
                 doc.build(flowables)
             elif file_format.lower() in ["txt"]:
                 with open(file_path, "w", newline='', encoding='utf-8') as file:
