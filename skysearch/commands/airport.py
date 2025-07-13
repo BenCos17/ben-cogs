@@ -179,3 +179,100 @@ class AirportCommands:
         else:
             embed = discord.Embed(title="Airport Not Found", description=f"No airport found with code {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed) 
+
+    @red_commands.guild_only()
+    @airport_group.command(name='forecast', help='Get the weather for an airport by ICAO or IATA code (US airports only).')
+    async def forecast(self, ctx, code: str):
+        code_type = 'icao' if len(code) == 4 else 'iata' if len(code) == 3 else None
+        if not code_type:
+            await ctx.send(embed=discord.Embed(title="Error", description="Invalid ICAO or IATA code. ICAO codes are 4 characters long and IATA codes are 3 characters long.", color=0xff4545))
+            return
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"https://airport-data.com/api/ap_info.json?{code_type}={code}") as response1:
+                    data1 = await response1.json()
+                    latitude, longitude = data1.get('latitude'), data1.get('longitude')
+                    if not latitude or not longitude:
+                        await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch latitude and longitude for the provided code.", color=0xff4545))
+                        return
+                    if data1.get('country_code') != 'US':
+                        await ctx.send(embed=discord.Embed(title="Error", description="Weather forecasts are currently only available for airports in the United States.", color=0xff4545))
+                        return
+
+                async with session.get(f"https://api.weather.gov/points/{latitude},{longitude}") as response2:
+                    data2 = await response2.json()
+                    forecast_url = data2.get('properties', {}).get('forecast')
+                    if not forecast_url:
+                        await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch forecast URL.", color=0xff4545))
+                        return
+
+                async with session.get(forecast_url) as response3:
+                    data3 = await response3.json()
+                    periods = data3.get('properties', {}).get('periods')
+                    if not periods:
+                        await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch forecast details.", color=0xff4545))
+                        return
+
+            combined_pages = []
+            for period in periods:
+                timeemoji = "☀️" if period.get('isDaytime') else "🌙"
+                description = f"{timeemoji} {period['name']}"
+                embed = discord.Embed(title=f"Weather forecast for {code.upper()}", description=description, color=0xfffffe)
+                temperature = period['temperature']
+                temperature_unit = period['temperatureUnit']
+                # Determine the emoji based on temperature
+                if temperature_unit == 'F':
+                    if temperature >= 90:
+                        emoji = '🔥'  # Hot
+                    elif temperature <= 32:
+                        emoji = '❄️'  # Cold
+                    else:
+                        emoji = '🌡️'  # Moderate
+                else:  # Assuming Celsius
+                    if temperature >= 32:
+                        emoji = '🔥'  # Hot
+                    elif temperature <= 0:
+                        emoji = '❄️'  # Cold
+                    else:
+                        emoji = '🌡️'  # Moderate
+                embed.add_field(name="Temperature", value=f"{emoji} **`{temperature}° {temperature_unit}`**", inline=True)
+                wind_speed = period['windSpeed']
+                wind_direction = period['windDirection']
+                # Determine the emoji based on wind speed
+                try:
+                    speed_value = int(wind_speed.split()[0])
+                    if speed_value >= 30:
+                        wind_emoji = '💨'  # Strong wind
+                    elif speed_value >= 15:
+                        wind_emoji = '🌬️'  # Moderate wind
+                    else:
+                        wind_emoji = '🍃'  # Light wind
+                except ValueError:
+                    wind_emoji = '🍃'  # Default to light wind if parsing fails
+                # Determine the emoji based on wind direction
+                direction_emoji = {
+                    'N': '⬆️', 'NNE': '⬆️↗️', 'NE': '↗️', 'ENE': '↗️➡️', 'E': '➡️', 'ESE': '➡️↘️', 'SE': '↘️',
+                    'SSE': '↘️⬇️', 'S': '⬇️', 'SSW': '⬇️↙️', 'SW': '↙️', 'WSW': '↙️⬅️', 'W': '⬅️',
+                    'WNW': '⬅️↖️', 'NW': '↖️', 'NNW': '↖️⬆️'
+                }.get(wind_direction, '❓')
+                embed.add_field(name="Wind speed", value=f"{wind_emoji} **`{wind_speed}`**", inline=True)
+                embed.add_field(name="Wind direction", value=f"{direction_emoji} **`{wind_direction}`**", inline=True)
+                if 'relativeHumidity' in period and period['relativeHumidity']['value'] is not None:
+                    embed.add_field(name="Humidity", value=f"**`{period['relativeHumidity']['value']}%`**", inline=True)
+                if 'probabilityOfPrecipitation' in period and period['probabilityOfPrecipitation']['value'] is not None:
+                    embed.add_field(name="Chance of precipitation", value=f"**`{period['probabilityOfPrecipitation']['value']}%`**", inline=True)
+                if 'dewpoint' in period and period['dewpoint']['value'] is not None:
+                    dewpoint_celsius = period['dewpoint']['value']
+                    dewpoint_fahrenheit = (dewpoint_celsius * 9/5) + 32
+                    embed.add_field(name="Dewpoint", value=f"**`{dewpoint_fahrenheit:.1f}°F`**", inline=True)
+                embed.add_field(name="Forecast", value=f"**`{period['detailedForecast']}`**", inline=False)
+                combined_pages.append(embed)
+            # Paginate if possible, else send all
+            if hasattr(self, 'paginate_embed'):
+                await self.paginate_embed(ctx, combined_pages)
+            else:
+                for embed in combined_pages:
+                    await ctx.send(embed=embed)
+        except Exception as e:
+            await ctx.send(embed=discord.Embed(title="Error", description=str(e), color=0xff4545)) 
