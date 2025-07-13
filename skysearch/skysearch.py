@@ -921,14 +921,19 @@ class Skysearch(commands.Cog):
                 flowables.append(Paragraph(f"Export Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal-Small']))
                 flowables.append(Spacer(1, 24)) 
 
-                # Select only the most important columns for PDF to avoid layout issues
-                important_keys = ['hex', 'flight', 'reg', 't', 'alt_baro', 'lat', 'lon', 'squawk', 'gs', 'seen']
-                available_keys = [key for key in important_keys if key in all_aircraft[0].keys()]
+                # Always use a limited set of essential columns for PDF to avoid layout issues
+                essential_keys = ['hex', 'flight', 'reg', 't', 'alt_baro', 'lat', 'lon']
                 
-                # If we have too many columns, use only the most essential ones
-                if len(all_aircraft[0].keys()) > 15:
-                    essential_keys = ['hex', 'flight', 'reg', 't', 'alt_baro', 'lat', 'lon']
-                    available_keys = [key for key in essential_keys if key in all_aircraft[0].keys()]
+                # Check which essential keys are actually available in the data
+                available_keys = []
+                for key in essential_keys:
+                    if key in all_aircraft[0].keys():
+                        available_keys.append(key)
+                
+                # If no essential keys are available, use the first few keys from the data
+                if not available_keys:
+                    all_keys = list(all_aircraft[0].keys())
+                    available_keys = all_keys[:7]  # Limit to first 7 columns
                 
                 # Create table with selected aircraft data
                 table_data = [[Paragraph(f"<b>{key.upper()}</b>", styles['Normal-Bold']) for key in available_keys]]
@@ -938,8 +943,8 @@ class Skysearch(commands.Cog):
                     for key in available_keys:
                         value = str(aircraft.get(key, 'N/A'))
                         # Truncate long values to prevent layout issues
-                        if len(value) > 20:
-                            value = value[:17] + "..."
+                        if len(value) > 15:
+                            value = value[:12] + "..."
                         aircraft_values.append(Paragraph(value, styles['Normal-Small']))
                     table_data.append(aircraft_values)
 
@@ -962,10 +967,9 @@ class Skysearch(commands.Cog):
                 
                 flowables.append(table)
                 
-                # Add note about truncated data if we limited columns
-                if len(all_aircraft[0].keys()) > 15:
-                    flowables.append(Spacer(1, 12))
-                    flowables.append(Paragraph(f"Note: Only essential columns shown due to space constraints. Full data available in CSV format.", styles['Normal-Small']))
+                # Add note about limited columns
+                flowables.append(Spacer(1, 12))
+                flowables.append(Paragraph(f"Note: Only essential columns shown. Full data available in CSV format.", styles['Normal-Small']))
                 
                 doc.build(flowables)
             elif file_format.lower() in ["txt"]:
