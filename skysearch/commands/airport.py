@@ -20,14 +20,6 @@ class AirportCommands:
         self.api = APIManager(cog)
         self.helpers = HelperUtils(cog)
     
-    @red_commands.guild_only()
-    @red_commands.group(name='airport', help='Command center for airport related commands')
-    async def airport_group(self, ctx):
-        """Command center for airport related commands"""
-        # This will be handled by the main cog
-
-    @red_commands.guild_only()
-    @airport_group.command(name='info', help='Get information about an airport by its ICAO or IATA code.')
     async def airport_info(self, ctx, airport_code: str):
         """Get airport information by ICAO or IATA code."""
         airport_code = airport_code.upper()
@@ -80,8 +72,6 @@ class AirportCommands:
             embed = discord.Embed(title="Airport Not Found", description=f"No airport found with code {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @airport_group.command(name='runway', help='Get runway information for an airport.')
     async def runway_info(self, ctx, airport_code: str):
         """Get runway information for an airport."""
         airport_code = airport_code.upper()
@@ -111,8 +101,6 @@ class AirportCommands:
             embed = discord.Embed(title="No Runway Data", description=f"No runway information found for {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @airport_group.command(name='navaid', help='Get navigational aids for an airport.')
     async def navaid_info(self, ctx, airport_code: str):
         """Get navigational aids for an airport."""
         airport_code = airport_code.upper()
@@ -140,8 +128,6 @@ class AirportCommands:
             embed = discord.Embed(title="No Navaid Data", description=f"No navigational aid information found for {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @airport_group.command(name='forecast', help='Get weather forecast for an airport.')
     async def weather_forecast(self, ctx, airport_code: str):
         """Get weather forecast for an airport."""
         airport_code = airport_code.upper()

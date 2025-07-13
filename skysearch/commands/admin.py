@@ -16,18 +16,8 @@ class AdminCommands:
     def __init__(self, cog):
         self.cog = cog
     
-    @red_commands.guild_only()
-    @red_commands.admin_or_permissions()
-    @red_commands.group(name='aircraft', help='Command center for aircraft related commands')
-    async def aircraft_group(self, ctx):
-        """Command center for aircraft related commands"""
-        # This will be handled by the main cog
-
-    @red_commands.guild_only()
-    @red_commands.admin_or_permissions()
-    @aircraft_group.command(name='alertchannel', help='Set or clear a channel to send emergency squawk alerts to. Clear with no channel.')
     async def set_alert_channel(self, ctx, channel: discord.TextChannel = None):
-        """Set or clear the alert channel for emergency squawks."""
+        """Set or clear a channel to send emergency squawk alerts to. Clear with no channel."""
         if channel:
             try:
                 await self.cog.config.guild(ctx.guild).alert_channel.set(channel.id)
@@ -45,11 +35,8 @@ class AdminCommands:
                 embed = discord.Embed(description=f"Error clearing alert channel: {e}", color=0xff4545)
                 await ctx.send(embed=embed)
     
-    @red_commands.guild_only()
-    @red_commands.admin_or_permissions()
-    @aircraft_group.command(name='alertrole', help='Set or clear a role to mention when new emergency squawks occur. Clear with no role.')
     async def set_alert_role(self, ctx, role: discord.Role = None):
-        """Set or clear the alert role for emergency squawks."""
+        """Set or clear a role to mention when new emergency squawks occur. Clear with no role."""
         if role:
             try:
                 await self.cog.config.guild(ctx.guild).alert_role.set(role.id)
@@ -67,9 +54,6 @@ class AdminCommands:
                 embed = discord.Embed(description=f"Error clearing alert role: {e}", color=0xff4545)
                 await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @red_commands.has_permissions(manage_guild=True)
-    @aircraft_group.command(name='autoicao')
     async def autoicao(self, ctx, state: bool = None):
         """Enable or disable automatic ICAO lookup."""
         if state is None:
@@ -98,9 +82,6 @@ class AdminCommands:
                 embed = discord.Embed(title="ICAO Lookup Status", description="Automatic ICAO lookup has been disabled.", color=0xff4545)
                 await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @red_commands.has_permissions(manage_guild=True)
-    @aircraft_group.command(name='autodelete', aliases=['autodel'], help='Enable or disable automatic deletion of "not found" messages.')
     async def autodelete(self, ctx, state: bool = None):
         """Enable or disable automatic deletion of 'not found' messages."""
         if state is None:
@@ -124,8 +105,6 @@ class AdminCommands:
                 embed.add_field(name="Behavior", value="Messages will remain visible when no aircraft is found.", inline=False)
                 await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='showalertchannel', help='Show alert task status and output if set')
     async def list_alert_channels(self, ctx):
         """Show alert channel status and task information."""
         guild = ctx.guild
@@ -166,8 +145,6 @@ class AdminCommands:
             embed.add_field(name="Status", value="No alert channel set.", inline=False)
         await ctx.send(embed=embed)
 
-    @red_commands.is_owner()
-    @red_commands.command(name='setapikey', help='Set the API key for Skysearch.')
     async def set_api_key(self, ctx, api_key: str):
         """Set the airplanes.live API key."""
         await self.cog.config.airplanesliveapi.set(api_key)
@@ -176,8 +153,6 @@ class AdminCommands:
         embed.add_field(name="Header", value="`auth: [your-api-key]`", inline=True)
         await ctx.send(embed=embed)
 
-    @red_commands.is_owner()
-    @red_commands.command(name='apikey', help='Check the status of the API key configuration.')
     async def check_api_key(self, ctx):
         """Check API key status."""
         api_key = await self.cog.config.airplanesliveapi()
@@ -193,8 +168,6 @@ class AdminCommands:
             embed.add_field(name="Note", value="Some features may be limited without an API key", inline=True)
         await ctx.send(embed=embed)
 
-    @red_commands.is_owner()
-    @red_commands.command(name='clearapikey', help='Clear the API key configuration.')
     async def clear_api_key(self, ctx):
         """Clear the airplanes.live API key."""
         await self.cog.config.airplanesliveapi.clear()
@@ -203,8 +176,6 @@ class AdminCommands:
         embed.add_field(name="Note", value="Some features may be limited without an API key", inline=True)
         await ctx.send(embed=embed)
 
-    @red_commands.is_owner()
-    @red_commands.command(name='debugapi', help='Debug API key and connection issues (DM only)')
     async def debug_api(self, ctx):
         """Debug API key and connection issues - sends detailed info via DM."""
         try:

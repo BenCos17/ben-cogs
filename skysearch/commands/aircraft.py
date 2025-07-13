@@ -93,14 +93,6 @@ class AircraftCommands:
                 except discord.errors.Forbidden:
                     pass
 
-    @red_commands.guild_only()
-    @red_commands.group(name='aircraft', help='Command center for aircraft related commands')
-    async def aircraft_group(self, ctx):
-        """Command center for aircraft related commands"""
-        # This will be handled by the main cog
-
-    @red_commands.guild_only()
-    @aircraft_group.command(name='icao', help='Get information about an aircraft by its 24-bit ICAO Address')
     async def aircraft_by_icao(self, ctx, hex_id: str):
         """Get aircraft information by ICAO hex code."""
         url = f"{self.api.api_url}/?find_hex={hex_id}"
@@ -115,8 +107,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='callsign', help='Get information about an aircraft by its callsign.')
     async def aircraft_by_callsign(self, ctx, callsign: str):
         """Get aircraft information by callsign."""
         url = f"{self.api.api_url}/?find_callsign={callsign}"
@@ -127,8 +117,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="No aircraft found with the specified callsign.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='reg', help='Get information about an aircraft by its registration.')
     async def aircraft_by_reg(self, ctx, registration: str):
         """Get aircraft information by registration."""
         url = f"{self.api.api_url}/?find_reg={registration}"
@@ -139,8 +127,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='type', help='Get information about aircraft by its type.')
     async def aircraft_by_type(self, ctx, aircraft_type: str):
         """Get aircraft information by type."""
         url = f"{self.api.api_url}/?find_type={aircraft_type}"
@@ -151,8 +137,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='squawk', help='Get information about an aircraft by its squawk code.')
     async def aircraft_by_squawk(self, ctx, squawk_value: str):
         """Get aircraft information by squawk code."""
         url = f"{self.api.api_url}/?all_with_pos&filter_squawk={squawk_value}"
@@ -163,8 +147,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='export', help='Search aircraft by ICAO, callsign, squawk, or type and export the results.')
     async def export_aircraft(self, ctx, search_type: str, search_value: str, file_format: str):
         """Export aircraft data to various formats."""
         # Map search_type to new REST API query parameters
@@ -237,8 +219,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='military', help='Get information about military aircraft.')
     async def show_military_aircraft(self, ctx):
         """Get information about military aircraft."""
         url = f"{self.api.api_url}/?all_with_pos&filter_mil"
@@ -316,8 +296,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='ladd', help='Get information on LADD-restricted aircraft')
     async def ladd_aircraft(self, ctx):
         """Get information on LADD-restricted aircraft."""
         url = f"{self.api.api_url}/?all_with_pos&filter_ladd"
@@ -381,8 +359,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='pia', help='View live aircraft using private ICAO addresses')
     async def pia_aircraft(self, ctx):
         """View live aircraft using private ICAO addresses."""
         url = f"{self.api.api_url}/?all_with_pos&filter_pia"
@@ -446,8 +422,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='radius', help='Get information about aircraft within a specified radius.')
     async def aircraft_within_radius(self, ctx, lat: str, lon: str, radius: str):
         """Get information about aircraft within a specified radius."""
         url = f"{self.api.api_url}/?circle={lat},{lon},{radius}"
@@ -458,8 +432,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information for aircraft within the specified radius.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='closest', help='Find the closest aircraft to specified coordinates.')
     async def closest_aircraft(self, ctx, lat: str, lon: str, radius: str = "100"):
         """Find the closest aircraft to specified coordinates."""
         # Validate input parameters
@@ -612,8 +584,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving closest aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.guild_only()
-    @aircraft_group.command(name='scroll', help='Scroll through available planes.')
     async def scroll_planes(self, ctx):
         """Scroll through available planes."""
         url = f"{self.api.api_url}/?all_with_pos&filter_mil"
