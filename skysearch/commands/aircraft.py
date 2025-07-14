@@ -24,6 +24,7 @@ class AircraftCommands:
         self.api = APIManager(cog)
         self.helpers = HelperUtils(cog)
         self.export = ExportManager(cog)
+        self._debug_enabled = False  # Debug output toggle
     
     async def send_aircraft_info(self, ctx, response):
         """Send aircraft information as an embed."""
@@ -87,7 +88,13 @@ class AircraftCommands:
             embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
             await ctx.send(embed=embed)
 
+    async def set_debug(self, ctx, enabled: bool):
+        self._debug_enabled = enabled
+        await ctx.send(f"[DEBUG] Aircraft debug output {'enabled' if enabled else 'disabled'}.")
+
     async def _debug_api_info(self, ctx, url):
+        if not self._debug_enabled:
+            return
         # Only allow bot owners to see the API key
         is_owner = False
         try:
@@ -103,6 +110,9 @@ class AircraftCommands:
             await ctx.send(f"[DEBUG] Endpoint: `{url}`\n[DEBUG] API key: `{masked_key}`")
 
     async def debug_lookup(self, ctx, lookup_type: str, value: str):
+        if not self._debug_enabled:
+            await ctx.send("[DEBUG] Aircraft debug output is currently disabled. Use `*aircraft debugtoggle on` to enable.")
+            return
         # Build the endpoint URL
         if lookup_type == 'icao':
             url = f"/?find_hex={value}"

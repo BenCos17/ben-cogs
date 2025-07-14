@@ -264,6 +264,16 @@ class Skysearch(red_commands.Cog):
             return
         await self.aircraft_commands.debug_lookup(ctx, lookup_type, value)
 
+    @red_commands.is_owner()
+    @aircraft_group.command(name='debugtoggle')
+    async def aircraft_debugtoggle(self, ctx, state: str = None):
+        """Enable or disable aircraft debug output: *aircraft debugtoggle <on|off>"""
+        if state is None or state.lower() not in ("on", "off"):
+            await ctx.send("Usage: `*aircraft debugtoggle <on|off>`")
+            return
+        enabled = state.lower() == "on"
+        await self.aircraft_commands.set_debug(ctx, enabled)
+
     # Airport commands
     @red_commands.guild_only()
     @red_commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)
