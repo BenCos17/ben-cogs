@@ -132,11 +132,9 @@ class Skysearch(red_commands.Cog):
         embed.add_field(name="Export", value="`export` - Export aircraft data to CSV, PDF, TXT, or HTML", inline=False)
         embed.add_field(name="Configuration", value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
         embed.add_field(name="Other", value="`scroll` - Scroll through available planes", inline=False)
-        
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
-            embed.add_field(name="Debug", value="`debugapi` - Debug API issues (owner only)", inline=False)
-        
+            embed.add_field(name="Debug", value="`debugapi` - Debug API issues (owner only)\n`debugtoggle` - Toggle debug output for lookups (owner only)\n`debug` - Run a debug lookup (owner only)", inline=False)
         embed.add_field(name="Detailed Help", value="Use `*help aircraft` for detailed command information", inline=False)
         await ctx.send(embed=embed)
 
