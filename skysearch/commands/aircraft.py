@@ -606,7 +606,7 @@ class AircraftCommands:
                         self.add_item(Button(label="Stop", style=discord.ButtonStyle.danger, custom_id="stop"))
 
                     async def send_or_edit(self):
-                        embed, view = await self.parent.get_aircraft_embed_and_view(self.ctx, self.aircraft_list[self.index])
+                        embed, view = await get_aircraft_embed_and_view(self.ctx, self.aircraft_list[self.index])
                         self.update_buttons()
                         if self.message:
                             await self.message.edit(embed=embed, view=self)
