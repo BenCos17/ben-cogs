@@ -229,9 +229,12 @@ class AdminCommands:
                 debug_info += f"\n**Testing with API key...**\n"
                 try:
                     test_url_with_key = f"{base_url}/?all_with_pos"
+                    import time
+                    start = time.monotonic()
                     async with self.cog._http_client.get(test_url_with_key, headers=headers) as response:
+                        elapsed = time.monotonic() - start
                         debug_info += f"📡 **Authenticated Status:** {response.status}\n"
-                        
+                        debug_info += f"⏱️ **API Latency:** {elapsed:.2f} seconds\n"
                         if response.status == 200:
                             debug_info += f"✅ **Authentication:** Working\n"
                             try:
