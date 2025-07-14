@@ -97,14 +97,18 @@ class AircraftCommands:
         """Get aircraft information by ICAO hex code."""
         url = f"/?find_hex={hex_id}"
         response = await self.api.make_request(url, ctx)
-        if response:
-            if 'aircraft' in response and len(response['aircraft']) > 1:
-                for aircraft_info in response['aircraft']:
-                    await self.send_aircraft_info(ctx, {'aircraft': [aircraft_info]})
+        api_mode = await self.cog.config.api_mode()
+        key = 'aircraft' if api_mode == 'primary' else 'ac'
+        aircraft_list = response.get(key) if response else None
+        if aircraft_list and len(aircraft_list) > 0:
+            if len(aircraft_list) > 1:
+                for aircraft_info in aircraft_list:
+                    await self.send_aircraft_info(ctx, {key: [aircraft_info]})
             else:
-                await self.send_aircraft_info(ctx, response)
+                await self.send_aircraft_info(ctx, {key: aircraft_list})
         else:
-            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            embed = discord.Embed(title="No results found for your query", color=discord.Colour(0xff4545))
+            embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
             await ctx.send(embed=embed)
 
     async def aircraft_by_callsign(self, ctx, callsign: str):
