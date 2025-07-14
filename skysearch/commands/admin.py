@@ -284,7 +284,10 @@ class AdminCommands:
             debug_info += f"\n**Testing both API modes...**\n"
             for mode in ("primary", "fallback"):
                 base_url = self.cog.api.primary_api_url if mode == "primary" else self.cog.api.fallback_api_url
-                test_url = f"{base_url}/?all_with_pos"
+                if mode == "primary":
+                    test_url = f"{base_url}/?all_with_pos"
+                else:
+                    test_url = f"{base_url}/v2/mil"  # Use a real fallback endpoint
                 debug_info += f"🔗 **{mode.title()} Test URL:** `{test_url}`\n"
                 try:
                     import time
