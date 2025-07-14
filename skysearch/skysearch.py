@@ -251,6 +251,19 @@ class Skysearch(red_commands.Cog):
         mode = await self.config.api_mode()
         await ctx.send(f"🌐 Current API mode: **{mode}**")
 
+    @red_commands.is_owner()
+    @aircraft_group.command(name='debug')
+    async def aircraft_debug_lookup(self, ctx, lookup_type: str = None, value: str = None):
+        """Debug an aircraft lookup: *aircraft debug <lookup_type> <value> (lookup_type: icao, callsign, reg, type, squawk)"""
+        if not lookup_type or not value:
+            await ctx.send("Usage: `*aircraft debug <lookup_type> <value>` (lookup_type: icao, callsign, reg, type, squawk)")
+            return
+        lookup_type = lookup_type.lower()
+        if lookup_type not in ("icao", "callsign", "reg", "type", "squawk"):
+            await ctx.send("Invalid lookup_type. Must be one of: icao, callsign, reg, type, squawk.")
+            return
+        await self.aircraft_commands.debug_lookup(ctx, lookup_type, value)
+
     # Airport commands
     @red_commands.guild_only()
     @red_commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)

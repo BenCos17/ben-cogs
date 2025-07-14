@@ -87,9 +87,53 @@ class AircraftCommands:
             embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
             await ctx.send(embed=embed)
 
+    async def _debug_api_info(self, ctx, url):
+        # Only allow bot owners to see the API key
+        is_owner = False
+        try:
+            is_owner = await ctx.bot.is_owner(ctx.author)
+        except Exception:
+            pass
+        if is_owner:
+            api_key = await self.cog.config.airplanesliveapi()
+            if api_key:
+                masked_key = api_key[:4] + '*' * (len(api_key) - 8) + api_key[-4:] if len(api_key) > 8 else api_key
+            else:
+                masked_key = '(not set)'
+            await ctx.send(f"[DEBUG] Endpoint: `{url}`\n[DEBUG] API key: `{masked_key}`")
+
+    async def debug_lookup(self, ctx, lookup_type: str, value: str):
+        # Build the endpoint URL
+        if lookup_type == 'icao':
+            url = f"/?find_hex={value}"
+        elif lookup_type == 'callsign':
+            url = f"/?find_callsign={value}"
+        elif lookup_type == 'reg':
+            url = f"/?find_reg={value}"
+        elif lookup_type == 'type':
+            url = f"/?find_type={value}"
+        elif lookup_type == 'squawk':
+            url = f"/?all_with_pos&filter_squawk={value}"
+        else:
+            await ctx.send("Invalid lookup_type. Must be one of: icao, callsign, reg, type, squawk.")
+            return
+        # Print endpoint and masked API key
+        await self._debug_api_info(ctx, url)
+        try:
+            response = await self.api.make_request(url, ctx)
+            import json
+            if response:
+                pretty = json.dumps(response, indent=2)[:1900]  # Discord message limit
+                await ctx.send(f"[DEBUG] Raw API response (truncated):\n```json\n{pretty}\n```")
+            else:
+                await ctx.send("[DEBUG] No response or empty response from the API.")
+        except Exception as e:
+            await ctx.send(f"[DEBUG] Exception occurred: {e}")
+
     async def aircraft_by_icao(self, ctx, hex_id: str):
         """Get aircraft information by ICAO hex code."""
         url = f"/?find_hex={hex_id}"
+        await self._debug_api_info(ctx, url)
         response = await self.api.make_request(url, ctx)
         api_mode = await self.cog.config.api_mode()
         key = 'aircraft' if api_mode == 'primary' else 'ac'
@@ -108,6 +152,7 @@ class AircraftCommands:
     async def aircraft_by_callsign(self, ctx, callsign: str):
         """Get aircraft information by callsign."""
         url = f"/?find_callsign={callsign}"
+        await self._debug_api_info(ctx, url)
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
@@ -118,6 +163,7 @@ class AircraftCommands:
     async def aircraft_by_reg(self, ctx, registration: str):
         """Get aircraft information by registration."""
         url = f"/?find_reg={registration}"
+        await self._debug_api_info(ctx, url)
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
@@ -128,6 +174,7 @@ class AircraftCommands:
     async def aircraft_by_type(self, ctx, aircraft_type: str):
         """Get aircraft information by type."""
         url = f"/?find_type={aircraft_type}"
+        await self._debug_api_info(ctx, url)
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
@@ -138,6 +185,7 @@ class AircraftCommands:
     async def aircraft_by_squawk(self, ctx, squawk_value: str):
         """Get aircraft information by squawk code."""
         url = f"/?all_with_pos&filter_squawk={squawk_value}"
+        await self._debug_api_info(ctx, url)
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
