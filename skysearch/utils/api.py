@@ -14,14 +14,21 @@ class APIManager:
         self.cog = cog
         self.primary_api_url = "https://rest.api.airplanes.live"
         self.fallback_api_url = "https://api.airplanes.live"
+        self.flightera_api_url = "https://flightera-flight-data.p.rapidapi.com"
         self._http_client = None
     
     async def get_headers(self, url=None, api_mode=None):
         """Return headers with API key for requests, if available. Only send API key for primary API."""
         headers = {}
-        api_key = await self.cog.config.airplanesliveapi()
-        if api_mode == "primary" and api_key:
-            headers['auth'] = api_key
+        if api_mode == "flightera":
+            api_key = await self.cog.config.flightera_api()
+            if api_key:
+                headers["X-RapidAPI-Key"] = api_key
+                headers["X-RapidAPI-Host"] = "flightera-flight-data.p.rapidapi.com"
+        else:
+            api_key = await self.cog.config.airplanesliveapi()
+            if api_mode == "primary" and api_key:
+                headers['auth'] = api_key
         return headers
 
     async def make_request(self, url, ctx=None):
@@ -31,49 +38,14 @@ class APIManager:
 
         # Determine which API to use
         api_mode = await self.cog.config.api_mode()
-        base_url = self.primary_api_url if api_mode == "primary" else self.fallback_api_url
-
-        # Rewrite URL for ICAO hex search if using fallback
-        import re
-        if api_mode == "fallback":
-            # Rewrite to /v2/ endpoints for all supported aircraft lookups
-            match = re.search(r"[?&/]find_hex=([0-9a-fA-F]+)", url)
-            if match:
-                hex_code = match.group(1)
-                url = f"{self.fallback_api_url}/v2/hex/{hex_code}"
-            else:
-                match = re.search(r"[?&/]find_callsign=([A-Za-z0-9]+)", url)
-                if match:
-                    callsign = match.group(1)
-                    url = f"{self.fallback_api_url}/v2/callsign/{callsign}"
-                else:
-                    match = re.search(r"[?&/]find_reg=([A-Za-z0-9]+)", url)
-                    if match:
-                        reg = match.group(1)
-                        url = f"{self.fallback_api_url}/v2/reg/{reg}"
-                    else:
-                        match = re.search(r"[?&/]find_type=([A-Za-z0-9]+)", url)
-                        if match:
-                            typecode = match.group(1)
-                            url = f"{self.fallback_api_url}/v2/type/{typecode}"
-                        else:
-                            match = re.search(r"[?&/]filter_squawk=([0-9]+)", url)
-                            if match:
-                                squawk = match.group(1)
-                                url = f"{self.fallback_api_url}/v2/squawk/{squawk}"
-                            elif "filter_mil" in url:
-                                url = f"{self.fallback_api_url}/v2/mil"
-                            elif "filter_ladd" in url:
-                                url = f"{self.fallback_api_url}/v2/ladd"
-                            elif "filter_pia" in url:
-                                url = f"{self.fallback_api_url}/v2/pia"
-                            else:
-                                # Otherwise, just replace the base URL
-                                url = url.replace(self.primary_api_url, self.fallback_api_url)
-        else:
-            # If the URL is not absolute, prepend the primary API base URL
+        if api_mode == "flightera":
+            base_url = self.flightera_api_url
             if not url.startswith("https"):
-                url = self.primary_api_url + url
+                url = base_url + url
+        else:
+            base_url = self.primary_api_url if api_mode == "primary" else self.fallback_api_url
+            if not url.startswith("https"):
+                url = base_url + url
             else:
                 url = url.replace(self.fallback_api_url, self.primary_api_url)
 
@@ -117,3 +89,33 @@ class APIManager:
         if self._http_client:
             await self._http_client.close()
             self._http_client = None 
+
+    async def query_flightera(self, search_type, value):
+        """Query Flightera for arrival/departure/flight status data by ICAO, callsign, or registration."""
+        api_key = await self.cog.config.flightera_api()
+        if not api_key:
+            return None
+        if not self._http_client:
+            self._http_client = aiohttp.ClientSession()
+        headers = {
+            "X-RapidAPI-Key": api_key,
+            "X-RapidAPI-Host": "flightera-flight-data.p.rapidapi.com"
+        }
+        # Map search_type to Flightera endpoint
+        if search_type == "icao":
+            endpoint = f"/flight/icao24/{value}"
+        elif search_type == "callsign":
+            endpoint = f"/flight/callsign/{value}"
+        elif search_type == "reg":
+            endpoint = f"/flight/registration/{value}"
+        else:
+            return None
+        url = f"https://flightera-flight-data.p.rapidapi.com{endpoint}"
+        try:
+            async with self._http_client.get(url, headers=headers) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    return None
+        except aiohttp.ClientError:
+            return None 

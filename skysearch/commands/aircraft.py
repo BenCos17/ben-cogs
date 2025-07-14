@@ -26,8 +26,8 @@ class AircraftCommands:
         self.export = ExportManager(cog)
         self._debug_enabled = False  # Debug output toggle
     
-    async def send_aircraft_info(self, ctx, response):
-        """Send aircraft information as an embed."""
+    async def send_aircraft_info(self, ctx, response, flightera_data=None):
+        """Send aircraft information as an embed, with Flightera arrival/departure/status if available."""
         # Support both 'aircraft' and 'ac' keys
         aircraft_list = response.get('aircraft') or response.get('ac')
         if aircraft_list:
@@ -40,6 +40,20 @@ class AircraftCommands:
             image_url, photographer = await self.helpers.get_photo_by_hex(icao)
             # Create embed
             embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+            # Add Flightera info if available
+            if flightera_data and isinstance(flightera_data, dict):
+                # Try to extract arrival/departure/status info
+                flight = flightera_data.get('flight') or flightera_data.get('flights', [{}])[0]
+                if flight:
+                    arr = flight.get('arrival_airport') or flight.get('arrival')
+                    dep = flight.get('departure_airport') or flight.get('departure')
+                    status = flight.get('status')
+                    if dep:
+                        embed.add_field(name="Departure", value=dep, inline=True)
+                    if arr:
+                        embed.add_field(name="Arrival", value=arr, inline=True)
+                    if status:
+                        embed.add_field(name="Flight Status", value=status, inline=True)
             # Create view with buttons
             view = discord.ui.View()
             link = f"https://globe.airplanes.live/?icao={icao}"
@@ -146,42 +160,52 @@ class AircraftCommands:
             await ctx.send(f"[DEBUG] Exception occurred: {e}")
 
     async def aircraft_by_icao(self, ctx, hex_id: str):
-        """Get aircraft information by ICAO hex code."""
+        """Get aircraft information by ICAO hex code, including Flightera arrival/departure/status if available."""
         url = f"/?find_hex={hex_id}"
         await self._debug_api_info(ctx, url)
-        response = await self.api.make_request(url, ctx)
+        # Query both main API and Flightera in parallel
+        import asyncio
+        main_api_task = asyncio.create_task(self.api.make_request(url, ctx))
+        flightera_task = asyncio.create_task(self.api.query_flightera("icao", hex_id))
+        response, flightera_data = await asyncio.gather(main_api_task, flightera_task)
         api_mode = await self.cog.config.api_mode()
         key = 'aircraft' if api_mode == 'primary' else 'ac'
         aircraft_list = response.get(key) if response else None
         if aircraft_list and len(aircraft_list) > 0:
             if len(aircraft_list) > 1:
                 for aircraft_info in aircraft_list:
-                    await self.send_aircraft_info(ctx, {key: [aircraft_info]})
+                    await self.send_aircraft_info(ctx, {key: [aircraft_info]}, flightera_data)
             else:
-                await self.send_aircraft_info(ctx, {key: aircraft_list})
+                await self.send_aircraft_info(ctx, {key: aircraft_list}, flightera_data)
         else:
             embed = discord.Embed(title="No results found for your query", color=discord.Colour(0xff4545))
             embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
             await ctx.send(embed=embed)
 
     async def aircraft_by_callsign(self, ctx, callsign: str):
-        """Get aircraft information by callsign."""
+        """Get aircraft information by callsign, including Flightera arrival/departure/status if available."""
         url = f"/?find_callsign={callsign}"
         await self._debug_api_info(ctx, url)
-        response = await self.api.make_request(url, ctx)
+        import asyncio
+        main_api_task = asyncio.create_task(self.api.make_request(url, ctx))
+        flightera_task = asyncio.create_task(self.api.query_flightera("callsign", callsign))
+        response, flightera_data = await asyncio.gather(main_api_task, flightera_task)
         if response:
-            await self.send_aircraft_info(ctx, response)
+            await self.send_aircraft_info(ctx, response, flightera_data)
         else:
             embed = discord.Embed(title="Error", description="No aircraft found with the specified callsign.", color=0xff4545)
             await ctx.send(embed=embed)
 
     async def aircraft_by_reg(self, ctx, registration: str):
-        """Get aircraft information by registration."""
+        """Get aircraft information by registration, including Flightera arrival/departure/status if available."""
         url = f"/?find_reg={registration}"
         await self._debug_api_info(ctx, url)
-        response = await self.api.make_request(url, ctx)
+        import asyncio
+        main_api_task = asyncio.create_task(self.api.make_request(url, ctx))
+        flightera_task = asyncio.create_task(self.api.query_flightera("reg", registration))
+        response, flightera_data = await asyncio.gather(main_api_task, flightera_task)
         if response:
-            await self.send_aircraft_info(ctx, response)
+            await self.send_aircraft_info(ctx, response, flightera_data)
         else:
             embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
