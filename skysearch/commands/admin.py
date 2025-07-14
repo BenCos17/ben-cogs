@@ -274,6 +274,20 @@ class AdminCommands:
                 except Exception as e:
                     debug_info += f"❌ **{endpoint_name}:** Error - {str(e)}\n"
 
+            # Test fallback logic
+            debug_info += f"\n**Testing fallback logic...**\n"
+            try:
+                # Use a non-existent endpoint to force a failure and trigger fallback
+                bad_url = f"{self.cog.api.api_url}/this_endpoint_does_not_exist"
+                debug_info += f"🔗 **Fallback Test URL:** `{bad_url}`\n"
+                result = await self.cog.api.make_request(bad_url)
+                if result is not None:
+                    debug_info += f"✅ **Fallback succeeded:** Received data from fallback API.\n"
+                else:
+                    debug_info += f"❌ **Fallback failed:** No data returned from either API.\n"
+            except Exception as e:
+                debug_info += f"❌ **Fallback Test Error:** {str(e)}\n"
+
             # Final summary
             debug_info += f"\n**📋 Summary:**\n"
             debug_info += f"• **API Base URL:** `{self.cog.api.api_url}`\n"
