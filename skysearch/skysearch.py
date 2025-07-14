@@ -130,7 +130,7 @@ class Skysearch(red_commands.Cog):
         embed.add_field(name="Search Commands", value="`icao` `callsign` `reg` `type` `squawk` `radius` `closest`", inline=False)
         embed.add_field(name="Special Aircraft", value="`military` `ladd` `pia`", inline=False)
         embed.add_field(name="Export", value="`export` - Export aircraft data to CSV, PDF, TXT, or HTML", inline=False)
-        embed.add_field(name="Configuration", value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel`", inline=False)
+        embed.add_field(name="Configuration", value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
         embed.add_field(name="Other", value="`scroll` - Scroll through available planes", inline=False)
         
         # Only show debug command to bot owners
@@ -233,6 +233,24 @@ class Skysearch(red_commands.Cog):
         """Debug API key and connection issues (DM only)."""
         await self.admin_commands.debug_api(ctx)
 
+    @red_commands.is_owner()
+    @aircraft_group.command(name='setapimode')
+    async def aircraft_set_api_mode(self, ctx, mode: str):
+        """Set which API to use globally: 'primary' or 'fallback'. (owner only)"""
+        mode = mode.lower()
+        if mode not in ("primary", "fallback"):
+            await ctx.send("❌ Invalid mode. Use 'primary' or 'fallback'.")
+            return
+        await self.config.api_mode.set(mode)
+        await ctx.send(f"✅ API mode set to **{mode}**.")
+
+    @red_commands.is_owner()
+    @aircraft_group.command(name='apimode')
+    async def aircraft_show_api_mode(self, ctx):
+        """Show the current global API mode. (owner only)"""
+        mode = await self.config.api_mode()
+        await ctx.send(f"🌐 Current API mode: **{mode}**")
+
     # Airport commands
     @red_commands.guild_only()
     @red_commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)
@@ -307,24 +325,6 @@ class Skysearch(red_commands.Cog):
         """Clear the OpenWeatherMap API key."""
         await self.config.openweathermap_api.set(None)
         await ctx.send("OpenWeatherMap API key cleared.")
-
-    @red_commands.is_owner()
-    @red_commands.command(name='setapimode')
-    async def set_api_mode(self, ctx, mode: str):
-        """Set which API to use globally: 'primary' or 'fallback'."""
-        mode = mode.lower()
-        if mode not in ("primary", "fallback"):
-            await ctx.send("❌ Invalid mode. Use 'primary' or 'fallback'.")
-            return
-        await self.config.api_mode.set(mode)
-        await ctx.send(f"✅ API mode set to **{mode}**.")
-
-    @red_commands.is_owner()
-    @red_commands.command(name='apimode')
-    async def show_api_mode(self, ctx):
-        """Show the current global API mode."""
-        mode = await self.config.api_mode()
-        await ctx.send(f"🌐 Current API mode: **{mode}**")
 
     @tasks.loop(minutes=2)
     async def check_emergency_squawks(self):
