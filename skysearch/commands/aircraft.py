@@ -579,14 +579,127 @@ class AircraftCommands:
             await ctx.send(embed=embed)
 
     async def scroll_planes(self, ctx):
-        """Scroll through available planes."""
+        """Scroll through available planes with button-based pagination."""
         url = f"/?all_with_pos&filter_mil"
         try:
             response = await self.api.make_request(url, ctx)
             aircraft_list = response.get('aircraft') or response.get('ac')
             if response and aircraft_list:
-                for index, aircraft_info in enumerate(aircraft_list):
-                    await self.send_aircraft_info(ctx, {'aircraft': [aircraft_info]})
+                # Button-based pagination
+                import discord
+                from discord.ui import View, Button
+
+                class AircraftPaginator(View):
+                    def __init__(self, aircraft_list, parent, ctx):
+                        super().__init__(timeout=120)
+                        self.aircraft_list = aircraft_list
+                        self.index = 0
+                        self.parent = parent
+                        self.ctx = ctx
+                        self.message = None
+                        self.update_buttons()
+
+                    def update_buttons(self):
+                        self.clear_items()
+                        self.add_item(Button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="prev", disabled=self.index == 0))
+                        self.add_item(Button(label="Next", style=discord.ButtonStyle.secondary, custom_id="next", disabled=self.index == len(self.aircraft_list) - 1))
+                        self.add_item(Button(label="Stop", style=discord.ButtonStyle.danger, custom_id="stop"))
+
+                    async def send_or_edit(self):
+                        embed, view = await self.parent.get_aircraft_embed_and_view(self.ctx, self.aircraft_list[self.index])
+                        self.update_buttons()
+                        if self.message:
+                            await self.message.edit(embed=embed, view=self)
+                        else:
+                            self.message = await self.ctx.send(embed=embed, view=self)
+
+                    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+                        return interaction.user == self.ctx.author
+
+                    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="prev", row=0)
+                    async def prev(self, interaction: discord.Interaction, button: Button):
+                        if self.index > 0:
+                            self.index -= 1
+                            await self.send_or_edit()
+                        await interaction.response.defer()
+
+                    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, custom_id="next", row=0)
+                    async def next(self, interaction: discord.Interaction, button: Button):
+                        if self.index < len(self.aircraft_list) - 1:
+                            self.index += 1
+                            await self.send_or_edit()
+                        await interaction.response.defer()
+
+                    @discord.ui.button(label="Stop", style=discord.ButtonStyle.danger, custom_id="stop", row=0)
+                    async def stop(self, interaction: discord.Interaction, button: Button):
+                        await interaction.response.defer()
+                        await self.message.edit(content="Pagination stopped.", embed=None, view=None)
+                        self.stop()
+
+                async def get_aircraft_embed_and_view(ctx, aircraft_info):
+                    # Reuse send_aircraft_info logic for a single aircraft
+                    icao_key = 'aircraft' if 'aircraft' in response else 'ac'
+                    return await self._get_aircraft_embed_and_view(ctx, {icao_key: [aircraft_info]})
+
+                # Helper to get embed and view from send_aircraft_info
+                async def _get_aircraft_embed_and_view(self, ctx, response):
+                    # This is a copy of send_aircraft_info but returns embed and view instead of sending
+                    aircraft_list = response.get('aircraft') or response.get('ac')
+                    if aircraft_list:
+                        aircraft_data = aircraft_list[0]
+                        icao = aircraft_data.get('hex', None)
+                        if icao:
+                            icao = icao.upper()
+                        image_url, photographer = await self.helpers.get_photo_by_hex(icao)
+                        embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+                        view = discord.ui.View()
+                        link = f"https://globe.airplanes.live/?icao={icao}"
+                        view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
+                        import urllib.parse
+                        ground_speed_knots = aircraft_data.get('gs', 'N/A')
+                        ground_speed_mph = 'unknown'
+                        if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
+                            try:
+                                ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+                            except Exception:
+                                ground_speed_mph = 'unknown'
+                        squawk_code = aircraft_data.get('squawk', 'N/A')
+                        emergency_squawk_codes = ['7500', '7600', '7700']
+                        lat = aircraft_data.get('lat', 'N/A')
+                        lon = aircraft_data.get('lon', 'N/A')
+                        if lat != 'N/A' and lat is not None:
+                            try:
+                                lat = round(float(lat), 2)
+                                lat_dir = "N" if lat >= 0 else "S"
+                                lat = f"{abs(lat)}{lat_dir}"
+                            except Exception:
+                                pass
+                        if lon != 'N/A' and lon is not None:
+                            try:
+                                lon = round(float(lon), 2)
+                                lon_dir = "E" if lon >= 0 else "W"
+                                lon = f"{abs(lon)}{lon_dir}"
+                            except Exception:
+                                pass
+                        if squawk_code in emergency_squawk_codes:
+                            tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+                        else:
+                            tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+                        tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+                        view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
+                        whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
+                        whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
+                        view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+                        return embed, view
+                    else:
+                        embed = discord.Embed(title='No results found for your query', color=discord.Colour(0xff4545))
+                        embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
+                        return embed, None
+
+                # Attach helper to self for use in paginator
+                self._get_aircraft_embed_and_view = _get_aircraft_embed_and_view.__get__(self)
+                paginator = AircraftPaginator(aircraft_list, self, ctx)
+                await paginator.send_or_edit()
             else:
                 embed = discord.Embed(title="No results found for your query", color=discord.Colour(0xff4545))
                 embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
