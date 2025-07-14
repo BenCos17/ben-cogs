@@ -13,6 +13,7 @@ class APIManager:
     def __init__(self, cog):
         self.cog = cog
         self.api_url = "https://rest.api.airplanes.live"
+        self.fallback_api_url = "https://api.airplanes.live"  # Fallback API URL
         self._http_client = None
     
     async def get_headers(self):
@@ -23,8 +24,8 @@ class APIManager:
             headers['auth'] = api_key  # Use 'auth' header as specified in API docs
         return headers
 
-    async def make_request(self, url, ctx=None):
-        """Make an HTTP request to the API."""
+    async def make_request(self, url, ctx=None, use_fallback=False):
+        """Make an HTTP request to the API, with fallback to secondary API if the primary fails."""
         if not self._http_client:
             self._http_client = aiohttp.ClientSession()
         
@@ -38,6 +39,10 @@ class APIManager:
                         await ctx.send(f"❌ **Error:** {error_msg}")
                     else:
                         print(error_msg)
+                    # Fallback if not already tried
+                    if not use_fallback and self.fallback_api_url in url or self.api_url in url:
+                        fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                        return await self.make_request(fallback_url, ctx, use_fallback=True)
                     return None
                 elif response.status == 403:
                     error_msg = "API key does not have permission for this endpoint."
@@ -45,6 +50,10 @@ class APIManager:
                         await ctx.send(f"❌ **Error:** {error_msg}")
                     else:
                         print(error_msg)
+                    # Fallback if not already tried
+                    if not use_fallback and self.fallback_api_url in url or self.api_url in url:
+                        fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                        return await self.make_request(fallback_url, ctx, use_fallback=True)
                     return None
                 elif response.status == 429:
                     error_msg = "Rate limit exceeded. Please wait before making more requests."
@@ -52,7 +61,16 @@ class APIManager:
                         await ctx.send(f"❌ **Error:** {error_msg}")
                     else:
                         print(error_msg)
+                    # Fallback if not already tried
+                    if not use_fallback and self.fallback_api_url in url or self.api_url in url:
+                        fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                        return await self.make_request(fallback_url, ctx, use_fallback=True)
                     return None
+                elif response.status >= 500:
+                    # Server error, try fallback if not already tried
+                    if not use_fallback and self.api_url in url:
+                        fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                        return await self.make_request(fallback_url, ctx, use_fallback=True)
                 response.raise_for_status()
                 data = await response.json()
                 return data
@@ -62,6 +80,10 @@ class APIManager:
                 await ctx.send(f"❌ **Error:** {error_msg}")
             else:
                 print(error_msg)
+            # Fallback if not already tried
+            if not use_fallback and self.api_url in url:
+                fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                return await self.make_request(fallback_url, ctx, use_fallback=True)
             return None
     
     async def close(self):
