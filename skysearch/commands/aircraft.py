@@ -27,71 +27,65 @@ class AircraftCommands:
     
     async def send_aircraft_info(self, ctx, response):
         """Send aircraft information as an embed."""
-        if 'aircraft' in response and response['aircraft']:
+        # Support both 'aircraft' and 'ac' keys
+        aircraft_list = response.get('aircraft') or response.get('ac')
+        if aircraft_list:
             await ctx.typing()
-            aircraft_data = response['aircraft'][0]
-            
+            aircraft_data = aircraft_list[0]
             # Get photo for the aircraft
-            icao = aircraft_data.get('hex', None).upper()
+            icao = aircraft_data.get('hex', None)
+            if icao:
+                icao = icao.upper()
             image_url, photographer = await self.helpers.get_photo_by_hex(icao)
-            
             # Create embed
             embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
-            
             # Create view with buttons
             view = discord.ui.View()
             link = f"https://globe.airplanes.live/?icao={icao}"
             view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
-            
-            # Add social media buttons
+
+            # Social media sharing logic 
+            import urllib.parse
             ground_speed_knots = aircraft_data.get('gs', 'N/A')
             ground_speed_mph = 'unknown'
-            if ground_speed_knots != 'N/A':
-                ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
-            
+            if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
+                try:
+                    ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+                except Exception:
+                    ground_speed_mph = 'unknown'
             squawk_code = aircraft_data.get('squawk', 'N/A')
             emergency_squawk_codes = ['7500', '7600', '7700']
-            
             lat = aircraft_data.get('lat', 'N/A')
             lon = aircraft_data.get('lon', 'N/A')
-            if lat != 'N/A':
-                lat = round(float(lat), 2)
-                lat_dir = "N" if lat >= 0 else "S"
-                lat = f"{abs(lat)}{lat_dir}"
-            if lon != 'N/A':
-                lon = round(float(lon), 2)
-                lon_dir = "E" if lon >= 0 else "W"
-                lon = f"{abs(lon)}{lon_dir}"
-            
+            if lat != 'N/A' and lat is not None:
+                try:
+                    lat = round(float(lat), 2)
+                    lat_dir = "N" if lat >= 0 else "S"
+                    lat = f"{abs(lat)}{lat_dir}"
+                except Exception:
+                    pass
+            if lon != 'N/A' and lon is not None:
+                try:
+                    lon = round(float(lon), 2)
+                    lon_dir = "E" if lon >= 0 else "W"
+                    lon = f"{abs(lon)}{lon_dir}"
+                except Exception:
+                    pass
             if squawk_code in emergency_squawk_codes:
                 tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
             else:
                 tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
             tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
             view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
-            
             whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
             whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
             view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
-            
+
             await ctx.send(embed=embed, view=view)
         else:
             embed = discord.Embed(title='No results found for your query', color=discord.Colour(0xff4545))
             embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
-            message = await ctx.send(embed=embed)
-            
-            # Check if auto-delete is enabled for this guild
-            auto_delete_enabled = await self.cog.config.guild(ctx.guild).auto_delete_not_found()
-            if auto_delete_enabled:
-                await asyncio.sleep(5)
-                try:
-                    await ctx.message.delete()
-                except discord.errors.Forbidden:
-                    pass
-                try:
-                    await message.delete()
-                except discord.errors.Forbidden:
-                    pass
+            await ctx.send(embed=embed)
 
     async def aircraft_by_icao(self, ctx, hex_id: str):
         """Get aircraft information by ICAO hex code."""
