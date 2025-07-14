@@ -604,7 +604,6 @@ class AircraftCommands:
                 await ctx.send(embed=embed)
                 return
             # Button-based pagination
-            import discord
             from discord.ui import View, Button
 
             class AircraftPaginator(View):
