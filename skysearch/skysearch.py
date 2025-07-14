@@ -31,6 +31,7 @@ class Skysearch(red_commands.Cog):
         self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
+        self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback'
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, last_emergency_squawk_time=None, auto_delete_not_found=True)
         
         # Initialize utility managers
@@ -306,6 +307,24 @@ class Skysearch(red_commands.Cog):
         """Clear the OpenWeatherMap API key."""
         await self.config.openweathermap_api.set(None)
         await ctx.send("OpenWeatherMap API key cleared.")
+
+    @red_commands.is_owner()
+    @red_commands.command(name='setapimode')
+    async def set_api_mode(self, ctx, mode: str):
+        """Set which API to use globally: 'primary' or 'fallback'."""
+        mode = mode.lower()
+        if mode not in ("primary", "fallback"):
+            await ctx.send("❌ Invalid mode. Use 'primary' or 'fallback'.")
+            return
+        await self.config.api_mode.set(mode)
+        await ctx.send(f"✅ API mode set to **{mode}**.")
+
+    @red_commands.is_owner()
+    @red_commands.command(name='apimode')
+    async def show_api_mode(self, ctx):
+        """Show the current global API mode."""
+        mode = await self.config.api_mode()
+        await ctx.send(f"🌐 Current API mode: **{mode}**")
 
     @tasks.loop(minutes=2)
     async def check_emergency_squawks(self):
