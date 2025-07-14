@@ -16,11 +16,12 @@ class APIManager:
         self.fallback_api_url = "https://api.airplanes.live"  # Fallback API URL
         self._http_client = None
     
-    async def get_headers(self):
-        """Return headers with API key for requests, if available."""
+    async def get_headers(self, url=None):
+        """Return headers with API key for requests, if available. Only send API key for primary API."""
         headers = {}
         api_key = await self.cog.config.airplanesliveapi()
-        if api_key:
+        # Only send API key if using the primary API
+        if api_key and (url is None or self.api_url in url):
             headers['auth'] = api_key  # Use 'auth' header as specified in API docs
         return headers
 
@@ -30,7 +31,7 @@ class APIManager:
             self._http_client = aiohttp.ClientSession()
         
         try:
-            headers = await self.get_headers()  # Get headers with API key if available
+            headers = await self.get_headers(url)  # Get headers with API key if available, only for primary
             
             async with self._http_client.get(url, headers=headers) as response:
                 if response.status == 401:
