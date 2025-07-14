@@ -205,8 +205,11 @@ class AdminCommands:
                 if not hasattr(self.cog, '_http_client'):
                     self.cog._http_client = aiohttp.ClientSession()
                 
+                # Use the correct base URL from APIManager
+                api_mode = await self.cog.config.api_mode()
+                base_url = self.cog.api.primary_api_url if api_mode == "primary" else self.cog.api.fallback_api_url
                 # Test without API key first
-                test_url = f"{self.cog.api.api_url}/?all_with_pos"
+                test_url = f"{base_url}/?all_with_pos"
                 debug_info += f"🔗 **Test URL:** `{test_url}`\n"
                 
                 async with self.cog._http_client.get(test_url) as response:
@@ -225,7 +228,7 @@ class AdminCommands:
             if api_key:
                 debug_info += f"\n**Testing with API key...**\n"
                 try:
-                    test_url_with_key = f"{self.cog.api.api_url}/?all_with_pos"
+                    test_url_with_key = f"{base_url}/?all_with_pos"
                     async with self.cog._http_client.get(test_url_with_key, headers=headers) as response:
                         debug_info += f"📡 **Authenticated Status:** {response.status}\n"
                         
@@ -254,10 +257,10 @@ class AdminCommands:
             # Test specific endpoints
             debug_info += f"\n**Testing specific endpoints...**\n"
             test_endpoints = [
-                ("Military aircraft", f"{self.cog.api.api_url}/?all_with_pos&filter_mil"),
-                ("LADD aircraft", f"{self.cog.api.api_url}/?all_with_pos&filter_ladd"),
-                ("PIA aircraft", f"{self.cog.api.api_url}/?all_with_pos&filter_pia"),
-                ("Emergency squawk 7700", f"{self.cog.api.api_url}/?all_with_pos&filter_squawk=7700")
+                ("Military aircraft", f"{base_url}/?all_with_pos&filter_mil"),
+                ("LADD aircraft", f"{base_url}/?all_with_pos&filter_ladd"),
+                ("PIA aircraft", f"{base_url}/?all_with_pos&filter_pia"),
+                ("Emergency squawk 7700", f"{base_url}/?all_with_pos&filter_squawk=7700")
             ]
             
             for endpoint_name, endpoint_url in test_endpoints:
@@ -274,23 +277,26 @@ class AdminCommands:
                 except Exception as e:
                     debug_info += f"❌ **{endpoint_name}:** Error - {str(e)}\n"
 
-            # Test fallback logic
-            debug_info += f"\n**Testing fallback logic...**\n"
+            # Test fallback logic (now just test both modes)
+            debug_info += f"\n**Testing both API modes...**\n"
             try:
-                # Use a non-existent endpoint to force a failure and trigger fallback
-                bad_url = f"{self.cog.api.api_url}/this_endpoint_does_not_exist"
-                debug_info += f"🔗 **Fallback Test URL:** `{bad_url}`\n"
-                result = await self.cog.api.make_request(bad_url)
-                if result is not None:
-                    debug_info += f"✅ **Fallback succeeded:** Received data from fallback API.\n"
-                else:
-                    debug_info += f"❌ **Fallback failed:** No data returned from either API.\n"
+                for mode in ("primary", "fallback"):
+                    base_url = self.cog.api.primary_api_url if mode == "primary" else self.cog.api.fallback_api_url
+                    test_url = f"{base_url}/this_endpoint_does_not_exist"
+                    debug_info += f"🔗 **{mode.title()} Test URL:** `{test_url}`\n"
+                    result = await self.cog.api.make_request(test_url)
+                    if result is not None:
+                        debug_info += f"✅ **{mode.title()} succeeded:** Received data.\n"
+                    else:
+                        debug_info += f"❌ **{mode.title()} failed:** No data returned.\n"
             except Exception as e:
-                debug_info += f"❌ **Fallback Test Error:** {str(e)}\n"
+                debug_info += f"❌ **API Mode Test Error:** {str(e)}\n"
 
             # Final summary
             debug_info += f"\n**📋 Summary:**\n"
-            debug_info += f"• **API Base URL:** `{self.cog.api.api_url}`\n"
+            debug_info += f"• **API Base URL (primary):** `{self.cog.api.primary_api_url}`\n"
+            debug_info += f"• **API Base URL (fallback):** `{self.cog.api.fallback_api_url}`\n"
+            debug_info += f"• **Current Mode:** `{await self.cog.config.api_mode()}`\n"
             debug_info += f"• **API Key:** {'✅ Configured' if api_key else '❌ Not configured'}\n"
             debug_info += f"• **Session:** {'✅ Active' if hasattr(self.cog, '_http_client') else '❌ Not initialized'}\n"
             
