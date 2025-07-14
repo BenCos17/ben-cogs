@@ -580,31 +580,17 @@ class AircraftCommands:
 
     async def scroll_planes(self, ctx):
         """Scroll through available planes."""
-        url = f"{self.api.api_url}/?all_with_pos&filter_mil"
+        url = f"/?all_with_pos&filter_mil"
         try:
             response = await self.api.make_request(url, ctx)
-            if response and 'aircraft' in response:
-                for index, aircraft_info in enumerate(response['aircraft']):
+            aircraft_list = response.get('aircraft') or response.get('ac')
+            if response and aircraft_list:
+                for index, aircraft_info in enumerate(aircraft_list):
                     await self.send_aircraft_info(ctx, {'aircraft': [aircraft_info]})
-                    embed = discord.Embed(description=f"Plane {index + 1}/{len(response['aircraft'])}. React with ➡️ to view the next plane or ⏹️ to stop.")
-                    message = await ctx.send(embed=embed)
-                    await message.add_reaction("➡️")
-                    await message.add_reaction("⏹️") 
-
-                    def check(reaction, user):
-                        return user == ctx.author and str(reaction.emoji) == '➡️' or str(reaction.emoji) == '⏹️'
-
-                    try:
-                        reaction, user = await self.cog.bot.wait_for('reaction_add', timeout=60.0, check=check)
-                        await message.remove_reaction(reaction.emoji, ctx.author)
-                        if str(reaction.emoji) == '⏹️':
-                            embed = discord.Embed(description="Stopping.")
-                            await ctx.send(embed=embed)
-                            break
-                    except asyncio.TimeoutError:
-                        embed = discord.Embed(description="No reaction received. Stopping.")
-                        await ctx.send(embed=embed)
-                        break
+            else:
+                embed = discord.Embed(title="No results found for your query", color=discord.Colour(0xff4545))
+                embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
+                await ctx.send(embed=embed)
         except Exception as e:
-            embed = discord.Embed(description=f"An error occurred during scrolling: {e}.")
+            embed = discord.Embed(title="Error", description=f"Error scrolling through planes: {e}", color=0xff4545)
             await ctx.send(embed=embed) 
