@@ -176,43 +176,6 @@ class AdminCommands:
         embed.add_field(name="Note", value="Some features may be limited without an API key", inline=True)
         await ctx.send(embed=embed)
 
-    @red_commands.is_owner()
-    @red_commands.command(name='setflighterakey')
-    async def set_flightera_key(self, ctx, api_key: str):
-        """Set the Flightera API key (RapidAPI)."""
-        await self.cog.config.flightera_api.set(api_key)
-        embed = discord.Embed(title="Flightera API Key Updated", description="The Flightera API key has been set successfully.", color=0x2BBD8E)
-        embed.add_field(name="Status", value="✅ API key configured", inline=True)
-        embed.add_field(name="Header", value="`X-RapidAPI-Key: [your-api-key]`", inline=True)
-        await ctx.send(embed=embed)
-
-    @red_commands.is_owner()
-    @red_commands.command(name='flighterakey')
-    async def flightera_key(self, ctx):
-        """Check the status of the Flightera API key configuration."""
-        api_key = await self.cog.config.flightera_api()
-        if api_key:
-            embed = discord.Embed(title="Flightera API Key Status", description="✅ API key is configured", color=0x2BBD8E)
-            embed.add_field(name="Status", value="Configured", inline=True)
-            embed.add_field(name="Key Preview", value=f"`{api_key[:8]}...`", inline=True)
-            embed.add_field(name="Header Format", value="`X-RapidAPI-Key: [your-api-key]`", inline=True)
-        else:
-            embed = discord.Embed(title="Flightera API Key Status", description="❌ No API key configured", color=0xff4545)
-            embed.add_field(name="Status", value="Not configured", inline=True)
-            embed.add_field(name="Usage", value="Use `setflighterakey <your-api-key>` to configure", inline=True)
-            embed.add_field(name="Note", value="Some features may be limited without an API key", inline=True)
-        await ctx.send(embed=embed)
-
-    @red_commands.is_owner()
-    @red_commands.command(name='clearflighterakey')
-    async def clear_flightera_key(self, ctx):
-        """Clear the Flightera API key configuration."""
-        await self.cog.config.flightera_api.clear()
-        embed = discord.Embed(title="Flightera API Key Cleared", description="The Flightera API key has been cleared.", color=0xff4545)
-        embed.add_field(name="Status", value="❌ API key removed", inline=True)
-        embed.add_field(name="Note", value="Some features may be limited without an API key", inline=True)
-        await ctx.send(embed=embed)
-
     async def debug_api(self, ctx):
         """Debug API key and connection issues - sends detailed info via DM."""
         try:
@@ -317,7 +280,7 @@ class AdminCommands:
                 except Exception as e:
                     debug_info += f"❌ **{endpoint_name}:** Error - {str(e)}\n"
 
-            # Test both API modes
+            # Test both API modes with a real endpoint
             debug_info += f"\n**Testing both API modes...**\n"
             for mode in ("primary", "fallback"):
                 base_url = self.cog.api.primary_api_url if mode == "primary" else self.cog.api.fallback_api_url
@@ -325,31 +288,26 @@ class AdminCommands:
                     test_url = f"{base_url}/?all_with_pos"
                 else:
                     test_url = f"{base_url}/v2/mil"  # Use a real fallback endpoint
-                debug_info += f"\n__**{mode.title()} API Test**__\n"
-                debug_info += f"• **Test URL:** `{test_url}`\n"
+                debug_info += f"🔗 **{mode.title()} Test URL:** `{test_url}`\n"
                 try:
                     import time
                     start = time.monotonic()
                     async with self.cog._http_client.get(test_url, headers=headers) as response:
                         elapsed = time.monotonic() - start
-                        debug_info += f"• **Status:** {response.status}\n"
-                        debug_info += f"• **API Latency:** {elapsed:.2f} seconds\n"
+                        debug_info += f"📡 **{mode.title()} Status:** {response.status}\n"
+                        debug_info += f"⏱️ **{mode.title()} API Latency:** {elapsed:.2f} seconds\n"
                         if response.status == 200:
                             try:
                                 data = await response.json()
-                                debug_info += f"• **Response Keys:**\n```{list(data.keys())}```
-                                
-"
+                                debug_info += f"📊 **{mode.title()} Response Keys:** `{list(data.keys())}`\n"
                                 if 'aircraft' in data:
-                                    debug_info += f"• **Aircraft Count:** {len(data['aircraft'])} aircraft\n"
-                                elif 'ac' in data:
-                                    debug_info += f"• **Aircraft Count:** {len(data['ac'])} aircraft\n"
+                                    debug_info += f"✈️ **{mode.title()} Aircraft Count:** {len(data['aircraft'])} aircraft\n"
                             except Exception as e:
-                                debug_info += f"❌ **JSON Parse Error:** {str(e)}\n"
+                                debug_info += f"❌ **{mode.title()} JSON Parse Error:** {str(e)}\n"
                         else:
-                            debug_info += f"❌ **Failed:** Status {response.status}\n"
+                            debug_info += f"❌ **{mode.title()} failed:** Status {response.status}\n"
                 except Exception as e:
-                    debug_info += f"❌ **Test Error:** {str(e)}\n"
+                    debug_info += f"❌ **{mode.title()} Test Error:** {str(e)}\n"
 
             # Final summary
             debug_info += f"\n**📋 Summary:**\n"

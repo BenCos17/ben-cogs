@@ -30,9 +30,8 @@ class Skysearch(red_commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
-        self.config.register_global(flightera_api=None)  # API key for Flightera
         self.config.register_global(openweathermap_api=None)  # OWM API key
-        self.config.register_global(api_mode="primary")  # API mode: 'primary', 'fallback', or 'flightera'
+        self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback'
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, last_emergency_squawk_time=None, auto_delete_not_found=True)
         
         # Initialize utility managers
@@ -354,10 +353,12 @@ class Skysearch(red_commands.Cog):
         try:
             emergency_squawk_codes = ['7500', '7600', '7700']
             for squawk_code in emergency_squawk_codes:
+                # Use new REST API endpoint for squawk filter - must combine with base query
                 url = f"{self.api.api_url}/?all_with_pos&filter_squawk={squawk_code}"
                 response = await self.api.make_request(url)  # No ctx for background task
                 if response and 'aircraft' in response:
                     for aircraft_info in response['aircraft']:
+                        # Ignore aircraft with the hex 00000000
                         if aircraft_info.get('hex') == '00000000':
                             continue
                         guilds = self.bot.guilds
@@ -366,20 +367,23 @@ class Skysearch(red_commands.Cog):
                             if alert_channel_id:
                                 alert_channel = self.bot.get_channel(alert_channel_id)
                                 if alert_channel:
+                                    # Get the alert role
                                     alert_role_id = await self.config.guild(guild).alert_role()
                                     alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
+                                    
+                                    # Send the new alert with role mention if available
                                     if alert_role_mention:
                                         await alert_channel.send(alert_role_mention, allowed_mentions=discord.AllowedMentions(roles=True))
-                                    # Query Flightera in parallel for this aircraft
-                                    import asyncio
-                                    flightera_task = asyncio.create_task(self.api.query_flightera("icao", aircraft_info.get('hex')))
-                                    flightera_data = await flightera_task
-                                    await self.aircraft_commands.send_aircraft_info(alert_channel, {'aircraft': [aircraft_info]}, flightera_data)
+                                    await self.aircraft_commands.send_aircraft_info(alert_channel, {'aircraft': [aircraft_info]})
+                                    
+                                    # Check if aircraft has landed
                                     if aircraft_info.get('altitude') is not None and aircraft_info.get('altitude') < 25:
                                         embed = discord.Embed(title="Aircraft landed", description=f"Aircraft {aircraft_info.get('hex')} has landed while squawking {squawk_code}.", color=0x00ff00)
                                         await alert_channel.send(embed=embed)
                                 else:
+                                    # Only log if channel was set but not found (actual error)
                                     print(f"Warning: Alert channel {alert_channel_id} not found for guild {guild.name} - channel may have been deleted")
+                            # Removed the "No alert channel set" message - this is normal behavior
                 await asyncio.sleep(2)  # Add a delay to respect API rate limit
         except Exception as e:
             print(f"Error checking emergency squawks: {e}")
