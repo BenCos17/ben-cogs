@@ -130,13 +130,18 @@ class AircraftCommands:
         # Print endpoint and masked API key
         await self._debug_api_info(ctx, url)
         try:
+            import time
+            start = time.monotonic()
             response = await self.api.make_request(url, ctx)
+            elapsed = time.monotonic() - start
             import json
             if response:
                 pretty = json.dumps(response, indent=2)[:1900]  # Discord message limit
-                await ctx.send(f"[DEBUG] Raw API response (truncated):\n```json\n{pretty}\n```")
+                await ctx.send(f"[DEBUG] Raw API response (truncated):\n```json\n{pretty}\n```\n⏱️ API Latency: {elapsed:.2f} seconds")
             else:
-                await ctx.send("[DEBUG] No response or empty response from the API.")
+                await ctx.send(f"[DEBUG] No response or empty response from the API.\n⏱️ API Latency: {elapsed:.2f} seconds")
+            # if hasattr(response, 'headers') and 'X-RateLimit-Remaining' in response.headers:
+            #     await ctx.send(f"[DEBUG] Requests remaining: {response.headers['X-RateLimit-Remaining']}")
         except Exception as e:
             await ctx.send(f"[DEBUG] Exception occurred: {e}")
 
