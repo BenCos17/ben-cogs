@@ -36,14 +36,34 @@ class APIManager:
         # Rewrite URL for ICAO hex search if using fallback
         import re
         if api_mode == "fallback":
-            # If the URL is a find_hex search, rewrite to /v2/hex/[hex]
+            # Rewrite to /v2/ endpoints for all supported aircraft lookups
             match = re.search(r"[?&/]find_hex=([0-9a-fA-F]+)", url)
             if match:
                 hex_code = match.group(1)
                 url = f"{self.fallback_api_url}/v2/hex/{hex_code}"
             else:
-                # Otherwise, just replace the base URL
-                url = url.replace(self.primary_api_url, self.fallback_api_url)
+                match = re.search(r"[?&/]find_callsign=([A-Za-z0-9]+)", url)
+                if match:
+                    callsign = match.group(1)
+                    url = f"{self.fallback_api_url}/v2/callsign/{callsign}"
+                else:
+                    match = re.search(r"[?&/]find_reg=([A-Za-z0-9]+)", url)
+                    if match:
+                        reg = match.group(1)
+                        url = f"{self.fallback_api_url}/v2/reg/{reg}"
+                    else:
+                        match = re.search(r"[?&/]find_type=([A-Za-z0-9]+)", url)
+                        if match:
+                            typecode = match.group(1)
+                            url = f"{self.fallback_api_url}/v2/type/{typecode}"
+                        else:
+                            match = re.search(r"[?&/]filter_squawk=([0-9]+)", url)
+                            if match:
+                                squawk = match.group(1)
+                                url = f"{self.fallback_api_url}/v2/squawk/{squawk}"
+                            else:
+                                # Otherwise, just replace the base URL
+                                url = url.replace(self.primary_api_url, self.fallback_api_url)
         else:
             url = url.replace(self.fallback_api_url, self.primary_api_url)
 

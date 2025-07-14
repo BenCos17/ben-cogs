@@ -188,6 +188,7 @@ class AdminCommands:
 
             # Get API key status
             api_key = await self.cog.config.airplanesliveapi()
+            api_mode = await self.cog.config.api_mode()
             debug_info = f"**API Key Status:**\n"
             if api_key:
                 debug_info += f"✅ **Configured:** `{api_key[:8]}...`\n"
@@ -196,7 +197,7 @@ class AdminCommands:
                 debug_info += f"❌ **Not configured**\n"
             
             debug_info += f"\n**Headers being sent:**\n"
-            headers = await self.cog.api.get_headers()
+            headers = await self.cog.api.get_headers(api_mode=api_mode)
             debug_info += f"```{headers}```\n"
 
             # Test basic connectivity
@@ -206,7 +207,6 @@ class AdminCommands:
                     self.cog._http_client = aiohttp.ClientSession()
                 
                 # Use the correct base URL from APIManager
-                api_mode = await self.cog.config.api_mode()
                 base_url = self.cog.api.primary_api_url if api_mode == "primary" else self.cog.api.fallback_api_url
                 # Test without API key first
                 test_url = f"{base_url}/?all_with_pos"
