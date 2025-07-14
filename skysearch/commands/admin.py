@@ -280,7 +280,7 @@ class AdminCommands:
                 except Exception as e:
                     debug_info += f"❌ **{endpoint_name}:** Error - {str(e)}\n"
 
-            # Test both API modes with a real endpoint
+            # Test both API modes
             debug_info += f"\n**Testing both API modes...**\n"
             for mode in ("primary", "fallback"):
                 base_url = self.cog.api.primary_api_url if mode == "primary" else self.cog.api.fallback_api_url
@@ -288,26 +288,32 @@ class AdminCommands:
                     test_url = f"{base_url}/?all_with_pos"
                 else:
                     test_url = f"{base_url}/v2/mil"  # Use a real fallback endpoint
-                debug_info += f"🔗 **{mode.title()} Test URL:** `{test_url}`\n"
+                debug_info += f"\n__**{mode.title()} API Test**__\n"
+                debug_info += f"• **Test URL:** `{test_url}`\n"
                 try:
                     import time
                     start = time.monotonic()
                     async with self.cog._http_client.get(test_url, headers=headers) as response:
                         elapsed = time.monotonic() - start
-                        debug_info += f"📡 **{mode.title()} Status:** {response.status}\n"
-                        debug_info += f"⏱️ **{mode.title()} API Latency:** {elapsed:.2f} seconds\n"
+                        debug_info += f"• **Status:** {response.status}\n"
+                        debug_info += f"• **API Latency:** {elapsed:.2f} seconds\n"
                         if response.status == 200:
                             try:
                                 data = await response.json()
-                                debug_info += f"📊 **{mode.title()} Response Keys:** `{list(data.keys())}`\n"
+                                debug_info += f"• **Response Keys:**\n```
+{list(data.keys())}
+```
+"
                                 if 'aircraft' in data:
-                                    debug_info += f"✈️ **{mode.title()} Aircraft Count:** {len(data['aircraft'])} aircraft\n"
+                                    debug_info += f"• **Aircraft Count:** {len(data['aircraft'])} aircraft\n"
+                                elif 'ac' in data:
+                                    debug_info += f"• **Aircraft Count:** {len(data['ac'])} aircraft\n"
                             except Exception as e:
-                                debug_info += f"❌ **{mode.title()} JSON Parse Error:** {str(e)}\n"
+                                debug_info += f"❌ **JSON Parse Error:** {str(e)}\n"
                         else:
-                            debug_info += f"❌ **{mode.title()} failed:** Status {response.status}\n"
+                            debug_info += f"❌ **Failed:** Status {response.status}\n"
                 except Exception as e:
-                    debug_info += f"❌ **{mode.title()} Test Error:** {str(e)}\n"
+                    debug_info += f"❌ **Test Error:** {str(e)}\n"
 
             # Final summary
             debug_info += f"\n**📋 Summary:**\n"
