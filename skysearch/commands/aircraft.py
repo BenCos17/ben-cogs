@@ -591,8 +591,12 @@ class AircraftCommands:
             url = f"/?all_with_pos"
         else:
             url = f"/?all_with_pos&filter_mil"  # fallback to mil
+        # Print the endpoint being used (before rewriting)
+        await ctx.send(f"Using endpoint: `{url}` (will be rewritten if needed)")
         try:
             response = await self.api.make_request(url, ctx)
+            # After make_request, print the final URL used (if possible)
+            # (If you want to print the rewritten URL, you would need to modify APIManager to return it or log it.)
             if not response:
                 embed = discord.Embed(title="Error", description="No response from the API.", color=0xff4545)
                 await ctx.send(embed=embed)
