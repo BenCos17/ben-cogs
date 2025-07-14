@@ -578,9 +578,19 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description="Error retrieving closest aircraft information.", color=0xff4545)
             await ctx.send(embed=embed)
 
-    async def scroll_planes(self, ctx):
-        """Scroll through available planes with button-based pagination."""
-        url = f"/?all_with_pos&filter_mil"
+    async def scroll_planes(self, ctx, category: str = 'mil'):
+        """Scroll through available planes with button-based pagination. Category: mil, ladd, pia, all."""
+        category = (category or 'mil').lower()
+        if category == 'mil':
+            url = f"/?all_with_pos&filter_mil"
+        elif category == 'ladd':
+            url = f"/?all_with_pos&filter_ladd"
+        elif category == 'pia':
+            url = f"/?all_with_pos&filter_pia"
+        elif category == 'all':
+            url = f"/?all_with_pos"
+        else:
+            url = f"/?all_with_pos&filter_mil"  # fallback to mil
         try:
             response = await self.api.make_request(url, ctx)
             aircraft_list = response.get('aircraft') or response.get('ac')

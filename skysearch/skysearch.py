@@ -197,9 +197,9 @@ class Skysearch(red_commands.Cog):
         await self.aircraft_commands.closest_aircraft(ctx, lat, lon, radius)
 
     @aircraft_group.command(name='scroll')
-    async def aircraft_scroll(self, ctx):
-        """Scroll through available planes."""
-        await self.aircraft_commands.scroll_planes(ctx)
+    async def aircraft_scroll(self, ctx, category: str = 'mil'):
+        """Scroll through available planes. Optionally specify a category: mil, ladd, pia, or all."""
+        await self.aircraft_commands.scroll_planes(ctx, category)
 
     # Admin commands
     @aircraft_group.command(name='alertchannel')
