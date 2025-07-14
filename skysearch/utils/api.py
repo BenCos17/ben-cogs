@@ -41,8 +41,15 @@ class APIManager:
                     else:
                         print(error_msg)
                     # Fallback if not already tried
-                    if not use_fallback and self.fallback_api_url in url or self.api_url in url:
+                    if not use_fallback and (self.fallback_api_url in url or self.api_url in url):
                         fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                        # Special handling for ICAO hex search
+                        if "/find_hex=" in url or "?find_hex=" in url:
+                            import re
+                            match = re.search(r"[?&]find_hex=([0-9a-fA-F]+)", url)
+                            if match:
+                                hex_code = match.group(1)
+                                fallback_url = f"{self.fallback_api_url}/hex/{hex_code}"
                         return await self.make_request(fallback_url, ctx, use_fallback=True)
                     return None
                 elif response.status == 403:
@@ -52,8 +59,15 @@ class APIManager:
                     else:
                         print(error_msg)
                     # Fallback if not already tried
-                    if not use_fallback and self.fallback_api_url in url or self.api_url in url:
+                    if not use_fallback and (self.fallback_api_url in url or self.api_url in url):
                         fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                        # Special handling for ICAO hex search
+                        if "/find_hex=" in url or "?find_hex=" in url:
+                            import re
+                            match = re.search(r"[?&]find_hex=([0-9a-fA-F]+)", url)
+                            if match:
+                                hex_code = match.group(1)
+                                fallback_url = f"{self.fallback_api_url}/hex/{hex_code}"
                         return await self.make_request(fallback_url, ctx, use_fallback=True)
                     return None
                 elif response.status == 429:
@@ -63,14 +77,28 @@ class APIManager:
                     else:
                         print(error_msg)
                     # Fallback if not already tried
-                    if not use_fallback and self.fallback_api_url in url or self.api_url in url:
+                    if not use_fallback and (self.fallback_api_url in url or self.api_url in url):
                         fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                        # Special handling for ICAO hex search
+                        if "/find_hex=" in url or "?find_hex=" in url:
+                            import re
+                            match = re.search(r"[?&]find_hex=([0-9a-fA-F]+)", url)
+                            if match:
+                                hex_code = match.group(1)
+                                fallback_url = f"{self.fallback_api_url}/hex/{hex_code}"
                         return await self.make_request(fallback_url, ctx, use_fallback=True)
                     return None
                 elif response.status >= 500:
                     # Server error, try fallback if not already tried
                     if not use_fallback and self.api_url in url:
                         fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                        # Special handling for ICAO hex search
+                        if "/find_hex=" in url or "?find_hex=" in url:
+                            import re
+                            match = re.search(r"[?&]find_hex=([0-9a-fA-F]+)", url)
+                            if match:
+                                hex_code = match.group(1)
+                                fallback_url = f"{self.fallback_api_url}/hex/{hex_code}"
                         return await self.make_request(fallback_url, ctx, use_fallback=True)
                 response.raise_for_status()
                 data = await response.json()
@@ -84,6 +112,13 @@ class APIManager:
             # Fallback if not already tried
             if not use_fallback and self.api_url in url:
                 fallback_url = url.replace(self.api_url, self.fallback_api_url)
+                # Special handling for ICAO hex search
+                if "/find_hex=" in url or "?find_hex=" in url:
+                    import re
+                    match = re.search(r"[?&]find_hex=([0-9a-fA-F]+)", url)
+                    if match:
+                        hex_code = match.group(1)
+                        fallback_url = f"{self.fallback_api_url}/hex/{hex_code}"
                 return await self.make_request(fallback_url, ctx, use_fallback=True)
             return None
     
