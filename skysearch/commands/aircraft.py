@@ -95,7 +95,7 @@ class AircraftCommands:
 
     async def aircraft_by_icao(self, ctx, hex_id: str):
         """Get aircraft information by ICAO hex code."""
-        url = f"{self.api.api_url}/?find_hex={hex_id}"
+        url = f"/?find_hex={hex_id}"
         response = await self.api.make_request(url, ctx)
         if response:
             if 'aircraft' in response and len(response['aircraft']) > 1:
@@ -109,7 +109,7 @@ class AircraftCommands:
 
     async def aircraft_by_callsign(self, ctx, callsign: str):
         """Get aircraft information by callsign."""
-        url = f"{self.api.api_url}/?find_callsign={callsign}"
+        url = f"/?find_callsign={callsign}"
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
@@ -119,7 +119,7 @@ class AircraftCommands:
 
     async def aircraft_by_reg(self, ctx, registration: str):
         """Get aircraft information by registration."""
-        url = f"{self.api.api_url}/?find_reg={registration}"
+        url = f"/?find_reg={registration}"
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
@@ -129,7 +129,7 @@ class AircraftCommands:
 
     async def aircraft_by_type(self, ctx, aircraft_type: str):
         """Get aircraft information by type."""
-        url = f"{self.api.api_url}/?find_type={aircraft_type}"
+        url = f"/?find_type={aircraft_type}"
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
@@ -139,7 +139,7 @@ class AircraftCommands:
 
     async def aircraft_by_squawk(self, ctx, squawk_value: str):
         """Get aircraft information by squawk code."""
-        url = f"{self.api.api_url}/?all_with_pos&filter_squawk={squawk_value}"
+        url = f"/?all_with_pos&filter_squawk={squawk_value}"
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
@@ -173,18 +173,18 @@ class AircraftCommands:
             
             # Make separate API calls for each ICAO code
             for icao_code in icao_codes:
-                url = f"{self.api.api_url}/?find_hex={icao_code}"
+                url = f"/?find_hex={icao_code}"
                 response = await self.api.make_request(url, ctx)
                 if response and response.get('aircraft'):
                     all_aircraft.extend(response['aircraft'])
         else:
             # For other search types, use the original logic
             if search_type == "callsign":
-                url = f"{self.api.api_url}/?find_callsign={search_value}"
+                url = f"/?find_callsign={search_value}"
             elif search_type == "squawk":
-                url = f"{self.api.api_url}/?all_with_pos&filter_squawk={search_value}"
+                url = f"/?all_with_pos&filter_squawk={search_value}"
             elif search_type == "type":
-                url = f"{self.api.api_url}/?find_type={search_value}"
+                url = f"/?find_type={search_value}"
             else:
                 embed = discord.Embed(title="Error", description="Invalid search type specified.", color=0xfa4545)
                 await ctx.send(embed=embed)
@@ -221,7 +221,7 @@ class AircraftCommands:
 
     async def show_military_aircraft(self, ctx):
         """Get information about military aircraft."""
-        url = f"{self.api.api_url}/?all_with_pos&filter_mil"
+        url = f"/?all_with_pos&filter_mil"
         response = await self.api.make_request(url, ctx)
         if response:
             aircraft_list = response.get('aircraft', [])
@@ -250,13 +250,9 @@ class AircraftCommands:
                     photo_url, photographer = await self.helpers.get_photo_by_hex(aircraft_hex)
                     if photo_url:
                         embed.set_image(url=photo_url)
-                    if photographer:
-                        embed.set_footer(text=f"Photo by {photographer}")
-
-                    view = discord.ui.View()
-                    view.add_item(discord.ui.Button(label=f"Track {aircraft_hex} live", url=f"https://globe.airplanes.live/?icao={aircraft_hex}"))
-
-                    return embed, view
+                        if photographer:
+                            embed.set_footer(text=f"Photo by {photographer}")
+                    return embed
 
                 async def update_message(message, page_index):
                     embed, view = await create_embed(aircraft_list[page_index])
@@ -298,7 +294,7 @@ class AircraftCommands:
 
     async def ladd_aircraft(self, ctx):
         """Get information on LADD-restricted aircraft."""
-        url = f"{self.api.api_url}/?all_with_pos&filter_ladd"
+        url = f"/?all_with_pos&filter_ladd"
         response = await self.api.make_request(url, ctx)
         if response:
             if 'aircraft' in response and len(response['aircraft']) > 1:
@@ -361,7 +357,7 @@ class AircraftCommands:
 
     async def pia_aircraft(self, ctx):
         """View live aircraft using private ICAO addresses."""
-        url = f"{self.api.api_url}/?all_with_pos&filter_pia"
+        url = f"/?all_with_pos&filter_pia"
         response = await self.api.make_request(url, ctx)
         if response:
             if 'aircraft' in response and len(response['aircraft']) > 1:
