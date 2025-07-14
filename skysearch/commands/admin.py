@@ -239,7 +239,7 @@ class AdminCommands:
                                 debug_info += f"📊 **Response Keys:** `{list(data.keys())}`\n"
                                 if 'aircraft' in data:
                                     debug_info += f"✈️ **Aircraft Count:** {len(data['aircraft'])} aircraft\n"
-                                debug_info += f"⏱️ **Response Time:** {response.headers.get('X-RateLimit-Remaining', 'Unknown')} requests remaining\n"
+                                # Removed requests remaining/rate limit info
                             except Exception as e:
                                 debug_info += f"❌ **JSON Parse Error:** {str(e)}\n"
                         elif response.status == 401:
