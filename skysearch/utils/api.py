@@ -65,7 +65,11 @@ class APIManager:
                                 # Otherwise, just replace the base URL
                                 url = url.replace(self.primary_api_url, self.fallback_api_url)
         else:
-            url = url.replace(self.fallback_api_url, self.primary_api_url)
+            # If the URL is not absolute, prepend the primary API base URL
+            if not url.startswith("https"):
+                url = self.primary_api_url + url
+            else:
+                url = url.replace(self.fallback_api_url, self.primary_api_url)
 
         try:
             headers = await self.get_headers(url, api_mode)
