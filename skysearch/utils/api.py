@@ -61,6 +61,12 @@ class APIManager:
                             if match:
                                 squawk = match.group(1)
                                 url = f"{self.fallback_api_url}/v2/squawk/{squawk}"
+                            elif "filter_mil" in url:
+                                url = f"{self.fallback_api_url}/v2/mil"
+                            elif "filter_ladd" in url:
+                                url = f"{self.fallback_api_url}/v2/ladd"
+                            elif "filter_pia" in url:
+                                url = f"{self.fallback_api_url}/v2/pia"
                             else:
                                 # Otherwise, just replace the base URL
                                 url = url.replace(self.primary_api_url, self.fallback_api_url)
