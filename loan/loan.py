@@ -120,10 +120,10 @@ class BankLoan(commands.Cog):
         default_guild = {
             "require_mod_approval": False,
             "max_loan": 1000,
-            "pending_loans": []  # List of dicts: {"user_id": int, "amount": int, "date": str}
+            "pending_loans": []  
         }
         default_global = {
-            "pending_owner_loans": []  # List of dicts: {"user_id": int, "amount": int, "date": str}
+            "pending_owner_loans": []  
         }
         default_user = {
             "loan_amount": 0
