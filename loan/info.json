@@ -1,8 +1,13 @@
 {
-    "name": "Bank Loan",
-    "author": "bencos18",
-    "description": "A bank loan system for Redbot",
-    "version": "1.0"
+    "author": ["bencos18"],
+    "install_msg": "Thank you for installing the Bank Loan cog. Use `[p]loan` to get started. If you need support, message me on Discord (bencos18) or open a GitHub issue.",
+    "short": "A bank loan system for Redbot.",
+    "description": "A cog that provides a bank loan system for Redbot, allowing users to take out and repay loans.",
+    "requirements": [],
+    "tags": ["bank", "loan", "economy"],
+    "min_bot_version": "3.4.0",
+    "end_user_data_statement": "This cog stores user loan data for the purpose of tracking outstanding loans and repayments. All data is stored using Red's Config system and is not shared with third parties.",
+    "type": "COG"
 }
 
 
