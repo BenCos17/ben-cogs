@@ -12,6 +12,7 @@ def dashboard_page(*args, **kwargs):
     return decorator
 
 class DashboardIntegration(commands.Cog):
+    __cog_name__ = "SkySearch Dashboard"
     bot: Red
 
     @commands.Cog.listener()
