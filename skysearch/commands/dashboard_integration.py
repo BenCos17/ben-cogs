@@ -11,7 +11,7 @@ def dashboard_page(*args, **kwargs):
         return func
     return decorator
 
-class DashboardIntegration:
+class DashboardIntegration(commands.Cog):
     bot: Red
 
     @commands.Cog.listener()
