@@ -31,6 +31,86 @@ class LoanApprovalView(discord.ui.View):
         self.disable_all_items()
         await interaction.response.edit_message(view=self)
 
+class LoanApprovalPaginator(discord.ui.View):
+    def __init__(self, cog, ctx, requests, is_owner):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.ctx = ctx
+        self.requests = requests
+        self.is_owner = is_owner
+        self.index = 0
+        self.message = None
+        self.update_buttons()
+
+    def update_buttons(self):
+        self.clear_items()
+        if self.index > 0:
+            self.add_item(self.PrevButton(self))
+        self.add_item(self.ApproveButton(self))
+        self.add_item(self.DenyButton(self))
+        if self.index < len(self.requests) - 1:
+            self.add_item(self.NextButton(self))
+
+    async def send(self):
+        req = self.requests[self.index]
+        embed = await self.cog.make_request_embed(self.ctx, req, self.is_owner)
+        self.update_buttons()
+        self.message = await self.ctx.send(embed=embed, view=self)
+
+    async def update(self, interaction):
+        req = self.requests[self.index]
+        embed = await self.cog.make_request_embed(self.ctx, req, self.is_owner)
+        self.update_buttons()
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    class PrevButton(discord.ui.Button):
+        def __init__(self, parent):
+            super().__init__(style=discord.ButtonStyle.blurple, label="Previous")
+            self.parent = parent
+        async def callback(self, interaction: discord.Interaction):
+            self.parent.index -= 1
+            await self.parent.update(interaction)
+
+    class NextButton(discord.ui.Button):
+        def __init__(self, parent):
+            super().__init__(style=discord.ButtonStyle.blurple, label="Next")
+            self.parent = parent
+        async def callback(self, interaction: discord.Interaction):
+            self.parent.index += 1
+            await self.parent.update(interaction)
+
+    class ApproveButton(discord.ui.Button):
+        def __init__(self, parent):
+            super().__init__(style=discord.ButtonStyle.green, label="Approve")
+            self.parent = parent
+        async def callback(self, interaction: discord.Interaction):
+            req = self.parent.requests[self.parent.index]
+            await self.parent.cog.handle_approve(interaction, req, self.parent.is_owner)
+            # Remove the request and update view
+            del self.parent.requests[self.parent.index]
+            if not self.parent.requests:
+                await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
+                return
+            if self.parent.index >= len(self.parent.requests):
+                self.parent.index = len(self.parent.requests) - 1
+            await self.parent.update(interaction)
+
+    class DenyButton(discord.ui.Button):
+        def __init__(self, parent):
+            super().__init__(style=discord.ButtonStyle.red, label="Deny")
+            self.parent = parent
+        async def callback(self, interaction: discord.Interaction):
+            req = self.parent.requests[self.parent.index]
+            await self.parent.cog.handle_deny(interaction, req, self.parent.is_owner)
+            # Remove the request and update view
+            del self.parent.requests[self.parent.index]
+            if not self.parent.requests:
+                await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
+                return
+            if self.parent.index >= len(self.parent.requests):
+                self.parent.index = len(self.parent.requests) - 1
+            await self.parent.update(interaction)
+
 class BankLoan(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -147,22 +227,13 @@ class BankLoan(commands.Cog):
 
     @loanmod.command(name="pending")
     async def loanmod_pending(self, ctx):
-        """List all pending loan requests with details and buttons"""
+        """List all pending loan requests with details and buttons (paginated)"""
         pending = await self.config.guild(ctx.guild).pending_loans()
         if not pending:
             await ctx.send("There are no pending loan requests.")
             return
-        for req in pending:
-            member = ctx.guild.get_member(req["user_id"])
-            name = member.display_name if member else f"User ID {req['user_id']}"
-            balance = await bank.get_balance(member) if member else "N/A"
-            date = req.get("date", "N/A")
-            embed = discord.Embed(title="Pending Loan Request", color=discord.Color.orange())
-            embed.add_field(name="User", value=name, inline=True)
-            embed.add_field(name="Amount", value=req["amount"], inline=True)
-            embed.add_field(name="Date Submitted", value=date, inline=False)
-            embed.add_field(name="Current Balance", value=balance, inline=True)
-            await ctx.send(embed=embed, view=LoanApprovalView(self, ctx, req, is_owner=False))
+        paginator = LoanApprovalPaginator(self, ctx, pending, is_owner=False)
+        await paginator.send()
 
     async def handle_approve(self, interaction, request, is_owner):
         if is_owner:
@@ -247,7 +318,7 @@ class BankLoan(commands.Cog):
 
     @loanowner.command(name="pending")
     async def loanowner_pending(self, ctx):
-        """List all pending owner loan requests with details and buttons (global bank only)"""
+        """List all pending owner loan requests with details and buttons (paginated, global bank only)"""
         is_global = await bank.is_global()
         if not is_global:
             await ctx.send("The bank is not global. Use mod approval commands instead.")
@@ -259,17 +330,8 @@ class BankLoan(commands.Cog):
         if not pending:
             await ctx.send("There are no pending owner loan requests.")
             return
-        for req in pending:
-            user = self.bot.get_user(req["user_id"])
-            name = user.display_name if user else f"User ID {req['user_id']}"
-            balance = await bank.get_balance(user) if user else "N/A"
-            date = req.get("date", "N/A")
-            embed = discord.Embed(title="Pending Owner Loan Request", color=discord.Color.purple())
-            embed.add_field(name="User", value=name, inline=True)
-            embed.add_field(name="Amount", value=req["amount"], inline=True)
-            embed.add_field(name="Date Submitted", value=date, inline=False)
-            embed.add_field(name="Current Balance", value=balance, inline=True)
-            await ctx.send(embed=embed, view=LoanApprovalView(self, ctx, req, is_owner=True))
+        paginator = LoanApprovalPaginator(self, ctx, pending, is_owner=True)
+        await paginator.send()
 
     @loanowner.command(name="approve")
     async def loanowner_approve(self, ctx, user: discord.User):
@@ -310,6 +372,23 @@ class BankLoan(commands.Cog):
                 await ctx.send(f"Denied owner loan request for {user.display_name}.")
                 return
         await ctx.send("No pending owner loan request for that user.")
+
+    async def make_request_embed(self, ctx, req, is_owner):
+        if is_owner:
+            user = self.bot.get_user(req["user_id"])
+            name = user.display_name if user else f"User ID {req['user_id']}"
+            balance = await bank.get_balance(user) if user else "N/A"
+        else:
+            member = ctx.guild.get_member(req["user_id"])
+            name = member.display_name if member else f"User ID {req['user_id']}"
+            balance = await bank.get_balance(member) if member else "N/A"
+        date = req.get("date", "N/A")
+        embed = discord.Embed(title="Pending Loan Request" if not is_owner else "Pending Owner Loan Request", color=discord.Color.orange() if not is_owner else discord.Color.purple())
+        embed.add_field(name="User", value=name, inline=True)
+        embed.add_field(name="Amount", value=req["amount"], inline=True)
+        embed.add_field(name="Date Submitted", value=date, inline=False)
+        embed.add_field(name="Current Balance", value=balance, inline=True)
+        return embed
 
 
 
