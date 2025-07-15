@@ -7,5 +7,6 @@
     "tags": ["dnd", "rpg", "adventure", "game"],
     "min_bot_version": "3.4.0",
     "end_user_data_statement": "This cog stores user and guild data for the purpose of tracking DnD characters, campaigns, and inventory. All data is stored using Red's Config system and is not shared with third parties.",
+    "hidden": true,
     "type": "COG"
 } 
