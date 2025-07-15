@@ -1,9 +1,9 @@
 {
     "name": "earthquake",
     "short": "earthquake stuff",
-    "description": "Get the latest earthquake information",
+    "description": "DO NOT USE SPAMS channel and bot Get the latest earthquake information",
     "end_user_data_statement": "This cog does not record end user data.",
-    "install_msg": "",
+    "install_msg": "Do not use atm",
     "author": [
         "bencos18"],
 
@@ -11,7 +11,7 @@
         "api",
         "earthquake"
     ],
-    "hidden": false,
+    "hidden": true,
     "disabled": false,
     "type": "COG"
 }
