@@ -1,8 +1,0 @@
-{
-    "author": ["bencos18 (492089091320446976)"],
-    "install_msg": "Amazon Affiliate Link Cog installed! Use [p]amazon for commands. Set your affiliate tag with [p]amazon set_tag <tag>. See [p]help amazon for more.",
-    "short": "Amazon affiliate link handler for Discord.",
-    "description": "Automatically converts Amazon links to affiliate links using a configurable tag per server.",
-    "tags": ["amazon", "affiliate", "affiliate links"],
-    "end_user_data_statement": "This cog stores configuration data per guild, specifically affiliate tags and enable/disable state for affiliate link handling."
-}
