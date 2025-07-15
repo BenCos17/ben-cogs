@@ -21,19 +21,19 @@ To use the Bank Loan cog, simply type `[p]loan` followed by the desired command.
 #### Server Moderator Commands
 
 * `[p]loanmod pending`: List all pending loan requests.
-* `loanmod approve <user>`: Approve a user's pending loan request.
-* `loanmod deny <user>`: Deny a user's pending loan request.
+* `[p]loanmod approve <user>`: Approve a user's pending loan request.
+* `[p]loanmod deny <user>`: Deny a user's pending loan request.
 
 #### Bot Owner Commands
 
-* `loanowner pending`: List all pending owner loan requests.
-* `loanowner approve <user>`: Approve a user's pending owner loan request.
-* `loanowner deny <user>`: Deny a user's pending owner loan request.
+* `[p]loanowner pending`: List all pending owner loan requests.
+* `[p]loanowner approve <user>`: Approve a user's pending owner loan request.
+* `[p]loanowner deny <user>`: Deny a user's pending owner loan request.
 
 ## Settings
 
-* `loanset requiremod true/false`: Set whether moderator approval is required for loans (true/false).
-* `loanset maxloan <amount>`: Set the maximum loan amount.
+* `[p]loanset requiremod true/false`: Set whether moderator approval is required for loans (true/false).
+* `[p]loanset maxloan <amount>`: Set the maximum loan amount.
 
 
 
