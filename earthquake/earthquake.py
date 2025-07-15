@@ -13,7 +13,8 @@ class Earthquake(commands.Cog):
         self.config = Config.get_conf(self, identifier=492089091320446976)
         default_guild = {
             "alert_channel_id": None,
-            "min_magnitude": 5
+            "min_magnitude": 5,
+            "announced_earthquake_ids": []  # Track announced earthquake IDs per guild
         }
         self.config.register_guild(**default_guild)
         logging.basicConfig(level=logging.INFO)
@@ -53,11 +54,27 @@ class Earthquake(commands.Cog):
                         response.raise_for_status()
                         data = await response.json()
                         if data['metadata']['count'] > 0:
+                            # Get announced earthquake IDs from config
+                            announced_ids = set(await self.config.guild(guild).announced_earthquake_ids())
+                            new_announced_ids = set(announced_ids)
                             for feature in data['features']:
+                                eq_id = feature.get('id')
+                                if eq_id in announced_ids:
+                                    continue  # Already announced
                                 if self.stop_messages:  # Check here before sending
                                     break
                                 # Send alert for each new earthquake
                                 await self.send_earthquake_embed(self.bot.get_channel(alert_channel_id), feature)
+                                new_announced_ids.add(eq_id)
+                            # Save updated announced IDs (keep only the most recent 100 to avoid bloat)
+                            if new_announced_ids != announced_ids:
+                                # Sort by most recent in data['features'] order
+                                recent_ids = [f.get('id') for f in data['features'] if f.get('id') in new_announced_ids]
+                                # Add any old IDs not in this batch
+                                for old_id in announced_ids:
+                                    if old_id not in recent_ids:
+                                        recent_ids.append(old_id)
+                                await self.config.guild(guild).announced_earthquake_ids.set(recent_ids[:100])
                 except Exception as e:
                     logging.error(f"Error fetching earthquake data: {e}")
 
