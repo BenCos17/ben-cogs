@@ -85,8 +85,9 @@ class LoanApprovalPaginator(discord.ui.View):
             self.parent = parent
         async def callback(self, interaction: discord.Interaction):
             req = self.parent.requests[self.parent.index]
-            await self.parent.cog.handle_approve(interaction, req, self.parent.is_owner)
-            # Remove the request and update view
+            result = await self.parent.cog.handle_approve(interaction, req, self.parent.is_owner)
+            if result is False:
+                return  # Error already handled
             del self.parent.requests[self.parent.index]
             if not self.parent.requests:
                 await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
@@ -101,8 +102,9 @@ class LoanApprovalPaginator(discord.ui.View):
             self.parent = parent
         async def callback(self, interaction: discord.Interaction):
             req = self.parent.requests[self.parent.index]
-            await self.parent.cog.handle_deny(interaction, req, self.parent.is_owner)
-            # Remove the request and update view
+            result = await self.parent.cog.handle_deny(interaction, req, self.parent.is_owner)
+            if result is False:
+                return  # Error already handled
             del self.parent.requests[self.parent.index]
             if not self.parent.requests:
                 await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
@@ -244,10 +246,10 @@ class BankLoan(commands.Cog):
             user = interaction.guild.get_member(request["user_id"])
         if not user:
             await interaction.followup.send("User not found.", ephemeral=True)
-            return
+            return False
         if request not in pending:
             await interaction.followup.send("Request no longer pending.", ephemeral=True)
-            return
+            return False
         await bank.deposit_credits(user, request["amount"])
         await self.config.user(user).loan_amount.set(request["amount"])
         pending.remove(request)
@@ -255,7 +257,8 @@ class BankLoan(commands.Cog):
             await self.config.pending_owner_loans.set(pending)
         else:
             await self.config.guild(interaction.guild).pending_loans.set(pending)
-        await interaction.followup.send(f"Approved and credited {request['amount']} to {user.display_name}.", ephemeral=True)
+        # Do not send a followup message here; paginator will update the view
+        return True
 
     async def handle_deny(self, interaction, request, is_owner):
         if is_owner:
@@ -266,16 +269,17 @@ class BankLoan(commands.Cog):
             user = interaction.guild.get_member(request["user_id"])
         if not user:
             await interaction.followup.send("User not found.", ephemeral=True)
-            return
+            return False
         if request not in pending:
             await interaction.followup.send("Request no longer pending.", ephemeral=True)
-            return
+            return False
         pending.remove(request)
         if is_owner:
             await self.config.pending_owner_loans.set(pending)
         else:
             await self.config.guild(interaction.guild).pending_loans.set(pending)
-        await interaction.followup.send(f"Denied loan request for {user.display_name}.", ephemeral=True)
+        # Do not send a followup message here; paginator will update the view
+        return True
 
     @loanmod.command(name="approve")
     async def loanmod_approve(self, ctx, member: discord.Member):
