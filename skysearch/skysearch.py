@@ -31,7 +31,7 @@ class Skysearch(red_commands.Cog):
         self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
-        self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback'
+        self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, last_emergency_squawk_time=None, auto_delete_not_found=True)
         
         # Initialize utility managers
