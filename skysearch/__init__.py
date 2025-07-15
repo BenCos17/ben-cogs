@@ -3,7 +3,7 @@ SkySearch - A powerful aircraft tracking and information Discord bot cog
 """
 
 from .skysearch import Skysearch
-from .commands.dashboard_integration import DashboardIntegration
+from .commands.dashboard_integration import SkySearchDashboard
 
 __red_end_user_data_statement__ = "This cog does not store any end user data."
 
@@ -14,5 +14,5 @@ async def setup(bot):
     # Register dashboard integration if Dashboard cog is loaded
     dashboard_cog = bot.get_cog("Dashboard")
     if dashboard_cog:
-        dashboard_integration = DashboardIntegration()
+        dashboard_integration = SkySearchDashboard()
         await bot.add_cog(dashboard_integration)
