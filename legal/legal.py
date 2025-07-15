@@ -112,7 +112,7 @@ class Legal(commands.Cog):
         image = Image.open(template_path)
 
         # Load font
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
+        font = ImageFont.truetype("arial.ttf", 24) if os.name == 'nt' else ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
 
         # Draw text on image
         draw = ImageDraw.Draw(image)
