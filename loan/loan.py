@@ -1,6 +1,8 @@
 import discord
 from redbot.core import commands, Config, bank
 from redbot.core.utils.chat_formatting import humanize_list
+from datetime import datetime
+
 
 # Custom check to hide loanmod commands if bank is global
 async def bank_not_global(ctx):
@@ -9,17 +11,37 @@ async def bank_not_global(ctx):
 def loanmod_check():
     return commands.check(bank_not_global)
 
+class LoanApprovalView(discord.ui.View):
+    def __init__(self, cog, ctx, request, is_owner):
+        super().__init__(timeout=60)
+        self.cog = cog
+        self.ctx = ctx
+        self.request = request
+        self.is_owner = is_owner
+
+    @discord.ui.button(label="Approve", style=discord.ButtonStyle.green)
+    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.cog.handle_approve(interaction, self.request, self.is_owner)
+        self.disable_all_items()
+        await interaction.response.edit_message(view=self)
+
+    @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
+    async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.cog.handle_deny(interaction, self.request, self.is_owner)
+        self.disable_all_items()
+        await interaction.response.edit_message(view=self)
+
 class BankLoan(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config = Config.get_conf(self, identifier=492089091320446976)
         default_guild = {
             "require_mod_approval": False,
             "max_loan": 1000,
-            "pending_loans": []  # List of dicts: {"user_id": int, "amount": int}
+            "pending_loans": []  # List of dicts: {"user_id": int, "amount": int, "date": str}
         }
         default_global = {
-            "pending_owner_loans": []  # List of dicts: {"user_id": int, "amount": int}
+            "pending_owner_loans": []  # List of dicts: {"user_id": int, "amount": int, "date": str}
         }
         default_user = {
             "loan_amount": 0
@@ -48,6 +70,7 @@ class BankLoan(commands.Cog):
             await ctx.send(f"The maximum loan amount is {max_loan}.")
             return
         is_global = await bank.is_global()
+        now = datetime.utcnow().isoformat()
         if is_global:
             # Owner approval required
             pending = await self.config.pending_owner_loans()
@@ -55,7 +78,7 @@ class BankLoan(commands.Cog):
                 if req["user_id"] == user.id:
                     await ctx.send("You already have a pending loan request.")
                     return
-            pending.append({"user_id": user.id, "amount": amount})
+            pending.append({"user_id": user.id, "amount": amount, "date": now})
             await self.config.pending_owner_loans.set(pending)
             await ctx.send(f"Loan request for {amount} submitted and is pending bot owner approval.")
             return
@@ -67,7 +90,7 @@ class BankLoan(commands.Cog):
                 if req["user_id"] == user.id:
                     await ctx.send("You already have a pending loan request.")
                     return
-            pending.append({"user_id": user.id, "amount": amount})
+            pending.append({"user_id": user.id, "amount": amount, "date": now})
             await self.config.guild(guild).pending_loans.set(pending)
             await ctx.send(f"Loan request for {amount} submitted and is pending moderator approval.")
         else:
@@ -124,21 +147,68 @@ class BankLoan(commands.Cog):
 
     @loanmod.command(name="pending")
     async def loanmod_pending(self, ctx):
-        """List all pending loan requests"""
+        """List all pending loan requests with details and buttons"""
         pending = await self.config.guild(ctx.guild).pending_loans()
         if not pending:
             await ctx.send("There are no pending loan requests.")
             return
-        lines = []
         for req in pending:
             member = ctx.guild.get_member(req["user_id"])
             name = member.display_name if member else f"User ID {req['user_id']}"
-            lines.append(f"{name}: {req['amount']}")
-        await ctx.send("Pending loan requests:\n" + "\n".join(lines))
+            balance = await bank.get_balance(member) if member else "N/A"
+            date = req.get("date", "N/A")
+            embed = discord.Embed(title="Pending Loan Request", color=discord.Color.orange())
+            embed.add_field(name="User", value=name, inline=True)
+            embed.add_field(name="Amount", value=req["amount"], inline=True)
+            embed.add_field(name="Date Submitted", value=date, inline=False)
+            embed.add_field(name="Current Balance", value=balance, inline=True)
+            await ctx.send(embed=embed, view=LoanApprovalView(self, ctx, req, is_owner=False))
+
+    async def handle_approve(self, interaction, request, is_owner):
+        if is_owner:
+            pending = await self.config.pending_owner_loans()
+            user = self.bot.get_user(request["user_id"])
+        else:
+            pending = await self.config.guild(interaction.guild).pending_loans()
+            user = interaction.guild.get_member(request["user_id"])
+        if not user:
+            await interaction.followup.send("User not found.", ephemeral=True)
+            return
+        if request not in pending:
+            await interaction.followup.send("Request no longer pending.", ephemeral=True)
+            return
+        await bank.deposit_credits(user, request["amount"])
+        await self.config.user(user).loan_amount.set(request["amount"])
+        pending.remove(request)
+        if is_owner:
+            await self.config.pending_owner_loans.set(pending)
+        else:
+            await self.config.guild(interaction.guild).pending_loans.set(pending)
+        await interaction.followup.send(f"Approved and credited {request['amount']} to {user.display_name}.", ephemeral=True)
+
+    async def handle_deny(self, interaction, request, is_owner):
+        if is_owner:
+            pending = await self.config.pending_owner_loans()
+            user = self.bot.get_user(request["user_id"])
+        else:
+            pending = await self.config.guild(interaction.guild).pending_loans()
+            user = interaction.guild.get_member(request["user_id"])
+        if not user:
+            await interaction.followup.send("User not found.", ephemeral=True)
+            return
+        if request not in pending:
+            await interaction.followup.send("Request no longer pending.", ephemeral=True)
+            return
+        pending.remove(request)
+        if is_owner:
+            await self.config.pending_owner_loans.set(pending)
+        else:
+            await self.config.guild(interaction.guild).pending_loans.set(pending)
+        await interaction.followup.send(f"Denied loan request for {user.display_name}.", ephemeral=True)
 
     @loanmod.command(name="approve")
     async def loanmod_approve(self, ctx, member: discord.Member):
-        """Approve a user's pending loan request"""
+        """Approve a user's pending loan request (manual fallback)"""
         pending = await self.config.guild(ctx.guild).pending_loans()
         for req in pending:
             if req["user_id"] == member.id:
@@ -152,7 +222,7 @@ class BankLoan(commands.Cog):
 
     @loanmod.command(name="deny")
     async def loanmod_deny(self, ctx, member: discord.Member):
-        """Deny a user's pending loan request"""
+        """Deny a user's pending loan request (manual fallback)"""
         pending = await self.config.guild(ctx.guild).pending_loans()
         for req in pending:
             if req["user_id"] == member.id:
@@ -177,7 +247,7 @@ class BankLoan(commands.Cog):
 
     @loanowner.command(name="pending")
     async def loanowner_pending(self, ctx):
-        """List all pending owner loan requests (global bank only)"""
+        """List all pending owner loan requests with details and buttons (global bank only)"""
         is_global = await bank.is_global()
         if not is_global:
             await ctx.send("The bank is not global. Use mod approval commands instead.")
@@ -189,16 +259,21 @@ class BankLoan(commands.Cog):
         if not pending:
             await ctx.send("There are no pending owner loan requests.")
             return
-        lines = []
         for req in pending:
-            user = ctx.bot.get_user(req["user_id"])
+            user = self.bot.get_user(req["user_id"])
             name = user.display_name if user else f"User ID {req['user_id']}"
-            lines.append(f"{name}: {req['amount']}")
-        await ctx.send("Pending owner loan requests:\n" + "\n".join(lines))
+            balance = await bank.get_balance(user) if user else "N/A"
+            date = req.get("date", "N/A")
+            embed = discord.Embed(title="Pending Owner Loan Request", color=discord.Color.purple())
+            embed.add_field(name="User", value=name, inline=True)
+            embed.add_field(name="Amount", value=req["amount"], inline=True)
+            embed.add_field(name="Date Submitted", value=date, inline=False)
+            embed.add_field(name="Current Balance", value=balance, inline=True)
+            await ctx.send(embed=embed, view=LoanApprovalView(self, ctx, req, is_owner=True))
 
     @loanowner.command(name="approve")
     async def loanowner_approve(self, ctx, user: discord.User):
-        """Approve a user's pending owner loan request (global bank only)"""
+        """Approve a user's pending owner loan request (manual fallback, global bank only)"""
         is_global = await bank.is_global()
         if not is_global:
             await ctx.send("The bank is not global. Use mod approval commands instead.")
@@ -219,7 +294,7 @@ class BankLoan(commands.Cog):
 
     @loanowner.command(name="deny")
     async def loanowner_deny(self, ctx, user: discord.User):
-        """Deny a user's pending owner loan request (global bank only)"""
+        """Deny a user's pending owner loan request (manual fallback, global bank only)"""
         is_global = await bank.is_global()
         if not is_global:
             await ctx.send("The bank is not global. Use mod approval commands instead.")
