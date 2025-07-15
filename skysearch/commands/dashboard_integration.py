@@ -39,9 +39,11 @@ class DashboardIntegration(commands.Cog):
 
     @dashboard_page(name="settings", description="Configure SkySearch settings for this guild", methods=("GET", "POST"), is_owner=False)
     async def guild_settings_page(self, user: discord.User, guild: discord.Guild, request: typing.Optional[dict] = None, **kwargs) -> typing.Dict[str, typing.Any]:
+        import html
         config = self.bot.get_cog("Skysearch").config.guild(guild)
         error_message = ""
         updates = []
+        request_debug = f"<pre>{html.escape(str(request))}</pre>" if request else "<pre>No request object received.</pre>"
         try:
             # Handle POST (update settings)
             if request and (request.get("method") == "POST" or request.get("_method") == "POST"):
@@ -86,7 +88,7 @@ class DashboardIntegration(commands.Cog):
                     updates.append(f"Error setting auto-delete: {e}")
         except Exception as exc:
             import traceback
-            error_message = f"<pre>{traceback.format_exc()}</pre>"
+            error_message = f"<pre>{html.escape(traceback.format_exc())}</pre>"
         # Fetch current settings
         alert_channel = await config.alert_channel()
         alert_role = await config.alert_role()
@@ -95,14 +97,16 @@ class DashboardIntegration(commands.Cog):
         # Render settings form
         source = f'''
         <h3>SkySearch Guild Settings</h3>
-        {('<div style="color:red;">'+error_message+'</div>') if error_message else ''}
-        {('<div style="color:green;">'+'<br>'.join(updates)+'</div>') if updates else ''}
-        <form method="post">
-            <label>Alert Channel ID:<br><input type="text" name="alert_channel" value="{alert_channel or ''}" placeholder="Channel ID or blank to clear"></label><br>
-            <label>Alert Role ID:<br><input type="text" name="alert_role" value="{alert_role or ''}" placeholder="Role ID or blank to clear"></label><br>
-            <label>Auto ICAO Lookup:<br><input type="checkbox" name="auto_icao" {'checked' if auto_icao else ''}></label><br>
-            <label>Auto-Delete 'Not Found' Messages:<br><input type="checkbox" name="auto_delete_not_found" {'checked' if auto_delete else ''}></label><br>
-            <button type="submit">Update Settings</button>
+        <h4>Debug Info</h4>
+        {request_debug}
+        {('<div style=\"color:red;\">'+error_message+'</div>') if error_message else ''}
+        {('<div style=\"color:green;\">'+'<br>'.join(updates)+'</div>') if updates else ''}
+        <form method=\"post\">
+            <label>Alert Channel ID:<br><input type=\"text\" name=\"alert_channel\" value=\"{alert_channel or ''}\" placeholder=\"Channel ID or blank to clear\"></label><br>
+            <label>Alert Role ID:<br><input type=\"text\" name=\"alert_role\" value=\"{alert_role or ''}\" placeholder=\"Role ID or blank to clear\"></label><br>
+            <label>Auto ICAO Lookup:<br><input type=\"checkbox\" name=\"auto_icao\" {'checked' if auto_icao else ''}></label><br>
+            <label>Auto-Delete 'Not Found' Messages:<br><input type=\"checkbox\" name=\"auto_delete_not_found\" {'checked' if auto_delete else ''}></label><br>
+            <button type=\"submit\">Update Settings</button>
         </form>
         '''
         return {
