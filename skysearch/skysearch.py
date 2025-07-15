@@ -9,6 +9,7 @@ import datetime
 import aiohttp
 from discord.ext import tasks, commands
 from redbot.core import commands as red_commands, Config
+import typing
 
 from .data.icao_codes import (
     law_enforcement_icao_set, military_icao_set, medical_icao_set, 
