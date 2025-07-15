@@ -469,16 +469,17 @@ class Skysearch(red_commands.Cog):
                             updates.append(f"Alert role set to <@&{role_id}>.")
                     except Exception as e:
                         updates.append(f"Error setting alert role: {e}")
-                auto_icao = data.get("auto_icao")
+                # Fix checkbox handling: if not present, set to False
+                auto_icao = data.get("auto_icao") is not None
                 try:
-                    await config.auto_icao.set(bool(auto_icao))
-                    updates.append(f"Auto ICAO lookup set to {bool(auto_icao)}.")
+                    await config.auto_icao.set(auto_icao)
+                    updates.append(f"Auto ICAO lookup set to {auto_icao}.")
                 except Exception as e:
                     updates.append(f"Error setting auto ICAO: {e}")
-                auto_delete = data.get("auto_delete_not_found")
+                auto_delete = data.get("auto_delete_not_found") is not None
                 try:
-                    await config.auto_delete_not_found.set(bool(auto_delete))
-                    updates.append(f"Auto-delete 'not found' set to {bool(auto_delete)}.")
+                    await config.auto_delete_not_found.set(auto_delete)
+                    updates.append(f"Auto-delete 'not found' set to {auto_delete}.")
                 except Exception as e:
                     updates.append(f"Error setting auto-delete: {e}")
         except Exception:
