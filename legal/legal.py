@@ -107,7 +107,7 @@ class Legal(commands.Cog):
 
     async def generate_image(self, template, *args):
         # Load template image
-        template_path = os.path.join("legal", "templates", court_order_template.png)
+        template_path = os.path.join("legal", "templates", court_order_template)
         image = Image.open(template_path)
 
         # Load font
