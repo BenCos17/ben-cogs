@@ -489,7 +489,15 @@ class Skysearch(red_commands.Cog):
         alert_role = await config.alert_role()
         auto_icao = await config.auto_icao()
         auto_delete = await config.auto_delete_not_found()
-        csrf_token = kwargs.get("csrf_token", ["", ""])[0]  # Get the CSRF token from kwargs
+        csrf_token_tuple = kwargs.get("csrf_token")
+        print("CSRF token in kwargs:", csrf_token_tuple)  # Debug print
+        if not csrf_token_tuple or not csrf_token_tuple[0]:
+            source = "<h3>Error</h3><p>CSRF token is missing. Please reload the page or contact the bot admin.</p>"
+            return {
+                "status": 0,
+                "web_content": {"source": source},
+            }
+        csrf_token = csrf_token_tuple[0]
         updates_html = f"<div style='color:green;'>{'<br>'.join(updates)}</div>" if updates else ""
         source = f'''
         <h3>SkySearch Guild Settings</h3>
