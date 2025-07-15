@@ -1,0 +1,11 @@
+{
+    "author": ["bencos18"],
+    "install_msg": "Thank you for installing the AutoChannel cog. Use `[p]autochannel` to manage auto-reply channels. For support, message me on Discord (bencos18) or open a GitHub issue.",
+    "short": "Automatically reply in specified channels.",
+    "description": "Cog to automatically reply in specified channels. Lets you set channels where the bot will always reply to messages.",
+    "requirements": [],
+    "tags": ["auto", "channel", "reply"],
+    "min_bot_version": "3.4.0",
+    "end_user_data_statement": "This cog stores channel IDs for the purpose of tracking which channels are set for auto-reply. All data is stored using Red's Config system and is not shared with third parties.",
+    "type": "COG"
+} 

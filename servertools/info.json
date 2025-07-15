@@ -1,0 +1,11 @@
+{
+    "author": ["bencos18"],
+    "install_msg": "Thank you for installing the Servertools cog. Use `[p]help servertools` to see available commands. For support, message me on Discord (bencos18) or open a GitHub issue.",
+    "short": "Server management utilities.",
+    "description": "A cog providing various server management utilities, such as mod DMs, voice moves, auto-reactions, and more.",
+    "requirements": ["aiohttp", "Pillow"],
+    "tags": ["server", "tools", "moderation", "utility"],
+    "min_bot_version": "3.4.0",
+    "end_user_data_statement": "This cog stores guild and user data for the purpose of managing server utilities and notifications. All data is stored using Red's Config system and is not shared with third parties.",
+    "type": "COG"
+} 

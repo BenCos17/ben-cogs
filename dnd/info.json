@@ -1,0 +1,11 @@
+{
+    "author": ["bencos18"],
+    "install_msg": "Thank you for installing the DnD cog. Use `[p]dndgame` to start an adventure. For support, message me on Discord (bencos18) or open a GitHub issue.",
+    "short": "Play DnD-style adventures in Discord.",
+    "description": "A feature-rich DnD cog for Redbot, including character creation, combat, inventory, and campaign management.",
+    "requirements": [],
+    "tags": ["dnd", "rpg", "adventure", "game"],
+    "min_bot_version": "3.4.0",
+    "end_user_data_statement": "This cog stores user and guild data for the purpose of tracking DnD characters, campaigns, and inventory. All data is stored using Red's Config system and is not shared with third parties.",
+    "type": "COG"
+} 
