@@ -489,11 +489,13 @@ class Skysearch(red_commands.Cog):
         alert_role = await config.alert_role()
         auto_icao = await config.auto_icao()
         auto_delete = await config.auto_delete_not_found()
+        csrf_token = kwargs.get("csrf_token", ["", ""])[0]  # Get the CSRF token from kwargs
         updates_html = f"<div style='color:green;'>{'<br>'.join(updates)}</div>" if updates else ""
         source = f'''
         <h3>SkySearch Guild Settings</h3>
         {updates_html}
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{csrf_token}">
             <label>Alert Channel ID:<br><input type="text" name="alert_channel" value="{alert_channel or ''}" placeholder="Channel ID or blank to clear"></label><br>
             <label>Alert Role ID:<br><input type="text" name="alert_role" value="{alert_role or ''}" placeholder="Role ID or blank to clear"></label><br>
             <label>Auto ICAO Lookup:<br><input type="checkbox" name="auto_icao" {'checked' if auto_icao else ''}></label><br>
