@@ -2,6 +2,13 @@ import discord
 from redbot.core import commands, Config, bank
 from redbot.core.utils.chat_formatting import humanize_list
 
+# Custom check to hide loanmod commands if bank is global
+async def bank_not_global(ctx):
+    return not await bank.is_global()
+
+def loanmod_check():
+    return commands.check(bank_not_global)
+
 class BankLoan(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -109,22 +116,15 @@ class BankLoan(commands.Cog):
 
     @commands.group()
     @commands.mod_or_permissions(manage_guild=True)
+    @loanmod_check()
     async def loanmod(self, ctx):
         """Moderator loan approval commands"""
-        is_global = await bank.is_global()
-        if is_global:
-            await ctx.send("The bank is global. Use owner approval commands instead.")
-            return
         if ctx.invoked_subcommand is None:
             await ctx.send("Invalid subcommand")
 
     @loanmod.command(name="pending")
     async def loanmod_pending(self, ctx):
         """List all pending loan requests"""
-        is_global = await bank.is_global()
-        if is_global:
-            await ctx.send("The bank is global. Use owner approval commands instead.")
-            return
         pending = await self.config.guild(ctx.guild).pending_loans()
         if not pending:
             await ctx.send("There are no pending loan requests.")
@@ -139,10 +139,6 @@ class BankLoan(commands.Cog):
     @loanmod.command(name="approve")
     async def loanmod_approve(self, ctx, member: discord.Member):
         """Approve a user's pending loan request"""
-        is_global = await bank.is_global()
-        if is_global:
-            await ctx.send("The bank is global. Use owner approval commands instead.")
-            return
         pending = await self.config.guild(ctx.guild).pending_loans()
         for req in pending:
             if req["user_id"] == member.id:
@@ -157,10 +153,6 @@ class BankLoan(commands.Cog):
     @loanmod.command(name="deny")
     async def loanmod_deny(self, ctx, member: discord.Member):
         """Deny a user's pending loan request"""
-        is_global = await bank.is_global()
-        if is_global:
-            await ctx.send("The bank is global. Use owner approval commands instead.")
-            return
         pending = await self.config.guild(ctx.guild).pending_loans()
         for req in pending:
             if req["user_id"] == member.id:
