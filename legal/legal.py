@@ -100,14 +100,15 @@ class Legal(commands.Cog):
 
         # Adding a field for case details
         embed.add_field(name="Case Details", value="Case Number: [Case Number]\nCase Type: [Case Type]\nCourt Location: [Court Location]", inline=False)
-
         # Generate image
         image = await self.generate_image(image_template, target_name, reason, date, signature)
         await ctx.send(embed=embed, file=image)
 
     async def generate_image(self, template, *args):
         # Load template image
-        template_path = os.path.join("legal", "templates", template)
+        template_path = os.path.join(os.path.dirname(__file__), "templates", template)
+        if not os.path.exists(template_path):
+            raise FileNotFoundError(f"Template file not found: {template_path}")
         image = Image.open(template_path)
 
         # Load font
