@@ -501,6 +501,14 @@ class Skysearch(red_commands.Cog):
             <button type="submit">Update Settings</button>
         </form>
         '''
+        # Permission check: only allow users with Manage Channels permission
+        member = guild.get_member(user.id)
+        if not member or not member.guild_permissions.manage_channels:
+            source = "<h3>Permission Denied</h3><p>You need the <b>Manage Channels</b> permission in this server to access these settings.</p>"
+            return {
+                "status": 0,
+                "web_content": {"source": source},
+            }
         return {
             "status": 0,
             "web_content": {"source": source},
