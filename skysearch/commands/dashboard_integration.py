@@ -30,9 +30,9 @@ class DashboardIntegration(commands.Cog):
 
     @dashboard_page(name="guild", description="View SkySearch info for a guild", methods=("GET",), is_owner=False)
     async def guild_page(self, user: discord.User, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        # Example guild page
-        source = '<h4>SkySearch is active in guild: <b>{{ guild.name }}</b> (ID: {{ guild.id }})</h4>'
+        # Render the HTML with actual guild data
+        source = f'<h4>SkySearch is active in guild: <b>{guild.name}</b> (ID: {guild.id})</h4>'
         return {
             "status": 0,
-            "web_content": {"source": source, "guild": guild},
+            "web_content": {"source": source},
         } 
