@@ -22,6 +22,7 @@ from .utils.export import ExportManager
 from .commands.aircraft import AircraftCommands
 from .commands.airport import AirportCommands
 from .commands.admin import AdminCommands
+from .dashboard import setup_dashboard  # Import the dashboard integration
 
 
 def dashboard_page(*args, **kwargs):
@@ -65,6 +66,12 @@ class Skysearch(red_commands.Cog):
         # Start background tasks
         self.check_emergency_squawks.start()
         
+        # Setup dashboard integration
+        try:
+            setup_dashboard(self)
+        except Exception as e:
+            print(f"Dashboard integration setup failed: {e}")
+
     async def cog_unload(self):
         """Clean up when the cog is unloaded."""
         await self.api.close()
@@ -423,99 +430,5 @@ class Skysearch(red_commands.Cog):
     @commands.Cog.listener()
     async def on_dashboard_cog_add(self, dashboard_cog: commands.Cog) -> None:
         dashboard_cog.rpc.third_parties_handler.add_third_party(self)
-
-    @dashboard_page(name=None, description="SkySearch Dashboard Home", methods=("GET",), is_owner=False)
-    async def dashboard_home(self, user: discord.User, **kwargs) -> typing.Dict[str, typing.Any]:
-        source = '<h2>Welcome to the SkySearch Dashboard Integration!</h2>' \
-                 '<p>This page is provided by the SkySearch cog. Use the navigation to explore available features.</p>'
-        return {
-            "status": 0,
-            "web_content": {"source": source},
-        }
-
-    @dashboard_page(name="guild", description="View SkySearch info for a guild", methods=("GET",), is_owner=False)
-    async def guild_page(self, user: discord.User, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        source = f'<h4>SkySearch is active in guild: <b>{guild.name}</b> (ID: {guild.id})</h4>'
-        return {
-            "status": 0,
-            "web_content": {"source": source},
-        }
-
-    @dashboard_page(name="settings", description="Configure SkySearch settings for this guild", methods=("GET", "POST"), is_owner=False)
-    async def guild_settings_page(self, user: discord.User, guild: discord.Guild, request: typing.Optional[dict] = None, **kwargs) -> typing.Dict[str, typing.Any]:
-        config = self.config.guild(guild)
-        alert_channel = await config.alert_channel()
-        alert_role = await config.alert_role()
-        auto_icao = await config.auto_icao()
-        auto_delete = await config.auto_delete_not_found()
-
-        import wtforms
-        class SettingsForm(kwargs["Form"]):
-            def __init__(self):
-                super().__init__(prefix="skysearch_settings_")
-            alert_channel: wtforms.StringField = wtforms.StringField("Alert Channel ID", default=str(alert_channel or ""))
-            alert_role: wtforms.StringField = wtforms.StringField("Alert Role ID", default=str(alert_role or ""))
-            auto_icao: wtforms.BooleanField = wtforms.BooleanField("Auto ICAO Lookup", default=auto_icao)
-            auto_delete_not_found: wtforms.BooleanField = wtforms.BooleanField("Auto-Delete 'Not Found' Messages", default=auto_delete)
-            submit: wtforms.SubmitField = wtforms.SubmitField("Update Settings")
-
-        form = SettingsForm()
-        updates = []
-        if form.validate_on_submit():
-            try:
-                channel_id = form.alert_channel.data.strip()
-                if channel_id == "":
-                    await config.alert_channel.clear()
-                    updates.append("Alert channel cleared.")
-                else:
-                    await config.alert_channel.set(int(channel_id))
-                    updates.append(f"Alert channel set to <#{channel_id}>.")
-            except Exception as e:
-                updates.append(f"Error setting alert channel: {e}")
-            try:
-                role_id = form.alert_role.data.strip()
-                if role_id == "":
-                    await config.alert_role.clear()
-                    updates.append("Alert role cleared.")
-                else:
-                    await config.alert_role.set(int(role_id))
-                    updates.append(f"Alert role set to <@&{role_id}>.")
-            except Exception as e:
-                updates.append(f"Error setting alert role: {e}")
-            try:
-                await config.auto_icao.set(bool(form.auto_icao.data))
-                updates.append(f"Auto ICAO lookup set to {bool(form.auto_icao.data)}.")
-            except Exception as e:
-                updates.append(f"Error setting auto ICAO: {e}")
-            try:
-                await config.auto_delete_not_found.set(bool(form.auto_delete_not_found.data))
-                updates.append(f"Auto-delete 'not found' set to {bool(form.auto_delete_not_found.data)}.")
-            except Exception as e:
-                updates.append(f"Error setting auto-delete: {e}")
-        updates_html = f"<div style='color:green;'>{'<br>'.join(updates)}</div>" if updates else ""
-        source = f'''
-        <h3>SkySearch Guild Settings</h3>
-        {updates_html}
-        {{ form|safe }}
-        '''
-        # Permission check: only allow users with Manage Channels permission
-        member = guild.get_member(user.id)
-        if not member or not member.guild_permissions.manage_channels:
-            source = "<h3>Permission Denied</h3><p>You need the <b>Manage Channels</b> permission in this server to access these settings.</p>"
-            return {
-                "status": 0,
-                "web_content": {"source": source},
-            }
-        return {
-            "status": 0,
-            "web_content": {"source": source},
-        }
-
-    def cog_unload(self):
-        """Clean up when the cog is unloaded."""
-        try:
-            self.check_emergency_squawks.cancel()
-        except Exception as e:
-            print(f"Error unloading cog: {e}")
         
         
