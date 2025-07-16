@@ -69,8 +69,14 @@ class DashboardIntegration:
         class GuildSettingsForm(kwargs["Form"]):
             def __init__(self):
                 super().__init__(prefix="skysearch_guild_")
-            alert_channel = wtforms.StringField("Alert Channel ID")
-            alert_role = wtforms.StringField("Alert Role ID")
+            alert_channel = wtforms.StringField(
+                "Alert Channel ID",
+                validators=[wtforms.validators.Optional(), wtforms.validators.Regexp(r"^\\d*$", message="Must be a number or blank.")]
+            )
+            alert_role = wtforms.StringField(
+                "Alert Role ID",
+                validators=[wtforms.validators.Optional(), wtforms.validators.Regexp(r"^\\d*$", message="Must be a number or blank.")]
+            )
             auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
             auto_delete = wtforms.BooleanField("Auto Delete Not Found")
             submit = wtforms.SubmitField("Save Settings")
@@ -83,8 +89,18 @@ class DashboardIntegration:
             form.auto_delete.data = bool(auto_delete)
 
         if form.validate_on_submit():
-            new_channel = int(form.alert_channel.data) if form.alert_channel.data else None
-            new_role = int(form.alert_role.data) if form.alert_role.data else None
+            try:
+                new_channel = int(form.alert_channel.data) if form.alert_channel.data else None
+                new_role = int(form.alert_role.data) if form.alert_role.data else None
+            except ValueError:
+                return {
+                    "status": 0,
+                    "web_content": {
+                        "source": "{{ form|safe }}",
+                        "form": form,
+                    },
+                    "notifications": [{"message": "Channel/Role ID must be a number.", "category": "error"}],
+                }
             await config.alert_channel.set(new_channel)
             await config.alert_role.set(new_role)
             await config.auto_icao.set(form.auto_icao.data)
