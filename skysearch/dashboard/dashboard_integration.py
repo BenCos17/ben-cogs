@@ -50,8 +50,14 @@ class DashboardIntegration:
             },
         }
 
-    @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET", "POST"))
+    @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET",))
     async def dashboard_guild_settings(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
+        return {
+            "status": 0,
+            "web_content": {
+                "source": "<h2>Test: SkySearch Guild Settings page is loading.</h2>",
+            },
+        }
         try:
             cog = getattr(self, "_skysearch_cog", None)
             if not cog:
