@@ -54,9 +54,8 @@ class DashboardIntegration:
             },
         }
 
-    @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET", "POST"), context_ids=["guild_id"])
+    @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET",), context_ids=["guild_id"])
     async def dashboard_guild_settings(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        import wtforms
         cog = getattr(self, "_skysearch_cog", None)
         if not cog:
             return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
@@ -65,56 +64,26 @@ class DashboardIntegration:
         alert_role_id = await config.alert_role()
         auto_icao = await config.auto_icao()
         auto_delete = await config.auto_delete_not_found()
-
-        class GuildSettingsForm(kwargs["Form"]):
-            def __init__(self):
-                super().__init__(prefix="skysearch_guild_")
-            alert_channel = wtforms.StringField(
-                "Alert Channel ID",
-                validators=[wtforms.validators.Optional(), wtforms.validators.Regexp(r"^\\d*$", message="Must be a number or blank.")]
-            )
-            alert_role = wtforms.StringField(
-                "Alert Role ID",
-                validators=[wtforms.validators.Optional(), wtforms.validators.Regexp(r"^\\d*$", message="Must be a number or blank.")]
-            )
-            auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
-            auto_delete = wtforms.BooleanField("Auto Delete Not Found")
-            submit = wtforms.SubmitField("Save Settings")
-
-        form = GuildSettingsForm()
-        if not form.is_submitted():
-            form.alert_channel.data = str(alert_channel_id or "")
-            form.alert_role.data = str(alert_role_id or "")
-            form.auto_icao.data = bool(auto_icao)
-            form.auto_delete.data = bool(auto_delete)
-
-        if form.validate_on_submit():
-            try:
-                new_channel = int(form.alert_channel.data) if form.alert_channel.data else None
-                new_role = int(form.alert_role.data) if form.alert_role.data else None
-            except ValueError:
-                return {
-                    "status": 0,
-                    "web_content": {
-                        "source": "{{ form|safe }}",
-                        "form": form,
-                    },
-                    "notifications": [{"message": "Channel/Role ID must be a number.", "category": "error"}],
-                }
-            await config.alert_channel.set(new_channel)
-            await config.alert_role.set(new_role)
-            await config.auto_icao.set(form.auto_icao.data)
-            await config.auto_delete_not_found.set(form.auto_delete.data)
-            return {
-                "status": 0,
-                "notifications": [{"message": "Settings updated!", "category": "success"}],
-                "redirect_url": kwargs["request_url"],
-            }
-
+        # Resolve channel and role names
+        channel_obj = guild.get_channel(alert_channel_id) if alert_channel_id else None
+        role_obj = guild.get_role(alert_role_id) if alert_role_id else None
+        alert_channel = channel_obj.name if channel_obj else "Not set"
+        alert_role = role_obj.name if role_obj else "Not set"
+        auto_icao_str = "Enabled" if auto_icao else "Disabled"
+        auto_delete_str = "Enabled" if auto_delete else "Disabled"
+        html = f'''
+            <h2>SkySearch Guild Settings</h2>
+            <ul>
+                <li><b>Alert Channel:</b> {alert_channel}</li>
+                <li><b>Alert Role:</b> {alert_role}</li>
+                <li><b>Auto ICAO Lookup:</b> {auto_icao_str}</li>
+                <li><b>Auto Delete Not Found:</b> {auto_delete_str}</li>
+            </ul>
+            <p>Use Discord commands to change these settings.</p>
+        '''
         return {
             "status": 0,
             "web_content": {
-                "source": "{{ form|safe }}",
-                "form": form,
+                "source": html,
             },
         } 
