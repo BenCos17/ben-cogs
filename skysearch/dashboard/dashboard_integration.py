@@ -31,7 +31,6 @@ class DashboardIntegration:
         )
         # Try to get stats from the cog if possible
         cog = getattr(self, "_skysearch_cog", None)
-        aircraft_count = getattr(cog, "aircraft_commands", None)
         if hasattr(cog, "military_icao_set"):
             military_count = len(cog.military_icao_set)
         else:
@@ -44,9 +43,11 @@ class DashboardIntegration:
             "status": 0,
             "web_content": {
                 "source": embed_html,
-                "aircraft_count": "?",
-                "military_count": military_count,
-                "law_count": law_count,
+                "context": {
+                    "aircraft_count": "?",
+                    "military_count": military_count,
+                    "law_count": law_count,
+                },
             },
         }
 
