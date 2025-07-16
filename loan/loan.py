@@ -384,6 +384,15 @@ class BankLoan(commands.Cog):
     @loanset.command()
     async def reviewchannel(self, ctx, channel: discord.TextChannel = None):
         """Set the channel for pending loan review (leave blank to disable)"""
+        current = await self.config.guild(ctx.guild).review_channel()
+        if channel:
+            if current == channel.id:
+                await ctx.send(f"Review channel is already set to {channel.mention}.")
+                return
+        else:
+            if current is None:
+                await ctx.send("Review channel notifications are already disabled.")
+                return
         await self.config.guild(ctx.guild).review_channel.set(channel.id if channel else None)
         if channel:
             await ctx.send(f"Review channel set to {channel.mention}.")
@@ -629,6 +638,15 @@ class BankLoan(commands.Cog):
         if not await ctx.bot.is_owner(ctx.author):
             await ctx.send("Only the bot owner can use this command.")
             return
+        current = await self.config.review_channel()
+        if channel:
+            if current == channel.id:
+                await ctx.send(f"Global review channel is already set to {channel.mention}.")
+                return
+        else:
+            if current is None:
+                await ctx.send("Global review channel notifications are already disabled.")
+                return
         await self.config.review_channel.set(channel.id if channel else None)
         if channel:
             await ctx.send(f"Global review channel set to {channel.mention}.")
