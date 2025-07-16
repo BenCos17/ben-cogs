@@ -33,15 +33,23 @@ class LoanApprovalView(discord.ui.View):
 
     @discord.ui.button(label="Approve", style=discord.ButtonStyle.green)
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.cog.handle_approve(interaction, self.request, self.is_owner)
-        self.disable_all_items()
-        await interaction.response.edit_message(view=self)
+        try:
+            await self.cog.handle_approve(interaction, self.request, self.is_owner)
+            self.disable_all_items()
+            await interaction.response.edit_message(view=self)
+        finally:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.cog.handle_deny(interaction, self.request, self.is_owner)
-        self.disable_all_items()
-        await interaction.response.edit_message(view=self)
+        try:
+            await self.cog.handle_deny(interaction, self.request, self.is_owner)
+            self.disable_all_items()
+            await interaction.response.edit_message(view=self)
+        finally:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
 
 class LoanApprovalPaginator(discord.ui.View):
     def __init__(self, cog, ctx, requests, is_owner):
@@ -96,40 +104,42 @@ class LoanApprovalPaginator(discord.ui.View):
             super().__init__(style=discord.ButtonStyle.green, label="Approve")
             self.parent = parent
         async def callback(self, interaction: discord.Interaction):
-            req = self.parent.requests[self.parent.index]
-            result = await self.parent.cog.handle_approve(interaction, req, self.parent.is_owner)
-            if result is False:
-                # Ensure the interaction is always responded to
+            try:
+                req = self.parent.requests[self.parent.index]
+                result = await self.parent.cog.handle_approve(interaction, req, self.parent.is_owner)
+                if result is False:
+                    return  # Error already handled
+                del self.parent.requests[self.parent.index]
+                if not self.parent.requests:
+                    await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
+                    return
+                if self.parent.index >= len(self.parent.requests):
+                    self.parent.index = len(self.parent.requests) - 1
+                await self.parent.update(interaction)
+            finally:
                 if not interaction.response.is_done():
                     await interaction.response.defer(ephemeral=True)
-                return  # Error already handled
-            del self.parent.requests[self.parent.index]
-            if not self.parent.requests:
-                await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
-                return
-            if self.parent.index >= len(self.parent.requests):
-                self.parent.index = len(self.parent.requests) - 1
-            await self.parent.update(interaction)
 
     class DenyButton(discord.ui.Button):
         def __init__(self, parent):
             super().__init__(style=discord.ButtonStyle.red, label="Deny")
             self.parent = parent
         async def callback(self, interaction: discord.Interaction):
-            req = self.parent.requests[self.parent.index]
-            result = await self.parent.cog.handle_deny(interaction, req, self.parent.is_owner)
-            if result is False:
-                # Ensure the interaction is always responded to
+            try:
+                req = self.parent.requests[self.parent.index]
+                result = await self.parent.cog.handle_deny(interaction, req, self.parent.is_owner)
+                if result is False:
+                    return  # Error already handled
+                del self.parent.requests[self.parent.index]
+                if not self.parent.requests:
+                    await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
+                    return
+                if self.parent.index >= len(self.parent.requests):
+                    self.parent.index = len(self.parent.requests) - 1
+                await self.parent.update(interaction)
+            finally:
                 if not interaction.response.is_done():
                     await interaction.response.defer(ephemeral=True)
-                return  # Error already handled
-            del self.parent.requests[self.parent.index]
-            if not self.parent.requests:
-                await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
-                return
-            if self.parent.index >= len(self.parent.requests):
-                self.parent.index = len(self.parent.requests) - 1
-            await self.parent.update(interaction)
 
 class BankLoan(commands.Cog):
     def __init__(self, bot):
