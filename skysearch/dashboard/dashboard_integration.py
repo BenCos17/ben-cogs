@@ -1,0 +1,51 @@
+from redbot.core import commands
+import typing
+import discord
+
+# Decorator for dashboard pages
+
+def dashboard_page(*args, **kwargs):
+    def decorator(func):
+        func.__dashboard_decorator_params__ = (args, kwargs)
+        return func
+    return decorator
+
+class DashboardIntegration:
+    bot: commands.Bot
+
+    @commands.Cog.listener()
+    async def on_dashboard_cog_add(self, dashboard_cog: commands.Cog) -> None:
+        dashboard_cog.rpc.third_parties_handler.add_third_party(self)
+
+    @dashboard_page(name=None, description="SkySearch Stats Page", methods=("GET",))
+    async def dashboard_stats(self, **kwargs) -> typing.Dict[str, typing.Any]:
+        # Example: Show a simple stats page
+        embed_html = (
+            '<h2>SkySearch Dashboard</h2>'
+            '<p>This is a simple integration page for SkySearch.</p>'
+            '<ul>'
+            '<li>Aircraft tracked: <b>{{ aircraft_count }}</b></li>'
+            '<li>Military ICAO tags: <b>{{ military_count }}</b></li>'
+            '<li>Law enforcement ICAO tags: <b>{{ law_count }}</b></li>'
+            '</ul>'
+        )
+        # Try to get stats from the cog if possible
+        cog = getattr(self, "_skysearch_cog", None)
+        aircraft_count = getattr(cog, "aircraft_commands", None)
+        if hasattr(cog, "military_icao_set"):
+            military_count = len(cog.military_icao_set)
+        else:
+            military_count = 0
+        if hasattr(cog, "law_enforcement_icao_set"):
+            law_count = len(cog.law_enforcement_icao_set)
+        else:
+            law_count = 0
+        return {
+            "status": 0,
+            "web_content": {
+                "source": embed_html,
+                "aircraft_count": "?",
+                "military_count": military_count,
+                "law_count": law_count,
+            },
+        } 

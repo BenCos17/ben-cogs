@@ -22,14 +22,16 @@ from .utils.export import ExportManager
 from .commands.aircraft import AircraftCommands
 from .commands.airport import AirportCommands
 from .commands.admin import AdminCommands
+from .dashboard.dashboard_integration import DashboardIntegration
 
 
 
-class Skysearch(red_commands.Cog):
+class Skysearch(red_commands.Cog, DashboardIntegration):
     """SkySearch - Aircraft tracking and information cog."""
     
     def __init__(self, bot):
         self.bot = bot
+        self._skysearch_cog = self  # For dashboard integration access
         self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
