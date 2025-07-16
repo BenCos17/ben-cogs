@@ -330,17 +330,25 @@ class BankLoan(commands.Cog):
         if not loan_amount or loan_amount <= 0:
             await ctx.send("You do not have any outstanding loans.")
             return
+        overpay = False
         if amount > loan_amount:
             amount = loan_amount
+            overpay = True
         if not await bank.can_spend(user, amount):
             await ctx.send("You do not have enough funds to repay this amount.")
             return
         await bank.withdraw_credits(user, amount)
         await self.config.user(user).loan_amount.set(loan_amount - amount)
         if loan_amount - amount <= 0:
-            await ctx.send(f"You have fully repaid your loan!")
+            if overpay:
+                await ctx.send(f"You only owed {loan_amount}, so only {loan_amount} was repaid. You have fully repaid your loan!")
+            else:
+                await ctx.send(f"You have fully repaid your loan!")
         else:
-            await ctx.send(f"Loan repayment of {amount} submitted. Remaining loan: {loan_amount - amount}")
+            if overpay:
+                await ctx.send(f"You only owed {loan_amount}, so only {loan_amount} was repaid. Remaining loan: {loan_amount - amount}")
+            else:
+                await ctx.send(f"Loan repayment of {amount} submitted. Remaining loan: {loan_amount - amount}")
 
     @commands.group()
     @commands.admin_or_permissions(manage_guild=True)
