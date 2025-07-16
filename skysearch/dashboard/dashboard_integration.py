@@ -52,6 +52,10 @@ class DashboardIntegration:
 
     @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET", "POST"))
     async def dashboard_guild_settings(self, guild: discord.Guild, **kwargs):
+        import sys
+        print("DASHBOARD DEBUG: kwargs keys:", list(kwargs.keys()), file=sys.stderr)
+        print("DASHBOARD DEBUG: Form in kwargs:", "Form" in kwargs, type(kwargs.get("Form")), file=sys.stderr)
+        print("DASHBOARD DEBUG: DpyObjectConverter in kwargs:", "DpyObjectConverter" in kwargs, type(kwargs.get("DpyObjectConverter")), file=sys.stderr)
         try:
             if "Form" not in kwargs:
                 return {"status": 1, "error": "No Form in kwargs"}
