@@ -50,36 +50,44 @@ class DashboardIntegration:
             },
         }
 
-    @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET",))
+    @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET", "POST"))
     async def dashboard_guild_settings(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        # Get the SkySearch cog instance
-        cog = getattr(self, "_skysearch_cog", None)
-        if not cog:
-            return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
-        # Fetch guild config
-        config = cog.config.guild(guild)
-        alert_channel_id = await config.alert_channel()
-        alert_role_id = await config.alert_role()
-        auto_icao = await config.auto_icao()
-        auto_delete = await config.auto_delete_not_found()
-        # Format values
-        alert_channel = f"<#{alert_channel_id}>" if alert_channel_id else "Not set"
-        alert_role = f"<@&{alert_role_id}>" if alert_role_id else "Not set"
-        auto_icao_str = "Enabled" if auto_icao else "Disabled"
-        auto_delete_str = "Enabled" if auto_delete else "Disabled"
-        html = f'''
-            <h2>SkySearch Guild Settings</h2>
-            <ul>
-                <li><b>Alert Channel:</b> {alert_channel}</li>
-                <li><b>Alert Role:</b> {alert_role}</li>
-                <li><b>Auto ICAO Lookup:</b> {auto_icao_str}</li>
-                <li><b>Auto Delete Not Found:</b> {auto_delete_str}</li>
-            </ul>
-            <p>Use Discord commands to change these settings.</p>
-        '''
-        return {
-            "status": 0,
-            "web_content": {
-                "source": html,
-            },
-        } 
+        try:
+            if "Form" not in kwargs:
+                return {"status": 1, "error": "No Form in kwargs"}
+            cog = getattr(self, "_skysearch_cog", None)
+            if not cog:
+                return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
+            config = cog.config.guild(guild)
+            alert_channel_id = await config.alert_channel()
+            alert_role_id = await config.alert_role()
+            auto_icao = await config.auto_icao()
+            auto_delete = await config.auto_delete_not_found()
+            alert_channel = f"<#{alert_channel_id}>" if alert_channel_id else "Not set"
+            alert_role = f"<@&{alert_role_id}>" if alert_role_id else "Not set"
+            auto_icao_str = "Enabled" if auto_icao else "Disabled"
+            auto_delete_str = "Enabled" if auto_delete else "Disabled"
+
+            import wtforms
+            class TestForm(kwargs["Form"]):
+                test = wtforms.StringField("Test Field")
+                submit = wtforms.SubmitField("Submit")
+            form = TestForm()
+            if form.validate_on_submit():
+                return {"status": 0, "notifications": [{"message": "Submitted!", "category": "success"}], "redirect_url": kwargs["request_url"]}
+            html = f'''
+                <h2>SkySearch Guild Settings</h2>
+                <ul>
+                    <li><b>Alert Channel:</b> {alert_channel}</li>
+                    <li><b>Alert Role:</b> {alert_role}</li>
+                    <li><b>Auto ICAO Lookup:</b> {auto_icao_str}</li>
+                    <li><b>Auto Delete Not Found:</b> {auto_delete_str}</li>
+                </ul>
+                <hr/>
+                {{% if form %}}{{{{ form|safe }}}}{{% endif %}}
+            '''
+            return {"status": 0, "web_content": {"source": html, "form": form}}
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": 1, "error": f"Exception: {e}"} 
