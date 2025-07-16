@@ -50,6 +50,7 @@ To use the Bank Loan cog, simply type `[p]loan` followed by the desired command.
 * `[p]loanset reviewchannel <#channel>`: Set the channel for pending loan review notifications (leave blank to disable).
 * `[p]loanset interest <rate>`: Set the interest rate for loans (e.g., 0.05 for 5%).
 * `[p]loanset interestinterval <interval>`: Set or show the interest interval (e.g., 12h, 2d, 24h). Leave blank to show current.
+* `[p]loanset dmnotify true/false`: Enable or disable DM notifications for loan approval/denial.
 * `[p]loanset listloans`: List all users in this server with a loan balance (admin only).
 
 ### Global Settings (Global Mode Only, Owner Only)
@@ -57,6 +58,7 @@ To use the Bank Loan cog, simply type `[p]loan` followed by the desired command.
 * `[p]loanowner setinterest <rate>`: Set the global interest rate (e.g., 0.05 for 5%).
 * `[p]loanowner setinterestinterval <interval>`: Set or show the global interest interval (e.g., 12h, 2d, 24h). Leave blank to show current.
 * `[p]loanowner setreviewchannel <#channel>`: Set the global review channel for owner loan requests (leave blank to disable).
+* `[p]loanowner setdmnotify true/false`: Enable or disable global DM notifications for loan approval/denial.
 * `[p]loanowner listloans`: List all users globally with a loan balance (owner only).
 
 ## Automatic Interest
@@ -69,6 +71,7 @@ Interest is applied automatically at the configured interval (default: every 24 
 - All balances are integers (no decimals).
 - If you try to repay more than you owe, only the remaining balance will be repaid and you will be notified.
 - Review channels can be set for both guild and global loan requests for pending review notifications.
+- DM notifications can be enabled to notify users when their loan is approved or denied.
 - Only the bot owner can set the global review channel or global interest settings in global mode.
 - Admins can set per-guild review channels and interest settings in guild mode.
 
