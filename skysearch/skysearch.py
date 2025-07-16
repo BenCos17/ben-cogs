@@ -444,7 +444,11 @@ class Skysearch(red_commands.Cog):
     @dashboard_page(name="settings", description="Configure SkySearch settings for this guild", methods=("GET", "POST"), is_owner=False)
     async def guild_settings_page(self, user: discord.User, guild: discord.Guild, request: typing.Optional[dict] = None, **kwargs) -> typing.Dict[str, typing.Any]:
         config = self.config.guild(guild)
-        # Use WTForms utility for dashboard integration
+        alert_channel = await config.alert_channel()
+        alert_role = await config.alert_role()
+        auto_icao = await config.auto_icao()
+        auto_delete = await config.auto_delete_not_found()
+
         import wtforms
         class SettingsForm(kwargs["Form"]):
             def __init__(self):
