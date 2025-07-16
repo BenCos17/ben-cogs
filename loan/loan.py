@@ -240,8 +240,6 @@ class BankLoan(commands.Cog):
     @commands.group()
     async def loan(self, ctx):
         """Bank loan commands"""
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid subcommand")
 
     @loan.command()
     async def request(self, ctx, amount: int):
@@ -332,8 +330,6 @@ class BankLoan(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def loanset(self, ctx):
         """Loan settings (admin only)"""
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid subcommand")
 
     @loanset.command()
     async def requiremod(self, ctx, value: bool):
@@ -374,8 +370,6 @@ class BankLoan(commands.Cog):
     @loanmod_check()
     async def loanmod(self, ctx):
         """Moderator loan approval commands"""
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid subcommand")
 
     @loanmod.command(name="pending")
     async def loanmod_pending(self, ctx):
@@ -468,8 +462,6 @@ class BankLoan(commands.Cog):
         if not await ctx.bot.is_owner(ctx.author):
             await ctx.send("Only the bot owner can use these commands.")
             return
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Invalid subcommand")
 
     @loanowner.command(name="pending")
     async def loanowner_pending(self, ctx):
