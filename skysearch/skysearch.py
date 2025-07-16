@@ -321,25 +321,19 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @airport_group.command(name="setowmkey")
     async def airport_setowmkey(self, ctx, api_key: str):
         """Set the OpenWeatherMap API key."""
-        await self.config.openweathermap_api.set(api_key)
-        await ctx.send("OpenWeatherMap API key set.")
+        await self.admin_commands.set_owm_key(ctx, api_key)
 
     @commands.is_owner()
     @airport_group.command(name="owmkey")
     async def airport_owmkey(self, ctx):
         """Show the current OpenWeatherMap API key (partially masked)."""
-        key = await self.config.openweathermap_api()
-        if key:
-            await ctx.send(f"OpenWeatherMap API key: `{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}`")
-        else:
-            await ctx.send("No OpenWeatherMap API key set.")
+        await self.admin_commands.check_owm_key(ctx)
 
     @commands.is_owner()
     @airport_group.command(name="clearowmkey")
     async def airport_clearowmkey(self, ctx):
         """Clear the OpenWeatherMap API key."""
-        await self.config.openweathermap_api.set(None)
-        await ctx.send("OpenWeatherMap API key cleared.")
+        await self.admin_commands.clear_owm_key(ctx)
 
     @tasks.loop(minutes=2)
     async def check_emergency_squawks(self):

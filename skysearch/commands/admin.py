@@ -332,3 +332,24 @@ class AdminCommands:
             except:
                 await ctx.send(f"❌ **Debug Error:** {str(e)}")
             await ctx.send("❌ **Debug failed!** Check your DMs for error details.") 
+
+    async def set_owm_key(self, ctx, api_key: str):
+        """Set the OpenWeatherMap API key."""
+        await self.cog.config.openweathermap_api.set(api_key)
+        embed = discord.Embed(title="OpenWeatherMap API Key Updated", description="The OpenWeatherMap API key has been set successfully.", color=0x2BBD8E)
+        embed.add_field(name="Status", value="✅ OWM API key configured", inline=True)
+        await ctx.send(embed=embed)
+
+    async def check_owm_key(self, ctx):
+        """Show the current OpenWeatherMap API key (partially masked)."""
+        key = await self.cog.config.openweathermap_api()
+        if key:
+            masked = f"{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}" if len(key) > 8 else key
+            await ctx.send(f"OpenWeatherMap API key: `{masked}`")
+        else:
+            await ctx.send("No OpenWeatherMap API key set.")
+
+    async def clear_owm_key(self, ctx):
+        """Clear the OpenWeatherMap API key."""
+        await self.cog.config.openweathermap_api.set(None)
+        await ctx.send("OpenWeatherMap API key cleared.") 
