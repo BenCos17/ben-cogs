@@ -330,41 +330,4 @@ class HelperUtils:
         except (aiohttp.ClientError, KeyError, ValueError):
             pass
         
-        return None
-
-    async def get_weather_forecast(self, lat: str, lon: str):
-        """Get weather forecast for coordinates."""
-        if lat == 'N/A' or lon == 'N/A':
-            return None
-        
-        if not hasattr(self.cog, '_http_client'):
-            self.cog._http_client = aiohttp.ClientSession()
-        
-        try:
-            # Try weatherapi.com (free tier available)
-            # Note: This would require an API key for production use
-            # url = f"http://api.weatherapi.com/v1/forecast.json?key=YOUR_API_KEY&q={lat},{lon}&days=3"
-            
-            # Return placeholder data for now
-            return {
-                'current': {
-                    'temp': 'N/A',
-                    'condition': {'text': 'N/A'},
-                    'wind_kph': 'N/A',
-                    'humidity': 'N/A'
-                },
-                'forecast': {
-                    'forecastday': [
-                        {
-                            'date': 'N/A',
-                            'day': {
-                                'maxtemp_c': 'N/A',
-                                'mintemp_c': 'N/A',
-                                'condition': {'text': 'N/A'}
-                            }
-                        }
-                    ]
-                }
-            }
-        except Exception:
-            return None 
+        return None 

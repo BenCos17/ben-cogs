@@ -274,76 +274,68 @@ class AirportCommands:
                     await self.paginate_embed(ctx, combined_pages)
                 else:
                     # Non-US logic (OpenWeatherMap)
-                    api_key = await self.cog.config.openweathermap_api()
-                    if not api_key:
-                        await ctx.send(embed=discord.Embed(title="Error", description="OpenWeatherMap API key is not set. Please ask the bot owner to set it using *setowmkey.", color=0xff4545))
+                    data = await self.cog.api.get_openweathermap_forecast(latitude, longitude)
+                    if not data or 'list' not in data:
+                        await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch forecast from OpenWeatherMap.", color=0xff4545))
                         return
-                    # OWM 5-day/3-hour forecast
-                    url = f"https://api.openweathermap.org/data/2.5/forecast?lat={latitude}&lon={longitude}&appid={api_key}&units=metric"
-                    async with session.get(url) as resp:
-                        data = await resp.json()
-                        if 'list' not in data:
-                            await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch forecast from OpenWeatherMap.", color=0xff4545))
-                            return
-                        city = data.get('city', {}).get('name', code.upper())
-                        country = data.get('city', {}).get('country', '')
-                        combined_pages = []
-                        for entry in data['list']:
-                            dt_txt = entry.get('dt_txt', '')
-                            main = entry.get('main', {})
-                            weather = entry.get('weather', [{}])[0]
-                            wind = entry.get('wind', {})
-                            temp = main.get('temp')
-                            feels_like = main.get('feels_like')
-                            humidity = main.get('humidity')
-                            description = weather.get('description', '').capitalize()
-                            icon = weather.get('icon', '')
-                            wind_speed = wind.get('speed')
-                            wind_deg = wind.get('deg')
-                            # Emoji logic for temperature
-                            if temp is not None:
-                                if temp >= 32:
-                                    emoji = '🔥'
-                                elif temp <= 0:
-                                    emoji = '❄️'
-                                else:
-                                    emoji = '🌡️'
+                    city = data.get('city', {}).get('name', code.upper())
+                    country = data.get('city', {}).get('country', '')
+                    combined_pages = []
+                    for entry in data['list']:
+                        dt_txt = entry.get('dt_txt', '')
+                        main = entry.get('main', {})
+                        weather = entry.get('weather', [{}])[0]
+                        wind = entry.get('wind', {})
+                        temp = main.get('temp')
+                        feels_like = main.get('feels_like')
+                        humidity = main.get('humidity')
+                        description = weather.get('description', '').capitalize()
+                        icon = weather.get('icon', '')
+                        wind_speed = wind.get('speed')
+                        wind_deg = wind.get('deg')
+                        # Emoji logic for temperature
+                        if temp is not None:
+                            if temp >= 32:
+                                emoji = '🔥'
+                            elif temp <= 0:
+                                emoji = '❄️'
                             else:
                                 emoji = '🌡️'
-                            # Wind speed emoji
-                            try:
-                                speed_value = float(wind_speed) if wind_speed is not None else 0
-                                if speed_value >= 13.4:  # ~30 mph
-                                    wind_emoji = '💨'
-                                elif speed_value >= 6.7:  # ~15 mph
-                                    wind_emoji = '🌬️'
-                                else:
-                                    wind_emoji = '🍃'
-                            except Exception:
+                        else:
+                            emoji = '🌡️'
+                        # Wind speed emoji
+                        try:
+                            speed_value = float(wind_speed) if wind_speed is not None else 0
+                            if speed_value >= 13.4:  # ~30 mph
+                                wind_emoji = '💨'
+                            elif speed_value >= 6.7:  # ~15 mph
+                                wind_emoji = '🌬️'
+                            else:
                                 wind_emoji = '🍃'
-                            # Wind direction emoji
-                            def deg_to_compass(deg):
-                                if deg is None:
-                                    return '❓'
-                                dirs = ['⬆️', '⬆️↗️', '↗️', '↗️➡️', '➡️', '➡️↘️', '↘️', '↘️⬇️', '⬇️', '⬇️↙️', '↙️', '↙️⬅️', '⬅️', '⬅️↖️', '↖️', '↖️⬆️']
-                                ix = int((float(deg) + 11.25) / 22.5) % 16
-                                return dirs[ix]
-                            direction_emoji = deg_to_compass(wind_deg)
-                            embed = discord.Embed(
-                                title=f"Weather forecast for {airport_name or code.upper()}",
-                                description=dt_txt,
-                                color=0xfffffe
-                            )
-                            if icon:
-                                embed.set_thumbnail(url=f"https://openweathermap.org/img/wn/{icon}@2x.png")
-                            embed.add_field(name="Description", value=description, inline=False)
-                            embed.add_field(name="Temperature", value=f"{emoji} **`{temp}°C (feels like {feels_like}°C)`**", inline=True)
-                            embed.add_field(name="Wind speed", value=f"{wind_emoji} **`{wind_speed} m/s`**", inline=True)
-                            embed.add_field(name="Wind direction", value=f"{direction_emoji} **`{wind_deg}°`**", inline=True)
-                            embed.add_field(name="Humidity", value=f"**`{humidity}%`**", inline=True)
-                            # OWM forecast does not provide probability of precipitation or dewpoint in this endpoint
-                            embed.add_field(name="Forecast", value=f"**`{description}`**", inline=False)
-                            combined_pages.append(embed)
-                        await self.paginate_embed(ctx, combined_pages)
+                        except Exception:
+                            wind_emoji = '🍃'
+                        # Wind direction emoji
+                        def deg_to_compass(deg):
+                            if deg is None:
+                                return '❓'
+                            dirs = ['⬆️', '⬆️↗️', '↗️', '↗️➡️', '➡️', '➡️↘️', '↘️', '↘️⬇️', '⬇️', '⬇️↙️', '↙️', '↙️⬅️', '⬅️', '⬅️↖️', '↖️', '↖️⬆️']
+                            ix = int((float(deg) + 11.25) / 22.5) % 16
+                            return dirs[ix]
+                        direction_emoji = deg_to_compass(wind_deg)
+                        embed = discord.Embed(
+                            title=f"Weather forecast for {airport_name or code.upper()}",
+                            description=dt_txt,
+                            color=0xfffffe
+                        )
+                        if icon:
+                            embed.set_thumbnail(url=f"https://openweathermap.org/img/wn/{icon}@2x.png")
+                        embed.add_field(name="Description", value=description, inline=False)
+                        embed.add_field(name="Temperature", value=f"{emoji} **`{temp}°C (feels like {feels_like}°C)`**", inline=True)
+                        embed.add_field(name="Wind speed", value=f"{wind_emoji} **`{wind_speed} m/s`**", inline=True)
+                        embed.add_field(name="Wind direction", value=f"{direction_emoji} **`{wind_deg}°`**", inline=True)
+                        embed.add_field(name="Humidity", value=f"**`{humidity}%`**", inline=True)
+                        embed.add_field(name="Forecast", value=f"**`{description}`**", inline=False)
+                        combined_pages.append(embed)
+                    await self.paginate_embed(ctx, combined_pages)
         except Exception as e:
             await ctx.send(embed=discord.Embed(title="Error", description=str(e), color=0xff4545)) 

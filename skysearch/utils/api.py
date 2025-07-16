@@ -132,3 +132,21 @@ class APIManager:
         except aiohttp.ClientError as e:
             print(f"Error fetching stats: {e}")
             return None 
+
+    async def get_openweathermap_forecast(self, lat, lon):
+        """Fetch 5-day/3-hour forecast from OpenWeatherMap for given lat/lon."""
+        api_key = await self.cog.config.openweathermap_api()
+        if not api_key:
+            return None
+        url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric"
+        if not self._http_client:
+            self._http_client = aiohttp.ClientSession()
+        try:
+            async with self._http_client.get(url) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                else:
+                    return None
+        except aiohttp.ClientError as e:
+            print(f"Error fetching OpenWeatherMap forecast: {e}")
+            return None 
