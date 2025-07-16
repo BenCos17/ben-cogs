@@ -52,59 +52,64 @@ class DashboardIntegration:
 
     @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET", "POST"))
     async def dashboard_guild_settings(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        cog = getattr(self, "_skysearch_cog", None)
-        if not cog:
-            return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
-        config = cog.config.guild(guild)
+        try:
+            cog = getattr(self, "_skysearch_cog", None)
+            if not cog:
+                return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
+            config = cog.config.guild(guild)
 
-        import wtforms
+            import wtforms
 
-        class SettingsForm(kwargs["Form"]):
-            def __init__(self):
-                super().__init__(prefix="skysearch_settings_")
-            alert_channel = wtforms.IntegerField(
-                "Alert Channel (ID):",
-                validators=[wtforms.validators.Optional(), kwargs["DpyObjectConverter"](discord.TextChannel)]
-            )
-            alert_role = wtforms.IntegerField(
-                "Alert Role (ID):",
-                validators=[wtforms.validators.Optional(), kwargs["DpyObjectConverter"](discord.Role)]
-            )
-            auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
-            auto_delete = wtforms.BooleanField("Auto Delete Not Found")
-            submit = wtforms.SubmitField("Save Settings")
+            class SettingsForm(kwargs["Form"]):
+                def __init__(self):
+                    super().__init__(prefix="skysearch_settings_")
+                alert_channel = wtforms.IntegerField(
+                    "Alert Channel (ID):",
+                    validators=[wtforms.validators.Optional(), kwargs["DpyObjectConverter"](discord.TextChannel)]
+                )
+                alert_role = wtforms.IntegerField(
+                    "Alert Role (ID):",
+                    validators=[wtforms.validators.Optional(), kwargs["DpyObjectConverter"](discord.Role)]
+                )
+                auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
+                auto_delete = wtforms.BooleanField("Auto Delete Not Found")
+                submit = wtforms.SubmitField("Save Settings")
 
-        # Get current values
-        alert_channel_id = await config.alert_channel()
-        alert_role_id = await config.alert_role()
-        auto_icao_val = await config.auto_icao()
-        auto_delete_val = await config.auto_delete_not_found()
+            # Get current values
+            alert_channel_id = await config.alert_channel()
+            alert_role_id = await config.alert_role()
+            auto_icao_val = await config.auto_icao()
+            auto_delete_val = await config.auto_delete_not_found()
 
-        form = SettingsForm()
-        if not form.is_submitted():
-            form.alert_channel.data = alert_channel_id
-            form.alert_role.data = alert_role_id
-            form.auto_icao.data = auto_icao_val
-            form.auto_delete.data = auto_delete_val
+            form = SettingsForm()
+            if not form.is_submitted():
+                form.alert_channel.data = alert_channel_id
+                form.alert_role.data = alert_role_id
+                form.auto_icao.data = auto_icao_val
+                form.auto_delete.data = auto_delete_val
 
-        if form.validate_on_submit() and await form.validate_dpy_converters():
-            # Save settings
-            await config.alert_channel.set(form.alert_channel.data)
-            await config.alert_role.set(form.alert_role.data)
-            await config.auto_icao.set(form.auto_icao.data)
-            await config.auto_delete_not_found.set(form.auto_delete.data)
+            if form.validate_on_submit() and await form.validate_dpy_converters():
+                # Save settings
+                await config.alert_channel.set(form.alert_channel.data)
+                await config.alert_role.set(form.alert_role.data)
+                await config.auto_icao.set(form.auto_icao.data)
+                await config.auto_delete_not_found.set(form.auto_delete.data)
+                return {
+                    "status": 0,
+                    "notifications": [{"message": "Settings updated!", "category": "success"}],
+                    "redirect_url": kwargs["request_url"],
+                }
+
+            html = "{{ form|safe }}"
+
             return {
                 "status": 0,
-                "notifications": [{"message": "Settings updated!", "category": "success"}],
-                "redirect_url": kwargs["request_url"],
+                "web_content": {
+                    "source": html,
+                    "form": form,
+                },
             }
-
-        html = "{{ form|safe }}"
-
-        return {
-            "status": 0,
-            "web_content": {
-                "source": html,
-                "form": form,
-            },
-        } 
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": 1, "error": f"Exception: {e}"} 
