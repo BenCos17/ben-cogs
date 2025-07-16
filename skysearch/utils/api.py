@@ -117,3 +117,18 @@ class APIManager:
         if self._http_client:
             await self._http_client.close()
             self._http_client = None 
+
+    async def get_stats(self):
+        """Fetch stats from the airplanes.live API and return the JSON response or None on error."""
+        url = "https://api.airplanes.live/stats"
+        if not self._http_client:
+            self._http_client = aiohttp.ClientSession()
+        try:
+            async with self._http_client.get(url) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    return None
+        except aiohttp.ClientError as e:
+            print(f"Error fetching stats: {e}")
+            return None 
