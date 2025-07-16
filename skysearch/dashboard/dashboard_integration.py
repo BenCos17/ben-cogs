@@ -62,9 +62,11 @@ class DashboardIntegration:
         alert_role_id = await config.alert_role()
         auto_icao = await config.auto_icao()
         auto_delete = await config.auto_delete_not_found()
-        # Format values
-        alert_channel = f"<#{alert_channel_id}>" if alert_channel_id else "Not set"
-        alert_role = f"<@&{alert_role_id}>" if alert_role_id else "Not set"
+        # Resolve channel and role names
+        channel_obj = guild.get_channel(alert_channel_id) if alert_channel_id else None
+        role_obj = guild.get_role(alert_role_id) if alert_role_id else None
+        alert_channel = channel_obj.name if channel_obj else "Not set"
+        alert_role = role_obj.name if role_obj else "Not set"
         auto_icao_str = "Enabled" if auto_icao else "Disabled"
         auto_delete_str = "Enabled" if auto_delete else "Disabled"
         html = f'''
