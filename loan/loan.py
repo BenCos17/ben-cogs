@@ -156,14 +156,16 @@ class BankLoan(commands.Cog):
             "review_channel": None,  # Channel ID for pending review
             "interest_rate": 0.05,  # Default 5% interest
             "interest_interval": "24h",  # Default 24 hours
-            "last_interest": None
+            "last_interest": None,
+            "dm_notify": False  # DM user on approval/denial
         }
         default_global = {
             "pending_owner_loans": [],  
             "interest_rate": 0.05,  # Default 5% interest (global)
             "interest_interval": "24h",  # Default 24 hours (global)
             "last_interest": None,
-            "review_channel": None  # Global review channel
+            "review_channel": None,  # Global review channel
+            "dm_notify": False  # DM user on approval/denial (global)
         }
         default_user = {
             "loan_amount": 0
@@ -416,6 +418,12 @@ class BankLoan(commands.Cog):
         await self.config.guild(ctx.guild).interest_rate.set(rate)
         await ctx.send(f"Interest rate set to {rate * 100:.2f}% for this server.")
 
+    @loanset.command()
+    async def dmnotify(self, ctx, value: bool):
+        """Enable or disable DM notifications for loan approval/denial (guild only)"""
+        await self.config.guild(ctx.guild).dm_notify.set(value)
+        await ctx.send(f"DM notifications for loan approval/denial set to {value}.")
+
     @commands.group()
     @commands.mod_or_permissions(manage_guild=True)
     @loanmod_check()
@@ -436,9 +444,11 @@ class BankLoan(commands.Cog):
         if is_owner:
             pending = await self.config.pending_owner_loans()
             user = self.bot.get_user(request["user_id"])
+            dm_notify = await self.config.dm_notify()
         else:
             pending = await self.config.guild(interaction.guild).pending_loans()
             user = interaction.guild.get_member(request["user_id"])
+            dm_notify = await self.config.guild(interaction.guild).dm_notify()
         if not user:
             await interaction.followup.send("User not found.", ephemeral=True)
             return False
@@ -452,6 +462,12 @@ class BankLoan(commands.Cog):
             await self.config.pending_owner_loans.set(pending)
         else:
             await self.config.guild(interaction.guild).pending_loans.set(pending)
+        # DM notify if enabled
+        if dm_notify:
+            try:
+                await user.send(f"Your loan request for {request['amount']} has been approved.")
+            except Exception:
+                pass
         # Do not send a followup message here; paginator will update the view
         return True
 
@@ -459,9 +475,11 @@ class BankLoan(commands.Cog):
         if is_owner:
             pending = await self.config.pending_owner_loans()
             user = self.bot.get_user(request["user_id"])
+            dm_notify = await self.config.dm_notify()
         else:
             pending = await self.config.guild(interaction.guild).pending_loans()
             user = interaction.guild.get_member(request["user_id"])
+            dm_notify = await self.config.guild(interaction.guild).dm_notify()
         if not user:
             await interaction.followup.send("User not found.", ephemeral=True)
             return False
@@ -473,6 +491,12 @@ class BankLoan(commands.Cog):
             await self.config.pending_owner_loans.set(pending)
         else:
             await self.config.guild(interaction.guild).pending_loans.set(pending)
+        # DM notify if enabled
+        if dm_notify:
+            try:
+                await user.send(f"Your loan request for {request['amount']} has been denied.")
+            except Exception:
+                pass
         # Do not send a followup message here; paginator will update the view
         return True
 
@@ -656,6 +680,19 @@ class BankLoan(commands.Cog):
             await ctx.send(f"Global review channel set to {channel.mention}.")
         else:
             await ctx.send("Global review channel notifications disabled.")
+
+    @loanowner.command(name="setdmnotify")
+    async def loanowner_setdmnotify(self, ctx, value: bool):
+        """Enable or disable global DM notifications for loan approval/denial (owner only, global mode)"""
+        is_global = await bank.is_global()
+        if not is_global:
+            await ctx.send("The bank is not global. Use [p]loanset dmnotify for guilds.")
+            return
+        if not await ctx.bot.is_owner(ctx.author):
+            await ctx.send("Only the bot owner can use this command.")
+            return
+        await self.config.dm_notify.set(value)
+        await ctx.send(f"Global DM notifications for loan approval/denial set to {value}.")
 
     @loan.command()
     async def interest(self, ctx):
