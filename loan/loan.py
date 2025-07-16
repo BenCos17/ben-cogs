@@ -147,6 +147,14 @@ class LoanApprovalPaginator(discord.ui.View):
 
 class BankLoan(commands.Cog):
     def __init__(self, bot):
+        """
+        Initialize the BankLoan cog with configuration.
+        
+        Config structure:
+        - Guild: per-server settings (max loan, interest rate, review channel, etc.)
+        - Global: bot-wide settings (owner approval queue, global interest, review channel)
+        - User: individual loan amounts
+        """
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
         default_guild = {
@@ -175,17 +183,29 @@ class BankLoan(commands.Cog):
         self.config.register_user(**default_user)
 
     def cog_load(self):
+        """Start the background interest task when the cog loads."""
         self.interest_task.start()
 
     def cog_unload(self):
+        """Cancel the background interest task when the cog unloads."""
         self.interest_task.cancel()
 
     @tasks.loop(minutes=10)
     async def interest_task(self):
+        """
+        Background task that runs every 10 minutes to check if interest should be applied.
+        
+        For global mode: applies interest to all users across all guilds
+        For guild mode: applies interest to users in each guild individually
+        
+        The task checks the configured interval and last application time to determine
+        if enough time has passed to apply interest again.
+        """
         await self.bot.wait_until_red_ready()
         is_global = await bank.is_global()
         now = datetime.utcnow()
         if is_global:
+            # Global mode: apply interest to all users across all guilds
             interval_str = await self.config.interest_interval()
             last_applied = await self.config.last_interest()
             interval = self.parse_interval(interval_str)
@@ -194,12 +214,13 @@ class BankLoan(commands.Cog):
             if last_applied:
                 last_applied_dt = datetime.fromisoformat(last_applied)
                 if now < last_applied_dt + interval:
-                    return
+                    return  # Not enough time has passed
             # Apply global interest
             ctx = None  # No context for background
             await self.apply_interest_global()
             await self.config.last_interest.set(now.isoformat())
         else:
+            # Guild mode: apply interest to users in each guild individually
             for guild in self.bot.guilds:
                 interval_str = await self.config.guild(guild).interest_interval()
                 last_applied = await self.config.guild(guild).last_interest()
@@ -209,12 +230,26 @@ class BankLoan(commands.Cog):
                 if last_applied:
                     last_applied_dt = datetime.fromisoformat(last_applied)
                     if now < last_applied_dt + interval:
-                        continue
+                        continue  # Not enough time has passed for this guild
                 await self.apply_interest_guild(guild)
                 await self.config.guild(guild).last_interest.set(now.isoformat())
 
     @staticmethod
     def parse_interval(interval_str):
+        """
+        Parses a string representation of a time interval and convert it to a timedelta object.
+        
+        Supports formats:
+        - "24h" for hours (e.g., "12h", "0.5h")
+        - "2d" for days (e.g., "1d", "0.5d") 
+        - "24" for hours (fallback, assumes hours if no suffix)
+        
+        Args:
+            interval_str (str): The interval string to parse
+            
+        Returns:
+            timedelta or None: The parsed interval, or None if invalid
+        """
         if not interval_str:
             return None
         interval_str = interval_str.strip().lower()
@@ -238,6 +273,12 @@ class BankLoan(commands.Cog):
             return None
 
     async def apply_interest_guild(self, guild):
+        """
+        Apply interest to all users with loans in a specific guild.
+        
+        Args:
+            guild: The Discord guild to apply interest to
+        """
         rate = await self.config.guild(guild).interest_rate()
         members = guild.members
         for member in members:
@@ -247,6 +288,9 @@ class BankLoan(commands.Cog):
                 await self.config.user(member).loan_amount.set(new_amount)
 
     async def apply_interest_global(self):
+        """
+        Apply interest to all users with loans across all guilds (global mode).
+        """
         rate = await self.config.interest_rate()
         for user_id in (await self.config.all_users()).keys():
             user = self.bot.get_user(int(user_id))
@@ -263,7 +307,17 @@ class BankLoan(commands.Cog):
 
     @loan.command()
     async def request(self, ctx, amount: int):
-        """Request a loan from the bank"""
+        """
+        Request a loan from the bank.
+        
+        Flow:
+        1. Check if user already has a loan
+        2. Check if amount exceeds max loan
+        3. If global bank: add to owner approval queue
+        4. If guild bank: check if mod approval required
+        5. Send notifications to review channels if configured
+        6. DM user if enabled and loan is auto-approved
+        """
         user = ctx.author
         guild = ctx.guild
         has_loan = await self.config.user(user).loan_amount()
@@ -277,7 +331,7 @@ class BankLoan(commands.Cog):
         is_global = await bank.is_global()
         now = datetime.utcnow().isoformat()
         if is_global:
-            # Owner approval required
+            # Owner approval required for global bank mode
             pending = await self.config.pending_owner_loans()
             for req in pending:
                 if req["user_id"] == user.id:
@@ -298,7 +352,7 @@ class BankLoan(commands.Cog):
                             await channel.send(embed=embed, view=view)
                         except Exception:
                             pass
-            # Also send to per-guild review channels if set (legacy)
+            # Also send to per-guild review channels if set (legacy support)
             for guild in self.bot.guilds:
                 review_channel_id = await self.config.guild(guild).review_channel()
                 if review_channel_id:
@@ -313,7 +367,7 @@ class BankLoan(commands.Cog):
             return
         require_mod = await self.config.guild(guild).require_mod_approval()
         if require_mod:
-            # Add to pending queue
+            # Add to pending queue for moderator approval
             pending = await self.config.guild(guild).pending_loans()
             for req in pending:
                 if req["user_id"] == user.id:
@@ -322,7 +376,7 @@ class BankLoan(commands.Cog):
             pending.append({"user_id": user.id, "amount": amount, "date": now})
             await self.config.guild(guild).pending_loans.set(pending)
             await ctx.send(f"Loan request for {amount} submitted and is pending moderator approval.")
-            # Send to review channel if set (guild)
+            # Send to review channel if set (guild mode)
             review_channel_id = await self.config.guild(guild).review_channel()
             if review_channel_id:
                 channel = guild.get_channel(review_channel_id)
@@ -334,6 +388,7 @@ class BankLoan(commands.Cog):
                     except Exception:
                         pass
         else:
+            # Auto-approve the loan (no approval required)
             await bank.deposit_credits(user, amount)
             await self.config.user(user).loan_amount.set(amount)
             await ctx.send(f"Loan request for {amount} submitted and credited to your account.")
@@ -441,6 +496,17 @@ class BankLoan(commands.Cog):
         await paginator.send()
 
     async def handle_approve(self, interaction, request, is_owner):
+        """
+        Handle loan approval from button interaction.
+        
+        Args:
+            interaction: Discord interaction object
+            request: The loan request data containing user_id and amount
+            is_owner: Whether this is owner approval (global) or mod approval (guild)
+        
+        Returns:
+            bool: True if successful, False if error occurred
+        """
         if is_owner:
             pending = await self.config.pending_owner_loans()
             user = self.bot.get_user(request["user_id"])
@@ -455,6 +521,7 @@ class BankLoan(commands.Cog):
         if request not in pending:
             await interaction.followup.send("Request no longer pending.", ephemeral=True)
             return False
+        # Approve the loan: credit the user and set their loan amount
         await bank.deposit_credits(user, request["amount"])
         await self.config.user(user).loan_amount.set(request["amount"])
         pending.remove(request)
@@ -462,6 +529,8 @@ class BankLoan(commands.Cog):
             await self.config.pending_owner_loans.set(pending)
         else:
             await self.config.guild(interaction.guild).pending_loans.set(pending)
+        # Send confirmation message in the channel
+        await interaction.followup.send(f"✅ Loan request for {user.display_name} ({request['amount']}) has been approved.")
         # DM notify if enabled
         if dm_notify:
             try:
@@ -472,6 +541,17 @@ class BankLoan(commands.Cog):
         return True
 
     async def handle_deny(self, interaction, request, is_owner):
+        """
+        Handle loan denial from button interaction.
+        
+        Args:
+            interaction: Discord interaction object
+            request: The loan request data containing user_id and amount
+            is_owner: Whether this is owner denial (global) or mod denial (guild)
+        
+        Returns:
+            bool: True if successful, False if error occurred
+        """
         if is_owner:
             pending = await self.config.pending_owner_loans()
             user = self.bot.get_user(request["user_id"])
@@ -486,11 +566,14 @@ class BankLoan(commands.Cog):
         if request not in pending:
             await interaction.followup.send("Request no longer pending.", ephemeral=True)
             return False
+        # Deny the loan: remove from pending queue
         pending.remove(request)
         if is_owner:
             await self.config.pending_owner_loans.set(pending)
         else:
             await self.config.guild(interaction.guild).pending_loans.set(pending)
+        # Send confirmation message in the channel
+        await interaction.followup.send(f"❌ Loan request for {user.display_name} ({request['amount']}) has been denied.")
         # DM notify if enabled
         if dm_notify:
             try:
@@ -744,6 +827,17 @@ class BankLoan(commands.Cog):
             await ctx.send(f"Applied {rate * 100:.2f}% interest to {count} loans in this server.")
 
     async def make_request_embed(self, ctx, req, is_owner):
+        """
+        Create an embed for displaying loan request information.
+        
+        Args:
+            ctx: Command context
+            req: Request data containing user_id, amount, and date
+            is_owner: Whether this is for owner approval (global) or mod approval (guild)
+        
+        Returns:
+            discord.Embed: The formatted embed for the loan request
+        """
         if is_owner:
             user = self.bot.get_user(req["user_id"])
             name = user.display_name if user else f"User ID {req['user_id']}"
