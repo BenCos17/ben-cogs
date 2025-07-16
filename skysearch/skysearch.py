@@ -8,6 +8,7 @@ import re
 import datetime
 import aiohttp
 from redbot.core import commands, Config
+from discord.ext import tasks
 
 from .data.icao_codes import (
     law_enforcement_icao_set, military_icao_set, medical_icao_set, 
