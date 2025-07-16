@@ -120,7 +120,8 @@ class BankLoan(commands.Cog):
         default_guild = {
             "require_mod_approval": False,
             "max_loan": 1000,
-            "pending_loans": []  
+            "pending_loans": [],  
+            "review_channel": None  # Channel ID for pending review
         }
         default_global = {
             "pending_owner_loans": []  
@@ -163,6 +164,18 @@ class BankLoan(commands.Cog):
             pending.append({"user_id": user.id, "amount": amount, "date": now})
             await self.config.pending_owner_loans.set(pending)
             await ctx.send(f"Loan request for {amount} submitted and is pending bot owner approval.")
+            # Send to review channel if set (global)
+            for guild in self.bot.guilds:
+                review_channel_id = await self.config.guild(guild).review_channel()
+                if review_channel_id:
+                    channel = guild.get_channel(review_channel_id)
+                    if channel:
+                        embed = await self.make_request_embed(ctx, {"user_id": user.id, "amount": amount, "date": now}, is_owner=True)
+                        view = LoanApprovalView(self, ctx, {"user_id": user.id, "amount": amount, "date": now}, is_owner=True)
+                        try:
+                            await channel.send(embed=embed, view=view)
+                        except Exception:
+                            pass
             return
         require_mod = await self.config.guild(guild).require_mod_approval()
         if require_mod:
@@ -175,6 +188,17 @@ class BankLoan(commands.Cog):
             pending.append({"user_id": user.id, "amount": amount, "date": now})
             await self.config.guild(guild).pending_loans.set(pending)
             await ctx.send(f"Loan request for {amount} submitted and is pending moderator approval.")
+            # Send to review channel if set (guild)
+            review_channel_id = await self.config.guild(guild).review_channel()
+            if review_channel_id:
+                channel = guild.get_channel(review_channel_id)
+                if channel:
+                    embed = await self.make_request_embed(ctx, {"user_id": user.id, "amount": amount, "date": now}, is_owner=False)
+                    view = LoanApprovalView(self, ctx, {"user_id": user.id, "amount": amount, "date": now}, is_owner=False)
+                    try:
+                        await channel.send(embed=embed, view=view)
+                    except Exception:
+                        pass
         else:
             await bank.deposit_credits(user, amount)
             await self.config.user(user).loan_amount.set(amount)
@@ -218,6 +242,15 @@ class BankLoan(commands.Cog):
         """Set the maximum loan amount"""
         await self.config.guild(ctx.guild).max_loan.set(amount)
         await ctx.send(f"Maximum loan amount set to {amount}.")
+
+    @loanset.command()
+    async def reviewchannel(self, ctx, channel: discord.TextChannel = None):
+        """Set the channel for pending loan review (leave blank to disable)"""
+        await self.config.guild(ctx.guild).review_channel.set(channel.id if channel else None)
+        if channel:
+            await ctx.send(f"Review channel set to {channel.mention}.")
+        else:
+            await ctx.send("Review channel notifications disabled.")
 
     @commands.group()
     @commands.mod_or_permissions(manage_guild=True)
