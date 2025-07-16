@@ -13,6 +13,9 @@ async def bank_not_global(ctx):
 def loanmod_check():
     return commands.check(bank_not_global)
 
+# Custom check to hide loanset commands if bank is global
+loanset_check = loanmod_check  # Reuse the same check
+
 # Custom check to hide loanowner commands if bank is not global
 async def bank_is_global(ctx):
     return await bank.is_global()
@@ -145,7 +148,8 @@ class BankLoan(commands.Cog):
             "pending_owner_loans": [],  
             "interest_rate": 0.05,  # Default 5% interest (global)
             "interest_interval": "24h",  # Default 24 hours (global)
-            "last_interest": None
+            "last_interest": None,
+            "review_channel": None  # Global review channel
         }
         default_user = {
             "loan_amount": 0
@@ -266,7 +270,19 @@ class BankLoan(commands.Cog):
             pending.append({"user_id": user.id, "amount": amount, "date": now})
             await self.config.pending_owner_loans.set(pending)
             await ctx.send(f"Loan request for {amount} submitted and is pending bot owner approval.")
-            # Send to review channel if set (global)
+            # Send to global review channel if set
+            global_review_channel_id = await self.config.review_channel()
+            if global_review_channel_id:
+                for guild in self.bot.guilds:
+                    channel = guild.get_channel(global_review_channel_id)
+                    if channel:
+                        embed = await self.make_request_embed(ctx, {"user_id": user.id, "amount": amount, "date": now}, is_owner=True)
+                        view = LoanApprovalView(self, ctx, {"user_id": user.id, "amount": amount, "date": now}, is_owner=True)
+                        try:
+                            await channel.send(embed=embed, view=view)
+                        except Exception:
+                            pass
+            # Also send to per-guild review channels if set (legacy)
             for guild in self.bot.guilds:
                 review_channel_id = await self.config.guild(guild).review_channel()
                 if review_channel_id:
@@ -328,6 +344,7 @@ class BankLoan(commands.Cog):
 
     @commands.group()
     @commands.admin_or_permissions(manage_guild=True)
+    @loanset_check()
     async def loanset(self, ctx):
         """Loan settings (admin only)"""
 
@@ -580,6 +597,22 @@ class BankLoan(commands.Cog):
             return
         await self.config.interest_interval.set(interval)
         await ctx.send(f"Global interest interval set to {interval}.")
+
+    @loanowner.command(name="setreviewchannel")
+    async def loanowner_setreviewchannel(self, ctx, channel: discord.TextChannel = None):
+        """Set the global review channel for owner loan requests (leave blank to disable)"""
+        is_global = await bank.is_global()
+        if not is_global:
+            await ctx.send("The bank is not global. Use [p]loanset reviewchannel for guilds.")
+            return
+        if not await ctx.bot.is_owner(ctx.author):
+            await ctx.send("Only the bot owner can use this command.")
+            return
+        await self.config.review_channel.set(channel.id if channel else None)
+        if channel:
+            await ctx.send(f"Global review channel set to {channel.mention}.")
+        else:
+            await ctx.send("Global review channel notifications disabled.")
 
     @loan.command()
     async def interest(self, ctx):
