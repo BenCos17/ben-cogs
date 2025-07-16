@@ -444,72 +444,55 @@ class Skysearch(red_commands.Cog):
     @dashboard_page(name="settings", description="Configure SkySearch settings for this guild", methods=("GET", "POST"), is_owner=False)
     async def guild_settings_page(self, user: discord.User, guild: discord.Guild, request: typing.Optional[dict] = None, **kwargs) -> typing.Dict[str, typing.Any]:
         config = self.config.guild(guild)
+        # Use WTForms utility for dashboard integration
+        import wtforms
+        class SettingsForm(kwargs["Form"]):
+            def __init__(self):
+                super().__init__(prefix="skysearch_settings_")
+            alert_channel: wtforms.StringField = wtforms.StringField("Alert Channel ID", default=str(alert_channel or ""))
+            alert_role: wtforms.StringField = wtforms.StringField("Alert Role ID", default=str(alert_role or ""))
+            auto_icao: wtforms.BooleanField = wtforms.BooleanField("Auto ICAO Lookup", default=auto_icao)
+            auto_delete_not_found: wtforms.BooleanField = wtforms.BooleanField("Auto-Delete 'Not Found' Messages", default=auto_delete)
+            submit: wtforms.SubmitField = wtforms.SubmitField("Update Settings")
+
+        form = SettingsForm()
         updates = []
-        try:
-            if request and (request.get("method") == "POST" or request.get("_method") == "POST"):
-                data = request.get("data", request)
-                channel_id = data.get("alert_channel")
-                if channel_id is not None:
-                    try:
-                        if channel_id == "":
-                            await config.alert_channel.clear()
-                            updates.append("Alert channel cleared.")
-                        else:
-                            await config.alert_channel.set(int(channel_id))
-                            updates.append(f"Alert channel set to <#{channel_id}>.")
-                    except Exception as e:
-                        updates.append(f"Error setting alert channel: {e}")
-                role_id = data.get("alert_role")
-                if role_id is not None:
-                    try:
-                        if role_id == "":
-                            await config.alert_role.clear()
-                            updates.append("Alert role cleared.")
-                        else:
-                            await config.alert_role.set(int(role_id))
-                            updates.append(f"Alert role set to <@&{role_id}>.")
-                    except Exception as e:
-                        updates.append(f"Error setting alert role: {e}")
-                # Fix checkbox handling: if not present, set to False
-                auto_icao = data.get("auto_icao") is not None
-                try:
-                    await config.auto_icao.set(auto_icao)
-                    updates.append(f"Auto ICAO lookup set to {auto_icao}.")
-                except Exception as e:
-                    updates.append(f"Error setting auto ICAO: {e}")
-                auto_delete = data.get("auto_delete_not_found") is not None
-                try:
-                    await config.auto_delete_not_found.set(auto_delete)
-                    updates.append(f"Auto-delete 'not found' set to {auto_delete}.")
-                except Exception as e:
-                    updates.append(f"Error setting auto-delete: {e}")
-        except Exception:
-            pass
-        alert_channel = await config.alert_channel()
-        alert_role = await config.alert_role()
-        auto_icao = await config.auto_icao()
-        auto_delete = await config.auto_delete_not_found()
-        csrf_token_tuple = kwargs.get("csrf_token")
-        print("CSRF token in kwargs:", csrf_token_tuple)  # Debug print
-        if not csrf_token_tuple or not csrf_token_tuple[0]:
-            source = "<h3>Error</h3><p>CSRF token is missing. Please reload the page or contact the bot admin.</p>"
-            return {
-                "status": 0,
-                "web_content": {"source": source},
-            }
-        csrf_token = csrf_token_tuple[0]
+        if form.validate_on_submit():
+            try:
+                channel_id = form.alert_channel.data.strip()
+                if channel_id == "":
+                    await config.alert_channel.clear()
+                    updates.append("Alert channel cleared.")
+                else:
+                    await config.alert_channel.set(int(channel_id))
+                    updates.append(f"Alert channel set to <#{channel_id}>.")
+            except Exception as e:
+                updates.append(f"Error setting alert channel: {e}")
+            try:
+                role_id = form.alert_role.data.strip()
+                if role_id == "":
+                    await config.alert_role.clear()
+                    updates.append("Alert role cleared.")
+                else:
+                    await config.alert_role.set(int(role_id))
+                    updates.append(f"Alert role set to <@&{role_id}>.")
+            except Exception as e:
+                updates.append(f"Error setting alert role: {e}")
+            try:
+                await config.auto_icao.set(bool(form.auto_icao.data))
+                updates.append(f"Auto ICAO lookup set to {bool(form.auto_icao.data)}.")
+            except Exception as e:
+                updates.append(f"Error setting auto ICAO: {e}")
+            try:
+                await config.auto_delete_not_found.set(bool(form.auto_delete_not_found.data))
+                updates.append(f"Auto-delete 'not found' set to {bool(form.auto_delete_not_found.data)}.")
+            except Exception as e:
+                updates.append(f"Error setting auto-delete: {e}")
         updates_html = f"<div style='color:green;'>{'<br>'.join(updates)}</div>" if updates else ""
         source = f'''
         <h3>SkySearch Guild Settings</h3>
         {updates_html}
-        <form method="post">
-            <input type="hidden" name="csrf_token" value="{csrf_token}">
-            <label>Alert Channel ID:<br><input type="text" name="alert_channel" value="{alert_channel or ''}" placeholder="Channel ID or blank to clear"></label><br>
-            <label>Alert Role ID:<br><input type="text" name="alert_role" value="{alert_role or ''}" placeholder="Role ID or blank to clear"></label><br>
-            <label>Auto ICAO Lookup:<br><input type="checkbox" name="auto_icao" {'checked' if auto_icao else ''}></label><br>
-            <label>Auto-Delete 'Not Found' Messages:<br><input type="checkbox" name="auto_delete_not_found" {'checked' if auto_delete else ''}></label><br>
-            <button type="submit">Update Settings</button>
-        </form>
+        {{ form|safe }}
         '''
         # Permission check: only allow users with Manage Channels permission
         member = guild.get_member(user.id)
