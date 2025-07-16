@@ -22,7 +22,7 @@ from .utils.export import ExportManager
 from .commands.aircraft import AircraftCommands
 from .commands.airport import AirportCommands
 from .commands.admin import AdminCommands
-from .dashboard import setup_dashboard  # Import the dashboard integration
+from .dashboard.dashboard import setup_dashboard  # Import the dashboard integration from the dashboard/ subfolder
 
 
 def dashboard_page(*args, **kwargs):
