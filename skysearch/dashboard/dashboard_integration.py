@@ -51,7 +51,7 @@ class DashboardIntegration:
         }
 
     @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET", "POST"))
-    async def dashboard_guild_settings(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
+    async def dashboard_guild_settings(self, guild: discord.Guild, **kwargs):
         try:
             if "Form" not in kwargs:
                 return {"status": 1, "error": "No Form in kwargs"}
@@ -84,7 +84,7 @@ class DashboardIntegration:
                     <li><b>Auto Delete Not Found:</b> {auto_delete_str}</li>
                 </ul>
                 <hr/>
-                {{% if form %}}{{{{ form|safe }}}}{{% endif %}}
+                {{ form|safe }}
             '''
             return {"status": 0, "web_content": {"source": html, "form": form}}
         except Exception as e:
