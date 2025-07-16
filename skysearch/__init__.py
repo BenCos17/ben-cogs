@@ -10,4 +10,4 @@ async def setup(bot):
     """Add the Skysearch cog to the bot."""
     cog = Skysearch(bot)
     await bot.add_cog(cog)
-    # Dashboard integration is now handled within the main cog.
+    # Dashboard integration is handled within the dashboard_integration.py file
