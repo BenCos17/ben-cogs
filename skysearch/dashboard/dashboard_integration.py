@@ -19,7 +19,7 @@ class DashboardIntegration:
 
     @dashboard_page(name=None, description="SkySearch Stats Page", methods=("GET",))
     async def dashboard_stats(self, **kwargs) -> typing.Dict[str, typing.Any]:
-        # Example: Show a stats page
+        #Show a stats page
         embed_html = (
             '<h2>SkySearch Stats</h2>'
             '<p>This page shows live statistics and data for SkySearch.</p>'
