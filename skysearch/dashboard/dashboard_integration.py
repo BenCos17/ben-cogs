@@ -21,8 +21,8 @@ class DashboardIntegration:
     async def dashboard_stats(self, **kwargs) -> typing.Dict[str, typing.Any]:
         # Example: Show a simple stats page
         embed_html = (
-            '<h2>SkySearch Dashboard</h2>'
-            '<p>This is a simple integration page for SkySearch.</p>'
+            '<h2>SkySearch Stats</h2>'
+            '<p>This page shows live statistics and data for SkySearch.</p>'
             '<ul>'
             '<li>Aircraft tracked: <b>{{ aircraft_count }}</b></li>'
             '<li>Military ICAO tags: <b>{{ military_count }}</b></li>'
