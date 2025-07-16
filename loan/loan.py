@@ -87,6 +87,9 @@ class LoanApprovalPaginator(discord.ui.View):
             req = self.parent.requests[self.parent.index]
             result = await self.parent.cog.handle_approve(interaction, req, self.parent.is_owner)
             if result is False:
+                # Ensure the interaction is always responded to
+                if not interaction.response.is_done():
+                    await interaction.response.defer(ephemeral=True)
                 return  # Error already handled
             del self.parent.requests[self.parent.index]
             if not self.parent.requests:
@@ -104,6 +107,9 @@ class LoanApprovalPaginator(discord.ui.View):
             req = self.parent.requests[self.parent.index]
             result = await self.parent.cog.handle_deny(interaction, req, self.parent.is_owner)
             if result is False:
+                # Ensure the interaction is always responded to
+                if not interaction.response.is_done():
+                    await interaction.response.defer(ephemeral=True)
                 return  # Error already handled
             del self.parent.requests[self.parent.index]
             if not self.parent.requests:
