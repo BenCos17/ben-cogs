@@ -4,11 +4,15 @@
 
 ### First Time Setup
 1. **Load the cog** in your Red-DiscordBot
-2. **Set up an API key** (optional but recommended):
-   ```
-   *setapikey YOUR_API_KEY_HERE
-   ```
-   Get a free API key from [airplanes.live](https://airplanes.live/)
+2. **Set up API keys** (optional but recommended):
+   - For airplanes.live:
+     ```
+     *aircraft setapikey YOUR_API_KEY_HERE
+     ```
+   - For OpenWeatherMap (for weather/forecast):
+     ```
+     *airport setowmkey YOUR_OWM_API_KEY_HERE
+     ```
 
 ### Basic Commands
 - `*skysearch` - Main menu
@@ -228,4 +232,6 @@ This sends detailed debugging information to your DMs.
 ### Support
 - Check this guide first
 - Use the built-in help system
-- Contact the bot owner for technical issues 
+- Contact the bot owner for technical issues
+
+For further assistance, you can message me on Discord at **bencos17** or tag me in the Red-DiscordBot server. 
