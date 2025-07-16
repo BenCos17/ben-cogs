@@ -497,7 +497,7 @@ class Skysearch(red_commands.Cog):
                 "status": 0,
                 "web_content": {"source": source},
             }
-        csrf_token = csrf_token_tuple[0]
+        csrf_token = csrf_token_tuple[0]  # Use only the first element for the form
         updates_html = f"<div style='color:green;'>{'<br>'.join(updates)}</div>" if updates else ""
         source = f'''
         <h3>SkySearch Guild Settings</h3>
