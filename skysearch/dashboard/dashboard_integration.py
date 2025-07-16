@@ -19,21 +19,21 @@ class DashboardIntegration:
 
     @dashboard_page(name=None, description="SkySearch Stats Page", methods=("GET",))
     async def dashboard_stats(self, **kwargs) -> typing.Dict[str, typing.Any]:
-        embed_html = (
-            '<h2>SkySearch Dashboard</h2>'
-            '<p>This is a simple integration page for SkySearch.</p>'
-            '<ul>'
-            '<li>Aircraft tracked: <b>{{ aircraft_count }}</b></li>'
-            '<li>Military ICAO tags: <b>{{ military_count }}</b></li>'
-            '<li>Law enforcement ICAO tags: <b>{{ law_count }}</b></li>'
-            '</ul>'
-        )
+        embed_html = r'''
+            <h2>SkySearch Dashboard</h2>
+            <p>This is a simple integration page for SkySearch.</p>
+            <ul>
+                <li>Aircraft tracked: <b>{{ aircraft_count }}</b></li>
+                <li>Military ICAO tags: <b>{{ military_count }}</b></li>
+                <li>Law enforcement ICAO tags: <b>{{ law_count }}</b></li>
+            </ul>
+        '''
         cog = getattr(self, "_skysearch_cog", None)
         aircraft_count = "?"
         if cog and hasattr(cog, "api"):
-            stats = await cog.api.make_request("https://api.airplanes.live/stats")
+            stats = await cog.api.get_stats()
             if stats:
-                aircraft_count = stats.get("aircraft") or stats.get("ac") or "?"
+                aircraft_count = stats["aircraft_count"]
         if hasattr(cog, "military_icao_set"):
             military_count = len(cog.military_icao_set)
         else:

@@ -117,3 +117,15 @@ class APIManager:
         if self._http_client:
             await self._http_client.close()
             self._http_client = None 
+
+    async def get_stats(self):
+        """Fetch stats from the airplanes.live API (supports both endpoints)."""
+        url = "https://api.airplanes.live/stats"
+        stats = await self.make_request(url)
+        if not stats:
+            return None
+        aircraft_count = stats.get("aircraft") or stats.get("ac") or "?"
+        return {
+            "aircraft_count": aircraft_count,
+            # Add more stats here if needed
+        } 
