@@ -7,9 +7,7 @@ import asyncio
 import re
 import datetime
 import aiohttp
-from discord.ext import tasks, commands
-from redbot.core import commands as red_commands, Config
-import typing
+from redbot.core import commands, Config
 
 from .data.icao_codes import (
     law_enforcement_icao_set, military_icao_set, medical_icao_set, 
@@ -26,7 +24,7 @@ from .dashboard.dashboard_integration import DashboardIntegration
 
 
 
-class Skysearch(red_commands.Cog, DashboardIntegration):
+class Skysearch(commands.Cog, DashboardIntegration):
     """SkySearch - Aircraft tracking and information cog."""
     
     def __init__(self, bot):
@@ -68,8 +66,8 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         """Clean up when the cog is unloaded."""
         await self.api.close()
 
-    @red_commands.guild_only()
-    @red_commands.group(name='skysearch', help='Core menu for the cog', invoke_without_command=True)
+    @commands.guild_only()
+    @commands.group(name='skysearch', help='Core menu for the cog', invoke_without_command=True)
     async def skysearch(self, ctx):
         """SkySearch command group"""
         embed = discord.Embed(title="Thanks for using SkySearch", description="SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft.", color=0xfffffe)
@@ -77,7 +75,7 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         embed.add_field(name="airport", value="Use `airport` to show available commands to fetch information and imagery of airports around the world.", inline=False)
         await ctx.send(embed=embed)
     
-    @red_commands.guild_only()
+    @commands.guild_only()
     @skysearch.command(name='stats', help='Get statistics about SkySearch and the data used here')
     async def stats(self, ctx):
         """Get SkySearch statistics."""
@@ -118,8 +116,8 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         await ctx.send(embed=embed)
 
     # Aircraft commands
-    @red_commands.guild_only()
-    @red_commands.group(name='aircraft', help='Command center for aircraft related commands', invoke_without_command=True)
+    @commands.guild_only()
+    @commands.group(name='aircraft', help='Command center for aircraft related commands', invoke_without_command=True)
     async def aircraft_group(self, ctx):
         """Command center for aircraft related commands"""
         embed = discord.Embed(title="Aircraft Commands", description="Available aircraft-related commands:", color=0xfffffe)
@@ -221,13 +219,13 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         """Show alert task status and output if set."""
         await self.admin_commands.list_alert_channels(ctx)
 
-    @red_commands.is_owner()
+    @commands.is_owner()
     @aircraft_group.command(name='debugapi')
     async def aircraft_debugapi(self, ctx):
         """Debug API key and connection issues (DM only)."""
         await self.admin_commands.debug_api(ctx)
 
-    @red_commands.is_owner()
+    @commands.is_owner()
     @aircraft_group.command(name='setapimode')
     async def aircraft_set_api_mode(self, ctx, mode: str):
         """Set which API to use globally: 'primary' or 'fallback'. (owner only)"""
@@ -238,14 +236,14 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         await self.config.api_mode.set(mode)
         await ctx.send(f"✅ API mode set to **{mode}**.")
 
-    @red_commands.is_owner()
+    @commands.is_owner()
     @aircraft_group.command(name='apimode')
     async def aircraft_show_api_mode(self, ctx):
         """Show the current global API mode. (owner only)"""
         mode = await self.config.api_mode()
         await ctx.send(f"🌐 Current API mode: **{mode}**")
 
-    @red_commands.is_owner()
+    @commands.is_owner()
     @aircraft_group.command(name='debug')
     async def aircraft_debug_lookup(self, ctx, lookup_type: str = None, value: str = None):
         """Debug an aircraft lookup: *aircraft debug <lookup_type> <value> (lookup_type: icao, callsign, reg, type, squawk)"""
@@ -258,7 +256,7 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
             return
         await self.aircraft_commands.debug_lookup(ctx, lookup_type, value)
 
-    @red_commands.is_owner()
+    @commands.is_owner()
     @aircraft_group.command(name='debugtoggle')
     async def aircraft_debugtoggle(self, ctx, state: str = None):
         """Enable or disable aircraft debug output: *aircraft debugtoggle <on|off>"""
@@ -269,8 +267,8 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         await self.aircraft_commands.set_debug(ctx, enabled)
 
     # Airport commands
-    @red_commands.guild_only()
-    @red_commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)
+    @commands.guild_only()
+    @commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)
     async def airport_group(self, ctx):
         """Command center for airport related commands"""
         embed = discord.Embed(title="Airport Commands", description="Available airport-related commands:", color=0xfffffe)
@@ -301,33 +299,33 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         await self.airport_commands.forecast(ctx, code)
 
     # Owner commands
-    @red_commands.is_owner()
-    @red_commands.command(name='setapikey')
+    @commands.is_owner()
+    @commands.command(name='setapikey')
     async def setapikey(self, ctx, api_key: str):
         """Set the airplanes.live API key."""
         await self.admin_commands.set_api_key(ctx, api_key)
 
-    @red_commands.is_owner()
-    @red_commands.command(name='apikey')
+    @commands.is_owner()
+    @commands.command(name='apikey')
     async def apikey(self, ctx):
         """Check the status of the API key configuration."""
         await self.admin_commands.check_api_key(ctx)
 
-    @red_commands.is_owner()
-    @red_commands.command(name='clearapikey')
+    @commands.is_owner()
+    @commands.command(name='clearapikey')
     async def clearapikey(self, ctx):
         """Clear the API key configuration."""
         await self.admin_commands.clear_api_key(ctx)
 
-    @red_commands.is_owner()
-    @red_commands.command(name='setowmkey')
+    @commands.is_owner()
+    @commands.command(name='setowmkey')
     async def set_owm_key(self, ctx, api_key: str):
         """Set the OpenWeatherMap API key."""
         await self.config.openweathermap_api.set(api_key)
         await ctx.send("OpenWeatherMap API key set.")
 
-    @red_commands.is_owner()
-    @red_commands.command(name='owmkey')
+    @commands.is_owner()
+    @commands.command(name='owmkey')
     async def show_owm_key(self, ctx):
         """Show the current OpenWeatherMap API key (partially masked)."""
         key = await self.config.openweathermap_api()
@@ -336,8 +334,8 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         else:
             await ctx.send("No OpenWeatherMap API key set.")
 
-    @red_commands.is_owner()
-    @red_commands.command(name='clearowmkey')
+    @commands.is_owner()
+    @commands.command(name='clearowmkey')
     async def clear_owm_key(self, ctx):
         """Clear the OpenWeatherMap API key."""
         await self.config.openweathermap_api.set(None)
@@ -389,7 +387,7 @@ class Skysearch(red_commands.Cog, DashboardIntegration):
         """Wait for bot to be ready before starting the task."""
         await self.bot.wait_until_ready()
 
-    @red_commands.Cog.listener()
+    @commands.Cog.listener()
     async def on_message(self, message):
         """Handle automatic ICAO lookup."""
         if message.author == self.bot.user:

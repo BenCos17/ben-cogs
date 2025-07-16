@@ -7,7 +7,6 @@ import asyncio
 import datetime
 import aiohttp
 from discord.ext import commands
-from redbot.core import commands as red_commands
 
 
 class AdminCommands:

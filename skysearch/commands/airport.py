@@ -5,8 +5,6 @@ Airport commands for SkySearch cog
 import discord
 import aiohttp
 import asyncio
-from discord.ext import commands
-from redbot.core import commands as red_commands
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
 from ..utils.api import APIManager

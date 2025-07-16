@@ -9,7 +9,6 @@ import os
 from discord.ext import commands
 from discord.ext import tasks
 from urllib.parse import quote_plus
-from redbot.core import commands as red_commands
 
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
