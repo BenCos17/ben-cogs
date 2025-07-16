@@ -23,17 +23,11 @@ class DashboardIntegration:
             <h2>SkySearch Dashboard</h2>
             <p>This is a simple integration page for SkySearch.</p>
             <ul>
-                <li>Aircraft tracked: <b>{{ aircraft_count }}</b></li>
                 <li>Military ICAO tags: <b>{{ military_count }}</b></li>
                 <li>Law enforcement ICAO tags: <b>{{ law_count }}</b></li>
             </ul>
         '''
         cog = getattr(self, "_skysearch_cog", None)
-        aircraft_count = "?"
-        if cog and hasattr(cog, "api"):
-            stats = await cog.api.get_stats()
-            if stats:
-                aircraft_count = stats["aircraft_count"]
         if hasattr(cog, "military_icao_set"):
             military_count = len(cog.military_icao_set)
         else:
@@ -47,7 +41,6 @@ class DashboardIntegration:
             "web_content": {
                 "source": embed_html,
                 "context": {
-                    "aircraft_count": aircraft_count,
                     "military_count": military_count,
                     "law_count": law_count,
                 },
