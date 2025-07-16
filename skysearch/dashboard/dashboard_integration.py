@@ -50,62 +50,36 @@ class DashboardIntegration:
             },
         }
 
-    @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET", "POST"))
+    @dashboard_page(name="guild", description="SkySearch Guild Settings", methods=("GET",))
     async def dashboard_guild_settings(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        if "Form" not in kwargs or "DpyObjectConverter" not in kwargs:
-            return {"status": 1, "error": "Dashboard integration error: Form utilities missing."}
+        # Get the SkySearch cog instance
         cog = getattr(self, "_skysearch_cog", None)
         if not cog:
             return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
+        # Fetch guild config
         config = cog.config.guild(guild)
-
-        import wtforms
-
-        class SettingsForm(kwargs["Form"]):
-            def __init__(self):
-                super().__init__(prefix="skysearch_settings_")
-            alert_channel = wtforms.IntegerField(
-                "Alert Channel (ID):",
-                validators=[wtforms.validators.Optional(), kwargs["DpyObjectConverter"](discord.TextChannel)]
-            )
-            alert_role = wtforms.IntegerField(
-                "Alert Role (ID):",
-                validators=[wtforms.validators.Optional(), kwargs["DpyObjectConverter"](discord.Role)]
-            )
-            auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
-            auto_delete = wtforms.BooleanField("Auto Delete Not Found")
-            submit = wtforms.SubmitField("Save Settings")
-
-        # Get current values
         alert_channel_id = await config.alert_channel()
         alert_role_id = await config.alert_role()
-        auto_icao_val = await config.auto_icao()
-        auto_delete_val = await config.auto_delete_not_found()
-
-        form = SettingsForm()
-        if not form.is_submitted():
-            form.alert_channel.data = alert_channel_id
-            form.alert_role.data = alert_role_id
-            form.auto_icao.data = auto_icao_val
-            form.auto_delete.data = auto_delete_val
-
-        if form.validate_on_submit() and await form.validate_dpy_converters():
-            await config.alert_channel.set(form.alert_channel.data)
-            await config.alert_role.set(form.alert_role.data)
-            await config.auto_icao.set(form.auto_icao.data)
-            await config.auto_delete_not_found.set(form.auto_delete.data)
-            return {
-                "status": 0,
-                "notifications": [{"message": "Settings updated!", "category": "success"}],
-                "redirect_url": kwargs["request_url"],
-            }
-
-        html = "{{ form|safe }}"
-
+        auto_icao = await config.auto_icao()
+        auto_delete = await config.auto_delete_not_found()
+        # Format values
+        alert_channel = f"<#{alert_channel_id}>" if alert_channel_id else "Not set"
+        alert_role = f"<@&{alert_role_id}>" if alert_role_id else "Not set"
+        auto_icao_str = "Enabled" if auto_icao else "Disabled"
+        auto_delete_str = "Enabled" if auto_delete else "Disabled"
+        html = f'''
+            <h2>SkySearch Guild Settings</h2>
+            <ul>
+                <li><b>Alert Channel:</b> {alert_channel}</li>
+                <li><b>Alert Role:</b> {alert_role}</li>
+                <li><b>Auto ICAO Lookup:</b> {auto_icao_str}</li>
+                <li><b>Auto Delete Not Found:</b> {auto_delete_str}</li>
+            </ul>
+            <p>Use Discord commands to change these settings.</p>
+        '''
         return {
             "status": 0,
             "web_content": {
                 "source": html,
-                "form": form,
             },
         } 
