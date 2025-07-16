@@ -37,6 +37,7 @@ class LoanApprovalView(discord.ui.View):
             await self.cog.handle_approve(interaction, self.request, self.is_owner)
             self.disable_all_items()
             await interaction.response.edit_message(view=self)
+            await interaction.followup.send("Loan approved.")
         finally:
             if not interaction.response.is_done():
                 await interaction.response.defer(ephemeral=True)
@@ -47,6 +48,7 @@ class LoanApprovalView(discord.ui.View):
             await self.cog.handle_deny(interaction, self.request, self.is_owner)
             self.disable_all_items()
             await interaction.response.edit_message(view=self)
+            await interaction.followup.send("Loan denied.")
         finally:
             if not interaction.response.is_done():
                 await interaction.response.defer(ephemeral=True)
@@ -107,15 +109,10 @@ class LoanApprovalPaginator(discord.ui.View):
             try:
                 req = self.parent.requests[self.parent.index]
                 result = await self.parent.cog.handle_approve(interaction, req, self.parent.is_owner)
-                if result is False:
-                    return  # Error already handled
-                del self.parent.requests[self.parent.index]
-                if not self.parent.requests:
-                    await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
-                    return
-                if self.parent.index >= len(self.parent.requests):
-                    self.parent.index = len(self.parent.requests) - 1
-                await self.parent.update(interaction)
+                self.parent.parent.disable_all_items()
+                await interaction.response.edit_message(view=self.parent)
+                if result is not False:
+                    await interaction.followup.send("Loan approved.")
             finally:
                 if not interaction.response.is_done():
                     await interaction.response.defer(ephemeral=True)
@@ -128,15 +125,10 @@ class LoanApprovalPaginator(discord.ui.View):
             try:
                 req = self.parent.requests[self.parent.index]
                 result = await self.parent.cog.handle_deny(interaction, req, self.parent.is_owner)
-                if result is False:
-                    return  # Error already handled
-                del self.parent.requests[self.parent.index]
-                if not self.parent.requests:
-                    await interaction.response.edit_message(content="No more pending requests.", embed=None, view=None)
-                    return
-                if self.parent.index >= len(self.parent.requests):
-                    self.parent.index = len(self.parent.requests) - 1
-                await self.parent.update(interaction)
+                self.parent.parent.disable_all_items()
+                await interaction.response.edit_message(view=self.parent)
+                if result is not False:
+                    await interaction.followup.send("Loan denied.")
             finally:
                 if not interaction.response.is_done():
                     await interaction.response.defer(ephemeral=True)
