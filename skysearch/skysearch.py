@@ -66,11 +66,11 @@ class Skysearch(red_commands.Cog):
         # Start background tasks
         self.check_emergency_squawks.start()
         
-        # Setup dashboard integration
-        try:
-            setup_dashboard(self)
-        except Exception as e:
-            print(f"Dashboard integration setup failed: {e}")
+        # Remove dashboard setup from __init__
+        # try:
+        #     setup_dashboard(self)
+        # except Exception as e:
+        #     print(f"Dashboard integration setup failed: {e}")
 
     async def cog_unload(self):
         """Clean up when the cog is unloaded."""
@@ -430,5 +430,9 @@ class Skysearch(red_commands.Cog):
     @commands.Cog.listener()
     async def on_dashboard_cog_add(self, dashboard_cog: commands.Cog) -> None:
         dashboard_cog.rpc.third_parties_handler.add_third_party(self)
+        try:
+            setup_dashboard(self)
+        except Exception as e:
+            print(f"Dashboard integration setup failed: {e}")
         
         
