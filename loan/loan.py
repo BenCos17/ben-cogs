@@ -30,6 +30,7 @@ class LoanApprovalView(discord.ui.View):
         self.ctx = ctx
         self.request = request
         self.is_owner = is_owner
+        self.message = None
 
     @discord.ui.button(label="Approve", style=discord.ButtonStyle.green)
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -82,6 +83,9 @@ class LoanApprovalPaginator(discord.ui.View):
         embed = await self.cog.make_request_embed(self.ctx, req, self.is_owner)
         self.update_buttons()
         await interaction.response.edit_message(embed=embed, view=self)
+        # Optionally update self.message if needed
+        if interaction.message:
+            self.message = interaction.message
 
     class PrevButton(discord.ui.Button):
         def __init__(self, parent):
