@@ -680,6 +680,54 @@ class BankLoan(commands.Cog):
         embed.add_field(name="Current Balance", value=balance, inline=True)
         return embed
 
+    @loan.command()
+    async def balance(self, ctx):
+        """Show your current loan balance."""
+        loan_amount = await self.config.user(ctx.author).loan_amount()
+        if loan_amount and loan_amount > 0:
+            await ctx.send(f"Your current loan balance is {loan_amount}.")
+        else:
+            await ctx.send("You have no outstanding loan.")
+
+    @loanset.command()
+    async def listloans(self, ctx):
+        """List all users in this server with a loan balance (admin only)."""
+        members = ctx.guild.members
+        results = []
+        for member in members:
+            loan_amount = await self.config.user(member).loan_amount()
+            if loan_amount and loan_amount > 0:
+                results.append(f"{member.display_name} ({member.id}): {loan_amount}")
+        if results:
+            msg = "Users with outstanding loans:\n" + "\n".join(results)
+        else:
+            msg = "No users in this server have an outstanding loan."
+        await ctx.send(msg)
+
+    @loanowner.command(name="listloans")
+    async def loanowner_listloans(self, ctx):
+        """List all users globally with a loan balance (owner only, global bank only)."""
+        is_global = await bank.is_global()
+        if not is_global:
+            await ctx.send("The bank is not global. Use [p]loanset listloans for guilds.")
+            return
+        if not await ctx.bot.is_owner(ctx.author):
+            await ctx.send("Only the bot owner can use this command.")
+            return
+        results = []
+        for user_id in (await self.config.all_users()).keys():
+            user = self.bot.get_user(int(user_id))
+            if not user:
+                continue
+            loan_amount = await self.config.user(user).loan_amount()
+            if loan_amount and loan_amount > 0:
+                results.append(f"{user.display_name} ({user.id}): {loan_amount}")
+        if results:
+            msg = "Users with outstanding loans (global):\n" + "\n".join(results)
+        else:
+            msg = "No users globally have an outstanding loan."
+        await ctx.send(msg)
+
 
 
 
