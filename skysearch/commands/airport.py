@@ -337,3 +337,27 @@ class AirportCommands:
                     await self.paginate_embed(ctx, combined_pages)
         except Exception as e:
             await ctx.send(embed=discord.Embed(title="Error", description=str(e), color=0xff4545)) 
+
+    @commands.is_owner()
+    @commands.command(name="setowmkey")
+    async def setowmkey(self, ctx, api_key: str):
+        """Set the OpenWeatherMap API key."""
+        await self.cog.config.openweathermap_api.set(api_key)
+        await ctx.send("OpenWeatherMap API key set.")
+
+    @commands.is_owner()
+    @commands.command(name="owmkey")
+    async def owmkey(self, ctx):
+        """Show the current OpenWeatherMap API key (partially masked)."""
+        key = await self.cog.config.openweathermap_api()
+        if key:
+            await ctx.send(f"OpenWeatherMap API key: `{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}`")
+        else:
+            await ctx.send("No OpenWeatherMap API key set.")
+
+    @commands.is_owner()
+    @commands.command(name="clearowmkey")
+    async def clearowmkey(self, ctx):
+        """Clear the OpenWeatherMap API key."""
+        await self.cog.config.openweathermap_api.set(None)
+        await ctx.send("OpenWeatherMap API key cleared.") 

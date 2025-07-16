@@ -773,3 +773,27 @@ class AircraftCommands:
         except Exception as e:
             embed = discord.Embed(title="Error", description=f"Error scrolling through planes: {e}", color=0xff4545)
             await ctx.send(embed=embed) 
+
+    @commands.is_owner()
+    @commands.command(name="setapikey")
+    async def setapikey(self, ctx, api_key: str):
+        """Set the airplanes.live API key."""
+        await self.cog.config.airplanesliveapi.set(api_key)
+        await ctx.send("API key set.")
+
+    @commands.is_owner()
+    @commands.command(name="apikey")
+    async def apikey(self, ctx):
+        """Show the current airplanes.live API key (partially masked)."""
+        key = await self.cog.config.airplanesliveapi()
+        if key:
+            await ctx.send(f"API key: `{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}`")
+        else:
+            await ctx.send("No API key set.")
+
+    @commands.is_owner()
+    @commands.command(name="clearapikey")
+    async def clearapikey(self, ctx):
+        """Clear the airplanes.live API key."""
+        await self.cog.config.airplanesliveapi.set(None)
+        await ctx.send("API key cleared.") 
