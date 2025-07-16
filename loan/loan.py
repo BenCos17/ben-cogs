@@ -336,6 +336,9 @@ class BankLoan(commands.Cog):
     async def repay(self, ctx, amount: int):
         """Repay a loan to the bank"""
         user = ctx.author
+        if amount <= 0:
+            await ctx.send("You must repay a positive amount.")
+            return
         loan_amount = await self.config.user(user).loan_amount()
         if not loan_amount or loan_amount <= 0:
             await ctx.send("You do not have any outstanding loans.")
