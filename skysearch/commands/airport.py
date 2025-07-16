@@ -9,6 +9,7 @@ from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
+from redbot.core import commands
 
 
 class AirportCommands:

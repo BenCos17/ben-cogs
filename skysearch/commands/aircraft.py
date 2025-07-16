@@ -3,6 +3,7 @@ Aircraft commands for SkySearch cog
 """
 
 import discord
+from redbot.core import commands
 import asyncio
 import urllib
 import os
