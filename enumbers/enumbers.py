@@ -16,7 +16,8 @@ class Enumbers(commands.Cog):
         code = code.upper().replace(" ", "")
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(self.api_url) as resp:
+                headers = {"User-Agent": "Mozilla/5.0 (compatible; Discordbot/1.0; +https://discordapp.com)"}
+                async with session.get(self.api_url, headers=headers) as resp:
                     if resp.status != 200:
                         await ctx.send(f"❌ Could not reach the E-numbers API. Status: {resp.status}")
                         return
