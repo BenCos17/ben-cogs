@@ -13,18 +13,18 @@ class FacebookVideoDownloader(commands.Cog):
     @commands.command()
     async def fbvideo(self, ctx, url: str):
         """Download a Facebook video from a public URL and upload it here."""
-        await ctx.trigger_typing()
-        try:
-            video_url = self.get_facebook_video_url(url)
-            if not video_url:
-                await ctx.send("Could not find a downloadable video at that URL.")
-                return
-            filename = "fb_video.mp4"
-            self.download_video(video_url, filename)
-            await ctx.send(file=discord.File(filename))
-            os.remove(filename)
-        except Exception as e:
-            await ctx.send(f"Error: {e}")
+        async with ctx.typing():
+            try:
+                video_url = self.get_facebook_video_url(url)
+                if not video_url:
+                    await ctx.send("Could not find a downloadable video at that URL.")
+                    return
+                filename = "fb_video.mp4"
+                self.download_video(video_url, filename)
+                await ctx.send(file=discord.File(filename))
+                os.remove(filename)
+            except Exception as e:
+                await ctx.send(f"Error: {e}")
 
     def get_facebook_video_url(self, page_url):
         headers = {
