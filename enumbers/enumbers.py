@@ -7,7 +7,7 @@ class Enumbers(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=3141592653)
+        self.config = Config.get_conf(self, identifier=492089091320446976)
         self.api_url = "https://enumbers.jarvisdiscordbot.net/api/enumbers"
 
     @commands.command()
