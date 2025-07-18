@@ -38,10 +38,18 @@ class FacebookVideoDownloader(commands.Cog):
                     ydl_opts['outtmpl'] = tmpfile.name
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                         ydl.download([url])
-                    await status_msg.edit(content="Uploading video to Discord...")
+                    await status_msg.edit(content="Checking file size...")
                     if not os.path.exists(tmpfile.name):
                         await ctx.send("Could not download the video. Please check the URL or try again later.")
                         return
+                    file_size = os.path.getsize(tmpfile.name)
+                    max_size = 8 * 1024 * 1024  # 8MB default Discord limit
+                    file_size_mb = file_size / (1024 * 1024)
+                    if file_size > max_size:
+                        await status_msg.edit(content=f"The downloaded video is too large to upload to Discord.\nFile size: {file_size_mb:.2f} MB (limit: {max_size // (1024 * 1024)} MB).\nUpload failed because the file exceeds Discord's upload limit.")
+                        os.remove(tmpfile.name)
+                        return
+                    await status_msg.edit(content="Uploading video to Discord...")
                     await ctx.send(file=discord.File(tmpfile.name))
                     os.remove(tmpfile.name)
                 await status_msg.delete()
