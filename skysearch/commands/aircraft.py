@@ -481,7 +481,7 @@ class AircraftCommands:
 
     async def aircraft_within_radius(self, ctx, lat: str, lon: str, radius: str):
         """Get information about aircraft within a specified radius."""
-        url = f"{self.api.api_url}/?circle={lat},{lon},{radius}"
+        url = f"{await self.api.get_api_url()}/?circle={lat},{lon},{radius}"
         response = await self.api.make_request(url, ctx)
         if response:
             await self.send_aircraft_info(ctx, response)
@@ -518,7 +518,7 @@ class AircraftCommands:
             return
 
         # Use new REST API endpoint for closest aircraft search
-        url = f"{self.api.api_url}/?closest={lat},{lon},{radius}"
+        url = f"{await self.api.get_api_url()}/?closest={lat},{lon},{radius}"
         response = await self.api.make_request(url, ctx)
         
         if response and 'aircraft' in response and response['aircraft']:

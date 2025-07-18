@@ -16,6 +16,10 @@ class APIManager:
         self.fallback_api_url = "https://api.airplanes.live"
         self._http_client = None
     
+    async def get_api_url(self):
+        api_mode = await self.cog.config.api_mode()
+        return self.primary_api_url if api_mode == "primary" else self.fallback_api_url
+
     async def get_headers(self, url=None, api_mode=None):
         """Return headers with API key for requests, if available. Only send API key for primary API."""
         headers = {}

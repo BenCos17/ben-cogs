@@ -342,7 +342,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
             emergency_squawk_codes = ['7500', '7600', '7700']
             for squawk_code in emergency_squawk_codes:
                 # Use new REST API endpoint for squawk filter - must combine with base query
-                url = f"{self.api.api_url}/?all_with_pos&filter_squawk={squawk_code}"
+                url = f"{await self.api.get_api_url()}/?all_with_pos&filter_squawk={squawk_code}"
                 response = await self.api.make_request(url)  # No ctx for background task
                 if response and 'aircraft' in response:
                     for aircraft_info in response['aircraft']:
