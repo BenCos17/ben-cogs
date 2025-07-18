@@ -11,7 +11,7 @@ class Enumbers(commands.Cog):
         self.api_url = "https://enumbers.jarvisdiscordbot.net/api/enumbers"
 
     @commands.command()
-    async def enumber(self, ctx, code: str):
+    async def enumber(self, ctx, *, code: str):
         """Look up an E-number (e.g. E621, E100, E950).
         You can type E-numbers with or without spaces, e.g. E120, e 120, or E  1 2 0.
         """
