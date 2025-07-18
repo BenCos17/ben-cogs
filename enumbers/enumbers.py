@@ -7,7 +7,7 @@ class Enumbers(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=492089091320446976)
+        self.config = Config.get_conf(self, identifier=3141592653)
         self.api_url = "https://enumbers.jarvisdiscordbot.net/api/enumbers"
 
     @commands.command()
@@ -38,8 +38,24 @@ class Enumbers(commands.Cog):
             return
         name = found.get("name", "Unknown")
         url = found.get("openfoodfacts_url")
-        embed = discord.Embed(title=f"{code}: {name}", color=discord.Color.green())
+        additive = found.get("openfoodfacts_additive")
+        embed = discord.Embed(
+            title=f"{code}: {name}",
+            description=f"**{name}**",
+            color=discord.Color.green()
+        )
         if url:
-            embed.add_field(name="OpenFoodFacts", value=f"[Link]({url})", inline=False)
+            embed.add_field(name="OpenFoodFacts", value=f"[OpenFoodFacts Link]({url})", inline=False)
+        if additive:
+            add_name = additive.get("name")
+            add_url = additive.get("url")
+            wikidata = additive.get("sameAs", [])
+            if add_name:
+                embed.add_field(name="Additive Name", value=add_name, inline=False)
+            if add_url:
+                embed.add_field(name="Additive Info", value=f"[More Info]({add_url})", inline=False)
+            if wikidata:
+                wikidata_links = "\n".join(f"[Wikidata]({link})" for link in wikidata)
+                embed.add_field(name="Wikidata", value=wikidata_links, inline=False)
         await ctx.send(embed=embed)
 
