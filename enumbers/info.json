@@ -1,0 +1,11 @@
+{
+  "name": "Enumbers",
+  "description": "Look up E-numbers (food additives) using the enumbers API and get OpenFoodFacts links.",
+  "author": ["bencos18"],
+  "min_bot_version": "3.5.0",
+  "requirements": ["aiohttp"],
+  "tags": ["food", "lookup", "e-numbers", "additives"],
+  "hidden": false,
+  "disabled": false,
+  "type": "COG"
+}
