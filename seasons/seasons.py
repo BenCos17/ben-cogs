@@ -129,7 +129,7 @@ class Seasons(commands.Cog):
     async def easter(self, ctx, year: int = None):
         """Get the date of Easter or celebrate Easter!
         If year is provided, shows Easter date for that year."""
-        await set_contextual_locales_from_guild(ctx.guild)
+        set_contextual_locales_from_guild(ctx.guild)
         if year is None:
             year = datetime.date.today().year
         try:
