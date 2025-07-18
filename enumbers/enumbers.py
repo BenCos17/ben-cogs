@@ -132,7 +132,7 @@ class Enumbers(commands.Cog):
 
     @commands.command()
     async def enumberlist(self, ctx, page: int = 1):
-        """List all E-numbers (paginated, 20 per page)."""
+        """List all E-numbers (paginated, 20 per page, with buttons)."""
         try:
             data = await self.fetch_enumbers()
             if data is None:
@@ -144,15 +144,71 @@ class Enumbers(commands.Cog):
         per_page = 20
         total = len(data)
         pages = (total + per_page - 1) // per_page
-        if page < 1 or page > pages:
-            await ctx.send(f"Page must be between 1 and {pages}.")
-            return
-        start = (page - 1) * per_page
-        end = start + per_page
-        msg = f"**E-numbers List (Page {page}/{pages}):**\n"
-        for item in data[start:end]:
-            msg += f"`{item.get('code', '?')}`: {item.get('name', '?')}\n"
-        await ctx.send(msg)
+        page = max(1, min(page, pages))
+
+        def make_page_embed(page_num):
+            start = (page_num - 1) * per_page
+            end = start + per_page
+            msg = f"**E-numbers List (Page {page_num}/{pages}):**\n"
+            for item in data[start:end]:
+                msg += f"`{item.get('code', '?')}`: {item.get('name', '?')}\n"
+            return msg
+
+        class EnumberListView(discord.ui.View):
+            def __init__(self, ctx, total_pages, current_page):
+                super().__init__(timeout=60)
+                self.ctx = ctx
+                self.total_pages = total_pages
+                self.current_page = current_page
+                self.message = None
+                self.update_buttons()
+
+            def update_buttons(self):
+                self.clear_items()
+                self.add_item(self.PreviousButton(self))
+                self.add_item(self.NextButton(self))
+
+            class PreviousButton(discord.ui.Button):
+                def __init__(self, parent):
+                    super().__init__(label="Previous", style=discord.ButtonStyle.secondary, disabled=parent.current_page <= 1)
+                    self.parent = parent
+                async def callback(self, interaction: discord.Interaction):
+                    if interaction.user != self.parent.ctx.author:
+                        await interaction.response.send_message("You can't control this pagination.", ephemeral=True)
+                        return
+                    if self.parent.current_page > 1:
+                        self.parent.current_page -= 1
+                        await self.parent.update_message(interaction)
+
+            class NextButton(discord.ui.Button):
+                def __init__(self, parent):
+                    super().__init__(label="Next", style=discord.ButtonStyle.secondary, disabled=parent.current_page >= parent.total_pages)
+                    self.parent = parent
+                async def callback(self, interaction: discord.Interaction):
+                    if interaction.user != self.parent.ctx.author:
+                        await interaction.response.send_message("You can't control this pagination.", ephemeral=True)
+                        return
+                    if self.parent.current_page < self.parent.total_pages:
+                        self.parent.current_page += 1
+                        await self.parent.update_message(interaction)
+
+            async def update_message(self, interaction):
+                self.update_buttons()
+                content = make_page_embed(self.current_page)
+                await interaction.response.edit_message(content=content, view=self)
+
+            async def on_timeout(self):
+                for item in self.children:
+                    item.disabled = True
+                if self.message:
+                    try:
+                        await self.message.edit(view=self)
+                    except Exception:
+                        pass
+
+        view = EnumberListView(ctx, pages, page)
+        content = make_page_embed(page)
+        view.message = await ctx.send(content, view=view)
 
     @commands.command()
     async def enumbercount(self, ctx):
