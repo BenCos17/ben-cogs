@@ -14,12 +14,19 @@ class Enumbers(commands.Cog):
     async def enumber(self, ctx, code: str):
         """Look up an E-number (e.g. E621, E100, E950)."""
         code = code.upper().replace(" ", "")
-        async with aiohttp.ClientSession() as session:
-            async with session.get(self.api_url) as resp:
-                if resp.status != 200:
-                    await ctx.send("❌ Could not reach the E-numbers API.")
-                    return
-                data = await resp.json()
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.api_url) as resp:
+                    if resp.status != 200:
+                        await ctx.send(f"❌ Could not reach the E-numbers API. Status: {resp.status}")
+                        return
+                    data = await resp.json()
+        except aiohttp.ClientError as e:
+            await ctx.send(f"❌ HTTP error: {type(e).__name__}: {e}")
+            return
+        except Exception as e:
+            await ctx.send(f"❌ Unexpected error: {type(e).__name__}: {e}")
+            return
         found = None
         for item in data:
             if item.get("code", "").upper() == code:
@@ -35,5 +42,3 @@ class Enumbers(commands.Cog):
             embed.add_field(name="OpenFoodFacts", value=f"[Link]({url})", inline=False)
         await ctx.send(embed=embed)
 
-async def setup(bot):
-    await bot.add_cog(Enumbers(bot))
