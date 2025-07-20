@@ -72,12 +72,16 @@ class DashboardIntegration:
         class SettingsForm(kwargs["Form"]):
             def __init__(self):
                 super().__init__(prefix="settings_")
-            alert_channel = wtforms.StringField("Alert Channel ID", default=str(alert_channel_id or ""))
-            alert_role = wtforms.StringField("Alert Role ID", default=str(alert_role_id or ""))
-            auto_icao = wtforms.BooleanField("Auto ICAO Lookup", default=auto_icao)
-            auto_delete = wtforms.BooleanField("Auto Delete Not Found", default=auto_delete)
+            alert_channel = wtforms.StringField("Alert Channel ID")
+            alert_role = wtforms.StringField("Alert Role ID")
+            auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
+            auto_delete = wtforms.BooleanField("Auto Delete Not Found")
             submit = wtforms.SubmitField("Save Settings")
         form = SettingsForm()
+        form.alert_channel.data = str(alert_channel_id or "")
+        form.alert_role.data = str(alert_role_id or "")
+        form.auto_icao.data = auto_icao
+        form.auto_delete.data = auto_delete
         if form.validate_on_submit():
             try:
                 # Validate and update config
