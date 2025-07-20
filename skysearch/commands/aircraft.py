@@ -316,11 +316,11 @@ class AircraftCommands:
                     return embed
 
                 async def update_message(message, page_index):
-                    embed, view = await create_embed(aircraft_list[page_index])
-                    await message.edit(embed=embed, view=view)
+                    embed = await create_embed(aircraft_list[page_index])
+                    await message.edit(embed=embed)
 
-                embed, view = await create_embed(aircraft_list[page_index])
-                message = await ctx.send(embed=embed, view=view)
+                embed = await create_embed(aircraft_list[page_index])
+                message = await ctx.send(embed=embed)
 
                 await message.add_reaction("⬅️")
                 await message.add_reaction("❌")
