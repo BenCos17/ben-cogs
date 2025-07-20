@@ -50,7 +50,8 @@ class HelperUtils:
         # If still no photo found, try to get aircraft data to find registration and try again
         try:
             # Get aircraft data from airplanes.live to find registration
-            url = f"{self.cog.api.api_url}/?find_hex={hex_id}"
+            api_url = await self.cog.api.get_api_url()
+            url = f"{api_url}/?find_hex={hex_id}"
             response = await self.cog.api.make_request(url)
             
             if response and 'aircraft' in response and response['aircraft']:
