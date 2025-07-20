@@ -66,6 +66,11 @@ class DashboardIntegration:
             alert_role_id = await config.alert_role()
             auto_icao = await config.auto_icao()
             auto_delete = await config.auto_delete_not_found()
+            # Fetch channel and role names
+            alert_channel_obj = guild.get_channel(alert_channel_id) if alert_channel_id else None
+            alert_channel_name = alert_channel_obj.name if alert_channel_obj else "Not set"
+            alert_role_obj = guild.get_role(alert_role_id) if alert_role_id else None
+            alert_role_name = alert_role_obj.name if alert_role_obj else "Not set"
         except Exception as e:
             return {"status": 1, "web_content": {"source": f"<p>Error loading config: {e}</p>"}, "notifications": [{"message": f"Error loading config: {e}", "category": "error"}]}
         # WTForms form definition
@@ -99,11 +104,21 @@ class DashboardIntegration:
             except Exception as e:
                 return {
                     "status": 1,
-                    "web_content": {"source": "{{ form|safe }}", "form": form},
+                    "web_content": {"source": "{{ form|safe }}", "form": form, "alert_channel_name": alert_channel_name, "alert_role_name": alert_role_name},
                     "notifications": [{"message": f"Error updating settings: {e}", "category": "error"}]
                 }
         # Render the form
+        # Custom template to show names beside fields
+        custom_form_html = (
+            '{{ form.alert_channel.label }} {{ form.alert_channel() }} '
+            '(<b>{{ alert_channel_name }}</b>)<br>'
+            '{{ form.alert_role.label }} {{ form.alert_role() }} '
+            '(<b>{{ alert_role_name }}</b>)<br>'
+            '{{ form.auto_icao.label }} {{ form.auto_icao() }}<br>'
+            '{{ form.auto_delete.label }} {{ form.auto_delete() }}<br>'
+            '{{ form.submit() }}'
+        )
         return {
             "status": 0,
-            "web_content": {"source": "{{ form|safe }}", "form": form},
+            "web_content": {"source": custom_form_html, "form": form, "alert_channel_name": alert_channel_name, "alert_role_name": alert_role_name},
         } 
