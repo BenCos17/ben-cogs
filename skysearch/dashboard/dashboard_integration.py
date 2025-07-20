@@ -74,8 +74,7 @@ class DashboardIntegration:
         except Exception as e:
             return {"status": 1, "web_content": {"source": f"<p>Error loading config: {e}</p>"}, "notifications": [{"message": f"Error loading config: {e}", "category": "error"}]}
         # WTForms form definition
-        FormBase = kwargs.get("Form", wtforms.Form)
-        class SettingsForm(FormBase):
+        class SettingsForm(kwargs["Form"]):
             def __init__(self):
                 super().__init__(prefix="settings_")
             alert_channel = wtforms.StringField("Alert Channel ID")
