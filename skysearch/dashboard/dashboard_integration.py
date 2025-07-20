@@ -72,8 +72,10 @@ class DashboardIntegration:
             role_name = role_obj.name if role_obj else "Not set"
         except Exception as e:
             return {"status": 1, "web_content": {"source": f"<p>Error loading config: {e}</p>"}, "notifications": [{"message": f"Error loading config: {e}", "category": "error"}]}
-        # WTForms form definition (no default=... in class)
+        # WTForms form definition
         class SettingsForm(kwargs["Form"]):
+            def __init__(self):
+                super().__init__(prefix="settings_")
             alert_channel = wtforms.StringField("Alert Channel ID")
             alert_role = wtforms.StringField("Alert Role ID")
             auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
