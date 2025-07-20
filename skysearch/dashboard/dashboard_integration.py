@@ -66,10 +66,6 @@ class DashboardIntegration:
             alert_role_id = await config.alert_role()
             auto_icao = await config.auto_icao()
             auto_delete = await config.auto_delete_not_found()
-            channel_obj = guild.get_channel(alert_channel_id) if alert_channel_id else None
-            role_obj = guild.get_role(alert_role_id) if alert_role_id else None
-            channel_name = channel_obj.name if channel_obj else "Not set"
-            role_name = role_obj.name if role_obj else "Not set"
         except Exception as e:
             return {"status": 1, "web_content": {"source": f"<p>Error loading config: {e}</p>"}, "notifications": [{"message": f"Error loading config: {e}", "category": "error"}]}
         # WTForms form definition
@@ -86,18 +82,6 @@ class DashboardIntegration:
         form.alert_role.data = str(alert_role_id or "")
         form.auto_icao.data = auto_icao
         form.auto_delete.data = auto_delete
-        # Custom HTML to show channel/role names, using Jinja2 double curly braces
-        source = """
-        <div>
-            {{ form.alert_channel.label }}<br>
-            {{ form.alert_channel(size=40) }} <span style='color: #aaa;'>(Current: {{ channel_name }})</span><br><br>
-            {{ form.alert_role.label }}<br>
-            {{ form.alert_role(size=40) }} <span style='color: #aaa;'>(Current: {{ role_name }})</span><br><br>
-            {{ form.auto_icao() }} {{ form.auto_icao.label }}<br>
-            {{ form.auto_delete() }} {{ form.auto_delete.label }}<br>
-            {{ form.submit() }}
-        </div>
-        """
         if form.validate_on_submit():
             try:
                 # Validate and update config
@@ -115,11 +99,11 @@ class DashboardIntegration:
             except Exception as e:
                 return {
                     "status": 1,
-                    "web_content": {"source": source, "form": form, "channel_name": channel_name, "role_name": role_name},
+                    "web_content": {"source": "{{ form|safe }}", "form": form},
                     "notifications": [{"message": f"Error updating settings: {e}", "category": "error"}]
                 }
         # Render the form
         return {
             "status": 0,
-            "web_content": {"source": source, "form": form, "channel_name": channel_name, "role_name": role_name},
+            "web_content": {"source": "{{ form|safe }}", "form": form},
         } 
