@@ -70,6 +70,8 @@ class AdminCommands:
                     # Convert seconds to minutes
                     seconds = int(duration[:-1])
                     minutes = seconds / 60
+                elif duration.endswith('m'):
+                    minutes = int(duration[:-1])
                 else:
                     minutes = int(duration)
                 
@@ -81,15 +83,15 @@ class AdminCommands:
                 if minutes < 1:
                     await ctx.send(f"Emergency alert cooldown set to {int(minutes * 60)} seconds.")
                 else:
-                    await ctx.send(f"Emergency alert cooldown set to {minutes} minutes.")
+                    await ctx.send(f"Emergency alert cooldown set to {int(minutes)} minutes.")
             except ValueError:
-                await ctx.send("Invalid duration format. Use a number for minutes or add 's' for seconds (e.g. '30s')")
+                await ctx.send("Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds ('30s')")
         else:
             cooldown = await self.cog.config.guild(ctx.guild).emergency_cooldown()
             if cooldown < 1:
                 await ctx.send(f"Current emergency alert cooldown is {int(cooldown * 60)} seconds.")
             else:
-                await ctx.send(f"Current emergency alert cooldown is {cooldown} minutes.")
+                await ctx.send(f"Current emergency alert cooldown is {int(cooldown)} minutes.")
 
     async def autoicao(self, ctx, state: bool = None):
         """Enable or disable automatic ICAO lookup."""

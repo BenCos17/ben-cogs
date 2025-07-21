@@ -211,10 +211,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
         
         Default cooldown is 5 minutes.
         Use without a value to check current setting.
-        Accepts minutes (e.g. 5) or seconds (e.g. 30s)
+        Accepts minutes (e.g. 5, 5m) or seconds (e.g. 30s)
         
         Examples:
-            [p]aircraft alertcooldown 10   - Set cooldown to 10 minutes
+            [p]aircraft alertcooldown 10m  - Set cooldown to 10 minutes
             [p]aircraft alertcooldown 30s  - Set cooldown to 30 seconds
             [p]aircraft alertcooldown      - Show current cooldown
         """
