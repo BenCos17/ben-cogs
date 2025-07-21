@@ -35,7 +35,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
-        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, last_emergency_squawk_time=None, auto_delete_not_found=True)
+        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={})
         
         # Initialize utility managers
         self.api = APIManager(self)
@@ -205,6 +205,11 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Set or clear a role to mention when new emergency squawks occur."""
         await self.admin_commands.set_alert_role(ctx, role)
 
+    @aircraft_group.command(name='alertcooldown')
+    async def aircraft_alertcooldown(self, ctx, minutes: int = None):
+        """Set or show the cooldown for emergency squawk alerts (in minutes)."""
+        await self.admin_commands.set_alert_cooldown(ctx, minutes)
+
     @aircraft_group.command(name='autoicao')
     async def aircraft_autoicao(self, ctx, state: bool = None):
         """Enable or disable automatic ICAO lookup."""
@@ -351,12 +356,41 @@ class Skysearch(commands.Cog, DashboardIntegration):
                             continue
                         guilds = self.bot.guilds
                         for guild in guilds:
-                            alert_channel_id = await self.config.guild(guild).alert_channel()
+                            guild_config = self.config.guild(guild)
+                            alert_channel_id = await guild_config.alert_channel()
                             if alert_channel_id:
+                                icao_hex = aircraft_info.get('hex')
+                                if not icao_hex:
+                                    continue
+                                
+                                cooldown_minutes = await guild_config.emergency_cooldown()
+                                alert_key = f"{icao_hex}-{squawk_code}"
+                                now = datetime.datetime.now(datetime.timezone.utc)
+                                
+                                last_alerts = await guild_config.last_alerts()
+                                last_alert_timestamp = last_alerts.get(alert_key)
+                                
+                                if last_alert_timestamp:
+                                    last_alert_time = datetime.datetime.fromtimestamp(last_alert_timestamp, tz=datetime.timezone.utc)
+                                    if (now - last_alert_time).total_seconds() < cooldown_minutes * 60:
+                                        continue  # Cooldown active, skip.
+                                
                                 alert_channel = self.bot.get_channel(alert_channel_id)
                                 if alert_channel:
+                                    # Update timestamp before sending, to be safe
+                                    async with guild_config.last_alerts() as last_alerts_ctx:
+                                        last_alerts_ctx[alert_key] = now.timestamp()
+                                        # Clean up old entries
+                                        keys_to_delete = [
+                                            k for k, ts in last_alerts_ctx.items()
+                                            if (now.timestamp() - ts) > (cooldown_minutes * 60)
+                                        ]
+                                        for k in keys_to_delete:
+                                            if k != alert_key:
+                                                del last_alerts_ctx[k]
+
                                     # Get the alert role
-                                    alert_role_id = await self.config.guild(guild).alert_role()
+                                    alert_role_id = await guild_config.alert_role()
                                     alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
                                     
                                     # Send the new alert with role mention if available
@@ -372,7 +406,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     # Only log if channel was set but not found (actual error)
                                     print(f"Warning: Alert channel {alert_channel_id} not found for guild {guild.name} - channel may have been deleted")
                             # Removed the "No alert channel set" message - this is normal behavior
-                await asyncio.sleep(2)  # Add a delay to respect API rate limit
+                await asyncio.sleep(2)
         except Exception as e:
             print(f"Error checking emergency squawks: {e}")
 

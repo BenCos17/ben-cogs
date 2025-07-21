@@ -53,6 +53,18 @@ class AdminCommands:
                 embed = discord.Embed(description=f"Error clearing alert role: {e}", color=0xff4545)
                 await ctx.send(embed=embed)
 
+    async def set_alert_cooldown(self, ctx, minutes: int = None):
+        """Set or show the cooldown for emergency squawk alerts."""
+        if minutes is not None:
+            if minutes < 0:
+                await ctx.send("Cooldown must be a positive number of minutes.")
+                return
+            await self.cog.config.guild(ctx.guild).emergency_cooldown.set(minutes)
+            await ctx.send(f"Emergency alert cooldown set to {minutes} minutes.")
+        else:
+            cooldown = await self.cog.config.guild(ctx.guild).emergency_cooldown()
+            await ctx.send(f"Current emergency alert cooldown is {cooldown} minutes.")
+
     async def autoicao(self, ctx, state: bool = None):
         """Enable or disable automatic ICAO lookup."""
         if state is None:
