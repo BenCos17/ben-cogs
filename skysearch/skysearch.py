@@ -206,9 +206,19 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await self.admin_commands.set_alert_role(ctx, role)
 
     @aircraft_group.command(name='alertcooldown')
-    async def aircraft_alertcooldown(self, ctx, minutes: int = None):
-        """Set or show the cooldown for emergency squawk alerts (in minutes)."""
-        await self.admin_commands.set_alert_cooldown(ctx, minutes)
+    async def aircraft_alertcooldown(self, ctx, duration: str = None):
+        """Set or show the cooldown for emergency squawk alerts.
+        
+        Default cooldown is 5 minutes.
+        Use without a value to check current setting.
+        Accepts minutes (e.g. 5) or seconds (e.g. 30s)
+        
+        Examples:
+            [p]aircraft alertcooldown 10   - Set cooldown to 10 minutes
+            [p]aircraft alertcooldown 30s  - Set cooldown to 30 seconds
+            [p]aircraft alertcooldown      - Show current cooldown
+        """
+        await self.admin_commands.set_alert_cooldown(ctx, duration)
 
     @aircraft_group.command(name='autoicao')
     async def aircraft_autoicao(self, ctx, state: bool = None):

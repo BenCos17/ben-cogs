@@ -53,17 +53,43 @@ class AdminCommands:
                 embed = discord.Embed(description=f"Error clearing alert role: {e}", color=0xff4545)
                 await ctx.send(embed=embed)
 
-    async def set_alert_cooldown(self, ctx, minutes: int = None):
-        """Set or show the cooldown for emergency squawk alerts."""
-        if minutes is not None:
-            if minutes < 0:
-                await ctx.send("Cooldown must be a positive number of minutes.")
-                return
-            await self.cog.config.guild(ctx.guild).emergency_cooldown.set(minutes)
-            await ctx.send(f"Emergency alert cooldown set to {minutes} minutes.")
+    async def set_alert_cooldown(self, ctx, duration: str = None):
+        """Set or show the cooldown for emergency squawk alerts.
+        
+        Parameters:
+        -----------
+        duration: str, optional
+            The duration to set for the cooldown.
+            Can be in minutes (e.g. "5") or seconds (e.g. "30s")
+            If not provided, shows the current cooldown setting.
+            Default is 5 minutes.
+        """
+        if duration is not None:
+            try:
+                if duration.endswith('s'):
+                    # Convert seconds to minutes
+                    seconds = int(duration[:-1])
+                    minutes = seconds / 60
+                else:
+                    minutes = int(duration)
+                
+                if minutes < 0:
+                    await ctx.send("Cooldown must be a positive number.")
+                    return
+                
+                await self.cog.config.guild(ctx.guild).emergency_cooldown.set(minutes)
+                if minutes < 1:
+                    await ctx.send(f"Emergency alert cooldown set to {int(minutes * 60)} seconds.")
+                else:
+                    await ctx.send(f"Emergency alert cooldown set to {minutes} minutes.")
+            except ValueError:
+                await ctx.send("Invalid duration format. Use a number for minutes or add 's' for seconds (e.g. '30s')")
         else:
             cooldown = await self.cog.config.guild(ctx.guild).emergency_cooldown()
-            await ctx.send(f"Current emergency alert cooldown is {cooldown} minutes.")
+            if cooldown < 1:
+                await ctx.send(f"Current emergency alert cooldown is {int(cooldown * 60)} seconds.")
+            else:
+                await ctx.send(f"Current emergency alert cooldown is {cooldown} minutes.")
 
     async def autoicao(self, ctx, state: bool = None):
         """Enable or disable automatic ICAO lookup."""
