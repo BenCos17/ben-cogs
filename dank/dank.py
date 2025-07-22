@@ -1,5 +1,6 @@
 from redbot.core import commands
 import random
+import discord
 
 class Dank(commands.Cog):
     """Gay and Simp rating machine, Dank Memer style."""
@@ -11,9 +12,11 @@ class Dank(commands.Cog):
             user = ctx.author
         percent = random.randint(0, 100)
         if user == ctx.author:
-            await ctx.send(f"gay r8 machine\nYou are {percent}% gay :gay_pride_flag:")
+            desc = f"You are {percent}% gay 🏳️‍🌈"
         else:
-            await ctx.send(f"gay r8 machine\n{user.display_name} is {percent}% gay :gay_pride_flag:")
+            desc = f"{user.display_name} is {percent}% gay 🏳️‍🌈"
+        embed = discord.Embed(title="gay r8 machine", description=desc, color=discord.Color.dark_theme())
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def simprate(self, ctx, user: commands.MemberConverter = None):
@@ -22,9 +25,11 @@ class Dank(commands.Cog):
             user = ctx.author
         percent = random.randint(0, 100)
         if user == ctx.author:
-            await ctx.send(f"simp r8 machine\nYou are {percent}% simp")
+            desc = f"You are {percent}% simp"
         else:
-            await ctx.send(f"simp r8 machine\n{user.display_name} is {percent}% simp")
+            desc = f"{user.display_name} is {percent}% simp"
+        embed = discord.Embed(description=desc, color=discord.Color.dark_theme())
+        await ctx.send(embed=embed)
 
 
 
