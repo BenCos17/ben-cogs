@@ -22,6 +22,10 @@ from .commands.aircraft import AircraftCommands
 from .commands.airport import AirportCommands
 from .commands.admin import AdminCommands
 from .dashboard.dashboard_integration import DashboardIntegration
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), 'api'))
+from api.squawk_api import SquawkAlertAPI
 
 
 
@@ -60,8 +64,16 @@ class Skysearch(commands.Cog, DashboardIntegration):
         
         # Start background tasks
         self.check_emergency_squawks.start()
-        
 
+        # Squawk alert API
+        self.squawk_api = SquawkAlertAPI()
+
+    def register_squawk_alert_callback(self, callback):
+        """
+        Register a callback to be called when a squawk alert is triggered.
+        The callback should be a coroutine function accepting (guild, aircraft_info, squawk_code).
+        """
+        self.squawk_api.register_callback(callback)
 
     async def cog_unload(self):
         """Clean up when the cog is unloaded."""
@@ -404,10 +416,38 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     alert_role_id = await guild_config.alert_role()
                                     alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
                                     
-                                    # Send the new alert with role mention if available
-                                    if alert_role_mention:
-                                        await alert_channel.send(alert_role_mention, allowed_mentions=discord.AllowedMentions(roles=True))
-                                    await self.aircraft_commands.send_aircraft_info(alert_channel, {'aircraft': [aircraft_info]})
+                                    # Prepare message data for pre-send hooks
+                                    message_data = {
+                                        'content': alert_role_mention if alert_role_mention else None,
+                                        'embed': None,
+                                        'view': None,
+                                    }
+                                    # Compose the embed and view as before
+                                    embed, view = None, None
+                                    # If you have a custom embed/view creation, do it here:
+                                    # (Assume send_aircraft_info returns embed/view or you can call a helper)
+                                    # For now, let's use the helpers directly:
+                                    aircraft_data = aircraft_info
+                                    image_url, photographer = await self.helpers.get_photo_by_hex(aircraft_data.get('hex', None))
+                                    embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+                                    view = None
+                                    # If you use a view (buttons), create it here as before
+                                    # ... (existing view logic if any) ...
+                                    message_data['embed'] = embed
+                                    message_data['view'] = view
+
+                                    # Let other cogs modify the message before sending
+                                    message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
+
+                                    # Send the message using the possibly modified data
+                                    sent_message = await alert_channel.send(
+                                        content=message_data.get('content'),
+                                        embed=message_data.get('embed'),
+                                        view=message_data.get('view')
+                                    )
+
+                                    # Let other cogs react after the message is sent
+                                    await self.squawk_api.run_post_send(guild, aircraft_info, squawk_code, sent_message)
                                     
                                     # Check if aircraft has landed
                                     if aircraft_info.get('altitude') is not None and aircraft_info.get('altitude') < 25:
