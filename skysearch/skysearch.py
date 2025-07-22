@@ -388,16 +388,17 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                 alert_channel = self.bot.get_channel(alert_channel_id)
                                 if alert_channel:
                                     # Update timestamp before sending, to be safe
-                                    async with guild_config.last_alerts() as last_alerts_ctx:
-                                        last_alerts_ctx[alert_key] = now.timestamp()
-                                        # Clean up old entries
-                                        keys_to_delete = [
-                                            k for k, ts in last_alerts_ctx.items()
-                                            if (now.timestamp() - ts) > (cooldown_minutes * 60)
-                                        ]
-                                        for k in keys_to_delete:
-                                            if k != alert_key:
-                                                del last_alerts_ctx[k]
+                                    last_alerts = await guild_config.last_alerts()
+                                    last_alerts[alert_key] = now.timestamp()
+                                    # Clean up old entries
+                                    keys_to_delete = [
+                                        k for k, ts in last_alerts.items()
+                                        if (now.timestamp() - ts) > (cooldown_minutes * 60)
+                                    ]
+                                    for k in keys_to_delete:
+                                        if k != alert_key:
+                                            del last_alerts[k]
+                                    await guild_config.last_alerts.set(last_alerts)
 
                                     # Get the alert role
                                     alert_role_id = await guild_config.alert_role()
