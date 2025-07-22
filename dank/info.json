@@ -1,0 +1,11 @@
+{
+  "name": "Dank",
+  "author": ["yourname"],
+  "description": "Gay and Simp rating machine, Dank Memer style.",
+  "requirements": [],
+  "min_bot_version": "3.0.0",
+  "tags": ["fun", "meme", "rating"],
+  "hidden": false,
+  "disabled": false,
+  "type": "COG"
+} 
