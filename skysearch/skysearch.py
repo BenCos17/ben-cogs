@@ -22,10 +22,7 @@ from .commands.aircraft import AircraftCommands
 from .commands.airport import AirportCommands
 from .commands.admin import AdminCommands
 from .dashboard.dashboard_integration import DashboardIntegration
-import os
-import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), 'api'))
-from api.squawk_api import SquawkAlertAPI
+from .api.squawk_api import SquawkAlertAPI
 
 
 
