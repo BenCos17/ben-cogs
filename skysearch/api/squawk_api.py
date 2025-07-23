@@ -30,14 +30,23 @@ class SquawkAlertAPI:
         """
         self._post_send_callbacks.append(callback)
 
-    async def call_callbacks(self, guild, aircraft_info, squawk_code):
+    async def call_callbacks(self, guild: Optional[Discord Guild], 
+                            aircraft_info: Dict, 
+                            squawk_code: str) -> None:
+        """Call all registered callbacks with the provided parameters."""
         for cb in self._callbacks:
             try:
                 await cb(guild, aircraft_info, squawk_code)
             except Exception as e:
                 print(f"Error in squawk alert callback: {e}")
 
-    async def run_pre_send(self, guild, aircraft_info, squawk_code, message_data: Dict) -> Dict:
+    async def run_pre_send(self, guild: Optional[Discord Guild], 
+                          aircraft_info: Dict, 
+                          squawk_code: str, 
+                          message_data: Dict) -> Dict:
+        """
+        Run all pre-send callbacks and update the message data.
+        """
         for cb in self._pre_send_callbacks:
             try:
                 result = await cb(guild, aircraft_info, squawk_code, message_data)
@@ -45,11 +54,16 @@ class SquawkAlertAPI:
                     message_data.update(result)
             except Exception as e:
                 print(f"Error in pre-send callback: {e}")
-        return message_data
 
-    async def run_post_send(self, guild, aircraft_info, squawk_code, sent_message):
+    async def run_post_send(self, guild: Optional[Discord Guild], 
+                          aircraft_info: Dict, 
+                          squawk_code: str, 
+                          sent_message: Any) -> None:
+        """
+        Run all post-send callbacks after the message has been sent.
+        """
         for cb in self._post_send_callbacks:
             try:
                 await cb(guild, aircraft_info, squawk_code, sent_message)
             except Exception as e:
-                print(f"Error in post-send callback: {e}") 
+                print(f"Error in post-send callback: {e}")
