@@ -541,6 +541,22 @@ class SquawkCog(commands.Cog):
                 
             else:
                 embed.add_field(name="SquawkAPI", value="❌ Not found", inline=True)
+                
+            # Check CommandAPI connection
+            if hasattr(skysearch_cog, 'command_api'):
+                embed.add_field(name="CommandAPI", value="✅ Available", inline=True)
+                
+                # Check command callback counts
+                cmd_api = skysearch_cog.command_api
+                embed.add_field(name="Command Callbacks", 
+                               value=f"Basic: {len(cmd_api._callbacks)}\nPre-execute: {len(cmd_api._pre_execute_callbacks)}\nPost-execute: {len(cmd_api._post_execute_callbacks)}", 
+                               inline=False)
+                
+                # Check if our command callbacks are registered
+                our_cmd_callback_found = any(cb.__self__ == self for cb in cmd_api._callbacks if hasattr(cb, '__self__'))
+                embed.add_field(name="Our Command Callbacks", value="✅ Registered" if our_cmd_callback_found else "❌ Not found", inline=True)
+            else:
+                embed.add_field(name="CommandAPI", value="❌ Not found", inline=True)
         else:
             embed.add_field(name="SkySearch Cog", value="❌ Not found", inline=True)
             
