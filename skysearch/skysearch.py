@@ -412,10 +412,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Background task to check for emergency squawks."""
         try:
             emergency_squawk_codes = ['7500', '7600', '7700']
+            print(f"[SkySearch DEBUG] Background task checking for emergency squawks...")
             for squawk_code in emergency_squawk_codes:
                 # Use new REST API endpoint for squawk filter - must combine with base query
                 url = f"{await self.api.get_api_url()}/?all_with_pos&filter_squawk={squawk_code}"
                 response = await self.api.make_request(url)  # No ctx for background task
+                print(f"[SkySearch DEBUG] Checked {squawk_code}: Found {len(response.get('aircraft', [])) if response else 0} aircraft")
                 if response and 'aircraft' in response:
                     for aircraft_info in response['aircraft']:
                         # Ignore aircraft with the hex 00000000
@@ -439,7 +441,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                 
                                 if last_alert_timestamp:
                                     last_alert_time = datetime.datetime.fromtimestamp(last_alert_timestamp, tz=datetime.timezone.utc)
-                                    if (now - last_alert_time).total_seconds() < cooldown_minutes * 60:
+                                    time_since_last = (now - last_alert_time).total_seconds()
+                                    if time_since_last < cooldown_minutes * 60:
+                                        print(f"[SkySearch DEBUG] Cooldown active for {icao_hex} ({squawk_code}) - {time_since_last:.1f}s since last alert (cooldown: {cooldown_minutes}m)")
                                         continue  # Cooldown active, skip.
                                 
                                 alert_channel = self.bot.get_channel(alert_channel_id)
@@ -482,7 +486,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     message_data['view'] = view
 
                                     # Let other cogs know about the alert first
+                                    print(f"[SkySearch DEBUG] About to call callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
+                                    print(f"[SkySearch DEBUG] Registered callbacks: {len(self.squawk_api._callbacks)}")
                                     await self.squawk_api.call_callbacks(guild, aircraft_info, squawk_code)
+                                    print(f"[SkySearch DEBUG] Finished calling callbacks for {icao_hex}")
 
                                     # Let other cogs modify the message before sending
                                     message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
