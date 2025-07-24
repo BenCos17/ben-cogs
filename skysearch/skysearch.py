@@ -7,6 +7,7 @@ import asyncio
 import re
 import datetime
 import aiohttp
+import logging
 from redbot.core import commands, Config
 from discord.ext import tasks
 
@@ -25,6 +26,7 @@ from .dashboard.dashboard_integration import DashboardIntegration
 from .api.squawk_api import SquawkAlertAPI
 from .api.command_api import CommandAPI
 
+log = logging.getLogger("red.skysearch")
 
 
 class Skysearch(commands.Cog, DashboardIntegration):
@@ -412,12 +414,13 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Background task to check for emergency squawks."""
         try:
             emergency_squawk_codes = ['7500', '7600', '7700']
-            print(f"[SkySearch DEBUG] Background task checking for emergency squawks...")
+            log.debug("Background task checking for emergency squawks...")
             for squawk_code in emergency_squawk_codes:
                 # Use new REST API endpoint for squawk filter - must combine with base query
                 url = f"{await self.api.get_api_url()}/?all_with_pos&filter_squawk={squawk_code}"
                 response = await self.api.make_request(url)  # No ctx for background task
-                print(f"[SkySearch DEBUG] Checked {squawk_code}: Found {len(response.get('aircraft', [])) if response else 0} aircraft")
+                aircraft_count = len(response.get('aircraft', [])) if response else 0
+                log.debug(f"Checked {squawk_code}: Found {aircraft_count} aircraft")
                 if response and 'aircraft' in response:
                     for aircraft_info in response['aircraft']:
                         # Ignore aircraft with the hex 00000000
@@ -443,7 +446,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     last_alert_time = datetime.datetime.fromtimestamp(last_alert_timestamp, tz=datetime.timezone.utc)
                                     time_since_last = (now - last_alert_time).total_seconds()
                                     if time_since_last < cooldown_minutes * 60:
-                                        print(f"[SkySearch DEBUG] Cooldown active for {icao_hex} ({squawk_code}) - {time_since_last:.1f}s since last alert (cooldown: {cooldown_minutes}m)")
+                                        log.debug(f"Cooldown active for {icao_hex} ({squawk_code}) - {time_since_last:.1f}s since last alert (cooldown: {cooldown_minutes}m)")
                                         continue  # Cooldown active, skip.
                                 
                                 alert_channel = self.bot.get_channel(alert_channel_id)
@@ -486,10 +489,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     message_data['view'] = view
 
                                     # Let other cogs know about the alert first
-                                    print(f"[SkySearch DEBUG] About to call callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
-                                    print(f"[SkySearch DEBUG] Registered callbacks: {len(self.squawk_api._callbacks)}")
+                                    log.debug(f"About to call callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
+                                    log.debug(f"Registered callbacks: {len(self.squawk_api._callbacks)}")
                                     await self.squawk_api.call_callbacks(guild, aircraft_info, squawk_code)
-                                    print(f"[SkySearch DEBUG] Finished calling callbacks for {icao_hex}")
+                                    log.debug(f"Finished calling callbacks for {icao_hex}")
 
                                     # Let other cogs modify the message before sending
                                     message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
@@ -510,11 +513,11 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                         await alert_channel.send(embed=embed)
                                 else:
                                     # Only log if channel was set but not found (actual error)
-                                    print(f"Warning: Alert channel {alert_channel_id} not found for guild {guild.name} - channel may have been deleted")
+                                    log.warning(f"Alert channel {alert_channel_id} not found for guild {guild.name} - channel may have been deleted")
                             # Removed the "No alert channel set" message - this is normal behavior
                 await asyncio.sleep(2)
         except Exception as e:
-            print(f"Error checking emergency squawks: {e}")
+            log.error(f"Error checking emergency squawks: {e}", exc_info=True)
 
     @check_emergency_squawks.before_loop
     async def before_check_emergency_squawks(self):
@@ -686,13 +689,13 @@ class Skysearch(commands.Cog, DashboardIntegration):
         message_data['embed'] = embed
         message_data['view'] = view
 
-        print(f"[SkySearch SIMULATE] About to call squawk API callbacks for {hex_code} with squawk {squawk_code} in guild {guild.name}")
-        print(f"[SkySearch SIMULATE] Number of registered callbacks: {len(self.squawk_api._callbacks)}")
+        log.info(f"SIMULATE: About to call squawk API callbacks for {hex_code} with squawk {squawk_code} in guild {guild.name}")
+        log.info(f"SIMULATE: Number of registered callbacks: {len(self.squawk_api._callbacks)}")
 
         # Let other cogs know about the alert first (THIS IS THE KEY PART)
         await self.squawk_api.call_callbacks(guild, fake_aircraft, squawk_code)
 
-        print(f"[SkySearch SIMULATE] Finished calling squawk API callbacks for {hex_code}")
+        log.info(f"SIMULATE: Finished calling squawk API callbacks for {hex_code}")
 
         # Let other cogs modify the message before sending
         message_data = await self.squawk_api.run_pre_send(guild, fake_aircraft, squawk_code, message_data)
