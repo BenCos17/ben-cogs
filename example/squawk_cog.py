@@ -1,6 +1,6 @@
 import discord
 from redbot.core import commands
-from api.squawk_api import SquawkAlertAPI
+from ..skysearch.squawk_api import SquawkAlertAPI
 
 class SquawkCog(commands.Cog):
     def __init__(self, bot):
