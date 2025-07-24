@@ -232,27 +232,32 @@ class SquawkCog(commands.Cog):
         
         # Store message reference for potential updates
         alert_key = f"{guild.id}_{hex_code}_{squawk_code}"
-        self.alert_messages[alert_key] = sent_message
         
-        guild_config = self.config.guild(guild)
-        if await guild_config.update_messages():
-            # Example: React to the message
-            try:
-                await sent_message.add_reaction("👀")
-                await sent_message.add_reaction("✈️")
-                if squawk_code == '7700':
-                    await sent_message.add_reaction("🚨")
-                elif squawk_code == '7600':
-                    await sent_message.add_reaction("📻")
-                elif squawk_code == '7500':
-                    await sent_message.add_reaction("🔒")
-            except discord.errors.Forbidden:
-                print("[SquawkExample] Could not add reactions - missing permissions")
-            except Exception as e:
-                print(f"[SquawkExample] Error adding reactions: {e}")
+        # Only schedule update if we haven't already stored this message (prevents duplicate tasks)
+        if alert_key not in self.alert_messages:
+            self.alert_messages[alert_key] = sent_message
             
-            # Schedule a message update after 30 seconds
-            asyncio.create_task(self._schedule_message_update(sent_message, aircraft_info, squawk_code))
+            guild_config = self.config.guild(guild)
+            if await guild_config.update_messages():
+                # Example: React to the message
+                try:
+                    await sent_message.add_reaction("👀")
+                    await sent_message.add_reaction("✈️")
+                    if squawk_code == '7700':
+                        await sent_message.add_reaction("🚨")
+                    elif squawk_code == '7600':
+                        await sent_message.add_reaction("📻")
+                    elif squawk_code == '7500':
+                        await sent_message.add_reaction("🔒")
+                except discord.errors.Forbidden:
+                    print("[SquawkExample] Could not add reactions - missing permissions")
+                except Exception as e:
+                    print(f"[SquawkExample] Error adding reactions: {e}")
+                
+                # Schedule a message update after 30 seconds (only once per alert)
+                asyncio.create_task(self._schedule_message_update(sent_message, aircraft_info, squawk_code))
+        else:
+            print(f"[SquawkExample] Skipping duplicate callback for {hex_code} - already processed")
 
     async def _schedule_message_update(self, message: discord.Message, aircraft_info: dict, squawk_code: str):
         """Schedule an update to the alert message with additional info."""
