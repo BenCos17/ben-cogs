@@ -17,7 +17,8 @@ class SquawkCog(commands.Cog):
         self.config.register_guild(
             track_alerts=True,
             update_messages=True,
-            alert_history=[]
+            alert_history=[],
+            command_history=[]
         )
         # Store message references for updating
         self.alert_messages: Dict[str, discord.Message] = {}
@@ -88,8 +89,8 @@ class SquawkCog(commands.Cog):
                 'channel_name': ctx.channel.name
             }
             
-            # You could store this in a separate command history if needed
-            # For now, just track it silently
+            # Store command in history
+            await self._add_command_to_history(ctx.guild, command_data)
 
     async def handle_command_complete(self, ctx, command_name: str, args: list, result: any, execution_time: float):
         """Handle when a SkySearch command completes."""
@@ -153,6 +154,20 @@ class SquawkCog(commands.Cog):
             history = history[-max_history:]
             
         await guild_config.alert_history.set(history)
+
+    async def _add_command_to_history(self, guild, command_data):
+        """Add command to history with size management."""
+        guild_config = self.config.guild(guild)
+        history = await guild_config.command_history()
+        max_history = await self.config.max_history()
+        
+        history.append(command_data)
+        
+        # Keep only the most recent commands
+        if len(history) > max_history:
+            history = history[-max_history:]
+            
+        await guild_config.command_history.set(history)
 
     async def _process_custom_alert(self, guild, aircraft_info, squawk_code):
         """Custom processing for different types of alerts."""
@@ -264,7 +279,7 @@ class SquawkCog(commands.Cog):
             )
             embed.add_field(
                 name="📊 Information",
-                value="`history` - View recent alert history\n`stats` - View alert statistics\n`status` - Check cog status\n`clear` - Clear alert history",
+                value="`history` - View recent alert history\n`stats` - View alert statistics\n`status` - Check cog status\n`clear` - Clear alert history\n`commands` - View command usage history",
                 inline=False
             )
             embed.add_field(
@@ -274,26 +289,65 @@ class SquawkCog(commands.Cog):
             )
             await ctx.send(embed=embed)
 
+    @squawk_example.command(name="commands")
+    async def view_commands(self, ctx, limit: int = 10):
+        """View recent SkySearch command usage history."""
+        guild_config = self.config.guild(ctx.guild)
+        history = await guild_config.command_history()
+        
+        if not history:
+            await ctx.send("No command usage history found.")
+            return
+            
+        # Get recent commands (limited)
+        recent_commands = history[-limit:] if len(history) > limit else history
+        recent_commands.reverse()  # Show newest first
+        
+        embed = discord.Embed(
+            title=f"Recent Command Usage (Last {len(recent_commands)})",
+            color=discord.Color.blue()
+        )
+        
+        for i, cmd in enumerate(recent_commands[:10]):  # Show max 10 in embed
+            timestamp = datetime.datetime.fromisoformat(cmd['timestamp'])
+            args_str = ' '.join(cmd['args']) if cmd['args'] else 'None'
+            embed.add_field(
+                name=f"Command #{len(history) - i}",
+                value=f"**Command:** {cmd['command_name']}\n"
+                      f"**Args:** {args_str}\n"
+                      f"**User:** {cmd['user_name']}\n"
+                      f"**Channel:** #{cmd['channel_name']}\n"
+                      f"**Time:** {timestamp.strftime('%Y-%m-%d %H:%M:%S')} UTC",
+                inline=True
+            )
+            
+        await ctx.send(embed=embed)
+
     @squawk_example.command(name="clear")
     async def clear_history(self, ctx):
         """Clear all alert history for this guild."""
         # Get current history count
-        history = await self.config.guild(ctx.guild).alert_history()
-        count = len(history)
+        guild_config = self.config.guild(ctx.guild)
+        alert_history = await guild_config.alert_history()
+        command_history = await guild_config.command_history()
+        alert_count = len(alert_history)
+        command_count = len(command_history)
         
-        if count == 0:
-            await ctx.send("❌ No alert history to clear.")
+        if alert_count == 0 and command_count == 0:
+            await ctx.send("❌ No history to clear.")
             return
             
-        # Clear the history
-        await self.config.guild(ctx.guild).alert_history.set([])
+        # Clear both histories
+        await guild_config.alert_history.set([])
+        await guild_config.command_history.set([])
         
         # Also clear active message references for this guild
         guild_keys = [key for key in self.alert_messages.keys() if key.startswith(str(ctx.guild.id))]
         for key in guild_keys:
             del self.alert_messages[key]
             
-        await ctx.send(f"✅ Cleared **{count}** alert(s) from history for this guild.")
+        total_cleared = alert_count + command_count
+        await ctx.send(f"✅ Cleared **{alert_count}** alert(s) and **{command_count}** command(s) from history for this guild (Total: {total_cleared}).")
 
     @squawk_example.command(name="history")
     async def view_history(self, ctx, limit: int = 10):
@@ -328,43 +382,62 @@ class SquawkCog(commands.Cog):
 
     @squawk_example.command(name="stats")
     async def view_stats(self, ctx):
-        """View alert statistics."""
+        """View alert and command usage statistics."""
         guild_config = self.config.guild(ctx.guild)
-        history = await guild_config.alert_history()
+        alert_history = await guild_config.alert_history()
+        command_history = await guild_config.command_history()
         
-        if not history:
-            await ctx.send("No alert data available.")
+        if not alert_history and not command_history:
+            await ctx.send("No data available for statistics.")
             return
             
-        # Calculate statistics
-        total_alerts = len(history)
-        squawk_counts = {}
-        guild_counts = {}
-        
-        for alert in history:
-            squawk = alert['squawk_code']
-            guild = alert['guild_name']
-            
-            squawk_counts[squawk] = squawk_counts.get(squawk, 0) + 1
-            guild_counts[guild] = guild_counts.get(guild, 0) + 1
-            
         embed = discord.Embed(
-            title="Alert Statistics",
-            description=f"Total alerts tracked: **{total_alerts}**",
+            title="Usage Statistics",
+            description=f"**Total alerts tracked:** {len(alert_history)}\n**Total commands tracked:** {len(command_history)}",
             color=discord.Color.green()
         )
         
-        # Top squawk codes
-        if squawk_counts:
-            top_squawks = sorted(squawk_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-            squawk_text = "\n".join([f"{code}: {count}" for code, count in top_squawks])
-            embed.add_field(name="Top Squawk Codes", value=squawk_text, inline=True)
+        # Alert statistics
+        if alert_history:
+            squawk_counts = {}
+            guild_counts = {}
             
-        # Top guilds
-        if guild_counts:
-            top_guilds = sorted(guild_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-            guild_text = "\n".join([f"{guild}: {count}" for guild, count in top_guilds])
-            embed.add_field(name="Top Guilds", value=guild_text, inline=True)
+            for alert in alert_history:
+                squawk = alert['squawk_code']
+                guild = alert['guild_name']
+                
+                squawk_counts[squawk] = squawk_counts.get(squawk, 0) + 1
+                guild_counts[guild] = guild_counts.get(guild, 0) + 1
+                
+            # Top squawk codes
+            if squawk_counts:
+                top_squawks = sorted(squawk_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+                squawk_text = "\n".join([f"{code}: {count}" for code, count in top_squawks])
+                embed.add_field(name="🚨 Top Squawk Codes", value=squawk_text, inline=True)
+                
+        # Command statistics
+        if command_history:
+            command_counts = {}
+            user_counts = {}
+            
+            for cmd in command_history:
+                command = cmd['command_name']
+                user = cmd['user_name']
+                
+                command_counts[command] = command_counts.get(command, 0) + 1
+                user_counts[user] = user_counts.get(user, 0) + 1
+                
+            # Top commands
+            if command_counts:
+                top_commands = sorted(command_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+                command_text = "\n".join([f"{cmd}: {count}" for cmd, count in top_commands])
+                embed.add_field(name="🔧 Top Commands", value=command_text, inline=True)
+                
+            # Top users
+            if user_counts:
+                top_users = sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+                user_text = "\n".join([f"{user}: {count}" for user, count in top_users])
+                embed.add_field(name="👤 Top Users", value=user_text, inline=True)
             
         await ctx.send(embed=embed)
 
@@ -414,10 +487,12 @@ class SquawkCog(commands.Cog):
         
         # Alert count
         guild_config = self.config.guild(ctx.guild)
-        history = await guild_config.alert_history()
+        alert_history = await guild_config.alert_history()
+        command_history = await guild_config.command_history()
         embed.add_field(
             name="Statistics",
-            value=f"Total Alerts: {len(history)}\n"
+            value=f"Alert History: {len(alert_history)}\n"
+                  f"Command History: {len(command_history)}\n"
                   f"Active Messages: {len(self.alert_messages)}",
             inline=True
         )
