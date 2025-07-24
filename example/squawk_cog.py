@@ -412,8 +412,8 @@ class SquawkCog(commands.Cog):
     @commands.is_owner() 
     async def debug_connection(self, ctx):
         """Debug the connection to SkySearch API (owner only)."""
-        # Try different possible names for the SkySearch cog
-        possible_names = ["SkySearch", "Skysearch", "skysearch", "SkySearchCog"]
+        # Try the correct name first, then fallbacks
+        possible_names = ["skysearch", "SkySearch", "Skysearch", "SkySearchCog"]
         skysearch_cog = None
         found_name = None
         
@@ -425,10 +425,6 @@ class SquawkCog(commands.Cog):
                 break
         
         embed = discord.Embed(title="SquawkExample Debug Info", color=discord.Color.blue())
-        
-        # Show all loaded cogs for debugging
-        all_cogs = list(self.bot.cogs.keys())
-        embed.add_field(name="All Loaded Cogs", value=", ".join(all_cogs) if all_cogs else "None", inline=False)
         
         if skysearch_cog:
             embed.add_field(name="SkySearch Cog", value=f"✅ Found as '{found_name}'", inline=True)
@@ -446,17 +442,17 @@ class SquawkCog(commands.Cog):
                 our_callback_found = any(cb.__self__ == self for cb in api._callbacks if hasattr(cb, '__self__'))
                 embed.add_field(name="Our Callbacks", value="✅ Registered" if our_callback_found else "❌ Not found", inline=True)
                 
+                # Check background task status
+                if hasattr(skysearch_cog, 'check_emergency_squawks'):
+                    task = skysearch_cog.check_emergency_squawks
+                    task_status = "✅ Running" if task.is_running() else "❌ Stopped"
+                    embed.add_field(name="Background Task", value=task_status, inline=True)
+                
             else:
                 embed.add_field(name="SquawkAPI", value="❌ Not found", inline=True)
         else:
-            embed.add_field(name="SkySearch Cog", value="❌ Not found with any name", inline=True)
+            embed.add_field(name="SkySearch Cog", value="❌ Not found", inline=True)
             
-        # Check background task status
-        if skysearch_cog and hasattr(skysearch_cog, 'check_emergency_squawks'):
-            task = skysearch_cog.check_emergency_squawks
-            task_status = "✅ Running" if task.is_running() else "❌ Stopped"
-            embed.add_field(name="Background Task", value=task_status, inline=True)
-        
         await ctx.send(embed=embed)
 
 # Setup function to add the cog to the bot
