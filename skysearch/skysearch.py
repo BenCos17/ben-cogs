@@ -534,4 +534,135 @@ class Skysearch(commands.Cog, DashboardIntegration):
             ctx = await self.bot.get_context(message)
             await self.aircraft_commands.aircraft_by_icao(ctx, content)
         
+    @commands.is_owner()
+    @aircraft_group.command(name="simulateemergency")
+    async def simulate_emergency_alert(self, ctx, hex_code: str, squawk_code: str = "7700", callsign: str = "TEST123"):
+        """Simulate a new emergency alert for testing callbacks (owner only).
+        
+        Usage: *aircraft simulateemergency <hex_code> [squawk_code] [callsign]
+        Examples:
+        - *aircraft simulateemergency ABC123
+        - *aircraft simulateemergency DEF456 7600 UNITED789
+        """
+        # Validate squawk code
+        emergency_squawk_codes = ['7500', '7600', '7700']
+        if squawk_code not in emergency_squawk_codes:
+            await ctx.send(f"❌ Invalid squawk code. Valid codes are: {', '.join(emergency_squawk_codes)}")
+            return
+            
+        # Validate hex code format
+        if not hex_code or len(hex_code) != 6 or not all(c in '0123456789ABCDEFabcdef' for c in hex_code):
+            await ctx.send("❌ Invalid hex code. Must be 6 hexadecimal characters (e.g., ABC123)")
+            return
+            
+        hex_code = hex_code.upper()
+        
+        await ctx.send(f"🧪 Simulating emergency alert: {hex_code} squawking {squawk_code}...")
+        
+        # Create realistic fake aircraft data
+        fake_aircraft = {
+            'hex': hex_code,
+            'flight': callsign,
+            'lat': 40.7128 + (hash(hex_code) % 1000) / 10000,  # Vary position based on hex
+            'lon': -74.0060 + (hash(hex_code) % 1000) / 10000,
+            'altitude': 35000 + (hash(hex_code) % 5000),
+            'ground_speed': 450 + (hash(hex_code) % 100),
+            'squawk': squawk_code,
+            'alt_baro': 35000 + (hash(hex_code) % 5000),
+            'track': hash(hex_code) % 360
+        }
+        
+        # Simulate the exact same logic as the background task
+        guild = ctx.guild
+        guild_config = self.config.guild(guild)
+        alert_channel_id = await guild_config.alert_channel()
+        
+        if not alert_channel_id:
+            await ctx.send("❌ No alert channel configured. Use `*aircraft alertchannel #channel` first.")
+            return
+            
+        # Check cooldown (same logic as background task)
+        cooldown_minutes = await guild_config.emergency_cooldown()
+        alert_key = f"{hex_code}-{squawk_code}"
+        now = datetime.datetime.now(datetime.timezone.utc)
+        
+        last_alerts = await guild_config.last_alerts()
+        last_alert_timestamp = last_alerts.get(alert_key)
+        
+        if last_alert_timestamp:
+            last_alert_time = datetime.datetime.fromtimestamp(last_alert_timestamp, tz=datetime.timezone.utc)
+            time_since_last = (now - last_alert_time).total_seconds()
+            if time_since_last < cooldown_minutes * 60:
+                await ctx.send(f"⏰ Cooldown active for {hex_code} ({squawk_code}): {time_since_last:.1f}s since last alert (cooldown: {cooldown_minutes}m)")
+                return
+        
+        alert_channel = self.bot.get_channel(alert_channel_id)
+        if not alert_channel:
+            await ctx.send(f"❌ Alert channel {alert_channel_id} not found")
+            return
+            
+        # Update timestamp (same as background task)
+        last_alerts = await guild_config.last_alerts()
+        last_alerts[alert_key] = now.timestamp()
+        
+        # Clean up old entries
+        keys_to_delete = [
+            k for k, ts in last_alerts.items()
+            if (now.timestamp() - ts) > (cooldown_minutes * 60)
+        ]
+        for k in keys_to_delete:
+            if k != alert_key:
+                del last_alerts[k]
+        await guild_config.last_alerts.set(last_alerts)
+
+        # Get the alert role
+        alert_role_id = await guild_config.alert_role()
+        alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
+        
+        # Prepare message data for pre-send hooks
+        message_data = {
+            'content': alert_role_mention if alert_role_mention else None,
+            'embed': None,
+            'view': None,
+        }
+        
+        # Create embed (same as background task)
+        aircraft_data = fake_aircraft
+        image_url, photographer = await self.helpers.get_photo_by_hex(aircraft_data.get('hex', None))
+        embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+        view = None
+        message_data['embed'] = embed
+        message_data['view'] = view
+
+        print(f"[SkySearch SIMULATE] About to call squawk API callbacks for {hex_code} with squawk {squawk_code} in guild {guild.name}")
+        print(f"[SkySearch SIMULATE] Number of registered callbacks: {len(self.squawk_api._callbacks)}")
+
+        # Let other cogs know about the alert first (THIS IS THE KEY PART)
+        await self.squawk_api.call_callbacks(guild, fake_aircraft, squawk_code)
+
+        print(f"[SkySearch SIMULATE] Finished calling squawk API callbacks for {hex_code}")
+
+        # Let other cogs modify the message before sending
+        message_data = await self.squawk_api.run_pre_send(guild, fake_aircraft, squawk_code, message_data)
+
+        # Send the message using the possibly modified data
+        sent_message = await alert_channel.send(
+            content=message_data.get('content'),
+            embed=message_data.get('embed'),
+            view=message_data.get('view')
+        )
+
+        # Let other cogs react after the message is sent
+        await self.squawk_api.run_post_send(guild, fake_aircraft, squawk_code, sent_message)
+        
+        await ctx.send(f"✅ Simulated emergency alert sent! Check #{alert_channel.name} and console logs.")
+
+    @commands.is_owner()
+    @aircraft_group.command(name="clearalertcooldowns")
+    async def clear_alert_cooldowns(self, ctx):
+        """Clear all alert cooldowns for this guild (owner only)."""
+        guild_config = self.config.guild(ctx.guild)
+        await guild_config.last_alerts.set({})
+        await ctx.send("✅ All alert cooldowns cleared for this guild.")
+        
         
