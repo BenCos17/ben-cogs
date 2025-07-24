@@ -292,7 +292,15 @@ class SquawkCog(commands.Cog):
     @squawk_example.command(name="status")
     async def check_status(self, ctx):
         """Check the status of the SquawkExample cog."""
-        skysearch_cog = self.bot.get_cog("SkySearch")
+        # Use the same logic as other commands to find the cog
+        possible_names = ["skysearch", "SkySearch", "Skysearch", "SkySearchCog"]
+        skysearch_cog = None
+        
+        for name in possible_names:
+            cog = self.bot.get_cog(name)
+            if cog:
+                skysearch_cog = cog
+                break
         
         embed = discord.Embed(
             title="SquawkExample Status",
