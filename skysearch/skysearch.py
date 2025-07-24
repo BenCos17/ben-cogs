@@ -489,9 +489,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     message_data['view'] = view
 
                                     # Let other cogs know about the alert first
-                                    log.info(f"REAL ALERT: Calling callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
+                                    log.error(f"DEBUG: Calling callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
                                     await self.squawk_api.call_callbacks(guild, aircraft_info, squawk_code)
-                                    log.info(f"REAL ALERT: Finished callbacks for {icao_hex}")
+                                    log.error(f"DEBUG: Finished callbacks for {icao_hex}")
 
                                     # Let other cogs modify the message before sending
                                     message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
