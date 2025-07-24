@@ -28,9 +28,13 @@ class SquawkCog(commands.Cog):
 
     def _get_squawk_api(self):
         """Get the SquawkAlertAPI from the skysearch cog."""
-        skysearch_cog = self.bot.get_cog("SkySearch")
-        if skysearch_cog and hasattr(skysearch_cog, 'squawk_api'):
-            return skysearch_cog.squawk_api
+        # Try different possible names for the SkySearch cog
+        possible_names = ["SkySearch", "Skysearch", "skysearch", "SkySearchCog"]
+        
+        for name in possible_names:
+            skysearch_cog = self.bot.get_cog(name)
+            if skysearch_cog and hasattr(skysearch_cog, 'squawk_api'):
+                return skysearch_cog.squawk_api
         return None
 
     async def _setup_squawk_api(self):
@@ -408,12 +412,26 @@ class SquawkCog(commands.Cog):
     @commands.is_owner() 
     async def debug_connection(self, ctx):
         """Debug the connection to SkySearch API (owner only)."""
-        skysearch_cog = self.bot.get_cog("SkySearch")
+        # Try different possible names for the SkySearch cog
+        possible_names = ["SkySearch", "Skysearch", "skysearch", "SkySearchCog"]
+        skysearch_cog = None
+        found_name = None
+        
+        for name in possible_names:
+            cog = self.bot.get_cog(name)
+            if cog:
+                skysearch_cog = cog
+                found_name = name
+                break
         
         embed = discord.Embed(title="SquawkExample Debug Info", color=discord.Color.blue())
         
+        # Show all loaded cogs for debugging
+        all_cogs = list(self.bot.cogs.keys())
+        embed.add_field(name="All Loaded Cogs", value=", ".join(all_cogs) if all_cogs else "None", inline=False)
+        
         if skysearch_cog:
-            embed.add_field(name="SkySearch Cog", value="✅ Found", inline=True)
+            embed.add_field(name="SkySearch Cog", value=f"✅ Found as '{found_name}'", inline=True)
             
             if hasattr(skysearch_cog, 'squawk_api'):
                 embed.add_field(name="SquawkAPI", value="✅ Available", inline=True)
@@ -431,7 +449,7 @@ class SquawkCog(commands.Cog):
             else:
                 embed.add_field(name="SquawkAPI", value="❌ Not found", inline=True)
         else:
-            embed.add_field(name="SkySearch Cog", value="❌ Not found", inline=True)
+            embed.add_field(name="SkySearch Cog", value="❌ Not found with any name", inline=True)
             
         # Check background task status
         if skysearch_cog and hasattr(skysearch_cog, 'check_emergency_squawks'):
