@@ -28,8 +28,8 @@ class SquawkCog(commands.Cog):
 
     def _get_squawk_api(self):
         """Get the SquawkAlertAPI from the skysearch cog."""
-        # Try different possible names for the SkySearch cog
-        possible_names = ["SkySearch", "Skysearch", "skysearch", "SkySearchCog"]
+        # Try the correct name first, then fallbacks
+        possible_names = ["skysearch", "SkySearch", "Skysearch", "SkySearchCog"]
         
         for name in possible_names:
             skysearch_cog = self.bot.get_cog(name)
