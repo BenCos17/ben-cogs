@@ -23,6 +23,7 @@ from .commands.airport import AirportCommands
 from .commands.admin import AdminCommands
 from .dashboard.dashboard_integration import DashboardIntegration
 from .api.squawk_api import SquawkAlertAPI
+from .api.command_api import CommandAPI
 
 
 
@@ -65,12 +66,50 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Squawk alert API
         self.squawk_api = SquawkAlertAPI()
 
+        # Command execution API
+        self.command_api = CommandAPI()
+
     def register_squawk_alert_callback(self, callback):
         """
         Register a callback to be called when a squawk alert is triggered.
         The callback should be a coroutine function accepting (guild, aircraft_info, squawk_code).
         """
         self.squawk_api.register_callback(callback)
+
+    def register_command_callback(self, callback):
+        """
+        Register a callback to be called when a SkySearch command is executed.
+        The callback should be a coroutine function accepting (ctx, command_name, args).
+        """
+        self.command_api.register_callback(callback)
+
+    async def _execute_with_hooks(self, ctx, command_name: str, args: list, command_func):
+        """Execute a command with pre/post hooks."""
+        import time
+        
+        # Call basic callbacks
+        await self.command_api.call_callbacks(ctx, command_name, args)
+        
+        # Run pre-execute hooks
+        should_continue = await self.command_api.run_pre_execute(ctx, command_name, args)
+        if not should_continue:
+            return None
+            
+        # Execute the actual command
+        start_time = time.time()
+        try:
+            result = await command_func()
+            success = True
+        except Exception as e:
+            result = e
+            success = False
+            raise  # Re-raise the exception
+        finally:
+            execution_time = time.time() - start_time
+            # Run post-execute hooks
+            await self.command_api.run_post_execute(ctx, command_name, args, result, execution_time)
+            
+        return result
 
     async def cog_unload(self):
         """Clean up when the cog is unloaded."""
@@ -146,12 +185,18 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @aircraft_group.command(name='icao')
     async def aircraft_icao(self, ctx, hex_id: str):
         """Get aircraft information by ICAO hex code."""
-        await self.aircraft_commands.aircraft_by_icao(ctx, hex_id)
+        await self._execute_with_hooks(
+            ctx, 'aircraft_icao', [hex_id],
+            lambda: self.aircraft_commands.aircraft_by_icao(ctx, hex_id)
+        )
 
     @aircraft_group.command(name='callsign')
     async def aircraft_callsign(self, ctx, callsign: str):
         """Get aircraft information by callsign."""
-        await self.aircraft_commands.aircraft_by_callsign(ctx, callsign)
+        await self._execute_with_hooks(
+            ctx, 'aircraft_callsign', [callsign],
+            lambda: self.aircraft_commands.aircraft_by_callsign(ctx, callsign)
+        )
 
     @aircraft_group.command(name='reg')
     async def aircraft_reg(self, ctx, registration: str):
@@ -166,7 +211,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @aircraft_group.command(name='squawk')
     async def aircraft_squawk(self, ctx, squawk_value: str):
         """Get aircraft information by squawk code."""
-        await self.aircraft_commands.aircraft_by_squawk(ctx, squawk_value)
+        await self._execute_with_hooks(
+            ctx, 'aircraft_squawk', [squawk_value],
+            lambda: self.aircraft_commands.aircraft_by_squawk(ctx, squawk_value)
+        )
 
     @aircraft_group.command(name='export')
     async def aircraft_export(self, ctx, search_type: str, search_value: str, file_format: str):

@@ -48,6 +48,65 @@ class SquawkCog(commands.Cog):
             print(f"[SquawkExample] Successfully connected to SkySearch API - {len(self.squawk_api._callbacks)} callbacks registered")
         else:
             print("[SquawkExample] Warning: SkySearch cog not found or doesn't have squawk_api")
+            
+        # Also hook into command API if available
+        await self._setup_command_api()
+
+    async def _setup_command_api(self):
+        """Set up the command API and register callbacks."""
+        skysearch_cog = None
+        possible_names = ["skysearch", "SkySearch", "Skysearch", "SkySearchCog"]
+        
+        for name in possible_names:
+            cog = self.bot.get_cog(name)
+            if cog and hasattr(cog, 'command_api'):
+                skysearch_cog = cog
+                break
+                
+        if skysearch_cog and hasattr(skysearch_cog, 'command_api'):
+            # Register command callbacks
+            skysearch_cog.command_api.register_callback(self.handle_command_execution)
+            skysearch_cog.command_api.register_post_execute_callback(self.handle_command_complete)
+            print(f"[SquawkExample] Successfully connected to SkySearch CommandAPI")
+        else:
+            print("[SquawkExample] Warning: SkySearch CommandAPI not found")
+
+    async def handle_command_execution(self, ctx, command_name: str, args: list):
+        """Handle when a SkySearch command is executed."""
+        print(f"[SquawkExample] 🔧 COMMAND EXECUTED: {command_name} by {ctx.author.name} in {ctx.guild.name}")
+        print(f"[SquawkExample] Command args: {args}")
+        
+        # Store command usage data
+        guild_config = self.config.guild(ctx.guild)
+        if await guild_config.track_alerts():  # Reuse the tracking setting
+            command_data = {
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'guild_id': ctx.guild.id,
+                'guild_name': ctx.guild.name,
+                'user_id': ctx.author.id,
+                'user_name': ctx.author.name,
+                'command_name': command_name,
+                'args': args,
+                'channel_id': ctx.channel.id,
+                'channel_name': ctx.channel.name
+            }
+            
+            # You could store this in a separate command history if needed
+            # For now, just log it
+            print(f"[SquawkExample] Logged command usage: {command_name}")
+
+    async def handle_command_complete(self, ctx, command_name: str, args: list, result: any, execution_time: float):
+        """Handle when a SkySearch command completes."""
+        success = not isinstance(result, Exception)
+        status = "✅ SUCCESS" if success else "❌ ERROR"
+        
+        print(f"[SquawkExample] 📊 COMMAND COMPLETE: {command_name} - {status} ({execution_time:.2f}s)")
+        
+        # You could add logic here to:
+        # - Track command performance
+        # - Log errors
+        # - Send notifications for slow commands
+        # - Update usage statistics
 
     async def reconnect_to_skysearch(self):
         """Manually reconnect to the SkySearch API."""
