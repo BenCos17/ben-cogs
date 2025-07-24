@@ -1,0 +1,12 @@
+{
+    "author": ["bencos17, adminescalation"],
+    "install_msg": "## :white_check_mark: Successfully installed SquawkExample.\nThis is an example cog that demonstrates how to integrate with the SquawkAlertAPI for handling aircraft squawk alerts.",
+    "name": "squawkexample",
+    "short": "Example cog for SquawkAlertAPI integration",
+    "description": "An example cog that demonstrates how to connect to and use the SquawkAlertAPI for handling aircraft squawk alerts. This shows developers how to register callbacks and handle squawk alert events.",
+    "tags": ["aviation", "alerts", "example", "squawk", "api"],
+    "end_user_data_statement": "This cog does not store any end user data.",
+    "requirements": [],
+    "permissions": [],
+    "min_bot_version": "3.5.0"
+} 
