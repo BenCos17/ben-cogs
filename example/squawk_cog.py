@@ -134,6 +134,26 @@ class SquawkCog(commands.Cog):
         
         await ctx.send(embed=embed)
 
+    @commands.command(name="debugskysearch")
+    @commands.is_owner()
+    async def debug_skysearch(self, ctx):
+        """Debug command to see SkySearch cog attributes."""
+        skysearch_cog = self.bot.get_cog("SkySearch")
+        if skysearch_cog:
+            attrs = [attr for attr in dir(skysearch_cog) if not attr.startswith('_')]
+            await ctx.send(f"SkySearch cog found! Attributes: {', '.join(attrs[:20])}")  # Show first 20 attributes
+            
+            # Check for common API attribute names
+            potential_apis = ['squawk_api', 'api', 'alert_api', 'squawk_alert_api']
+            for api_name in potential_apis:
+                if hasattr(skysearch_cog, api_name):
+                    api_obj = getattr(skysearch_cog, api_name)
+                    await ctx.send(f"✅ Found `{api_name}`: {type(api_obj)}")
+                else:
+                    await ctx.send(f"❌ No `{api_name}` attribute")
+        else:
+            await ctx.send("❌ SkySearch cog not found")
+
 # Setup function to add the cog to the bot
 async def setup(bot):
     await bot.add_cog(SquawkCog(bot))
