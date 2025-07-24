@@ -273,7 +273,8 @@ class SquawkCog(commands.Cog):
     @squawk_example.command(name="stats")
     async def view_stats(self, ctx):
         """View alert statistics."""
-        history = await self.config.alert_history(ctx.guild)
+        guild_config = self.config.guild(ctx.guild)
+        history = await guild_config.alert_history()
         
         if not history:
             await ctx.send("No alert data available.")
@@ -356,7 +357,8 @@ class SquawkCog(commands.Cog):
         )
         
         # Alert count
-        history = await self.config.alert_history(ctx.guild)
+        guild_config = self.config.guild(ctx.guild)
+        history = await guild_config.alert_history()
         embed.add_field(
             name="Statistics",
             value=f"Total Alerts: {len(history)}\n"
