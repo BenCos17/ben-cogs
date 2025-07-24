@@ -526,8 +526,21 @@ class SquawkCog(commands.Cog):
 
     @commands.command(name="testsquawk")
     @commands.is_owner()
-    async def test_squawk_api(self, ctx):
-        """Test command to manually trigger the squawk API callbacks."""
+    async def test_squawk_api(self, ctx, squawk_code: str = "7700"):
+        """Test command to manually trigger the squawk API callbacks.
+        
+        Usage: *testsquawk [squawk_code]
+        Examples:
+        - *testsquawk        (defaults to 7700)
+        - *testsquawk 7600   (test radio failure)
+        - *testsquawk 7500   (test hijack)
+        """
+        # Validate squawk code
+        valid_squawks = ['7500', '7600', '7700']
+        if squawk_code not in valid_squawks:
+            await ctx.send(f"❌ Invalid squawk code. Valid codes are: {', '.join(valid_squawks)}")
+            return
+        
         # Create fake aircraft data for testing
         fake_aircraft = {
             'hex': 'TEST01',
@@ -539,16 +552,26 @@ class SquawkCog(commands.Cog):
         }
         
         # Test the basic callback
-        await self.handle_squawk_alert(ctx.guild, fake_aircraft, '7700')
+        await self.handle_squawk_alert(ctx.guild, fake_aircraft, squawk_code)
         
         # Test pre-send callback
+        squawk_descriptions = {
+            '7500': 'Hijack Emergency',
+            '7600': 'Radio Failure Emergency', 
+            '7700': 'General Emergency'
+        }
+        
         test_message_data = {
-            'content': 'Test alert message',
-            'embed': discord.Embed(title="Test Emergency Alert", description="This is a test"),
+            'content': f'Test alert message for {squawk_code}',
+            'embed': discord.Embed(
+                title=f"Test {squawk_descriptions[squawk_code]}", 
+                description=f"This is a test of squawk code {squawk_code}",
+                color=0xff4545
+            ),
             'view': None
         }
         
-        modified_data = await self.modify_alert_message(ctx.guild, fake_aircraft, '7700', test_message_data)
+        modified_data = await self.modify_alert_message(ctx.guild, fake_aircraft, squawk_code, test_message_data)
         
         # Send the test message to see the modifications
         sent_message = await ctx.send(
@@ -557,7 +580,7 @@ class SquawkCog(commands.Cog):
         )
         
         # Test post-send callback
-        await self.after_alert_sent(ctx.guild, fake_aircraft, '7700', sent_message)
+        await self.after_alert_sent(ctx.guild, fake_aircraft, squawk_code, sent_message)
         
         await ctx.send("✅ SquawkAPI test completed! Check console for debug output.")
 
