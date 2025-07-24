@@ -1,16 +1,32 @@
 import discord
 from redbot.core import commands
-from ..skysearch.squawk_api import SquawkAlertAPI
 
 class SquawkCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.squawk_api = SquawkAlertAPI()
+        self.squawk_api = None
 
-        # Register different types of callbacks to test the API
-        self.squawk_api.register_callback(self.handle_squawk_alert)
-        self.squawk_api.register_pre_send_callback(self.modify_alert_message)
-        self.squawk_api.register_post_send_callback(self.after_alert_sent)
+    async def cog_load(self):
+        """Called when the cog is loaded."""
+        await self._setup_squawk_api()
+
+    def _get_squawk_api(self):
+        """Get the SquawkAlertAPI from the skysearch cog."""
+        skysearch_cog = self.bot.get_cog("SkySearch")
+        if skysearch_cog and hasattr(skysearch_cog, 'squawk_api'):
+            return skysearch_cog.squawk_api
+        return None
+
+    async def _setup_squawk_api(self):
+        """Set up the squawk API and register callbacks."""
+        self.squawk_api = self._get_squawk_api()
+        if self.squawk_api:
+            # Register different types of callbacks to test the API
+            self.squawk_api.register_callback(self.handle_squawk_alert)
+            self.squawk_api.register_pre_send_callback(self.modify_alert_message)
+            self.squawk_api.register_post_send_callback(self.after_alert_sent)
+        else:
+            print("[SquawkExample] Warning: SkySearch cog not found or doesn't have squawk_api")
 
     async def handle_squawk_alert(self, guild, aircraft_info, squawk_code):
         """Basic callback that gets called when a squawk alert is detected."""
