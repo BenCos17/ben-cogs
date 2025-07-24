@@ -626,11 +626,56 @@ class Skysearch(commands.Cog, DashboardIntegration):
             'view': None,
         }
         
-        # Create embed (same as background task)
+        # Create embed and buttons (same as real background task)
         aircraft_data = fake_aircraft
         image_url, photographer = await self.helpers.get_photo_by_hex(aircraft_data.get('hex', None))
         embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
-        view = None
+        
+        # Create buttons (same as real emergency alerts)
+        view = discord.ui.View()
+        icao = aircraft_data.get('hex', '').upper()
+        link = f"https://globe.airplanes.live/?icao={icao}"
+        view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
+
+        # Social media sharing (same as real alerts)
+        import urllib.parse
+        ground_speed_knots = aircraft_data.get('gs', aircraft_data.get('ground_speed', 'N/A'))
+        ground_speed_mph = 'unknown'
+        if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
+            try:
+                ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+            except Exception:
+                ground_speed_mph = 'unknown'
+        
+        lat = aircraft_data.get('lat', 'N/A')
+        lon = aircraft_data.get('lon', 'N/A')
+        if lat != 'N/A' and lat is not None:
+            try:
+                lat_formatted = round(float(lat), 2)
+                lat_dir = "N" if lat_formatted >= 0 else "S"
+                lat = f"{abs(lat_formatted)}{lat_dir}"
+            except Exception:
+                pass
+        if lon != 'N/A' and lon is not None:
+            try:
+                lon_formatted = round(float(lon), 2)
+                lon_dir = "E" if lon_formatted >= 0 else "W"
+                lon = f"{abs(lon_formatted)}{lon_dir}"
+            except Exception:
+                pass
+        
+        if squawk_code in ['7500', '7600', '7700']:
+            tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+        else:
+            tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+        
+        tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+        view.add_item(discord.ui.Button(label="Post on X", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
+        
+        whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
+        whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
+        view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+        
         message_data['embed'] = embed
         message_data['view'] = view
 
