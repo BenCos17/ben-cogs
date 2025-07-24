@@ -433,6 +433,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     message_data['embed'] = embed
                                     message_data['view'] = view
 
+                                    # Let other cogs know about the alert first
+                                    await self.squawk_api.call_callbacks(guild, aircraft_info, squawk_code)
+
                                     # Let other cogs modify the message before sending
                                     message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
 
