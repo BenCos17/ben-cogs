@@ -1,5 +1,5 @@
 {
-    "author": ["bencos17, adminescalation"],
+    "author": ["bencos17"],
     "install_msg": "## :white_check_mark: Successfully installed SquawkExample.\nThis is an example cog that demonstrates how to integrate with the SquawkAlertAPI for handling aircraft squawk alerts.",
     "name": "squawkexample",
     "short": "Example cog for SquawkAlertAPI integration",
