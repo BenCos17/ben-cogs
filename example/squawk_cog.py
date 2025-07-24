@@ -41,9 +41,14 @@ class SquawkCog(commands.Cog):
             self.squawk_api.register_callback(self.handle_squawk_alert)
             self.squawk_api.register_pre_send_callback(self.modify_alert_message)
             self.squawk_api.register_post_send_callback(self.after_alert_sent)
-            print("[SquawkExample] Successfully connected to SkySearch API")
+            print(f"[SquawkExample] Successfully connected to SkySearch API - {len(self.squawk_api._callbacks)} callbacks registered")
         else:
             print("[SquawkExample] Warning: SkySearch cog not found or doesn't have squawk_api")
+
+    async def reconnect_to_skysearch(self):
+        """Manually reconnect to the SkySearch API."""
+        await self._setup_squawk_api()
+        return self.squawk_api is not None
 
     async def handle_squawk_alert(self, guild, aircraft_info, squawk_code):
         """Enhanced callback that gets called when a squawk alert is detected."""
@@ -388,6 +393,53 @@ class SquawkCog(commands.Cog):
         await self.after_alert_sent(ctx.guild, fake_aircraft, '7700', sent_message)
         
         await ctx.send("✅ SquawkAPI test completed! Check console for debug output.")
+
+    @squawk_example.command(name="reconnect")
+    @commands.is_owner()
+    async def reconnect_api(self, ctx):
+        """Manually reconnect to the SkySearch API (owner only)."""
+        success = await self.reconnect_to_skysearch()
+        if success:
+            await ctx.send("✅ Successfully reconnected to SkySearch API!")
+        else:
+            await ctx.send("❌ Failed to reconnect to SkySearch API. Make sure the SkySearch cog is loaded.")
+
+    @squawk_example.command(name="debug")
+    @commands.is_owner() 
+    async def debug_connection(self, ctx):
+        """Debug the connection to SkySearch API (owner only)."""
+        skysearch_cog = self.bot.get_cog("SkySearch")
+        
+        embed = discord.Embed(title="SquawkExample Debug Info", color=discord.Color.blue())
+        
+        if skysearch_cog:
+            embed.add_field(name="SkySearch Cog", value="✅ Found", inline=True)
+            
+            if hasattr(skysearch_cog, 'squawk_api'):
+                embed.add_field(name="SquawkAPI", value="✅ Available", inline=True)
+                
+                # Check callback counts
+                api = skysearch_cog.squawk_api
+                embed.add_field(name="Registered Callbacks", 
+                               value=f"Basic: {len(api._callbacks)}\nPre-send: {len(api._pre_send_callbacks)}\nPost-send: {len(api._post_send_callbacks)}", 
+                               inline=False)
+                
+                # Check if our callbacks are registered
+                our_callback_found = any(cb.__self__ == self for cb in api._callbacks if hasattr(cb, '__self__'))
+                embed.add_field(name="Our Callbacks", value="✅ Registered" if our_callback_found else "❌ Not found", inline=True)
+                
+            else:
+                embed.add_field(name="SquawkAPI", value="❌ Not found", inline=True)
+        else:
+            embed.add_field(name="SkySearch Cog", value="❌ Not found", inline=True)
+            
+        # Check background task status
+        if skysearch_cog and hasattr(skysearch_cog, 'check_emergency_squawks'):
+            task = skysearch_cog.check_emergency_squawks
+            task_status = "✅ Running" if task.is_running() else "❌ Stopped"
+            embed.add_field(name="Background Task", value=task_status, inline=True)
+        
+        await ctx.send(embed=embed)
 
 # Setup function to add the cog to the bot
 async def setup(bot):
