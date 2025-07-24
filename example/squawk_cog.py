@@ -2,7 +2,10 @@ import discord
 from redbot.core import commands, Config
 import asyncio
 import datetime
+import logging
 from typing import Dict, Optional
+
+log = logging.getLogger("red.squawkexample")
 
 class SquawkCog(commands.Cog):
     def __init__(self, bot):
@@ -46,9 +49,9 @@ class SquawkCog(commands.Cog):
             self.squawk_api.register_callback(self.handle_squawk_alert)
             self.squawk_api.register_pre_send_callback(self.modify_alert_message)
             self.squawk_api.register_post_send_callback(self.after_alert_sent)
-            print(f"[SquawkExample] Successfully connected to SkySearch API - {len(self.squawk_api._callbacks)} callbacks registered")
+            log.info(f"Successfully connected to SkySearch API - {len(self.squawk_api._callbacks)} callbacks registered")
         else:
-            print("[SquawkExample] Warning: SkySearch cog not found or doesn't have squawk_api")
+            log.warning("SkySearch cog not found or doesn't have squawk_api")
             
         # Also hook into command API if available
         await self._setup_command_api()
@@ -68,9 +71,9 @@ class SquawkCog(commands.Cog):
             # Register command callbacks
             skysearch_cog.command_api.register_callback(self.handle_command_execution)
             skysearch_cog.command_api.register_post_execute_callback(self.handle_command_complete)
-            print(f"[SquawkExample] Successfully connected to SkySearch CommandAPI")
+            log.info("Successfully connected to SkySearch CommandAPI")
         else:
-            print("[SquawkExample] Warning: SkySearch CommandAPI not found")
+            log.warning("SkySearch CommandAPI not found")
 
     async def handle_command_execution(self, ctx, command_name: str, args: list):
         """Handle when a SkySearch command is executed."""
@@ -104,7 +107,7 @@ class SquawkCog(commands.Cog):
         
         # Only log errors, not successful commands
         if not success:
-            print(f"[SquawkExample] ❌ COMMAND ERROR: {command_name} failed - {result}")
+            log.error(f"COMMAND ERROR: {command_name} failed - {result}")
 
     async def reconnect_to_skysearch(self):
         """Manually reconnect to the SkySearch API."""
@@ -117,7 +120,7 @@ class SquawkCog(commands.Cog):
         callsign = aircraft_info.get('flight', 'Unknown')
         
         # Log the alert
-        print(f"[SquawkExample] 🚨 ALERT DETECTED in {guild.name}: Squawk {squawk_code} for aircraft {hex_code} ({callsign})")
+        log.info(f"🚨 ALERT DETECTED in {guild.name}: Squawk {squawk_code} for aircraft {hex_code} ({callsign})")
         
         # Check if we should track this alert
         guild_config = self.config.guild(guild)
@@ -175,11 +178,11 @@ class SquawkCog(commands.Cog):
         
         # Different handling based on squawk code
         if squawk_code == '7700':  # General emergency
-            print(f"[SquawkExample] 🚨 GENERAL EMERGENCY detected: {hex_code}")
+            log.info(f"🚨 GENERAL EMERGENCY detected: {hex_code}")
         elif squawk_code == '7600':  # Radio failure
-            print(f"[SquawkExample] 📻 RADIO FAILURE detected: {hex_code}")
+            log.info(f"📻 RADIO FAILURE detected: {hex_code}")
         elif squawk_code == '7500':  # Hijacking
-            print(f"[SquawkExample] 🔒 HIJACKING ALERT detected: {hex_code}")
+            log.info(f"🔒 HIJACKING ALERT detected: {hex_code}")
         
         # You could add custom logic here like:
         # - Send notifications to external services
@@ -222,13 +225,13 @@ class SquawkCog(commands.Cog):
                 embed.set_footer(text=footer_text)
         
         hex_code = aircraft_info.get('hex', 'Unknown')
-        print(f"[SquawkExample] Modified alert message for {hex_code}")
+        log.debug(f"Modified alert message for {hex_code}")
         return message_data
 
     async def after_alert_sent(self, guild, aircraft_info, squawk_code, sent_message):
         """Post-send callback that runs after the alert message is sent."""
         hex_code = aircraft_info.get('hex', 'Unknown')
-        print(f"[SquawkExample] Alert message sent in {guild.name} for aircraft {hex_code}")
+        log.info(f"Alert message sent in {guild.name} for aircraft {hex_code}")
         
         # Store message reference for potential updates
         alert_key = f"{guild.id}_{hex_code}_{squawk_code}"
@@ -250,14 +253,14 @@ class SquawkCog(commands.Cog):
                     elif squawk_code == '7500':
                         await sent_message.add_reaction("🔒")
                 except discord.errors.Forbidden:
-                    print("[SquawkExample] Could not add reactions - missing permissions")
+                    log.warning("Could not add reactions - missing permissions")
                 except Exception as e:
-                    print(f"[SquawkExample] Error adding reactions: {e}")
+                    log.error(f"Error adding reactions: {e}")
                 
                 # Schedule a message update after 30 seconds (only once per alert)
                 asyncio.create_task(self._schedule_message_update(sent_message, aircraft_info, squawk_code))
         else:
-            print(f"[SquawkExample] Skipping duplicate callback for {hex_code} - already processed")
+            log.debug(f"Skipping duplicate callback for {hex_code} - already processed")
 
     async def _schedule_message_update(self, message: discord.Message, aircraft_info: dict, squawk_code: str):
         """Schedule an update to the alert message with additional info."""
@@ -275,11 +278,11 @@ class SquawkCog(commands.Cog):
                 embed.color = discord.Color.orange()  # Change color to indicate update
                 
                 await message.edit(embed=embed)
-                print(f"[SquawkExample] Updated alert message for {aircraft_info.get('hex', 'Unknown')}")
+                log.debug(f"Updated alert message for {aircraft_info.get('hex', 'Unknown')}")
         except discord.errors.NotFound:
-            print(f"[SquawkExample] Could not update message - message was deleted")
+            log.debug("Could not update message - message was deleted")
         except Exception as e:
-            print(f"[SquawkExample] Error updating message: {e}")
+            log.error(f"Error updating message: {e}")
 
     @commands.group(name="squawkexample", aliases=["se"])
     async def squawk_example(self, ctx):
