@@ -10,14 +10,14 @@ class SquawkCog(commands.Cog):
         self.squawk_api = None
         self.config = Config.get_conf(self, identifier=492089091320446977)
         self.config.register_global(
-            alert_history=[],
             max_history=100,
             enable_logging=True,
             enable_message_updates=True
         )
         self.config.register_guild(
             track_alerts=True,
-            update_messages=True
+            update_messages=True,
+            alert_history=[]
         )
         # Store message references for updating
         self.alert_messages: Dict[str, discord.Message] = {}
@@ -79,14 +79,14 @@ class SquawkCog(commands.Cog):
                 'ground_speed': aircraft_info.get('ground_speed')
             }
             
-            await self._add_to_history(alert_data)
+            await self._add_to_history(guild, alert_data)
             
         # Additional custom processing
         await self._process_custom_alert(guild, aircraft_info, squawk_code)
 
-    async def _add_to_history(self, alert_data):
+    async def _add_to_history(self, guild, alert_data):
         """Add alert to history with size management."""
-        history = await self.config.alert_history()
+        history = await self.config.alert_history(guild)
         max_history = await self.config.max_history()
         
         history.append(alert_data)
@@ -95,7 +95,7 @@ class SquawkCog(commands.Cog):
         if len(history) > max_history:
             history = history[-max_history:]
             
-        await self.config.alert_history.set(history)
+        await self.config.alert_history.set(guild, history)
 
     async def _process_custom_alert(self, guild, aircraft_info, squawk_code):
         """Custom processing for different types of alerts."""
@@ -220,7 +220,7 @@ class SquawkCog(commands.Cog):
     @squawk_example.command(name="history")
     async def view_history(self, ctx, limit: int = 10):
         """View recent alert history."""
-        history = await self.config.alert_history()
+        history = await self.config.alert_history(ctx.guild)
         
         if not history:
             await ctx.send("No alert history found.")
@@ -251,7 +251,7 @@ class SquawkCog(commands.Cog):
     @squawk_example.command(name="stats")
     async def view_stats(self, ctx):
         """View alert statistics."""
-        history = await self.config.alert_history()
+        history = await self.config.alert_history(ctx.guild)
         
         if not history:
             await ctx.send("No alert data available.")
@@ -334,7 +334,7 @@ class SquawkCog(commands.Cog):
         )
         
         # Alert count
-        history = await self.config.alert_history()
+        history = await self.config.alert_history(ctx.guild)
         embed.add_field(
             name="Statistics",
             value=f"Total Alerts: {len(history)}\n"
