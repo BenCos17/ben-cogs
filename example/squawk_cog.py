@@ -1,10 +1,13 @@
 import discord
 from redbot.core import commands
+from datetime import datetime
 
 class SquawkCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.squawk_api = None
+        self.alert_count = 0
+        self.last_alert_time = None
 
     async def cog_load(self):
         """Called when the cog is loaded."""
@@ -30,7 +33,10 @@ class SquawkCog(commands.Cog):
 
     async def handle_squawk_alert(self, guild, aircraft_info, squawk_code):
         """Basic callback that gets called when a squawk alert is detected."""
-        print(f"[SquawkExample] Alert detected in {guild.name}: {squawk_code} for aircraft {aircraft_info.get('hex', 'Unknown')}")
+        self.alert_count += 1
+        self.last_alert_time = datetime.now()
+        
+        print(f"[SquawkExample] Alert #{self.alert_count} detected in {guild.name}: {squawk_code} for aircraft {aircraft_info.get('hex', 'Unknown')}")
         
         # You could do additional processing here, like:
         # - Log to a database
@@ -74,6 +80,13 @@ class SquawkCog(commands.Cog):
     @commands.is_owner()
     async def test_squawk_api(self, ctx):
         """Test command to manually trigger the squawk API callbacks."""
+        # Check if squawk API is available
+        if not self.squawk_api:
+            await self._setup_squawk_api()
+            if not self.squawk_api:
+                await ctx.send("❌ SkySearch cog is not loaded or doesn't have squawk_api available.")
+                return
+        
         # Create fake aircraft data for testing
         fake_aircraft = {
             'hex': 'TEST01',
@@ -103,6 +116,23 @@ class SquawkCog(commands.Cog):
         )
         
         await ctx.send("✅ SquawkAPI test completed! Check console for debug output.")
+
+    @commands.command(name="squawkstats")
+    async def squawk_stats(self, ctx):
+        """Show statistics about processed squawk alerts."""
+        embed = discord.Embed(title="📊 SquawkExample Statistics", color=0x00ff00)
+        embed.add_field(name="Total Alerts Processed", value=str(self.alert_count), inline=True)
+        
+        if self.last_alert_time:
+            embed.add_field(name="Last Alert", value=self.last_alert_time.strftime("%Y-%m-%d %H:%M:%S UTC"), inline=True)
+        else:
+            embed.add_field(name="Last Alert", value="None", inline=True)
+        
+        # Check if squawk API is connected
+        api_status = "✅ Connected" if self.squawk_api else "❌ Not Connected"
+        embed.add_field(name="SkySearch API Status", value=api_status, inline=True)
+        
+        await ctx.send(embed=embed)
 
 # Setup function to add the cog to the bot
 async def setup(bot):
