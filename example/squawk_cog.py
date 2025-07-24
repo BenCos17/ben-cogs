@@ -73,10 +73,7 @@ class SquawkCog(commands.Cog):
 
     async def handle_command_execution(self, ctx, command_name: str, args: list):
         """Handle when a SkySearch command is executed."""
-        print(f"[SquawkExample] 🔧 COMMAND EXECUTED: {command_name} by {ctx.author.name} in {ctx.guild.name}")
-        print(f"[SquawkExample] Command args: {args}")
-        
-        # Store command usage data
+        # Store command usage data silently
         guild_config = self.config.guild(ctx.guild)
         if await guild_config.track_alerts():  # Reuse the tracking setting
             command_data = {
@@ -92,21 +89,21 @@ class SquawkCog(commands.Cog):
             }
             
             # You could store this in a separate command history if needed
-            # For now, just log it
-            print(f"[SquawkExample] Logged command usage: {command_name}")
+            # For now, just track it silently
 
     async def handle_command_complete(self, ctx, command_name: str, args: list, result: any, execution_time: float):
         """Handle when a SkySearch command completes."""
         success = not isinstance(result, Exception)
-        status = "✅ SUCCESS" if success else "❌ ERROR"
-        
-        print(f"[SquawkExample] 📊 COMMAND COMPLETE: {command_name} - {status} ({execution_time:.2f}s)")
         
         # You could add logic here to:
         # - Track command performance
-        # - Log errors
+        # - Log errors (only if there are errors)
         # - Send notifications for slow commands
         # - Update usage statistics
+        
+        # Only log errors, not successful commands
+        if not success:
+            print(f"[SquawkExample] ❌ COMMAND ERROR: {command_name} failed - {result}")
 
     async def reconnect_to_skysearch(self):
         """Manually reconnect to the SkySearch API."""
