@@ -194,24 +194,32 @@ class SquawkCog(commands.Cog):
             
         # Add timestamp and custom branding
         timestamp = datetime.datetime.utcnow().strftime("%H:%M:%S UTC")
+        enhancement_text = f"🔔 **Enhanced by SquawkExample** | Detected at {timestamp}"
         
-        # Example: Add custom content to the message
+        # Example: Add custom content to the message (only if not already added)
         if message_data.get('content'):
-            message_data['content'] += f"\n🔔 **Enhanced by SquawkExample** | Detected at {timestamp}"
+            if enhancement_text not in message_data['content']:
+                message_data['content'] += f"\n{enhancement_text}"
         else:
-            message_data['content'] = f"🔔 **Enhanced by SquawkExample** | Detected at {timestamp}"
+            message_data['content'] = enhancement_text
         
-        # Example: Modify the embed
+        # Example: Modify the embed (only if not already modified)
         if message_data.get('embed'):
             embed = message_data['embed']
-            embed.add_field(
-                name="📡 Enhanced Monitoring", 
-                value=f"This alert is being tracked by SquawkExample cog\nDetection time: {timestamp}", 
-                inline=False
-            )
             
-            # Add custom footer
-            embed.set_footer(text=f"Enhanced by SquawkExample | Original SkySearch Alert")
+            # Check if we've already added our field
+            existing_field_names = [field.name for field in embed.fields]
+            if "📡 Enhanced Monitoring" not in existing_field_names:
+                embed.add_field(
+                    name="📡 Enhanced Monitoring", 
+                    value=f"This alert is being tracked by SquawkExample cog\nDetection time: {timestamp}", 
+                    inline=False
+                )
+            
+            # Add custom footer (only if not already set)
+            footer_text = f"Enhanced by SquawkExample | Original SkySearch Alert"
+            if not embed.footer or embed.footer.text != footer_text:
+                embed.set_footer(text=footer_text)
         
         hex_code = aircraft_info.get('hex', 'Unknown')
         print(f"[SquawkExample] Modified alert message for {hex_code}")
