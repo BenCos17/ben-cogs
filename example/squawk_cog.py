@@ -207,7 +207,7 @@ class SquawkCog(commands.Cog):
             )
             embed.add_field(
                 name="📊 Information",
-                value="`history` - View recent alert history\n`stats` - View alert statistics\n`status` - Check cog status",
+                value="`history` - View recent alert history\n`stats` - View alert statistics\n`status` - Check cog status\n`clear` - Clear alert history",
                 inline=False
             )
             embed.add_field(
@@ -217,10 +217,31 @@ class SquawkCog(commands.Cog):
             )
             await ctx.send(embed=embed)
 
+    @squawk_example.command(name="clear")
+    async def clear_history(self, ctx):
+        """Clear all alert history for this guild."""
+        # Get current history count
+        history = await self.config.guild(ctx.guild).alert_history()
+        count = len(history)
+        
+        if count == 0:
+            await ctx.send("❌ No alert history to clear.")
+            return
+            
+        # Clear the history
+        await self.config.guild(ctx.guild).alert_history.set([])
+        
+        # Also clear active message references for this guild
+        guild_keys = [key for key in self.alert_messages.keys() if key.startswith(str(ctx.guild.id))]
+        for key in guild_keys:
+            del self.alert_messages[key]
+            
+        await ctx.send(f"✅ Cleared **{count}** alert(s) from history for this guild.")
+
     @squawk_example.command(name="history")
     async def view_history(self, ctx, limit: int = 10):
         """View recent alert history."""
-        history = await self.config.alert_history(ctx.guild)
+        history = await self.config.guild(ctx.guild).alert_history()
         
         if not history:
             await ctx.send("No alert history found.")
