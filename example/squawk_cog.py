@@ -45,10 +45,25 @@ class SquawkCog(commands.Cog):
         """Set up the squawk API and register callbacks."""
         self.squawk_api = self._get_squawk_api()
         if self.squawk_api:
-            # Register different types of callbacks to test the API
-            self.squawk_api.register_callback(self.handle_squawk_alert)
-            self.squawk_api.register_pre_send_callback(self.modify_alert_message)
-            self.squawk_api.register_post_send_callback(self.after_alert_sent)
+            # Register different types of callbacks with enhanced parameters
+            self.squawk_api.register_callback(
+                self.handle_squawk_alert, 
+                cog_name="SquawkExample", 
+                priority=10,  # High priority for testing
+                timeout=15.0
+            )
+            self.squawk_api.register_pre_send_callback(
+                self.modify_alert_message, 
+                cog_name="SquawkExample", 
+                priority=5,   # Medium priority for message modification
+                timeout=8.0
+            )
+            self.squawk_api.register_post_send_callback(
+                self.after_alert_sent, 
+                cog_name="SquawkExample", 
+                priority=1,   # Lower priority for post-processing
+                timeout=20.0  # Longer timeout for potential message updates
+            )
             log.info(f"Successfully connected to SkySearch API - {len(self.squawk_api._callbacks)} callbacks registered")
         else:
             log.warning("SkySearch cog not found or doesn't have squawk_api")
@@ -68,9 +83,21 @@ class SquawkCog(commands.Cog):
                 break
                 
         if skysearch_cog and hasattr(skysearch_cog, 'command_api'):
-            # Register command callbacks
-            skysearch_cog.command_api.register_callback(self.handle_command_execution)
-            skysearch_cog.command_api.register_post_execute_callback(self.handle_command_complete)
+            # Register command callbacks with enhanced parameters
+            skysearch_cog.command_api.register_callback(
+                self.handle_command_execution,
+                cog_name="SquawkExample",
+                priority=5,
+                timeout=10.0,
+                command_filter=["aircraft_icao", "aircraft_callsign", "aircraft_squawk"]  # Only track specific commands
+            )
+            skysearch_cog.command_api.register_post_execute_callback(
+                self.handle_command_complete,
+                cog_name="SquawkExample",
+                priority=1,
+                timeout=5.0,
+                command_filter=None  # Track all commands for error logging
+            )
             log.info("Successfully connected to SkySearch CommandAPI")
         else:
             log.warning("SkySearch CommandAPI not found")
@@ -613,7 +640,7 @@ class SquawkCog(commands.Cog):
     @squawk_example.command(name="debug")
     @commands.is_owner() 
     async def debug_connection(self, ctx):
-        """Debug the connection to SkySearch API (owner only)."""
+        """Enhanced debug information about SkySearch API connection and performance (owner only)."""
         # Try the correct name first, then fallbacks
         possible_names = ["skysearch", "SkySearch", "Skysearch", "SkySearchCog"]
         skysearch_cog = None
@@ -626,23 +653,72 @@ class SquawkCog(commands.Cog):
                 found_name = name
                 break
         
-        embed = discord.Embed(title="SquawkExample Debug Info", color=discord.Color.blue())
+        embed = discord.Embed(title="🔧 SquawkExample Enhanced Debug Info", color=discord.Color.blue())
         
         if skysearch_cog:
             embed.add_field(name="SkySearch Cog", value=f"✅ Found as '{found_name}'", inline=True)
             
             if hasattr(skysearch_cog, 'squawk_api'):
-                embed.add_field(name="SquawkAPI", value="✅ Available", inline=True)
-                
-                # Check callback counts
                 api = skysearch_cog.squawk_api
-                embed.add_field(name="Registered Callbacks", 
-                               value=f"Basic: {len(api._callbacks)}\nPre-send: {len(api._pre_send_callbacks)}\nPost-send: {len(api._post_send_callbacks)}", 
-                               inline=False)
+                embed.add_field(name="SquawkAPI", value="✅ Available (Enhanced)", inline=True)
                 
-                # Check if our callbacks are registered
-                our_callback_found = any(cb.__self__ == self for cb in api._callbacks if hasattr(cb, '__self__'))
-                embed.add_field(name="Our Callbacks", value="✅ Registered" if our_callback_found else "❌ Not found", inline=True)
+                # Get enhanced statistics
+                if hasattr(api, 'get_stats'):
+                    stats = api.get_stats()
+                    
+                    # Basic callback info
+                    embed.add_field(
+                        name="📊 Callback Statistics", 
+                        value=f"Total: {stats['total_callbacks']}\n"
+                              f"Basic: {stats['basic_callbacks']}\n"
+                              f"Pre-send: {stats['pre_send_callbacks']}\n"
+                              f"Post-send: {stats['post_send_callbacks']}\n"
+                              f"Enabled: {stats['enabled_callbacks']}", 
+                        inline=True
+                    )
+                    
+                    # Performance metrics
+                    metrics = stats['metrics']
+                    embed.add_field(
+                        name="📈 Performance Metrics",
+                        value=f"Total calls: {metrics['total_calls']}\n"
+                              f"Successful: {metrics['successful_calls']}\n"
+                              f"Failed: {metrics['failed_calls']}\n"
+                              f"Alerts tracked: {stats['recent_alerts_tracked']}",
+                        inline=True
+                    )
+                    
+                    # Our callback details
+                    our_callbacks = [cb for cb in stats['callback_details'] if cb['cog_name'] == 'SquawkExample']
+                    if our_callbacks:
+                        cb_info = []
+                        for cb in our_callbacks:
+                            status = "✅" if cb['enabled'] else "❌"
+                            failures = f" ({cb['failure_count']} fails)" if cb['failure_count'] > 0 else ""
+                            cb_info.append(f"{status} Priority {cb['priority']}{failures}")
+                        
+                        embed.add_field(
+                            name="🎯 Our Callbacks Status",
+                            value="\n".join(cb_info),
+                            inline=False
+                        )
+                    
+                    # Performance stats for our cog
+                    our_stats = metrics['callback_stats'].get('SquawkExample', {})
+                    if our_stats.get('calls', 0) > 0:
+                        avg_time = our_stats['total_time'] / our_stats['calls'] * 1000  # Convert to ms
+                        embed.add_field(
+                            name="⚡ Our Performance",
+                            value=f"Calls: {our_stats['calls']}\n"
+                                  f"Failures: {our_stats['failures']}\n"
+                                  f"Avg time: {avg_time:.1f}ms",
+                            inline=True
+                        )
+                else:
+                    # Fallback for older API
+                    embed.add_field(name="Registered Callbacks", 
+                                   value=f"Basic: {len(api._callbacks)}\nPre-send: {len(api._pre_send_callbacks)}\nPost-send: {len(api._post_send_callbacks)}", 
+                                   inline=False)
                 
                 # Check background task status
                 if hasattr(skysearch_cog, 'check_emergency_squawks'):
@@ -653,25 +729,171 @@ class SquawkCog(commands.Cog):
             else:
                 embed.add_field(name="SquawkAPI", value="❌ Not found", inline=True)
                 
-            # Check CommandAPI connection
+            # Enhanced CommandAPI connection info
             if hasattr(skysearch_cog, 'command_api'):
-                embed.add_field(name="CommandAPI", value="✅ Available", inline=True)
-                
-                # Check command callback counts
                 cmd_api = skysearch_cog.command_api
-                embed.add_field(name="Command Callbacks", 
-                               value=f"Basic: {len(cmd_api._callbacks)}\nPre-execute: {len(cmd_api._pre_execute_callbacks)}\nPost-execute: {len(cmd_api._post_execute_callbacks)}", 
-                               inline=False)
+                embed.add_field(name="CommandAPI", value="✅ Available (Enhanced)", inline=True)
                 
-                # Check if our command callbacks are registered
-                our_cmd_callback_found = any(cb.__self__ == self for cb in cmd_api._callbacks if hasattr(cb, '__self__'))
-                embed.add_field(name="Our Command Callbacks", value="✅ Registered" if our_cmd_callback_found else "❌ Not found", inline=True)
+                # Get enhanced command statistics
+                if hasattr(cmd_api, 'get_stats'):
+                    cmd_stats = cmd_api.get_stats()
+                    
+                    embed.add_field(
+                        name="📊 Command Callback Stats", 
+                        value=f"Total: {cmd_stats['total_callbacks']}\n"
+                              f"Basic: {cmd_stats['basic_callbacks']}\n"
+                              f"Pre-execute: {cmd_stats['pre_execute_callbacks']}\n"
+                              f"Post-execute: {cmd_stats['post_execute_callbacks']}\n"
+                              f"Active commands: {cmd_stats['active_commands']}", 
+                        inline=True
+                    )
+                    
+                    # Command performance
+                    cmd_metrics = cmd_stats['metrics']
+                    embed.add_field(
+                        name="📈 Command Performance",
+                        value=f"Total: {cmd_metrics['total_commands']}\n"
+                              f"Successful: {cmd_metrics['successful_commands']}\n"
+                              f"Failed: {cmd_metrics['failed_commands']}\n"
+                              f"Cancelled: {cmd_metrics['cancelled_commands']}",
+                        inline=True
+                    )
+                else:
+                    # Fallback for older API
+                    embed.add_field(name="Command Callbacks", 
+                                   value=f"Basic: {len(cmd_api._callbacks)}\nPre-execute: {len(cmd_api._pre_execute_callbacks)}\nPost-execute: {len(cmd_api._post_execute_callbacks)}", 
+                                   inline=False)
             else:
                 embed.add_field(name="CommandAPI", value="❌ Not found", inline=True)
         else:
             embed.add_field(name="SkySearch Cog", value="❌ Not found", inline=True)
             
+        embed.set_footer(text="Enhanced API provides detailed metrics, circuit breakers, and priority handling")
         await ctx.send(embed=embed)
+
+    @squawk_example.command(name="apistats")
+    @commands.is_owner()
+    async def api_statistics(self, ctx):
+        """Show detailed API performance statistics (owner only)."""
+        skysearch_cog = self._get_skysearch_cog()
+        if not skysearch_cog:
+            await ctx.send("❌ SkySearch cog not found")
+            return
+            
+        embeds = []
+        
+        # SquawkAPI Statistics
+        if hasattr(skysearch_cog, 'squawk_api') and hasattr(skysearch_cog.squawk_api, 'get_stats'):
+            stats = skysearch_cog.squawk_api.get_stats()
+            
+            embed = discord.Embed(title="🚨 SquawkAPI Performance Statistics", color=discord.Color.orange())
+            
+            # Overall metrics
+            metrics = stats['metrics']
+            success_rate = (metrics['successful_calls'] / max(metrics['total_calls'], 1)) * 100
+            
+            embed.add_field(
+                name="📊 Overall Performance",
+                value=f"Total API calls: {metrics['total_calls']}\n"
+                      f"Success rate: {success_rate:.1f}%\n"
+                      f"Failed calls: {metrics['failed_calls']}\n"
+                      f"Active alerts: {stats['recent_alerts_tracked']}",
+                inline=True
+            )
+            
+            # Callback performance breakdown
+            callback_stats = metrics['callback_stats']
+            if callback_stats:
+                performance_info = []
+                for cog_name, cog_stats in callback_stats.items():
+                    if cog_stats['calls'] > 0:
+                        avg_time = (cog_stats['total_time'] / cog_stats['calls']) * 1000
+                        failure_rate = (cog_stats['failures'] / cog_stats['calls']) * 100
+                        performance_info.append(f"**{cog_name}:**\n  Calls: {cog_stats['calls']}\n  Avg: {avg_time:.1f}ms\n  Fails: {failure_rate:.1f}%")
+                
+                if performance_info:
+                    embed.add_field(
+                        name="🎯 Per-Cog Performance",
+                        value="\n\n".join(performance_info[:3]),  # Limit to prevent overflow
+                        inline=True
+                    )
+            
+            embeds.append(embed)
+        
+        # CommandAPI Statistics
+        if hasattr(skysearch_cog, 'command_api') and hasattr(skysearch_cog.command_api, 'get_stats'):
+            cmd_stats = skysearch_cog.command_api.get_stats()
+            
+            embed = discord.Embed(title="⚙️ CommandAPI Performance Statistics", color=discord.Color.green())
+            
+            # Command metrics
+            cmd_metrics = cmd_stats['metrics']
+            total_commands = cmd_metrics['total_commands']
+            
+            if total_commands > 0:
+                success_rate = (cmd_metrics['successful_commands'] / total_commands) * 100
+                
+                embed.add_field(
+                    name="📈 Command Execution",
+                    value=f"Total commands: {total_commands}\n"
+                          f"Success rate: {success_rate:.1f}%\n"
+                          f"Failed: {cmd_metrics['failed_commands']}\n"
+                          f"Cancelled: {cmd_metrics['cancelled_commands']}\n"
+                          f"Active now: {cmd_stats['active_commands']}",
+                    inline=True
+                )
+                
+                # Command performance breakdown
+                command_stats = cmd_metrics['command_stats']
+                if command_stats:
+                    perf_info = []
+                    for cmd_name, cmd_data in list(command_stats.items())[:5]:  # Top 5 commands
+                        failure_rate = (cmd_data['failures'] / max(cmd_data['count'], 1)) * 100
+                        perf_info.append(f"**{cmd_name}:**\n  Runs: {cmd_data['count']}\n  Avg: {cmd_data['avg_time']:.2f}s\n  Fails: {failure_rate:.1f}%")
+                    
+                    if perf_info:
+                        embed.add_field(
+                            name="🏃 Top Commands",
+                            value="\n\n".join(perf_info),
+                            inline=True
+                        )
+            else:
+                embed.add_field(name="📈 Command Execution", value="No commands executed yet", inline=False)
+            
+            embeds.append(embed)
+        
+        # Send embeds
+        if embeds:
+            for embed in embeds:
+                await ctx.send(embed=embed)
+        else:
+            await ctx.send("❌ No enhanced API statistics available. APIs may be using older versions.")
+
+    @squawk_example.command(name="enablecallbacks")
+    @commands.is_owner()
+    async def enable_callbacks(self, ctx):
+        """Re-enable any disabled callbacks for this cog (owner only)."""
+        skysearch_cog = self._get_skysearch_cog()
+        if not skysearch_cog:
+            await ctx.send("❌ SkySearch cog not found")
+            return
+            
+        enabled_count = 0
+        
+        # Re-enable SquawkAPI callbacks
+        if hasattr(skysearch_cog, 'squawk_api') and hasattr(skysearch_cog.squawk_api, 'enable_callback'):
+            if skysearch_cog.squawk_api.enable_callback('SquawkExample'):
+                enabled_count += 1
+                
+        # Re-enable CommandAPI callbacks  
+        if hasattr(skysearch_cog, 'command_api') and hasattr(skysearch_cog.command_api, 'enable_callback'):
+            if skysearch_cog.command_api.enable_callback('SquawkExample'):
+                enabled_count += 1
+        
+        if enabled_count > 0:
+            await ctx.send(f"✅ Re-enabled callbacks for SquawkExample cog in {enabled_count} API(s)")
+        else:
+            await ctx.send("ℹ️ No disabled callbacks found or APIs don't support re-enabling")
 
 # Setup function to add the cog to the bot
 async def setup(bot):
