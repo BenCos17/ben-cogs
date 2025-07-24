@@ -86,7 +86,8 @@ class SquawkCog(commands.Cog):
 
     async def _add_to_history(self, guild, alert_data):
         """Add alert to history with size management."""
-        history = await self.config.alert_history(guild)
+        guild_config = self.config.guild(guild)
+        history = await guild_config.alert_history()
         max_history = await self.config.max_history()
         
         history.append(alert_data)
@@ -95,7 +96,7 @@ class SquawkCog(commands.Cog):
         if len(history) > max_history:
             history = history[-max_history:]
             
-        await self.config.alert_history.set(guild, history)
+        await guild_config.alert_history.set(history)
 
     async def _process_custom_alert(self, guild, aircraft_info, squawk_code):
         """Custom processing for different types of alerts."""
