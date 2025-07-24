@@ -113,7 +113,7 @@ The `aircraft_info` dictionary contains:
 ### 🔌 How to Connect
 
 ```python
-from discord.ext import commands
+from redbot.core import commands
 
 class YourCog(commands.Cog):
     def __init__(self, bot):
@@ -243,7 +243,7 @@ Currently, these SkySearch commands trigger CommandAPI callbacks:
 ### 🔌 How to Connect
 
 ```python
-from discord.ext import commands
+from redbot.core import commands
 import datetime
 
 class YourCog(commands.Cog):
@@ -298,7 +298,7 @@ class YourCog(commands.Cog):
 
 ```python
 import discord
-from discord.ext import commands
+from redbot.core import commands
 import datetime
 import json
 
@@ -343,7 +343,7 @@ class AlertLogger(commands.Cog):
 
 ```python
 import discord
-from discord.ext import commands
+from redbot.core import commands
 from collections import defaultdict
 import datetime
 
@@ -385,7 +385,7 @@ class UsageAnalytics(commands.Cog):
 
 ```python
 import discord
-from discord.ext import commands
+from redbot.core import commands
 import aiohttp
 
 class AlertNotifier(commands.Cog):
