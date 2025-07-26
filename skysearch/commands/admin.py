@@ -246,7 +246,7 @@ class AdminCommands:
                     self.cog._http_client = aiohttp.ClientSession()
                 
                 # Use the correct base URL from APIManager
-                base_url = self.cog.api.primary_api_url if api_mode == "primary" else self.cog.api.fallback_api_url
+                base_url = self.cog.api.get_primary_api_url() if api_mode == "primary" else self.cog.api.get_fallback_api_url()
                 # Test without API key first
                 test_url = f"{base_url}/?all_with_pos"
                 debug_info += f"🔗 **Test URL:** `{test_url}`\n"
@@ -322,7 +322,7 @@ class AdminCommands:
             # Test both API modes with a real endpoint
             debug_info += f"\n**Testing both API modes...**\n"
             for mode in ("primary", "fallback"):
-                base_url = self.cog.api.primary_api_url if mode == "primary" else self.cog.api.fallback_api_url
+                base_url = self.cog.api.get_primary_api_url() if mode == "primary" else self.cog.api.get_fallback_api_url()
                 if mode == "primary":
                     test_url = f"{base_url}/?all_with_pos"
                 else:
@@ -350,8 +350,8 @@ class AdminCommands:
 
             # Final summary
             debug_info += f"\n**📋 Summary:**\n"
-            debug_info += f"• **API Base URL (primary):** `{self.cog.api.primary_api_url}`\n"
-            debug_info += f"• **API Base URL (fallback):** `{self.cog.api.fallback_api_url}`\n"
+            debug_info += f"• **API Base URL (primary):** `{self.cog.api.get_primary_api_url()}`\n"
+            debug_info += f"• **API Base URL (fallback):** `{self.cog.api.get_fallback_api_url()}`\n"
             debug_info += f"• **Current Mode:** `{await self.cog.config.api_mode()}`\n"
             debug_info += f"• **API Key:** {'✅ Configured' if api_key else '❌ Not configured'}\n"
             debug_info += f"• **Session:** {'✅ Active' if hasattr(self.cog, '_http_client') else '❌ Not initialized'}\n"

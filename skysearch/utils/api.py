@@ -20,6 +20,14 @@ class APIManager:
         api_mode = await self.cog.config.api_mode()
         return self.primary_api_url if api_mode == "primary" else self.fallback_api_url
 
+    def get_primary_api_url(self):
+        """Get the primary API URL."""
+        return self.primary_api_url
+
+    def get_fallback_api_url(self):
+        """Get the fallback API URL."""
+        return self.fallback_api_url
+
     async def get_headers(self, url=None, api_mode=None):
         """Return headers with API key for requests, if available. Only send API key for primary API."""
         headers = {}
