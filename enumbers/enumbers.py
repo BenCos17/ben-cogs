@@ -559,7 +559,7 @@ class Enumbers(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @commands.command(name="enumberrecent", aliases=["erecent"])
+    @commands.command(name="enumberrecent", aliases=["erecent", "recent"])
     async def enumberrecent(self, ctx):
         """Show the most recently searched E-numbers this session."""
         if not self.recent_searches:
@@ -587,7 +587,7 @@ class Enumbers(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name="enumberinfo", aliases=["einfo"])
+    @commands.command(name="enumberinfo", aliases=["einfo", "info"])
     async def enumberinfo(self, ctx):
         """Show information about E-numbers and this bot."""
         embed = discord.Embed(
