@@ -587,7 +587,7 @@ class Enumbers(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name="enumberinfo", aliases=["einfo"])
+    @commands.command(name="enumberinfo", aliases=["eninfo"])
     async def enumberinfo(self, ctx):
         """Show information about E-numbers and this bot."""
         embed = discord.Embed(
