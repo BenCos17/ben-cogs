@@ -294,7 +294,7 @@ class Enumbers(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @commands.command(name="enumberlist", aliases=["elist", "list"])
+    @commands.command(name="enumberlist", aliases=["elist"])
     async def enumberlist(self, ctx, page: int = 1):
         """List all E-numbers with pagination (20 per page).
         
