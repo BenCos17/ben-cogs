@@ -164,7 +164,7 @@ class Enumbers(commands.Cog):
         suggestions = direct_matches + close_codes + close_names
         return list(dict.fromkeys(suggestions))[:5]
 
-    @commands.command(name="enumber", aliases=["e"])
+    @commands.command(name="enumber", aliases=["en"])
     async def enumber(self, ctx, *, code: str):
         """Look up an E-number (e.g. E621, E100, E950).
         
@@ -218,7 +218,7 @@ class Enumbers(commands.Cog):
             embed = self.create_enumber_embed(code, found)
             await ctx.send(embed=embed)
 
-    @commands.command(name="enumbersearch", aliases=["esearch", "search"])
+    @commands.command(name="enumbersearch", aliases=["esearch"])
     async def enumbersearch(self, ctx, *, query: str):
         """Search for E-numbers by code or name (partial/fuzzy matching).
         
@@ -294,7 +294,7 @@ class Enumbers(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @commands.command(name="enumberlist", aliases=["elist"])
+    @commands.command(name="enumberlist", aliases=["elist", "list"])
     async def enumberlist(self, ctx, page: int = 1):
         """List all E-numbers with pagination (20 per page).
         
@@ -496,7 +496,7 @@ class Enumbers(commands.Cog):
             embed = make_page_embed(page)
             view.message = await ctx.send(embed=embed, view=view)
 
-    @commands.command(name="enumbercount", aliases=["ecount"])
+    @commands.command(name="enumbercount", aliases=["ecount", "count"])
     async def enumbercount(self, ctx):
         """Show statistics about the E-numbers database."""
         async with ctx.typing():
