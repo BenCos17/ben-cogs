@@ -496,7 +496,7 @@ class Enumbers(commands.Cog):
             embed = make_page_embed(page)
             view.message = await ctx.send(embed=embed, view=view)
 
-    @commands.command(name="enumbercount", aliases=["ecount", "count"])
+    @commands.command(name="enumbercount", aliases=["ecount"])
     async def enumbercount(self, ctx):
         """Show statistics about the E-numbers database."""
         async with ctx.typing():
@@ -559,7 +559,7 @@ class Enumbers(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @commands.command(name="enumberrecent", aliases=["erecent", "recent"])
+    @commands.command(name="enumberrecent", aliases=["erecent"])
     async def enumberrecent(self, ctx):
         """Show the most recently searched E-numbers this session."""
         if not self.recent_searches:
@@ -587,7 +587,7 @@ class Enumbers(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name="enumberinfo", aliases=["einfo", "info"])
+    @commands.command(name="enumberinfo", aliases=["einfo"])
     async def enumberinfo(self, ctx):
         """Show information about E-numbers and this bot."""
         embed = discord.Embed(
