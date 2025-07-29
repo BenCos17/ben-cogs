@@ -89,11 +89,8 @@ class DashboardIntegration:
             auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
             auto_delete = wtforms.BooleanField("Auto Delete Not Found")
             submit = wtforms.SubmitField("Save Settings")
+        
         form = SettingsForm()
-        form.alert_channel.data = str(alert_channel_id or "")
-        form.alert_role.data = str(alert_role_id or "")
-        form.auto_icao.data = auto_icao
-        form.auto_delete.data = auto_delete
         
         # Handle form submission using WTForms validation
         if form.validate_on_submit():
@@ -158,6 +155,12 @@ class DashboardIntegration:
                     "status": 1,
                     "notifications": [{"message": f"Error updating settings: {e}", "category": "error"}]
                 }
+        
+        # Populate form with current values (only if not a successful submission)
+        form.alert_channel.data = str(alert_channel_id or "")
+        form.alert_role.data = str(alert_role_id or "")
+        form.auto_icao.data = auto_icao
+        form.auto_delete.data = auto_delete
         # Render the form using WTForms template
         return {
             "status": 0,
