@@ -97,9 +97,19 @@ class DashboardIntegration:
         
         # Check if this is a POST request (form submission)
         if kwargs.get("request_method") == "POST":
+            # Verify CSRF token
+            post_data = kwargs.get("post_data", {})
+            csrf_token = post_data.get("csrf_token")
+            expected_csrf = kwargs.get("csrf_token")
+            
+            if not csrf_token or csrf_token != expected_csrf:
+                return {
+                    "status": 1,
+                    "notifications": [{"message": "Invalid CSRF token. Please try again.", "category": "error"}]
+                }
+            
             try:
                 # Get form data from POST request
-                post_data = kwargs.get("post_data", {})
                 alert_channel_val = int(post_data.get("settings_alert_channel", "")) if post_data.get("settings_alert_channel") else None
                 alert_role_val = int(post_data.get("settings_alert_role", "")) if post_data.get("settings_alert_role") else None
                 auto_icao_val = "settings_auto_icao" in post_data
@@ -143,6 +153,7 @@ class DashboardIntegration:
         
         <h3>Update Settings:</h3>
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{kwargs.get('csrf_token', '')}">
             <div style="margin-bottom: 15px;">
                 <label for="settings_alert_channel"><strong>Alert Channel ID:</strong></label><br>
                 <input type="text" id="settings_alert_channel" name="settings_alert_channel" value="{form.alert_channel.data}" style="width: 300px; padding: 5px;">
