@@ -94,24 +94,36 @@ class DashboardIntegration:
         form.alert_role.data = str(alert_role_id or "")
         form.auto_icao.data = auto_icao
         form.auto_delete.data = auto_delete
-        if form.validate_on_submit():
+        
+        # Check if this is a POST request (form submission)
+        if kwargs.get("request_method") == "POST":
             try:
-                # Validate and update config
-                alert_channel_val = int(form.alert_channel.data) if form.alert_channel.data else None
-                alert_role_val = int(form.alert_role.data) if form.alert_role.data else None
+                # Get form data from POST request
+                post_data = kwargs.get("post_data", {})
+                alert_channel_val = int(post_data.get("settings_alert_channel", "")) if post_data.get("settings_alert_channel") else None
+                alert_role_val = int(post_data.get("settings_alert_role", "")) if post_data.get("settings_alert_role") else None
+                auto_icao_val = "settings_auto_icao" in post_data
+                auto_delete_val = "settings_auto_delete" in post_data
+                
+                # Update config
                 await config.alert_channel.set(alert_channel_val)
                 await config.alert_role.set(alert_role_val)
-                await config.auto_icao.set(form.auto_icao.data)
-                await config.auto_delete_not_found.set(form.auto_delete.data)
+                await config.auto_icao.set(auto_icao_val)
+                await config.auto_delete_not_found.set(auto_delete_val)
+                
                 return {
                     "status": 0,
                     "notifications": [{"message": "Settings updated!", "category": "success"}],
                     "redirect_url": kwargs.get("request_url", "")
                 }
+            except ValueError as e:
+                return {
+                    "status": 1,
+                    "notifications": [{"message": "Invalid channel or role ID. Please enter valid numeric IDs.", "category": "error"}]
+                }
             except Exception as e:
                 return {
                     "status": 1,
-                    "web_content": {"source": "{{ form|safe }}", "form": form},
                     "notifications": [{"message": f"Error updating settings: {e}", "category": "error"}]
                 }
         # Render the form with channel/role names
@@ -130,10 +142,40 @@ class DashboardIntegration:
         </div>
         
         <h3>Update Settings:</h3>
-        {{ form|safe }}
+        <form method="POST">
+            <div style="margin-bottom: 15px;">
+                <label for="settings_alert_channel"><strong>Alert Channel ID:</strong></label><br>
+                <input type="text" id="settings_alert_channel" name="settings_alert_channel" value="{form.alert_channel.data}" style="width: 300px; padding: 5px;">
+                <small>Enter the channel ID where alerts should be sent</small>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label for="settings_alert_role"><strong>Alert Role ID:</strong></label><br>
+                <input type="text" id="settings_alert_role" name="settings_alert_role" value="{form.alert_role.data}" style="width: 300px; padding: 5px;">
+                <small>Enter the role ID to mention for alerts</small>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label>
+                    <input type="checkbox" name="settings_auto_icao" value="y" {"checked" if form.auto_icao.data else ""}>
+                    <strong>Auto ICAO Lookup</strong>
+                </label>
+                <small>Automatically look up ICAO codes when aircraft are mentioned</small>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label>
+                    <input type="checkbox" name="settings_auto_delete" value="y" {"checked" if form.auto_delete.data else ""}>
+                    <strong>Auto Delete Not Found</strong>
+                </label>
+                <small>Automatically delete messages when aircraft are not found</small>
+            </div>
+            
+            <button type="submit" style="background: #7289da; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Save Settings</button>
+        </form>
         """
         
         return {
             "status": 0,
-            "web_content": {"source": form_html, "form": form},
+            "web_content": {"source": form_html},
         } 
