@@ -107,10 +107,46 @@ class DashboardIntegration:
                 await config.auto_icao.set(form.auto_icao.data)
                 await config.auto_delete_not_found.set(form.auto_delete.data)
                 
+                # Update the display values to reflect the new settings
+                if alert_channel_val:
+                    channel = guild.get_channel(alert_channel_val)
+                    alert_channel_name = channel.name if channel else f"Unknown Channel ({alert_channel_val})"
+                else:
+                    alert_channel_name = "None"
+                    
+                if alert_role_val:
+                    role = guild.get_role(alert_role_val)
+                    alert_role_name = role.name if role else f"Unknown Role ({alert_role_val})"
+                else:
+                    alert_role_name = "None"
+                
                 return {
                     "status": 0,
                     "notifications": [{"message": "Settings updated!", "category": "success"}],
-                    "redirect_url": kwargs.get("request_url", "")
+                    "web_content": {
+                        "source": """
+                        <h2>SkySearch Guild Settings</h2>
+                        <p>Configure SkySearch settings for this guild.</p>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <h3>Current Settings:</h3>
+                            <ul>
+                                <li><strong>Alert Channel:</strong> {{ alert_channel_name }}</li>
+                                <li><strong>Alert Role:</strong> {{ alert_role_name }}</li>
+                                <li><strong>Auto ICAO Lookup:</strong> {{ auto_icao_status }}</li>
+                                <li><strong>Auto Delete Not Found:</strong> {{ auto_delete_status }}</li>
+                            </ul>
+                        </div>
+                        
+                        <h3>Update Settings:</h3>
+                        {{ form|safe }}
+                        """,
+                        "form": form,
+                        "alert_channel_name": alert_channel_name,
+                        "alert_role_name": alert_role_name,
+                        "auto_icao_status": "Enabled" if form.auto_icao.data else "Disabled",
+                        "auto_delete_status": "Enabled" if form.auto_delete.data else "Disabled",
+                    },
                 }
             except ValueError:
                 return {
