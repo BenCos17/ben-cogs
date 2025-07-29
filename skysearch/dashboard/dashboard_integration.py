@@ -123,25 +123,30 @@ class DashboardIntegration:
                     "notifications": [{"message": f"Error updating settings: {e}", "category": "error"}]
                 }
         # Render the form using WTForms template
-        form_html = f"""
-        <h2>SkySearch Guild Settings</h2>
-        <p>Configure SkySearch settings for this guild.</p>
-        
-        <div style="margin-bottom: 20px;">
-            <h3>Current Settings:</h3>
-            <ul>
-                <li><strong>Alert Channel:</strong> {alert_channel_name}</li>
-                <li><strong>Alert Role:</strong> {alert_role_name}</li>
-                <li><strong>Auto ICAO Lookup:</strong> {'Enabled' if auto_icao else 'Disabled'}</li>
-                <li><strong>Auto Delete Not Found:</strong> {'Enabled' if auto_delete else 'Disabled'}</li>
-            </ul>
-        </div>
-        
-        <h3>Update Settings:</h3>
-        {{ form|safe }}
-        """
-        
         return {
             "status": 0,
-            "web_content": {"source": form_html, "form": form},
+            "web_content": {
+                "source": """
+                <h2>SkySearch Guild Settings</h2>
+                <p>Configure SkySearch settings for this guild.</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3>Current Settings:</h3>
+                    <ul>
+                        <li><strong>Alert Channel:</strong> {{ alert_channel_name }}</li>
+                        <li><strong>Alert Role:</strong> {{ alert_role_name }}</li>
+                        <li><strong>Auto ICAO Lookup:</strong> {{ auto_icao_status }}</li>
+                        <li><strong>Auto Delete Not Found:</strong> {{ auto_delete_status }}</li>
+                    </ul>
+                </div>
+                
+                <h3>Update Settings:</h3>
+                {{ form|safe }}
+                """,
+                "form": form,
+                "alert_channel_name": alert_channel_name,
+                "alert_role_name": alert_role_name,
+                "auto_icao_status": "Enabled" if auto_icao else "Disabled",
+                "auto_delete_status": "Enabled" if auto_delete else "Disabled",
+            },
         } 
