@@ -61,148 +61,179 @@ class DashboardIntegration:
         if not cog:
             return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
         
+        # WTForms form definition
+        class LookupForm(kwargs["Form"]):
+            def __init__(self):
+                super().__init__(prefix="lookup_")
+            search_type = wtforms.SelectField("Search Type", choices=[
+                ("icao", "ICAO Hex Code"),
+                ("callsign", "Flight Callsign"),
+                ("reg", "Registration"),
+                ("type", "Aircraft Type")
+            ])
+            search_value = wtforms.StringField("Search Value")
+            submit = wtforms.SubmitField("Search Aircraft")
+        
+        form = LookupForm()
         result_html = ""
         
-        # Check if this is a POST request (form submission)
-        if kwargs.get("request") and kwargs["request"].method == "POST":
+        # Handle form submission using WTForms validation
+        if form.validate_on_submit():
             try:
-                # Get form data from POST request
-                form_data = kwargs["request"].form
-                search_type = form_data.get("search_type", "")
-                search_value = form_data.get("search_value", "").strip()
+                search_type = form.search_type.data
+                search_value = form.search_value.data.strip()
                 
                 if not search_value:
-                    result_html = '''
-                    <div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
-                        <strong>Error:</strong> Please enter a search value.
-                    </div>
-                    '''
-                else:
-                    # Build the API URL based on search type
-                    api_url = await cog.api.get_api_url()
-                    url = None
-                    
-                    if search_type == "icao":
-                        url = f"{api_url}/?find_hex={search_value}"
-                    elif search_type == "callsign":
-                        url = f"{api_url}/?find_callsign={search_value}"
-                    elif search_type == "reg":
-                        url = f"{api_url}/?find_reg={search_value}"
-                    elif search_type == "type":
-                        url = f"{api_url}/?find_type={search_value}"
-                    else:
-                        result_html = '''
-                        <div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
-                            <strong>Error:</strong> Invalid search type.
-                        </div>
-                        '''
-                    
-                    if url:
-                        # Make the API request
-                        response = await cog.api.make_request(url)
-                        
-                        if response:
-                            # Support both 'aircraft' and 'ac' keys
-                            aircraft_list = response.get('aircraft') or response.get('ac')
+                    return {
+                        "status": 1,
+                        "notifications": [{"message": "Please enter a search value.", "category": "error"}],
+                        "web_content": {
+                            "source": """
+                            <h2>SkySearch Aircraft Lookup</h2>
+                            <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
                             
-                            if aircraft_list and len(aircraft_list) > 0:
-                                result_html = '<div style="margin-top: 20px;"><h3>Search Results:</h3>'
-                                
-                                for i, aircraft_data in enumerate(aircraft_list[:5]):  # Limit to 5 results
-                                    # Get photo for the aircraft
-                                    icao = aircraft_data.get('hex', '')
-                                    if icao:
-                                        icao = icao.upper()
-                                    image_url, photographer = await cog.helpers.get_photo_by_hex(icao)
-                                    
-                                    # Create aircraft info HTML
-                                    description = f"{aircraft_data.get('desc', 'N/A')}"
-                                    if aircraft_data.get('year', None) is not None:
-                                        description += f" ({aircraft_data.get('year')})"
-                                    
-                                    callsign = aircraft_data.get('flight', 'N/A').strip()
-                                    if not callsign or callsign == 'N/A':
-                                        callsign = 'BLOCKED'
-                                    
-                                    registration = aircraft_data.get('reg', 'N/A')
-                                    if registration and registration != 'N/A':
-                                        registration = registration.upper()
-                                    
-                                    altitude = aircraft_data.get('alt_baro', 'N/A')
-                                    if altitude == 'ground':
-                                        altitude_text = "On ground"
-                                    elif altitude != 'N/A':
-                                        if isinstance(altitude, int):
-                                            altitude = "{:,}".format(altitude)
-                                        altitude_text = f"{altitude} ft"
-                                    else:
-                                        altitude_text = "N/A"
-                                    
-                                    lat = aircraft_data.get('lat', 'N/A')
-                                    lon = aircraft_data.get('lon', 'N/A')
-                                    if lat != 'N/A' and lat is not None and lon != 'N/A' and lon is not None:
-                                        try:
-                                            lat_rounded = round(float(lat), 2)
-                                            lon_rounded = round(float(lon), 2)
-                                            lat_dir = "N" if lat_rounded >= 0 else "S"
-                                            lon_dir = "E" if lon_rounded >= 0 else "W"
-                                            position_text = f"{abs(lat_rounded)}{lat_dir}, {abs(lon_rounded)}{lon_dir}"
-                                        except:
-                                            position_text = "N/A"
-                                    else:
-                                        position_text = "N/A"
-                                    
-                                    squawk_code = aircraft_data.get('squawk', 'N/A')
-                                    emergency_squawk_codes = ['7500', '7600', '7700']
-                                    if squawk_code in emergency_squawk_codes:
-                                        squawk_style = 'color: red; font-weight: bold;'
-                                    else:
-                                        squawk_style = ''
-                                    
-                                    globe_link = f"https://globe.airplanes.live/?icao={icao}"
-                                    
-                                    result_html += f'''
-                                    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #f9f9f9;">
-                                        <h4 style="margin-top: 0; color: #333;">{description}</h4>
-                                        <div style="display: flex; gap: 20px;">
-                                            <div style="flex: 1;">
-                                                <p><strong>Callsign:</strong> {callsign}</p>
-                                                <p><strong>Registration:</strong> {registration}</p>
-                                                <p><strong>ICAO:</strong> {icao}</p>
-                                                <p><strong>Altitude:</strong> {altitude_text}</p>
-                                                <p><strong>Position:</strong> {position_text}</p>
-                                                <p><strong>Squawk:</strong> <span style="{squawk_style}">{squawk_code}</span></p>
-                                            </div>
-                                            <div style="flex: 0 0 200px;">
-                                                {f'<img src="{image_url}" alt="Aircraft photo" style="max-width: 100%; height: auto; border-radius: 4px;">' if image_url else '<p style="color: #666; font-style: italic;">No photo available</p>'}
-                                                {f'<p style="font-size: 12px; color: #666; margin-top: 5px;">Photo by: {photographer}</p>' if photographer else ''}
-                                            </div>
-                                        </div>
-                                        <div style="margin-top: 10px;">
-                                            <a href="{globe_link}" target="_blank" style="background-color: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block;">View on Globe</a>
-                                        </div>
-                                    </div>
-                                    '''
-                                
-                                if len(aircraft_list) > 5:
-                                    result_html += f'<p style="color: #666; font-style: italic;">Showing first 5 of {len(aircraft_list)} results</p>'
-                                
-                                result_html += '</div>'
+                            <div style="margin-bottom: 20px;">
+                                <h3>Search Aircraft:</h3>
+                                {{ form|safe }}
+                            </div>
+                            """,
+                            "form": form,
+                        }
+                    }
+                
+                # Build the API URL based on search type
+                api_url = await cog.api.get_api_url()
+                if search_type == "icao":
+                    url = f"{api_url}/?find_hex={search_value}"
+                elif search_type == "callsign":
+                    url = f"{api_url}/?find_callsign={search_value}"
+                elif search_type == "reg":
+                    url = f"{api_url}/?find_reg={search_value}"
+                elif search_type == "type":
+                    url = f"{api_url}/?find_type={search_value}"
+                else:
+                    return {
+                        "status": 1,
+                        "notifications": [{"message": "Invalid search type.", "category": "error"}],
+                        "web_content": {
+                            "source": """
+                            <h2>SkySearch Aircraft Lookup</h2>
+                            <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <h3>Search Aircraft:</h3>
+                                {{ form|safe }}
+                            </div>
+                            """,
+                            "form": form,
+                        }
+                    }
+                
+                # Make the API request
+                response = await cog.api.make_request(url)
+                
+                if response:
+                    # Support both 'aircraft' and 'ac' keys
+                    aircraft_list = response.get('aircraft') or response.get('ac')
+                    
+                    if aircraft_list and len(aircraft_list) > 0:
+                        result_html = '<div style="margin-top: 20px;"><h3>Search Results:</h3>'
+                        
+                        for i, aircraft_data in enumerate(aircraft_list[:5]):  # Limit to 5 results
+                            # Get photo for the aircraft
+                            icao = aircraft_data.get('hex', '')
+                            if icao:
+                                icao = icao.upper()
+                            image_url, photographer = await cog.helpers.get_photo_by_hex(icao)
+                            
+                            # Create aircraft info HTML
+                            description = f"{aircraft_data.get('desc', 'N/A')}"
+                            if aircraft_data.get('year', None) is not None:
+                                description += f" ({aircraft_data.get('year')})"
+                            
+                            callsign = aircraft_data.get('flight', 'N/A').strip()
+                            if not callsign or callsign == 'N/A':
+                                callsign = 'BLOCKED'
+                            
+                            registration = aircraft_data.get('reg', 'N/A')
+                            if registration and registration != 'N/A':
+                                registration = registration.upper()
+                            
+                            altitude = aircraft_data.get('alt_baro', 'N/A')
+                            if altitude == 'ground':
+                                altitude_text = "On ground"
+                            elif altitude != 'N/A':
+                                if isinstance(altitude, int):
+                                    altitude = "{:,}".format(altitude)
+                                altitude_text = f"{altitude} ft"
                             else:
-                                result_html = '''
-                                <div style="margin-top: 20px;">
-                                    <h3>No Results Found</h3>
-                                    <p style="color: #666;">No aircraft found matching your search criteria. Please try a different search term.</p>
+                                altitude_text = "N/A"
+                            
+                            lat = aircraft_data.get('lat', 'N/A')
+                            lon = aircraft_data.get('lon', 'N/A')
+                            if lat != 'N/A' and lat is not None and lon != 'N/A' and lon is not None:
+                                try:
+                                    lat_rounded = round(float(lat), 2)
+                                    lon_rounded = round(float(lon), 2)
+                                    lat_dir = "N" if lat_rounded >= 0 else "S"
+                                    lon_dir = "E" if lon_rounded >= 0 else "W"
+                                    position_text = f"{abs(lat_rounded)}{lat_dir}, {abs(lon_rounded)}{lon_dir}"
+                                except:
+                                    position_text = "N/A"
+                            else:
+                                position_text = "N/A"
+                            
+                            squawk_code = aircraft_data.get('squawk', 'N/A')
+                            emergency_squawk_codes = ['7500', '7600', '7700']
+                            if squawk_code in emergency_squawk_codes:
+                                squawk_style = 'color: red; font-weight: bold;'
+                            else:
+                                squawk_style = ''
+                            
+                            globe_link = f"https://globe.airplanes.live/?icao={icao}"
+                            
+                            result_html += f'''
+                            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #f9f9f9;">
+                                <h4 style="margin-top: 0; color: #333;">{description}</h4>
+                                <div style="display: flex; gap: 20px;">
+                                    <div style="flex: 1;">
+                                        <p><strong>Callsign:</strong> {callsign}</p>
+                                        <p><strong>Registration:</strong> {registration}</p>
+                                        <p><strong>ICAO:</strong> {icao}</p>
+                                        <p><strong>Altitude:</strong> {altitude_text}</p>
+                                        <p><strong>Position:</strong> {position_text}</p>
+                                        <p><strong>Squawk:</strong> <span style="{squawk_style}">{squawk_code}</span></p>
+                                    </div>
+                                    <div style="flex: 0 0 200px;">
+                                        {f'<img src="{image_url}" alt="Aircraft photo" style="max-width: 100%; height: auto; border-radius: 4px;">' if image_url else '<p style="color: #666; font-style: italic;">No photo available</p>'}
+                                        {f'<p style="font-size: 12px; color: #666; margin-top: 5px;">Photo by: {photographer}</p>' if photographer else ''}
+                                    </div>
                                 </div>
-                                '''
-                        else:
-                            result_html = '''
-                            <div style="margin-top: 20px;">
-                                <h3>Error</h3>
-                                <p style="color: #666;">Unable to retrieve aircraft information. Please check your search terms and try again.</p>
+                                <div style="margin-top: 10px;">
+                                    <a href="{globe_link}" target="_blank" style="background-color: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block;">View on Globe</a>
+                                </div>
                             </div>
                             '''
-                            
+                        
+                        if len(aircraft_list) > 5:
+                            result_html += f'<p style="color: #666; font-style: italic;">Showing first 5 of {len(aircraft_list)} results</p>'
+                        
+                        result_html += '</div>'
+                    else:
+                        result_html = '''
+                        <div style="margin-top: 20px;">
+                            <h3>No Results Found</h3>
+                            <p style="color: #666;">No aircraft found matching your search criteria. Please try a different search term.</p>
+                        </div>
+                        '''
+                else:
+                    result_html = '''
+                    <div style="margin-top: 20px;">
+                        <h3>Error</h3>
+                        <p style="color: #666;">Unable to retrieve aircraft information. Please check your search terms and try again.</p>
+                    </div>
+                    '''
+                    
             except Exception as e:
                 result_html = f'''
                 <div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
@@ -210,29 +241,10 @@ class DashboardIntegration:
                 </div>
                 '''
         
-        # Create the HTML form with CSRF token
-        csrf_token = kwargs.get("csrf_token", "")
-        form_html = f'''
-        <form method="POST" style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-            <input type="hidden" name="csrf_token" value="{csrf_token}">
-            <div style="margin-bottom: 15px;">
-                <label for="search_type" style="display: block; margin-bottom: 5px; font-weight: bold;">Search Type:</label>
-                <select name="search_type" id="search_type" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
-                    <option value="icao" {'selected' if kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_type') == 'icao' else ''}>ICAO Hex Code</option>
-                    <option value="callsign" {'selected' if kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_type') == 'callsign' else ''}>Flight Callsign</option>
-                    <option value="reg" {'selected' if kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_type') == 'reg' else ''}>Registration</option>
-                    <option value="type" {'selected' if kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_type') == 'type' else ''}>Aircraft Type</option>
-                </select>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <label for="search_value" style="display: block; margin-bottom: 5px; font-weight: bold;">Search Value:</label>
-                <input type="text" name="search_value" id="search_value" value="{kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_value', '') or ''}" placeholder="Enter ICAO code, callsign, registration, or aircraft type" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
-            </div>
-            <div>
-                <button type="submit" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Search Aircraft</button>
-            </div>
-        </form>
-        '''
+        # Populate form with current values if this was a POST request
+        if kwargs.get("request") and kwargs["request"].method == "POST":
+            form.search_type.data = kwargs["request"].form.get("search_type", "icao")
+            form.search_value.data = kwargs["request"].form.get("search_value", "")
         
         return {
             "status": 0,
@@ -243,11 +255,12 @@ class DashboardIntegration:
                 
                 <div style="margin-bottom: 20px;">
                     <h3>Search Aircraft:</h3>
-                    {form_html}
+                    {{ form|safe }}
                 </div>
                 
                 {result_html}
                 """,
+                "form": form,
             },
         }
 
