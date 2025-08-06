@@ -62,21 +62,45 @@ class DashboardIntegration:
             return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
         
 
+        # WTForms form definition
+        class LookupForm(kwargs["Form"]):
+            def __init__(self):
+                super().__init__(prefix="lookup_")
+            search_type = wtforms.SelectField("Search Type", choices=[
+                ("icao", "ICAO Hex Code"),
+                ("callsign", "Flight Callsign"),
+                ("reg", "Registration"),
+                ("type", "Aircraft Type")
+            ])
+            search_value = wtforms.StringField("Search Value")
+            submit = wtforms.SubmitField("Search Aircraft")
+        
+        form = LookupForm()
         result_html = ""
         
-        # Handle form submission
-        if kwargs.get("request") and kwargs["request"].method == "POST":
+        # Handle form submission using WTForms validation
+        if form.validate_on_submit():
             try:
-                form_data = kwargs["request"].form
-                search_type = form_data.get("search_type", "")
-                search_value = form_data.get("search_value", "").strip()
+                search_type = form.search_type.data
+                search_value = form.search_value.data.strip()
                 
                 if not search_value:
-                    result_html = '''
-                    <div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
-                        <strong>Error:</strong> Please enter a search value.
-                    </div>
-                    '''
+                    return {
+                        "status": 1,
+                        "notifications": [{"message": "Please enter a search value.", "category": "error"}],
+                        "web_content": {
+                            "source": """
+                            <h2>SkySearch Aircraft Lookup</h2>
+                            <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <h3>Search Aircraft:</h3>
+                                {{ form|safe }}
+                            </div>
+                            """,
+                            "form": form,
+                        }
+                    }
                 
                 # Build the API URL based on search type
                 api_url = await cog.api.get_api_url()
@@ -89,11 +113,22 @@ class DashboardIntegration:
                 elif search_type == "type":
                     url = f"{api_url}/?find_type={search_value}"
                 else:
-                    result_html = '''
-                    <div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
-                        <strong>Error:</strong> Invalid search type.
-                    </div>
-                    '''
+                    return {
+                        "status": 1,
+                        "notifications": [{"message": "Invalid search type.", "category": "error"}],
+                        "web_content": {
+                            "source": """
+                            <h2>SkySearch Aircraft Lookup</h2>
+                            <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <h3>Search Aircraft:</h3>
+                                {{ form|safe }}
+                            </div>
+                            """,
+                            "form": form,
+                        }
+                    }
                 
                 # Make the API request
                 response = await cog.api.make_request(url)
@@ -209,44 +244,27 @@ class DashboardIntegration:
         
 
         
-        # Create a simple HTML form that will work
-        csrf_token = kwargs.get("csrf_token", "")
-        form_html = f'''
-        <form method="POST" style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-            <input type="hidden" name="csrf_token" value="{csrf_token}">
-            <div style="margin-bottom: 15px;">
-                <label for="search_type" style="display: block; margin-bottom: 5px; font-weight: bold;">Search Type:</label>
-                <select name="search_type" id="search_type" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
-                    <option value="icao" {'selected' if kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_type') == 'icao' else ''}>ICAO Hex Code</option>
-                    <option value="callsign" {'selected' if kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_type') == 'callsign' else ''}>Flight Callsign</option>
-                    <option value="reg" {'selected' if kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_type') == 'reg' else ''}>Registration</option>
-                    <option value="type" {'selected' if kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_type') == 'type' else ''}>Aircraft Type</option>
-                </select>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <label for="search_value" style="display: block; margin-bottom: 5px; font-weight: bold;">Search Value:</label>
-                <input type="text" name="search_value" id="search_value" value="{kwargs.get('request') and kwargs['request'].method == 'POST' and kwargs['request'].form.get('search_value', '') or ''}" placeholder="Enter ICAO code, callsign, registration, or aircraft type" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
-            </div>
-            <div>
-                <button type="submit" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Search Aircraft</button>
-            </div>
-        </form>
-        '''
+        # Populate form with current values if this was a POST request
+        if kwargs.get("request") and kwargs["request"].method == "POST":
+            form.search_type.data = kwargs["request"].form.get("search_type", "icao")
+            form.search_value.data = kwargs["request"].form.get("search_value", "")
         
         return {
             "status": 0,
             "web_content": {
-                "source": f"""
+                "source": """
                 <h2>SkySearch Aircraft Lookup</h2>
                 <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
                 
                 <div style="margin-bottom: 20px;">
                     <h3>Search Aircraft:</h3>
-                    {form_html}
+                    {{ form|safe }}
                 </div>
                 
-                {result_html}
+                {{ result_html|safe }}
                 """,
+                "form": form,
+                "result_html": result_html,
             },
         }
 
