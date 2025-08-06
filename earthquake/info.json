@@ -12,6 +12,6 @@
         "earthquake"
     ],
     "hidden": true,
-    "disabled": false,
+    "disabled": true,
     "type": "COG"
 }
