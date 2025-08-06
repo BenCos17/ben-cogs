@@ -194,8 +194,8 @@ class DashboardIntegration:
                             globe_link = f"https://globe.airplanes.live/?icao={icao}"
                             
                             result_html += f'''
-                            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #f9f9f9;">
-                                <h4 style="margin-top: 0; color: #333;">{description}</h4>
+                            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #808080; color: #000000;">
+                                <h4 style="margin-top: 0; color: #000000;">{description}</h4>
                                 <div style="display: flex; gap: 20px;">
                                     <div style="flex: 1;">
                                         <p><strong>Callsign:</strong> {callsign}</p>
@@ -258,7 +258,7 @@ class DashboardIntegration:
                 
                 <div style="margin-bottom: 20px;">
                     <h3>Search Aircraft:</h3>
-                    <div style="background-color: #808080; padding: 20px; border-radius: 8px; border: 1px solid #40444b; color: #000000;">
+                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                         {{ form|safe }}
                     </div>
                 </div>
