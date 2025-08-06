@@ -253,12 +253,60 @@ class DashboardIntegration:
             "status": 0,
             "web_content": {
                 "source": """
+                <style>
+                    .lookup-form {
+                        background-color: #2f3136 !important;
+                        padding: 20px !important;
+                        border-radius: 8px !important;
+                        border: 1px solid #40444b !important;
+                        color: #dcddde !important;
+                    }
+                    .lookup-form label {
+                        color: #dcddde !important;
+                        font-weight: bold !important;
+                        margin-bottom: 5px !important;
+                        display: block !important;
+                    }
+                    .lookup-form select,
+                    .lookup-form input[type="text"] {
+                        background-color: #40444b !important;
+                        border: 1px solid #202225 !important;
+                        color: #dcddde !important;
+                        padding: 8px !important;
+                        border-radius: 4px !important;
+                        width: 100% !important;
+                        font-size: 14px !important;
+                    }
+                    .lookup-form select:focus,
+                    .lookup-form input[type="text"]:focus {
+                        outline: none !important;
+                        border-color: #7289da !important;
+                    }
+                    .lookup-form button[type="submit"] {
+                        background-color: #7289da !important;
+                        color: white !important;
+                        padding: 10px 20px !important;
+                        border: none !important;
+                        border-radius: 4px !important;
+                        cursor: pointer !important;
+                        font-size: 14px !important;
+                    }
+                    .lookup-form button[type="submit"]:hover {
+                        background-color: #677bc4 !important;
+                    }
+                    .lookup-form .form-group {
+                        margin-bottom: 15px !important;
+                    }
+                </style>
+                
                 <h2>SkySearch Aircraft Lookup</h2>
                 <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
                 
                 <div style="margin-bottom: 20px;">
                     <h3>Search Aircraft:</h3>
-                    {{ form|safe }}
+                    <div class="lookup-form">
+                        {{ form|safe }}
+                    </div>
                 </div>
                 
                 {{ result_html|safe }}
