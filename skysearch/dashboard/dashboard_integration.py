@@ -258,7 +258,7 @@ class DashboardIntegration:
                 
                 <div style="margin-bottom: 20px;">
                     <h3>Search Aircraft:</h3>
-                    <div style="background-color: #2f3136; padding: 20px; border-radius: 8px; border: 1px solid #40444b; color: #dcddde;">
+                    <div style="background-color: #808080; padding: 20px; border-radius: 8px; border: 1px solid #40444b; color: #000000;">
                         {{ form|safe }}
                     </div>
                 </div>
