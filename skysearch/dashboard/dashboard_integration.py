@@ -210,9 +210,11 @@ class DashboardIntegration:
                 </div>
                 '''
         
-        # Create the HTML form
+        # Create the HTML form with CSRF token
+        csrf_token = kwargs.get("csrf_token", "")
         form_html = f'''
         <form method="POST" style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+            <input type="hidden" name="csrf_token" value="{csrf_token}">
             <div style="margin-bottom: 15px;">
                 <label for="search_type" style="display: block; margin-bottom: 5px; font-weight: bold;">Search Type:</label>
                 <select name="search_type" id="search_type" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
