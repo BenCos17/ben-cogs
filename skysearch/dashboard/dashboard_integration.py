@@ -286,6 +286,16 @@ class DashboardIntegration:
                             if icao and icao.upper() in cog.agri_utility_set:
                                 asset_intelligence.append("🌽 Used for agriculture surveys, easement validation, or land inspection")
                             
+                            # Build asset intelligence HTML
+                            asset_intelligence_html = ""
+                            if asset_intelligence:
+                                asset_intelligence_html = f'''
+                                <div style="margin-top: 20px;">
+                                    <h4 style="color: #000000; margin-bottom: 10px;">Asset Intelligence</h4>
+                                    {chr(10).join([f'<p style="margin: 5px 0;">{intel}</p>' for intel in asset_intelligence])}
+                                </div>
+                                '''
+                            
                             globe_link = f"https://globe.airplanes.live/?icao={icao}"
                             
                             result_html += f'''
@@ -323,12 +333,7 @@ class DashboardIntegration:
                                             <p><strong>Flight status:</strong> {emergency_status}</p>
                                         </div>
                                         
-                                        {f'''
-                                        <div style="margin-top: 20px;">
-                                            <h4 style="color: #000000; margin-bottom: 10px;">Asset Intelligence</h4>
-                                            {chr(10).join([f'<p style="margin: 5px 0;">{intel}</p>' for intel in asset_intelligence])}
-                                        </div>
-                                        ''' if asset_intelligence else ''}
+                                        {asset_intelligence_html}
                                     </div>
                                     
                                     <div style="flex: 0 0 250px;">
