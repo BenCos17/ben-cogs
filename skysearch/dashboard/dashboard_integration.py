@@ -326,7 +326,7 @@ class DashboardIntegration:
                                         {f'''
                                         <div style="margin-top: 20px;">
                                             <h4 style="color: #000000; margin-bottom: 10px;">Asset Intelligence</h4>
-                                            {''.join([f'<p style="margin: 5px 0;">{intel}</p>' for intel in asset_intelligence])}
+                                            {chr(10).join([f'<p style="margin: 5px 0;">{intel}</p>' for intel in asset_intelligence])}
                                         </div>
                                         ''' if asset_intelligence else ''}
                                     </div>
