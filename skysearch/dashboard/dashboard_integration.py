@@ -258,9 +258,10 @@ class DashboardIntegration:
                     {{ form|safe }}
                 </div>
                 
-                {result_html}
+                {{ result_html|safe }}
                 """,
                 "form": form,
+                "result_html": result_html,
             },
         }
 
