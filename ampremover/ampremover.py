@@ -4,8 +4,9 @@ import re
 from discord import Embed
 import aiohttp
 import asyncio
+from .dashboard_integration import DashboardIntegration
 
-class AmputatorBot(commands.Cog):
+class AmputatorBot(DashboardIntegration, commands.Cog):
     """Cog to convert AMP URLs to canonical forms using the AmputatorBot API.
     
     Supports opt-in/out for servers and users, and automatic conversion in messages.

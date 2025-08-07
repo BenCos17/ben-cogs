@@ -2,7 +2,15 @@
 
 ## Overview
 
-AmputatorBot is a Discord bot cog designed to convert AMP URLs to their canonical URLs using the AmputatorBot API. This cog provides several commands to manage server preferences, convert URLs, and display the current settings.
+AmputatorBot is a Discord bot cog designed to convert AMP URLs to their canonical URLs using the AmputatorBot API. This cog provides several commands to manage server preferences, convert URLs, and display the current settings. It also includes Red-Web-Dashboard integration for web-based management.
+
+## Features
+
+- **AMP URL Conversion**: Convert AMP URLs to canonical URLs using the AmputatorBot API
+- **Server Settings**: Per-server opt-in/opt-out functionality
+- **Automatic Detection**: Automatically detect and convert AMP URLs in messages (when enabled)
+- **Web Dashboard**: Full Red-Web-Dashboard integration with web-based management interface
+- **Statistics**: View conversion statistics and settings through the web interface
 
 ## Installation
 
@@ -57,3 +65,34 @@ Displays the current configuration settings for the AmputatorBot, including the 
 - **Opt-in Status:** Shows whether the server is currently opted in to use the AmputatorBot service. A checkmark (✅) indicates the server is opted in, while a cross (❌) indicates it is not.
 - **Embed Display:** The settings are displayed in an embed format, with the title showing the server's name. The embed color is green if opted in and red if not.
 - **Footer Information:** The embed includes a footer with a reminder to use `[p]amputator` for more commands.
+
+## Web Dashboard Integration
+
+This cog includes full Red-Web-Dashboard integration, providing a web-based interface for managing AMP URL conversion settings and viewing statistics.
+
+### Dashboard Features
+
+- **URL Converter**: Web-based form for converting AMP URLs to canonical URLs
+- **Settings Management**: Configure automatic AMP URL conversion settings for each guild
+- **Statistics View**: View guild settings, bot information, and available commands
+- **Real-time Updates**: Settings changes are applied immediately
+
+### Accessing the Dashboard
+
+1. Ensure you have Red-Web-Dashboard installed and configured
+2. Load this cog on your bot
+3. Access the dashboard through your Red-Web-Dashboard URL
+4. Navigate to the "Third Parties" section
+5. Find "AmputatorBot" in the list of available third-party integrations
+
+### Dashboard Pages
+
+- **Main Page** (`/third-party/AmputatorBot`): Convert AMP URLs to canonical URLs
+- **Settings Page** (`/third-party/AmputatorBot/settings`): Configure guild settings
+- **Statistics Page** (`/third-party/AmputatorBot/stats`): View guild statistics and information
+
+### Requirements
+
+- Red-Web-Dashboard must be installed and running
+- The Dashboard cog must be loaded on your bot
+- Users must have appropriate permissions to access the dashboard
