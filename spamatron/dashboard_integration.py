@@ -183,24 +183,24 @@ class DashboardIntegration:
                 {{ result_html|safe }}
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="background-color: #808080; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                         <h3>Toggle Typo Watch</h3>
                         {{ toggle_form|safe }}
                     </div>
                     
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="background-color: #808080; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                         <h3>Add New Word</h3>
                         {{ add_form|safe }}
                     </div>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="background-color: #808080; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                         <h3>Remove Word</h3>
                         {{ remove_form|safe }}
                     </div>
                     
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="background-color: #808080; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                         <h3>Update Responses</h3>
                         {{ responses_form|safe }}
                     </div>
@@ -280,12 +280,32 @@ class DashboardIntegration:
         # Build active tasks display
         active_tasks_html = ""
         if hasattr(cog, 'ghostping_tasks') and cog.ghostping_tasks:
+            active_tasks_html = '<div style="margin-top: 15px;">'
             for user_id, task in cog.ghostping_tasks.items():
                 user = guild.get_member(user_id)
                 user_name = user.display_name if user else f"User {user_id}"
-                active_tasks_html += f'<li>{user_name} - Task ID: {id(task)}</li>'
+                task_status = "Running" if not task.done() else "Completed"
+                task_status_color = "#28a745" if not task.done() else "#dc3545"
+                
+                active_tasks_html += f'''
+                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; background-color: #f8f9fa;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4 style="margin: 0; color: #333;">{user_name}</h4>
+                            <p style="margin: 5px 0; color: #666;">User ID: {user_id}</p>
+                            <p style="margin: 5px 0; color: #666;">Task ID: {id(task)}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="background-color: {task_status_color}; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                {task_status}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                '''
+            active_tasks_html += '</div>'
         else:
-            active_tasks_html = '<li>No active ghostping tasks</li>'
+            active_tasks_html = '<p style="color: #666; font-style: italic;">No active ghostping tasks</p>'
 
         return {
             "status": 0,
@@ -297,13 +317,13 @@ class DashboardIntegration:
                 {{ result_html|safe }}
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="background-color: #808080; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                         <h3>Start Ghostping Task</h3>
                         <p style="color: #666; font-size: 14px;">Enter the member ID and channel ID to start a ghostping task.</p>
                         {{ ghostping_form|safe }}
                     </div>
                     
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <div style="background-color: #808080; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                         <h3>Stop All Ghostpings</h3>
                         <p style="color: #666; font-size: 14px;">Stop all currently running ghostping tasks.</p>
                         {{ stop_form|safe }}
@@ -312,7 +332,7 @@ class DashboardIntegration:
                 
                 <div style="margin-top: 30px;">
                     <h3>Active Ghostping Tasks</h3>
-                    <ul>{{ active_tasks_html|safe }}</ul>
+                    {{ active_tasks_html|safe }}
                 </div>
                 
 

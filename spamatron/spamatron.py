@@ -182,6 +182,30 @@ class Spamatron(commands.Cog, DashboardIntegration):
         task.cancel()
         await ctx.send("Ghostping task stopped.")
 
+    @commands.guild_only()
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def ghostpingtasks(self, ctx):
+        """Show all currently running ghostping tasks."""
+        if not self.ghostping_tasks:
+            return await ctx.send("No ghostping tasks are currently running.")
+        
+        embed = discord.Embed(title="Active Ghostping Tasks", color=discord.Color.blue())
+        
+        for user_id, task in self.ghostping_tasks.items():
+            user = ctx.guild.get_member(user_id)
+            user_name = user.display_name if user else f"User {user_id}"
+            task_status = "Running" if not task.done() else "Completed"
+            status_emoji = "🟢" if not task.done() else "🔴"
+            
+            embed.add_field(
+                name=f"{status_emoji} {user_name}",
+                value=f"User ID: {user_id}\nTask ID: {id(task)}\nStatus: {task_status}",
+                inline=False
+            )
+        
+        await ctx.send(embed=embed)
+
     @typowatch.command(name="list")
     async def typowatch_list(self, ctx, word: str = None):
         """List all watched words or details about a specific word.
