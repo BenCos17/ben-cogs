@@ -12,6 +12,7 @@ class Spamatron(commands.Cog, DashboardIntegration):
     def __init__(self, bot):
         self.bot = bot
         self.ghostping_tasks = {}
+        self.ghostping_progress = {}  # Track progress: {user_id: {"current": X, "total": Y, "member": member, "channel": channel}}
         self.config = Config.get_conf(self, identifier=844628346534)
         
         # Default settings for servers - no default words
@@ -161,11 +162,24 @@ class Spamatron(commands.Cog, DashboardIntegration):
             return await ctx.send("You already have a ghostping task running.")
 
         async def ghostping_task(member, channel, amount, interval):
-            for _ in range(amount):
+            # Initialize progress tracking
+            self.ghostping_progress[ctx.author.id] = {
+                "current": 0,
+                "total": amount,
+                "member": member,
+                "channel": channel
+            }
+            
+            for i in range(amount):
                 msg = await channel.send(f"{member.mention} has been ghostpinged.")
                 await msg.delete()
+                # Update progress
+                self.ghostping_progress[ctx.author.id]["current"] = i + 1
                 await asyncio.sleep(interval)
-            self.ghostping_tasks.pop(ctx.author.id, None)  # Remove the task from the dictionary after completion
+            
+            # Clean up after completion
+            self.ghostping_tasks.pop(ctx.author.id, None)
+            self.ghostping_progress.pop(ctx.author.id, None)
 
         self.ghostping_tasks[ctx.author.id] = self.bot.loop.create_task(ghostping_task(member, channel, amount, interval))
         await ctx.send(f"Ghostping task started for {member.mention} in {channel.mention} with {amount} pings at an interval of {interval} seconds.")
@@ -180,6 +194,8 @@ class Spamatron(commands.Cog, DashboardIntegration):
 
         task = self.ghostping_tasks.pop(ctx.author.id)
         task.cancel()
+        # Clean up progress tracking
+        self.ghostping_progress.pop(ctx.author.id, None)
         await ctx.send("Ghostping task stopped.")
 
     @commands.guild_only()
@@ -198,9 +214,19 @@ class Spamatron(commands.Cog, DashboardIntegration):
             task_status = "Running" if not task.done() else "Completed"
             status_emoji = "🟢" if not task.done() else "🔴"
             
+            # Get progress information
+            progress_info = ""
+            if user_id in self.ghostping_progress:
+                progress = self.ghostping_progress[user_id]
+                target_member = progress["member"]
+                target_channel = progress["channel"]
+                current = progress["current"]
+                total = progress["total"]
+                progress_info = f"\nTarget: {target_member.display_name}\nChannel: {target_channel.name}\nProgress: {current}/{total} pings"
+            
             embed.add_field(
                 name=f"{status_emoji} {user_name}",
-                value=f"User ID: {user_id}\nTask ID: {id(task)}\nStatus: {task_status}",
+                value=f"User ID: {user_id}\nTask ID: {id(task)}\nStatus: {task_status}{progress_info}",
                 inline=False
             )
         

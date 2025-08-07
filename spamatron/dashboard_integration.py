@@ -287,6 +287,26 @@ class DashboardIntegration:
                 task_status = "Running" if not task.done() else "Completed"
                 task_status_color = "#28a745" if not task.done() else "#dc3545"
                 
+                # Get progress information
+                progress_info = ""
+                if hasattr(cog, 'ghostping_progress') and user_id in cog.ghostping_progress:
+                    progress = cog.ghostping_progress[user_id]
+                    target_member = progress["member"]
+                    target_channel = progress["channel"]
+                    current = progress["current"]
+                    total = progress["total"]
+                    progress_percentage = int((current / total) * 100) if total > 0 else 0
+                    progress_info = f'''
+                    <div style="margin-top: 10px; padding: 10px; background-color: #e9ecef; border-radius: 4px;">
+                        <p style="margin: 5px 0; color: #333;"><strong>Target:</strong> {target_member.display_name}</p>
+                        <p style="margin: 5px 0; color: #333;"><strong>Channel:</strong> {target_channel.name}</p>
+                        <p style="margin: 5px 0; color: #333;"><strong>Progress:</strong> {current}/{total} pings ({progress_percentage}%)</p>
+                        <div style="background-color: #ddd; border-radius: 10px; height: 10px; margin-top: 5px;">
+                            <div style="background-color: #007bff; height: 100%; border-radius: 10px; width: {progress_percentage}%;"></div>
+                        </div>
+                    </div>
+                    '''
+                
                 active_tasks_html += f'''
                 <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; background-color: #f8f9fa;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -301,6 +321,7 @@ class DashboardIntegration:
                             </span>
                         </div>
                     </div>
+                    {progress_info}
                 </div>
                 '''
             active_tasks_html += '</div>'
