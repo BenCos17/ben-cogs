@@ -184,6 +184,40 @@ class Spamatron(commands.Cog, DashboardIntegration):
         self.ghostping_tasks[ctx.author.id] = self.bot.loop.create_task(ghostping_task(member, channel, amount, interval))
         await ctx.send(f"Ghostping task started for {member.mention} in {channel.mention} with {amount} pings at an interval of {interval} seconds.")
 
+    async def start_ghostping_task(self, user_id: int, member: discord.Member, channel: discord.TextChannel, amount: int, interval: int):
+        """Start a ghostping task from dashboard or other sources."""
+        if user_id in self.ghostping_tasks:
+            return False, "User already has a ghostping task running."
+
+        async def ghostping_task(member, channel, amount, interval):
+            # Initialize progress tracking
+            self.ghostping_progress[user_id] = {
+                "current": 0,
+                "total": amount,
+                "member": member,
+                "channel": channel
+            }
+            
+            for i in range(amount):
+                try:
+                    msg = await channel.send(f"{member.mention} has been ghostpinged.")
+                    await msg.delete()
+                    # Update progress
+                    self.ghostping_progress[user_id]["current"] = i + 1
+                    await asyncio.sleep(interval)
+                except Exception as e:
+                    # If there's an error, clean up and break
+                    self.ghostping_tasks.pop(user_id, None)
+                    self.ghostping_progress.pop(user_id, None)
+                    break
+            
+            # Clean up after completion
+            self.ghostping_tasks.pop(user_id, None)
+            self.ghostping_progress.pop(user_id, None)
+
+        self.ghostping_tasks[user_id] = self.bot.loop.create_task(ghostping_task(member, channel, amount, interval))
+        return True, f"Ghostping task started for {member.display_name} in {channel.name} ({amount} pings, {interval}s interval)"
+
     @commands.guild_only()
     @commands.command()
     @commands.has_permissions(administrator=True)

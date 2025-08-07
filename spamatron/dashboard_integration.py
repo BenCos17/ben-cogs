@@ -225,6 +225,10 @@ class DashboardIntegration:
 
     @dashboard_page(name="ghostping", description="Spamatron Ghostping Management", methods=("GET", "POST"), context_ids=["guild_id"])
     async def dashboard_ghostping(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
+        # Get the user who is accessing the dashboard
+        user_id = kwargs.get("user_id")
+        if not user_id:
+            return {"status": 0, "web_content": {"source": "<p>Unable to identify user.</p>"}}
         """Manage ghostping tasks for a guild."""
         cog = getattr(self, "_spamatron_cog", None)
         if not cog:
@@ -234,9 +238,9 @@ class DashboardIntegration:
         class GhostpingForm(kwargs["Form"]):
             def __init__(self):
                 super().__init__(prefix="ghostping_")
-            member_id = wtforms.StringField("Member ID", validators=[wtforms.validators.DataRequired()])
-            channel_id = wtforms.StringField("Channel ID", validators=[wtforms.validators.DataRequired()])
-            amount = wtforms.IntegerField("Amount", validators=[wtforms.validators.DataRequired(), wtforms.validators.NumberRange(min=1, max=100)])
+            member_id = wtforms.StringField("Target Member ID (who to ghostping)", validators=[wtforms.validators.DataRequired()])
+            channel_id = wtforms.StringField("Channel ID (where to send pings)", validators=[wtforms.validators.DataRequired()])
+            amount = wtforms.IntegerField("Number of Pings", validators=[wtforms.validators.DataRequired(), wtforms.validators.NumberRange(min=1, max=100)])
             interval = wtforms.IntegerField("Interval (seconds)", validators=[wtforms.validators.DataRequired(), wtforms.validators.NumberRange(min=1, max=60)])
             submit = wtforms.SubmitField("Start Ghostping")
 
@@ -268,35 +272,13 @@ class DashboardIntegration:
                     elif not channel:
                         result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Channel not found</div>'
                     else:
-                        # Actually start the ghostping task
-                        if hasattr(cog, 'ghostping_tasks') and hasattr(cog, 'ghostping_progress'):
-                            # Check if user already has a task running
-                            if member_id in cog.ghostping_tasks:
-                                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> {member.display_name} already has a ghostping task running</div>'
+                        # Actually start the ghostping task using the cog's method
+                        if hasattr(cog, 'start_ghostping_task'):
+                            success, message = await cog.start_ghostping_task(user_id, member, channel, amount, interval)
+                            if success:
+                                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> {message}</div>'
                             else:
-                                # Create the ghostping task
-                                async def dashboard_ghostping_task(member, channel, amount, interval):
-                                    # Initialize progress tracking
-                                    cog.ghostping_progress[member_id] = {
-                                        "current": 0,
-                                        "total": amount,
-                                        "member": member,
-                                        "channel": channel
-                                    }
-                                    
-                                    for i in range(amount):
-                                        msg = await channel.send(f"{member.mention} has been ghostpinged.")
-                                        await msg.delete()
-                                        # Update progress
-                                        cog.ghostping_progress[member_id]["current"] = i + 1
-                                        await asyncio.sleep(interval)
-                                    
-                                    # Clean up after completion
-                                    cog.ghostping_tasks.pop(member_id, None)
-                                    cog.ghostping_progress.pop(member_id, None)
-                                
-                                cog.ghostping_tasks[member_id] = cog.bot.loop.create_task(dashboard_ghostping_task(member, channel, amount, interval))
-                                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> Ghostping task started for {member.display_name} in {channel.name} ({amount} pings, {interval}s interval)</div>'
+                                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> {message}</div>'
                         else:
                             result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Ghostping functionality not available</div>'
                         
