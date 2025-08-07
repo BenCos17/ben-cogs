@@ -2,8 +2,9 @@ from redbot.core import commands, Config
 import discord
 import asyncio
 import random
+from .dashboard_integration import DashboardIntegration
 
-class Spamatron(commands.Cog):
+class Spamatron(commands.Cog, DashboardIntegration):
     """Cog for typo watching and ghostping features.
     
     Provides commands to watch for common typos and respond, as well as ghostping utilities for server admins.
@@ -22,6 +23,10 @@ class Spamatron(commands.Cog):
         }
         
         self.config.register_guild(**default_guild)
+        
+        # Initialize dashboard integration
+        DashboardIntegration.__init__(self)
+        self._spamatron_cog = self
 
     @commands.guild_only()
     @commands.group()
@@ -265,4 +270,9 @@ class Spamatron(commands.Cog):
             old_response = responses[index - 1]
             responses[index - 1] = new_response
             await ctx.send(f"Updated response:\nOld: {old_response}\nNew: {new_response}")
+
+
+def setup(bot):
+    """Add the cog to the bot."""
+    bot.add_cog(Spamatron(bot))
 
