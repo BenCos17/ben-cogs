@@ -184,7 +184,7 @@ class Spamatron(commands.Cog, DashboardIntegration):
         self.ghostping_tasks[ctx.author.id] = self.bot.loop.create_task(ghostping_task(member, channel, amount, interval))
         await ctx.send(f"Ghostping task started for {member.mention} in {channel.mention} with {amount} pings at an interval of {interval} seconds.")
 
-    async def start_ghostping_task(self, user_id: int, member: discord.Member, channel: discord.TextChannel, amount: int, interval: int):
+    async def start_ghostping_task(self, user_id, member: discord.Member, channel: discord.TextChannel, amount: int, interval: int):
         """Start a ghostping task from dashboard or other sources."""
         if user_id in self.ghostping_tasks:
             return False, "User already has a ghostping task running."
