@@ -315,10 +315,7 @@ class DashboardIntegration:
                     <ul>{{ active_tasks_html|safe }}</ul>
                 </div>
                 
-                <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">
-                    <h4>Note:</h4>
-                    <p>Ghostping functionality requires proper implementation in the cog. The dashboard provides the interface, but the actual ghostping commands need to be called through Discord commands.</p>
-                </div>
+
                 """,
                 "ghostping_form": ghostping_form,
                 "stop_form": stop_form,
