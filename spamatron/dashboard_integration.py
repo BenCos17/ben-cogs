@@ -1,6 +1,7 @@
 import typing
 import discord
 import wtforms
+import asyncio
 from redbot.core import commands
 
 # Decorator for dashboard pages
@@ -267,15 +268,54 @@ class DashboardIntegration:
                     elif not channel:
                         result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Channel not found</div>'
                     else:
-                        # Note: This would need to be implemented in the cog to work properly
-                        result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> Ghostping task started for {member.display_name} in {channel.name}</div>'
+                        # Actually start the ghostping task
+                        if hasattr(cog, 'ghostping_tasks') and hasattr(cog, 'ghostping_progress'):
+                            # Check if user already has a task running
+                            if member_id in cog.ghostping_tasks:
+                                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> {member.display_name} already has a ghostping task running</div>'
+                            else:
+                                # Create the ghostping task
+                                async def dashboard_ghostping_task(member, channel, amount, interval):
+                                    # Initialize progress tracking
+                                    cog.ghostping_progress[member_id] = {
+                                        "current": 0,
+                                        "total": amount,
+                                        "member": member,
+                                        "channel": channel
+                                    }
+                                    
+                                    for i in range(amount):
+                                        msg = await channel.send(f"{member.mention} has been ghostpinged.")
+                                        await msg.delete()
+                                        # Update progress
+                                        cog.ghostping_progress[member_id]["current"] = i + 1
+                                        await asyncio.sleep(interval)
+                                    
+                                    # Clean up after completion
+                                    cog.ghostping_tasks.pop(member_id, None)
+                                    cog.ghostping_progress.pop(member_id, None)
+                                
+                                cog.ghostping_tasks[member_id] = cog.bot.loop.create_task(dashboard_ghostping_task(member, channel, amount, interval))
+                                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> Ghostping task started for {member.display_name} in {channel.name} ({amount} pings, {interval}s interval)</div>'
+                        else:
+                            result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Ghostping functionality not available</div>'
                         
                 except ValueError:
                     result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Invalid ID format</div>'
             
             elif form_prefix == "stop" and stop_form.validate_on_submit():
-                # Note: This would need to be implemented in the cog to work properly
-                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> All ghostping tasks stopped</div>'
+                # Stop all ghostping tasks
+                if hasattr(cog, 'ghostping_tasks') and cog.ghostping_tasks:
+                    stopped_count = 0
+                    for user_id, task in list(cog.ghostping_tasks.items()):
+                        task.cancel()
+                        cog.ghostping_tasks.pop(user_id, None)
+                        cog.ghostping_progress.pop(user_id, None)
+                        stopped_count += 1
+                    
+                    result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> Stopped {stopped_count} ghostping task(s)</div>'
+                else:
+                    result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> No ghostping tasks are currently running</div>'
 
         # Build active tasks display
         active_tasks_html = ""
