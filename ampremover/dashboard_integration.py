@@ -27,17 +27,18 @@ class DashboardIntegration:
         """Dashboard page for converting AMP URLs to canonical URLs."""
         import wtforms
         
-        class Form(kwargs["Form"]):
+        class ConvertForm(kwargs["Form"]):
             def __init__(self):
                 super().__init__(prefix="convert_amp_form_")
-            url: wtforms.TextAreaField = wtforms.TextAreaField(
+            url = wtforms.TextAreaField(
                 "URL(s) to convert:", 
                 validators=[wtforms.validators.InputRequired(), wtforms.validators.URL()],
                 description="Enter one or more AMP URLs to convert to canonical URLs"
             )
-            submit: wtforms.SubmitField = wtforms.SubmitField("Convert URLs!")
+            submit = wtforms.SubmitField("Convert URLs!")
 
-        form: Form = Form()
+        form = ConvertForm()
+        result_html = ""
         
         if form.validate_on_submit():
             urls = self.extract_urls(form.url.data)
@@ -45,7 +46,7 @@ class DashboardIntegration:
                 canonical_links = await self.fetch_canonical_links(urls)
                 if canonical_links:
                     result_html = f"""
-                    <div class="alert alert-success">
+                    <div style="margin-top: 20px; padding: 15px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
                         <h4>✅ Conversion Successful!</h4>
                         <p><strong>Original URLs:</strong></p>
                         <ul>
@@ -57,50 +58,52 @@ class DashboardIntegration:
                         </ul>
                     </div>
                     """
-                    return {
-                        "status": 0,
-                        "notifications": [{"message": f"Successfully converted {len(canonical_links)} URL(s)!", "category": "success"}],
-                        "web_content": {"source": result_html}
-                    }
                 else:
-                    return {
-                        "status": 0,
-                        "notifications": [{"message": "No canonical URLs found for the provided URLs.", "category": "warning"}],
-                        "web_content": {"source": "{{ form|safe }}", "form": form}
-                    }
+                    result_html = """
+                    <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">
+                        <h4>⚠️ No Results Found</h4>
+                        <p>No canonical URLs found for the provided URLs. Please check your input and try again.</p>
+                    </div>
+                    """
             else:
-                return {
-                    "status": 0,
-                    "notifications": [{"message": "No valid URLs found in the input.", "category": "error"}],
-                    "web_content": {"source": "{{ form|safe }}", "form": form}
-                }
-
-        source = """
-        <div class="container">
-            <h2>🔗 AMP URL Converter</h2>
-            <p>Convert AMP (Accelerated Mobile Pages) URLs to their canonical forms using the AmputatorBot API.</p>
-            <div class="card">
-                <div class="card-body">
-                    {{ form|safe }}
+                result_html = """
+                <div style="margin-top: 20px; padding: 15px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                    <h4>❌ Invalid Input</h4>
+                    <p>No valid URLs found in the input. Please enter valid AMP URLs.</p>
                 </div>
-            </div>
-            <div class="mt-3">
-                <h5>How it works:</h5>
-                <ul>
-                    <li>Enter one or more AMP URLs in the text area above</li>
-                    <li>Click "Convert URLs!" to process them</li>
-                    <li>The system will return the canonical (non-AMP) versions</li>
-                </ul>
-                <div class="alert alert-info">
-                    <strong>Example:</strong> <code>https://www.google.com/amp/s/example.com/article</code> → <code>https://example.com/article</code>
-                </div>
-            </div>
-        </div>
-        """
+                """
 
         return {
             "status": 0,
-            "web_content": {"source": source, "form": form}
+            "web_content": {
+                "source": """
+                <h2>🔗 AMP URL Converter</h2>
+                <p>Convert AMP (Accelerated Mobile Pages) URLs to their canonical forms using the AmputatorBot API.</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3>Convert URLs:</h3>
+                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                        {{ form|safe }}
+                    </div>
+                </div>
+                
+                {{ result_html|safe }}
+                
+                <div style="margin-top: 20px;">
+                    <h4>How it works:</h4>
+                    <ul>
+                        <li>Enter one or more AMP URLs in the text area above</li>
+                        <li>Click "Convert URLs!" to process them</li>
+                        <li>The system will return the canonical (non-AMP) versions</li>
+                    </ul>
+                    <div style="background-color: #d1ecf1; padding: 15px; border-radius: 4px; border: 1px solid #bee5eb; color: #0c5460;">
+                        <strong>Example:</strong> <code>https://www.google.com/amp/s/example.com/article</code> → <code>https://example.com/article</code>
+                    </div>
+                </div>
+                """,
+                "form": form,
+                "result_html": result_html,
+            }
         }
 
     @dashboard_page(name="settings", description="Configure AMP URL conversion settings for this guild", methods=("GET", "POST"))
@@ -111,70 +114,84 @@ class DashboardIntegration:
         # Get current settings
         opted_in = await self.config.guild(guild).opted_in()
         
-        class Form(kwargs["Form"]):
+        # WTForms form definition
+        class SettingsForm(kwargs["Form"]):
             def __init__(self):
-                super().__init__(prefix="settings_form_")
-            auto_convert: wtforms.BooleanField = wtforms.BooleanField(
-                "Enable automatic AMP URL conversion", 
-                default=opted_in,
-                description="When enabled, the bot will automatically convert AMP URLs in messages"
-            )
-            submit: wtforms.SubmitField = wtforms.SubmitField("Save Settings!")
-
-        form: Form = Form()
+                super().__init__(prefix="settings_")
+            auto_convert = wtforms.BooleanField("Enable automatic AMP URL conversion")
+            submit = wtforms.SubmitField("Save Settings")
         
+        form = SettingsForm()
+        
+        # Handle form submission using WTForms validation
         if form.validate_on_submit():
-            new_setting = form.auto_convert.data
-            await self.config.guild(guild).opted_in.set(new_setting)
+            await self.config.guild(guild).opted_in.set(form.auto_convert.data)
             
-            status_text = "enabled" if new_setting else "disabled"
+            status_text = "enabled" if form.auto_convert.data else "disabled"
             return {
                 "status": 0,
                 "notifications": [{"message": f"Automatic AMP URL conversion {status_text} for {guild.name}!", "category": "success"}],
-                "web_content": {"source": "{{ form|safe }}", "form": form}
-            }
-
-        source = f"""
-        <div class="container">
-            <h2>⚙️ AMP Remover Settings</h2>
-            <p>Configure AMP URL conversion settings for <strong>{guild.name}</strong>.</p>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h5>Current Status</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Automatic Conversion:</strong> 
-                        <span class="badge badge-{'success' if opted_in else 'danger'}">
-                            {'Enabled' if opted_in else 'Disabled'}
-                        </span>
-                    </p>
-                </div>
-            </div>
-            
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5>Settings</h5>
-                </div>
-                <div class="card-body">
+                "web_content": {
+                    "source": """
+                    <h2>⚙️ AMP Remover Settings</h2>
+                    <p>Configure AMP URL conversion settings for this guild.</p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h3>Current Status:</h3>
+                        <ul>
+                            <li><strong>Automatic Conversion:</strong> {{ auto_convert_status }}</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>Update Settings:</h3>
                     {{ form|safe }}
-                </div>
-            </div>
-            
-            <div class="mt-3">
-                <h5>What these settings do:</h5>
-                <ul>
-                    <li><strong>Automatic Conversion:</strong> When enabled, the bot will automatically detect AMP URLs in messages and respond with canonical versions</li>
-                    <li>Users can still use the <code>[p]amputator convert</code> command regardless of this setting</li>
-                    <li>This setting only affects automatic detection in messages</li>
-                </ul>
-            </div>
-        </div>
-        """
-
+                    
+                    <div style="margin-top: 20px;">
+                        <h4>What these settings do:</h4>
+                        <ul>
+                            <li><strong>Automatic Conversion:</strong> When enabled, the bot will automatically detect AMP URLs in messages and respond with canonical versions</li>
+                            <li>Users can still use the <code>[p]amputator convert</code> command regardless of this setting</li>
+                            <li>This setting only affects automatic detection in messages</li>
+                        </ul>
+                    </div>
+                    """,
+                    "form": form,
+                    "auto_convert_status": "Enabled" if form.auto_convert.data else "Disabled",
+                }
+            }
+        
+        # Populate form with current values
+        form.auto_convert.data = opted_in
+        
         return {
             "status": 0,
-            "web_content": {"source": source, "form": form}
+            "web_content": {
+                "source": """
+                <h2>⚙️ AMP Remover Settings</h2>
+                <p>Configure AMP URL conversion settings for this guild.</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3>Current Status:</h3>
+                    <ul>
+                        <li><strong>Automatic Conversion:</strong> {{ auto_convert_status }}</li>
+                    </ul>
+                </div>
+                
+                <h3>Update Settings:</h3>
+                {{ form|safe }}
+                
+                <div style="margin-top: 20px;">
+                    <h4>What these settings do:</h4>
+                    <ul>
+                        <li><strong>Automatic Conversion:</strong> When enabled, the bot will automatically detect AMP URLs in messages and respond with canonical versions</li>
+                        <li>Users can still use the <code>[p]amputator convert</code> command regardless of this setting</li>
+                        <li>This setting only affects automatic detection in messages</li>
+                    </ul>
+                </div>
+                """,
+                "form": form,
+                "auto_convert_status": "Enabled" if opted_in else "Disabled",
+            }
         }
 
     @dashboard_page(name="stats", description="View AMP URL conversion statistics", methods=("GET",))
