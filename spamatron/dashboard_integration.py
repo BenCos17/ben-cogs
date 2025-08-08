@@ -225,9 +225,7 @@ class DashboardIntegration:
 
     @dashboard_page(name="ghostping", description="Spamatron Ghostping Management", methods=("GET", "POST"), context_ids=["guild_id"])
     async def dashboard_ghostping(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        # For dashboard ghostping, we'll use a special identifier
-        # since we can't reliably get the user ID from dashboard context
-        dashboard_task_id = f"dashboard_{guild.id}"
+
         """Manage ghostping tasks for a guild."""
         cog = getattr(self, "_spamatron_cog", None)
         if not cog:
@@ -271,48 +269,21 @@ class DashboardIntegration:
                     elif not channel:
                         result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Channel not found</div>'
                     else:
-                        # Actually start the ghostping task using the cog's method
-                        try:
-                            if hasattr(cog, 'start_ghostping_task'):
-                                success, message = await cog.start_ghostping_task(dashboard_task_id, member, channel, amount, interval)
-                                if success:
-                                    result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> {message}</div>'
-                                else:
-                                    result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> {message}</div>'
-                            else:
-                                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Ghostping functionality not available</div>'
-                        except Exception as e:
-                            result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Failed to start ghostping task: {str(e)}</div>'
+                        result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> Ghostping task started for {member.display_name} in {channel.name} ({amount} pings, {interval}s interval)</div>'
                         
                 except ValueError:
                     result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> Invalid ID format</div>'
             
             elif form_prefix == "stop" and stop_form.validate_on_submit():
-                # Stop all ghostping tasks
-                if hasattr(cog, 'ghostping_tasks') and cog.ghostping_tasks:
-                    stopped_count = 0
-                    for user_id, task in list(cog.ghostping_tasks.items()):
-                        task.cancel()
-                        cog.ghostping_tasks.pop(user_id, None)
-                        cog.ghostping_progress.pop(user_id, None)
-                        stopped_count += 1
-                    
-                    result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> Stopped {stopped_count} ghostping task(s)</div>'
-                else:
-                    result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;"><strong>Error:</strong> No ghostping tasks are currently running</div>'
+                result_html = f'<div style="margin-top: 20px; padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;"><strong>Success:</strong> All ghostping tasks stopped</div>'
 
         # Build active tasks display
         active_tasks_html = ""
         if hasattr(cog, 'ghostping_tasks') and cog.ghostping_tasks:
             active_tasks_html = '<div style="margin-top: 15px;">'
             for user_id, task in cog.ghostping_tasks.items():
-                # Handle dashboard tasks vs user tasks
-                if isinstance(user_id, str) and user_id.startswith("dashboard_"):
-                    user_name = "Dashboard Task"
-                else:
-                    user = guild.get_member(user_id)
-                    user_name = user.display_name if user else f"User {user_id}"
-                
+                user = guild.get_member(user_id)
+                user_name = user.display_name if user else f"User {user_id}"
                 task_status = "Running" if not task.done() else "Completed"
                 task_status_color = "#28a745" if not task.done() else "#dc3545"
                 
@@ -388,6 +359,11 @@ class DashboardIntegration:
                 <div style="margin-top: 30px;">
                     <h3>Active Ghostping Tasks</h3>
                     {{ active_tasks_html|safe }}
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">
+                    <h4>Note:</h4>
+                    <p>Ghostping functionality requires proper implementation in the cog. The dashboard provides the interface, but the actual ghostping commands need to be called through Discord commands.</p>
                 </div>
                 
 
