@@ -195,8 +195,8 @@ class EmojiLink(commands.Cog):
 
     @emojilink.command(name="add", aliases=["create"])
     @commands.has_permissions(manage_emojis=True)
-    async def add_emoji(self, ctx: commands.Context, name: str, url: str = None):
-        """Add a custom emoji to the server from a URL or attachment."""
+    async def add_emoji(self, ctx: commands.Context, name: str, source: typing.Union[discord.PartialEmoji, str] = None):
+        """Add a custom emoji to the server from a URL, attachment, or existing emoji."""
         # Validate emoji name
         if not name.isalnum() and not '_' in name:
             return await ctx.send("Emoji name must contain only letters, numbers, and underscores.")
@@ -204,16 +204,25 @@ class EmojiLink(commands.Cog):
         if len(name) < 2 or len(name) > 32:
             return await ctx.send("Emoji name must be between 2 and 32 characters long.")
 
-        # Check for attachment if no URL is provided
-        if not url and not ctx.message.attachments:
-            return await ctx.send("Please provide either a URL or attach an image file.")
+        # Check for attachment if no source is provided
+        if not source and not ctx.message.attachments:
+            return await ctx.send("Please provide either an existing emoji, URL, or attach an image file.")
         
         try:
             async with ctx.typing():
                 async with aiohttp.ClientSession() as session:
-                    # Use attachment URL if no URL is provided
-                    if not url and ctx.message.attachments:
+                    # Handle different source types
+                    if isinstance(source, discord.PartialEmoji):
+                        # Copy existing emoji
+                        url = f"https://cdn.discordapp.com/emojis/{source.id}.{source.animated and 'gif' or 'png'}"
+                    elif isinstance(source, str) and source.startswith(('http://', 'https://')):
+                        # Direct URL
+                        url = source
+                    elif ctx.message.attachments:
+                        # Attachment
                         url = ctx.message.attachments[0].url
+                    else:
+                        return await ctx.send("Invalid source. Please provide an existing emoji, valid URL, or attach an image file.")
                     
                     async with session.get(url) as response:
                         if response.status != 200:
