@@ -12,6 +12,7 @@ Commands:
 import discord
 import aiohttp
 import random
+import time
 from typing import Optional
 from redbot.core import commands, Config
 from redbot.core.utils.chat_formatting import pagify
@@ -25,6 +26,8 @@ class XKCD(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
         self.session = None
+        self.comic_cache = {}  # Cache for comics to avoid repeated API calls
+        self.cache_timeout = 300  # 5 minutes cache timeout
         
     async def cog_load(self):
         """Initialize the cog and create aiohttp session"""
@@ -43,8 +46,17 @@ class XKCD(commands.Cog):
             self.session = aiohttp.ClientSession(timeout=timeout)
     
     async def get_comic(self, comic_id: Optional[int] = None) -> Optional[dict]:
-        """Fetch a comic from the XKCD API"""
+        """Fetch a comic from the XKCD API with caching"""
         await self._ensure_session()
+        
+        # Check cache first
+        if comic_id is not None and comic_id in self.comic_cache:
+            cached_data = self.comic_cache[comic_id]
+            if cached_data['timestamp'] + self.cache_timeout > time.time():
+                return cached_data['comic']
+            else:
+                # Remove expired cache entry
+                del self.comic_cache[comic_id]
         
         if comic_id is None:
             url = "https://xkcd.com/info.0.json"
@@ -54,7 +66,16 @@ class XKCD(commands.Cog):
         try:
             async with self.session.get(url) as response:
                 if response.status == 200:
-                    return await response.json()
+                    comic_data = await response.json()
+                    
+                    # Cache the result
+                    if comic_id is not None:
+                        self.comic_cache[comic_id] = {
+                            'comic': comic_data,
+                            'timestamp': time.time()
+                        }
+                    
+                    return comic_data
                 return None
         except Exception as e:
             print(f"Error fetching comic: {e}")
@@ -278,20 +299,47 @@ class XKCD(commands.Cog):
         return []
     
     async def _search_by_year(self, year: int) -> list:
-        """Search comics by year - optimized to search recent comics first"""
+        """Search comics by year using archive page for better performance"""
+        results = []
+        try:
+            # Use XKCD's archive page instead of individual API calls
+            async with self.session.get("https://xkcd.com/archive/") as response:
+                if response.status == 200:
+                    html = await response.text()
+                    # Parse the archive page to find comics from specific year
+                    import re
+                    # Look for comic links with dates
+                    pattern = r'<a href="/(\d+)/">(\d{4}-\d{2}-\d{2})</a>'
+                    matches = re.findall(pattern, html)
+                    
+                    for comic_num, date_str in matches:
+                        if date_str.startswith(str(year)):
+                            comic = await self.get_comic(int(comic_num))
+                            if comic:
+                                results.append(comic)
+                                if len(results) >= 20:
+                                    break
+        except Exception as e:
+            print(f"Error searching archive: {e}")
+            # Fallback to old method if archive fails
+            results = await self._search_by_year_fallback(year)
+        
+        return results
+    
+    async def _search_by_year_fallback(self, year: int) -> list:
+        """Fallback method for year search"""
         results = []
         latest = await self.get_comic()
         if not latest:
             return results
             
         latest_num = latest['num']
-        # Start from recent comics and work backwards for better performance
-        # Most users want recent comics anyway
-        for i in range(latest_num, max(0, latest_num - 500), -1):
+        # Only search last 200 comics as fallback
+        for i in range(latest_num, max(0, latest_num - 200), -1):
             comic = await self.get_comic(i)
             if comic and str(comic.get('year', '')) == str(year):
                 results.append(comic)
-                if len(results) >= 20:  # Limit results
+                if len(results) >= 20:
                     break
         return results
     
