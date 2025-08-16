@@ -28,15 +28,24 @@ class XKCD(commands.Cog):
         
     async def cog_load(self):
         """Initialize the cog and create aiohttp session"""
-        self.session = aiohttp.ClientSession()
+        timeout = aiohttp.ClientTimeout(total=10)
+        self.session = aiohttp.ClientSession(timeout=timeout)
         
     async def cog_unload(self):
         """Clean up the cog and close aiohttp session"""
         if self.session:
             await self.session.close()
     
+    async def _ensure_session(self):
+        """Ensure aiohttp session exists"""
+        if self.session is None or self.session.closed:
+            timeout = aiohttp.ClientTimeout(total=10)
+            self.session = aiohttp.ClientSession(timeout=timeout)
+    
     async def get_comic(self, comic_id: Optional[int] = None) -> Optional[dict]:
         """Fetch a comic from the XKCD API"""
+        await self._ensure_session()
+        
         if comic_id is None:
             url = "https://xkcd.com/info.0.json"
         else:
@@ -47,7 +56,8 @@ class XKCD(commands.Cog):
                 if response.status == 200:
                     return await response.json()
                 return None
-        except Exception:
+        except Exception as e:
+            print(f"Error fetching comic: {e}")
             return None
     
     async def search_comics(self, query: str) -> list:
@@ -152,6 +162,8 @@ class XKCD(commands.Cog):
     async def xkcd_error(self, ctx, error):
         """Handle errors in the xkcd command"""
         if isinstance(error, commands.CommandInvokeError):
-            await ctx.send("❌ An error occurred while fetching the comic. Please try again later.")
+            original_error = error.original
+            error_msg = f"❌ An error occurred: {type(original_error).__name__}: {str(original_error)}"
+            await ctx.send(error_msg)
         else:
             await ctx.send("❌ Invalid input. Use a number, 'random', 'latest', or search terms.")
