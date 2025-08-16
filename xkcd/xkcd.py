@@ -176,27 +176,35 @@ class XKCD(commands.Cog):
     @commands.command(name="xkcddate")
     async def xkcd_date_command(self, ctx, *, date_query: str):
         """Search XKCD comics by date. Use formats like: 2023, 2023-12, 2023-12-25, december 2023"""
-        async with ctx.typing():
-            results = await self.search_by_date(date_query)
-            if results:
-                if len(results) == 1:
-                    # Single result, show directly
-                    embed = self.create_embed(results[0])
-                    await ctx.send(embed=embed)
+        try:
+            async with ctx.typing():
+                # Add a timeout to prevent hanging
+                import asyncio
+                results = await asyncio.wait_for(self.search_by_date(date_query), timeout=30.0)
+                
+                if results:
+                    if len(results) == 1:
+                        # Single result, show directly
+                        embed = self.create_embed(results[0])
+                        await ctx.send(embed=embed)
+                    else:
+                        # Multiple results, show menu
+                        embeds = [self.create_embed(comic) for comic in results]
+                        await menu(ctx, embeds, DEFAULT_CONTROLS, timeout=60)
                 else:
-                    # Multiple results, show menu
-                    embeds = [self.create_embed(comic) for comic in results]
-                    await menu(ctx, embeds, DEFAULT_CONTROLS, timeout=60)
-            else:
-                help_text = (
-                    f"❌ No comics found for '{date_query}'.\n\n"
-                    "**Supported formats:**\n"
-                    "• `2023` - All comics from 2023\n"
-                    "• `2023-12` - All comics from December 2023\n"
-                    "• `december 2023` - All comics from December 2023\n"
-                    "• `2023-12-25` - Comic from December 25, 2023"
-                )
-                await ctx.send(help_text)
+                    help_text = (
+                        f"❌ No comics found for '{date_query}'.\n\n"
+                        "**Supported formats:**\n"
+                        "• `2023` - All comics from 2023\n"
+                        "• `2023-12` - All comics from December 2023\n"
+                        "• `december 2023` - All comics from December 2023\n"
+                        "• `2023-12-25` - Comic from December 25, 2023"
+                    )
+                    await ctx.send(help_text)
+        except asyncio.TimeoutError:
+            await ctx.send("❌ Search timed out. Please try a more specific search or try again later.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred during search: {str(e)}")
     
     async def search_by_date(self, date_query: str) -> list:
         """Search comics by date"""
@@ -270,15 +278,16 @@ class XKCD(commands.Cog):
         return []
     
     async def _search_by_year(self, year: int) -> list:
-        """Search comics by year"""
+        """Search comics by year - optimized to search recent comics first"""
         results = []
         latest = await self.get_comic()
         if not latest:
             return results
             
         latest_num = latest['num']
-        # Search through all comics for the year
-        for i in range(1, latest_num + 1):
+        # Start from recent comics and work backwards for better performance
+        # Most users want recent comics anyway
+        for i in range(latest_num, max(0, latest_num - 500), -1):
             comic = await self.get_comic(i)
             if comic and str(comic.get('year', '')) == str(year):
                 results.append(comic)
@@ -287,15 +296,15 @@ class XKCD(commands.Cog):
         return results
     
     async def _search_by_year_month(self, year: int, month: int) -> list:
-        """Search comics by year and month"""
+        """Search comics by year and month - optimized to search recent comics first"""
         results = []
         latest = await self.get_comic()
         if not latest:
             return results
             
         latest_num = latest['num']
-        # Search through all comics for the year/month
-        for i in range(1, latest_num + 1):
+        # Start from recent comics and work backwards for better performance
+        for i in range(latest_num, max(0, latest_num - 500), -1):
             comic = await self.get_comic(i)
             if (comic and 
                 str(comic.get('year', '')) == str(year) and 
@@ -306,15 +315,15 @@ class XKCD(commands.Cog):
         return results
     
     async def _search_by_exact_date(self, year: int, month: int, day: int) -> list:
-        """Search comics by exact date"""
+        """Search comics by exact date - optimized to search recent comics first"""
         results = []
         latest = await self.get_comic()
         if not latest:
             return results
             
         latest_num = latest['num']
-        # Search through all comics for the exact date
-        for i in range(1, latest_num + 1):
+        # Start from recent comics and work backwards for better performance
+        for i in range(latest_num, max(0, latest_num - 500), -1):
             comic = await self.get_comic(i)
             if (comic and 
                 str(comic.get('year', '')) == str(year) and 
