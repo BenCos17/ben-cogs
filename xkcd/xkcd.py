@@ -101,7 +101,22 @@ class XKCD(commands.Cog):
         )
         
         embed.set_image(url=comic['img'])
-        embed.set_footer(text=f"Published: {comic['year']}-{comic['month']:02d}-{comic['day']:02d}")
+        
+        # Handle date formatting - XKCD API returns strings, not integers
+        year = comic.get('year', '')
+        month = comic.get('month', '')
+        day = comic.get('day', '')
+        
+        if year and month and day:
+            # Try to format as date if possible, otherwise use as-is
+            try:
+                date_str = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+            except:
+                date_str = f"{year}-{month}-{day}"
+        else:
+            date_str = "Unknown date"
+            
+        embed.set_footer(text=f"Published: {date_str}")
         
         return embed
     
