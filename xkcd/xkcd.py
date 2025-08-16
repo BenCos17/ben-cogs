@@ -112,6 +112,70 @@ class XKCD(commands.Cog):
                     
         return results
     
+    async def search_by_title(self, title_query: str) -> list:
+        """Search comics by title using archive page for better performance"""
+        results = []
+        query_lower = title_query.lower().strip()
+        
+        try:
+            # Use XKCD's archive page instead of individual API calls
+            async with self.session.get("https://xkcd.com/archive/") as response:
+                if response.status == 200:
+                    html = await response.text()
+                    # Parse the archive page to find comics by title
+                    import re
+                    # Look for comic links with titles
+                    pattern = r'<a href="/(\d+)/">(\d{4}-\d{2}-\d{2})</a>'
+                    matches = re.findall(pattern, html)
+                    
+                    # Get comics and check titles
+                    for comic_num, date_str in matches:
+                        comic = await self.get_comic(int(comic_num))
+                        if comic:
+                            title_lower = comic.get('title', '').lower()
+                            alt_lower = comic.get('alt', '').lower()
+                            
+                            # Check if query is in title or alt text
+                            if (query_lower in title_lower or 
+                                query_lower in alt_lower or
+                                any(word in title_lower for word in query_lower.split())):
+                                results.append(comic)
+                                if len(results) >= 15:  # Limit results
+                                    break
+        except Exception as e:
+            print(f"Error searching archive by title: {e}")
+            # Fallback to old method if archive fails
+            results = await self._search_by_title_fallback(title_query)
+        
+        return results
+    
+    async def _search_by_title_fallback(self, title_query: str) -> list:
+        """Fallback method for title search"""
+        results = []
+        query_lower = title_query.lower().strip()
+        
+        latest = await self.get_comic()
+        if not latest:
+            return results
+            
+        latest_num = latest['num']
+        # Search through last 200 comics as fallback
+        for i in range(latest_num, max(0, latest_num - 200), -1):
+            comic = await self.get_comic(i)
+            if comic:
+                title_lower = comic.get('title', '').lower()
+                alt_lower = comic.get('alt', '').lower()
+                
+                # Check if query is in title or alt text
+                if (query_lower in title_lower or 
+                    query_lower in alt_lower or
+                    any(word in title_lower for word in query_lower.split())):
+                    results.append(comic)
+                    if len(results) >= 15:
+                        break
+        
+        return results
+    
     def create_embed(self, comic: dict) -> discord.Embed:
         """Create a Discord embed for the comic"""
         embed = discord.Embed(
@@ -222,6 +286,30 @@ class XKCD(commands.Cog):
                         "• `2023-12-25` - Comic from December 25, 2023"
                     )
                     await ctx.send(help_text)
+        except asyncio.TimeoutError:
+            await ctx.send("❌ Search timed out. Please try a more specific search or try again later.")
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred during search: {str(e)}")
+    
+    @commands.command(name="xkcdtitle")
+    async def xkcd_title_command(self, ctx, *, title_query: str):
+        """Search XKCD comics by title/cartoon name"""
+        try:
+            async with ctx.typing():
+                import asyncio
+                results = await asyncio.wait_for(self.search_by_title(title_query), timeout=30.0)
+                
+                if results:
+                    if len(results) == 1:
+                        # Single result, show directly
+                        embed = self.create_embed(results[0])
+                        await ctx.send(embed=embed)
+                    else:
+                        # Multiple results, show menu
+                        embeds = [self.create_embed(comic) for comic in results]
+                        await menu(ctx, embeds, DEFAULT_CONTROLS, timeout=60)
+                else:
+                    await ctx.send(f"❌ No comics found with title containing '{title_query}'.")
         except asyncio.TimeoutError:
             await ctx.send("❌ Search timed out. Please try a more specific search or try again later.")
         except Exception as e:
