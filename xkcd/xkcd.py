@@ -175,7 +175,7 @@ class XKCD(commands.Cog):
     
     @commands.command(name="xkcddate")
     async def xkcd_date_command(self, ctx, *, date_query: str):
-        """Search XKCD comics by date. Use formats like: 2023, 2023-12, 2023-12-25"""
+        """Search XKCD comics by date. Use formats like: 2023, 2023-12, 2023-12-25, december 2023"""
         async with ctx.typing():
             results = await self.search_by_date(date_query)
             if results:
@@ -188,7 +188,15 @@ class XKCD(commands.Cog):
                     embeds = [self.create_embed(comic) for comic in results]
                     await menu(ctx, embeds, DEFAULT_CONTROLS, timeout=60)
             else:
-                await ctx.send(f"❌ No comics found for date '{date_query}'.")
+                help_text = (
+                    f"❌ No comics found for '{date_query}'.\n\n"
+                    "**Supported formats:**\n"
+                    "• `2023` - All comics from 2023\n"
+                    "• `2023-12` - All comics from December 2023\n"
+                    "• `december 2023` - All comics from December 2023\n"
+                    "• `2023-12-25` - Comic from December 25, 2023"
+                )
+                await ctx.send(help_text)
     
     async def search_by_date(self, date_query: str) -> list:
         """Search comics by date"""
