@@ -173,6 +173,109 @@ class XKCD(commands.Cog):
                 else:
                     await ctx.send(f"❌ No comics found matching '{query}'.")
     
+    @commands.command(name="xkcddate")
+    async def xkcd_date_command(self, ctx, *, date_query: str):
+        """Search XKCD comics by date. Use formats like: 2023, 2023-12, 2023-12-25"""
+        async with ctx.typing():
+            results = await self.search_by_date(date_query)
+            if results:
+                if len(results) == 1:
+                    # Single result, show directly
+                    embed = self.create_embed(results[0])
+                    await ctx.send(embed=embed)
+                else:
+                    # Multiple results, show menu
+                    embeds = [self.create_embed(comic) for comic in results]
+                    await menu(ctx, embeds, DEFAULT_CONTROLS, timeout=60)
+            else:
+                await ctx.send(f"❌ No comics found for date '{date_query}'.")
+    
+    async def search_by_date(self, date_query: str) -> list:
+        """Search comics by date"""
+        results = []
+        date_parts = date_query.split('-')
+        
+        if len(date_parts) == 1:
+            # Just year: 2023
+            year = date_parts[0]
+            if not year.isdigit() or len(year) != 4:
+                return results
+            results = await self._search_by_year(int(year))
+            
+        elif len(date_parts) == 2:
+            # Year and month: 2023-12
+            year, month = date_parts
+            if not year.isdigit() or not month.isdigit() or len(year) != 4 or len(month) != 2:
+                return results
+            results = await self._search_by_year_month(int(year), int(month))
+            
+        elif len(date_parts) == 3:
+            # Full date: 2023-12-25
+            year, month, day = date_parts
+            if not year.isdigit() or not month.isdigit() or not day.isdigit():
+                return results
+            if len(year) != 4 or len(month) != 2 or len(day) != 2:
+                return results
+            results = await self._search_by_exact_date(int(year), int(month), int(day))
+            
+        return results
+    
+    async def _search_by_year(self, year: int) -> list:
+        """Search comics by year"""
+        results = []
+        latest = await self.get_comic()
+        if not latest:
+            return results
+            
+        latest_num = latest['num']
+        # Search through all comics for the year
+        for i in range(1, latest_num + 1):
+            comic = await self.get_comic(i)
+            if comic and str(comic.get('year', '')) == str(year):
+                results.append(comic)
+                if len(results) >= 20:  # Limit results
+                    break
+        return results
+    
+    async def _search_by_year_month(self, year: int, month: int) -> list:
+        """Search comics by year and month"""
+        results = []
+        latest = await self.get_comic()
+        if not latest:
+            return results
+            
+        latest_num = latest['num']
+        # Search through all comics for the year/month
+        for i in range(1, latest_num + 1):
+            comic = await self.get_comic(i)
+            if (comic and 
+                str(comic.get('year', '')) == str(year) and 
+                str(comic.get('month', '')).zfill(2) == str(month).zfill(2)):
+                results.append(comic)
+                if len(results) >= 20:  # Limit results
+                    break
+        return results
+    
+    async def _search_by_exact_date(self, year: int, month: int, day: int) -> list:
+        """Search comics by exact date"""
+        results = []
+        latest = await self.get_comic()
+        if not latest:
+            return results
+            
+        latest_num = latest['num']
+        # Search through all comics for the exact date
+        for i in range(1, latest_num + 1):
+            comic = await self.get_comic(i)
+            if (comic and 
+                str(comic.get('year', '')) == str(year) and 
+                str(comic.get('month', '')).zfill(2) == str(month).zfill(2) and
+                str(comic.get('day', '')).zfill(2) == str(day).zfill(2)):
+                results.append(comic)
+                break  # Should only be one comic per day
+        
+        return results
+    
     @xkcd_command.error
     async def xkcd_error(self, ctx, error):
         """Handle errors in the xkcd command"""
