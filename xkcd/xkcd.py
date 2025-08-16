@@ -193,25 +193,41 @@ class XKCD(commands.Cog):
     async def search_by_date(self, date_query: str) -> list:
         """Search comics by date"""
         results = []
+        
+        # Handle natural language formats
+        date_query_lower = date_query.lower().strip()
+        
+        # Try to parse natural language first
+        if any(word in date_query_lower for word in ['january', 'february', 'march', 'april', 'may', 'june', 
+                                                    'july', 'august', 'september', 'october', 'november', 'december']):
+            results = await self._parse_natural_language_date(date_query_lower)
+            if results:
+                return results
+        
+        # Fall back to standard format parsing
         date_parts = date_query.split('-')
         
         if len(date_parts) == 1:
             # Just year: 2023
-            year = date_parts[0]
+            year = date_parts[0].strip()
             if not year.isdigit() or len(year) != 4:
                 return results
             results = await self._search_by_year(int(year))
             
         elif len(date_parts) == 2:
-            # Year and month: 2023-12
-            year, month = date_parts
-            if not year.isdigit() or not month.isdigit() or len(year) != 4 or len(month) != 2:
-                return results
-            results = await self._search_by_year_month(int(year), int(month))
+            # Year and month: 2023-12 or 12-2023
+            part1, part2 = date_parts[0].strip(), date_parts[1].strip()
+            
+            if len(part1) == 4 and part1.isdigit() and len(part2) <= 2 and part2.isdigit():
+                # Format: 2023-12
+                results = await self._search_by_year_month(int(part1), int(part2))
+            elif len(part2) == 4 and part2.isdigit() and len(part1) <= 2 and part1.isdigit():
+                # Format: 12-2023
+                results = await self._search_by_year_month(int(part2), int(part1))
             
         elif len(date_parts) == 3:
             # Full date: 2023-12-25
-            year, month, day = date_parts
+            year, month, day = date_parts[0].strip(), date_parts[1].strip(), date_parts[2].strip()
             if not year.isdigit() or not month.isdigit() or not day.isdigit():
                 return results
             if len(year) != 4 or len(month) != 2 or len(day) != 2:
@@ -219,6 +235,31 @@ class XKCD(commands.Cog):
             results = await self._search_by_exact_date(int(year), int(month), int(day))
             
         return results
+    
+    async def _parse_natural_language_date(self, date_query: str) -> list:
+        """Parse natural language date queries like 'december 2023'"""
+        month_map = {
+            'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+            'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,
+            'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+        }
+        
+        words = date_query.split()
+        year = None
+        month = None
+        
+        for word in words:
+            if word in month_map:
+                month = month_map[word]
+            elif word.isdigit() and len(word) == 4:
+                year = int(word)
+        
+        if year and month:
+            return await self._search_by_year_month(year, month)
+        elif year:
+            return await self._search_by_year(year)
+        
+        return []
     
     async def _search_by_year(self, year: int) -> list:
         """Search comics by year"""
