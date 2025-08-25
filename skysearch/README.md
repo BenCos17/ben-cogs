@@ -62,3 +62,6 @@ To use the SkySearch cog, follow these steps:
 - `[p]skysearch apistats_config` - View API statistics auto-save configuration (owner only)
 - `[p]skysearch apistats_reset` - Reset API statistics (owner only)
 - `[p]skysearch apistats_save` - Manually save API statistics (owner only)
+
+### Dashboard Integration
+- `/dashboard/apistats` - Web interface for viewing API statistics and performance metrics
