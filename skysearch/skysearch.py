@@ -125,6 +125,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed = discord.Embed(title="Thanks for using SkySearch", description="SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft.", color=0xfffffe)
         embed.add_field(name="aircraft", value="Use `aircraft` to show available commands to fetch information about live aircraft and configure emergency squawk alerts.", inline=False)
         embed.add_field(name="airport", value="Use `airport` to show available commands to fetch information and imagery of airports around the world.", inline=False)
+        embed.add_field(name="📊 API Monitoring", value="Use `skysearch apistats` to view API performance and usage statistics", inline=False)
         await ctx.send(embed=embed)
     
     @commands.guild_only()
@@ -168,7 +169,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await ctx.send(embed=embed)
 
     @commands.guild_only()
-    @skysearch.command(name='apistats', help='Get detailed API request statistics for airplanes.live API')
+    @skysearch.command(name='apistats', help='View comprehensive API request statistics, performance metrics, and usage analytics')
     async def apistats(self, ctx):
         """Get detailed API request statistics."""
         # Wait for stats to be initialized from config
@@ -293,7 +294,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
     @commands.guild_only()
     @commands.is_owner()
-    @skysearch.command(name='apistats_config', help='View API statistics saving configuration (owner only)')
+    @skysearch.command(name='apistats_config', help='View API statistics auto-save configuration and current status (owner only)')
     async def apistats_config(self, ctx):
         """View API statistics saving configuration."""
         try:
@@ -345,10 +346,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
     # Aircraft commands
     @commands.guild_only()
-    @commands.group(name='aircraft', help='Command center for aircraft related commands', invoke_without_command=True)
+    @commands.group(name='aircraft', help='Command center for aircraft related commands and API monitoring', invoke_without_command=True)
     async def aircraft_group(self, ctx):
-        """Command center for aircraft related commands"""
-        embed = discord.Embed(title="Aircraft Commands", description="Available aircraft-related commands:", color=0xfffffe)
+        """Command center for aircraft related commands and API monitoring"""
+        embed = discord.Embed(title="Aircraft Commands", description="Available aircraft-related commands and API monitoring:", color=0xfffffe)
         embed.add_field(name="Search Commands", value="`icao` `callsign` `reg` `type` `squawk` `radius` `closest`", inline=False)
         embed.add_field(name="Special Aircraft", value="`military` `ladd` `pia`", inline=False)
         embed.add_field(name="Export", value="`export` - Export aircraft data to CSV, PDF, TXT, or HTML", inline=False)
@@ -357,6 +358,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
             embed.add_field(name="Debug", value="`debugapi` - Debug API issues (owner only)\n`debugtoggle` - Toggle debug output for lookups (owner only)\n`debug` - Run a debug lookup (owner only)", inline=False)
+        embed.add_field(name="📊 API Monitoring", value="Use `skysearch apistats` to view API performance and usage statistics", inline=False)
         embed.add_field(name="Detailed Help", value="Use `*help aircraft` for detailed command information", inline=False)
         await ctx.send(embed=embed)
 
