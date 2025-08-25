@@ -53,6 +53,12 @@ skysearch apistats_save
 ```
 Manually saves current API statistics to config (**bot owner only**)
 
+### View Save Configuration
+```
+skysearch apistats_config
+```
+View the current automatic saving configuration (**bot owner only**)
+
 ## 🌐 Dashboard Integration
 
 Access API statistics through the web dashboard at:
@@ -187,8 +193,12 @@ The tracking system is **enabled by default** and requires no configuration:
 ### Data Persistence
 - **Red-DiscordBot Config**: Statistics are automatically saved to Red's config system
 - **Survives Reloads**: All data persists when the cog is reloaded
-- **Automatic Saving**: Stats are saved after each API request
+- **Smart Auto-Saving**: Uses hybrid approach to prevent config spam:
+  - Save every **10 requests** OR
+  - Save every **30 seconds**
+  - Whichever comes first
 - **Manual Save**: Use `skysearch apistats_save` to manually save current stats
+- **Config Monitoring**: Use `skysearch apistats_config` to view save settings
 
 ### Memory Usage
 - **Minimal overhead**: ~1KB per 1000 requests

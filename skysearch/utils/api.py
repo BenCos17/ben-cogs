@@ -22,6 +22,13 @@ class APIManager:
         
         # Request tracking statistics - will be loaded from config
         self._request_stats = None
+        
+        # Hybrid saving configuration
+        self._save_counter = 0
+        self._save_batch_size = 10  # Save every 10 requests
+        self._last_save_time = time.time()
+        self._save_interval = 30  # Save every 30 seconds
+        
         # Initialize stats asynchronously
         asyncio.create_task(self._initialize_stats())
     
@@ -134,8 +141,19 @@ class APIManager:
         
         self._request_stats['last_request_time'] = current_time
         
-        # Save to config asynchronously
-        asyncio.create_task(self._save_stats_to_config())
+        # Hybrid saving: Save on count OR time, whichever comes first
+        self._save_counter += 1
+        current_time = time.time()
+        
+        should_save = (
+            self._save_counter >= self._save_batch_size or  # Save every N requests
+            current_time - self._last_save_time >= self._save_interval  # Save every X seconds
+        )
+        
+        if should_save:
+            asyncio.create_task(self._save_stats_to_config())
+            self._save_counter = 0
+            self._last_save_time = current_time
 
     def _extract_endpoint(self, url: str) -> str:
         """Extract endpoint name from URL for tracking purposes."""
@@ -343,6 +361,15 @@ class APIManager:
         if self._request_stats is None:
             # If still not initialized, use defaults
             self._request_stats = self._get_default_stats()
+
+    def get_save_config(self):
+        """Get current saving configuration."""
+        return {
+            'batch_size': self._save_batch_size,
+            'time_interval': self._save_interval,
+            'requests_since_last_save': self._save_counter,
+            'seconds_since_last_save': time.time() - self._last_save_time
+        }
 
     def reset_request_stats(self):
         """Reset all request statistics."""

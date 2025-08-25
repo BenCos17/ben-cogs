@@ -291,6 +291,58 @@ class Skysearch(commands.Cog, DashboardIntegration):
             )
             await ctx.send(embed=embed)
 
+    @commands.guild_only()
+    @commands.is_owner()
+    @skysearch.command(name='apistats_config', help='View API statistics saving configuration (owner only)')
+    async def apistats_config(self, ctx):
+        """View API statistics saving configuration."""
+        try:
+            # Wait for stats to be initialized
+            await self.api.wait_for_stats_initialization()
+            
+            # Get save configuration
+            save_config = self.api.get_save_config()
+            
+            embed = discord.Embed(
+                title="⚙️ API Statistics Save Configuration", 
+                description="Current configuration for automatic saving of API statistics", 
+                color=0x00aaff
+            )
+            
+            embed.add_field(
+                name="📊 Batch Saving",
+                value=f"**Batch Size:** {save_config['batch_size']} requests\n"
+                      f"**Current Count:** {save_config['requests_since_last_save']} requests",
+                inline=True
+            )
+            
+            embed.add_field(
+                name="⏰ Time-Based Saving",
+                value=f"**Interval:** {save_config['time_interval']} seconds\n"
+                      f"**Time Since Last Save:** {save_config['seconds_since_last_save']:.1f} seconds",
+                inline=True
+            )
+            
+            embed.add_field(
+                name="🔄 Save Strategy",
+                value="**Hybrid Approach:** Save when either:\n"
+                      "• Batch size is reached (10 requests)\n"
+                      "• Time interval is reached (30 seconds)\n"
+                      "• Whichever comes first",
+                inline=False
+            )
+            
+            embed.set_footer(text="This prevents config spam while ensuring data persistence")
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Config Error", 
+                description=f"Error viewing save configuration: {str(e)}", 
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+
     # Aircraft commands
     @commands.guild_only()
     @commands.group(name='aircraft', help='Command center for aircraft related commands', invoke_without_command=True)
