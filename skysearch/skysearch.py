@@ -39,6 +39,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
+        self.config.register_global(api_stats=None)  # API request statistics for persistence
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={})
         
         # Initialize utility managers
@@ -165,6 +166,128 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name="Mapping and imagery", value="Mapping and ground imagery powered by [Google Maps](https://maps.google.com) and the [Maps Static API](https://developers.google.com/maps/documentation/maps-static)", inline=False)
 
         await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @skysearch.command(name='apistats', help='Get detailed API request statistics for airplanes.live API')
+    async def apistats(self, ctx):
+        """Get detailed API request statistics."""
+        # Wait for stats to be initialized from config
+        await self.api.wait_for_stats_initialization()
+        api_stats = self.api.get_request_stats()
+        
+        embed = discord.Embed(
+            title="📊 Airplanes.live API Statistics", 
+            description="Detailed request tracking and performance metrics", 
+            color=0x00ff00
+        )
+        
+        # Overall statistics
+        embed.add_field(
+            name="📈 Overall Stats",
+            value=f"**Total Requests:** {api_stats['total_requests']:,}\n"
+                  f"**Success Rate:** {api_stats['success_rate']:.1f}%\n"
+                  f"**Last Request:** {api_stats.get('last_request_time_formatted', 'Never')}",
+            inline=True
+        )
+        
+        # Success/Failure breakdown
+        embed.add_field(
+            name="✅ Success/Failure",
+            value=f"**Successful:** {api_stats['successful_requests']:,}\n"
+                  f"**Failed:** {api_stats['failed_requests']:,}\n"
+                  f"**Rate Limited:** {api_stats['rate_limited_requests']:,}",
+            inline=True
+        )
+        
+        # API mode usage
+        embed.add_field(
+            name="🌐 API Mode Usage",
+            value=f"**Primary:** {api_stats['api_mode_usage']['primary']:,}\n"
+                  f"**Fallback:** {api_stats['api_mode_usage']['fallback']:,}",
+            inline=True
+        )
+        
+        # Performance metrics
+        if api_stats['avg_response_time'] > 0:
+            embed.add_field(
+                name="⚡ Performance",
+                value=f"**Avg Response:** {api_stats['avg_response_time']:.3f}s\n"
+                      f"**Last 24h:** {api_stats['requests_last_24h']:,} requests",
+                inline=True
+            )
+        
+        # Top endpoints
+        if api_stats['endpoint_usage']:
+            top_endpoints = sorted(
+                api_stats['endpoint_usage'].items(), 
+                key=lambda x: x[1], 
+                reverse=True
+            )[:5]
+            
+            endpoint_text = "\n".join([
+                f"**{endpoint}:** {count:,}" 
+                for endpoint, count in top_endpoints
+            ])
+            
+            embed.add_field(
+                name="🔗 Top Endpoints",
+                value=endpoint_text,
+                inline=False
+            )
+        
+        # Error breakdown
+        if api_stats['auth_failed_requests'] > 0 or api_stats['permission_denied_requests'] > 0:
+            error_text = []
+            if api_stats['auth_failed_requests'] > 0:
+                error_text.append(f"**Auth Failed:** {api_stats['auth_failed_requests']:,}")
+            if api_stats['permission_denied_requests'] > 0:
+                error_text.append(f"**Permission Denied:** {api_stats['permission_denied_requests']:,}")
+            
+            embed.add_field(
+                name="⚠️ Error Details",
+                value="\n".join(error_text),
+                inline=True
+            )
+        
+        embed.set_footer(text="Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save")
+        await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @skysearch.command(name='apistats_reset', help='Reset API request statistics')
+    async def apistats_reset(self, ctx):
+        """Reset API request statistics."""
+        self.api.reset_request_stats()
+        embed = discord.Embed(
+            title="🔄 API Statistics Reset", 
+            description="All API request statistics have been reset to zero.", 
+            color=0xffaa00
+        )
+        await ctx.send(embed=embed)
+
+    @commands.guild_only()
+    @skysearch.command(name='apistats_save', help='Manually save API statistics to config')
+    async def apistats_save(self, ctx):
+        """Manually save API statistics to config."""
+        try:
+            # Wait for stats to be initialized
+            await self.api.wait_for_stats_initialization()
+            
+            # Manually trigger save
+            await self.api._save_stats_to_config()
+            
+            embed = discord.Embed(
+                title="💾 API Statistics Saved", 
+                description="API request statistics have been manually saved to config.", 
+                color=0x00ff00
+            )
+            await ctx.send(embed=embed)
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Save Error", 
+                description=f"Error saving API statistics: {str(e)}", 
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
 
     # Aircraft commands
     @commands.guild_only()

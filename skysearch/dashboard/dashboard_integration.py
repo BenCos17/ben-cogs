@@ -55,6 +55,113 @@ class DashboardIntegration:
             },
         }
 
+    @dashboard_page(name="apistats", description="SkySearch API Statistics", methods=("GET",))
+    async def dashboard_api_stats(self, **kwargs) -> typing.Dict[str, typing.Any]:
+        """Show API request statistics in the dashboard."""
+        cog = getattr(self, "_skysearch_cog", None)
+        if not cog:
+            return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
+        
+        if not hasattr(cog.api, 'get_request_stats'):
+            return {"status": 0, "web_content": {"source": "<p>API statistics not available.</p>"}}
+        
+        try:
+            # Wait for stats to be initialized from config
+            await cog.api.wait_for_stats_initialization()
+            api_stats = cog.api.get_request_stats()
+            
+            # Format the statistics for display
+            stats_html = f"""
+            <h2>📊 Airplanes.live API Statistics</h2>
+            <p>Detailed request tracking and performance metrics for the airplanes.live API.</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <h3>📈 Overall Statistics</h3>
+                    <ul>
+                        <li><strong>Total Requests:</strong> {api_stats['total_requests']:,}</li>
+                        <li><strong>Success Rate:</strong> {api_stats['success_rate']:.1f}%</li>
+                        <li><strong>Last Request:</strong> {api_stats.get('last_request_time_formatted', 'Never')}</li>
+                    </ul>
+                </div>
+                
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <h3>✅ Success/Failure</h3>
+                    <ul>
+                        <li><strong>Successful:</strong> {api_stats['successful_requests']:,}</li>
+                        <li><strong>Failed:</strong> {api_stats['failed_requests']:,}</li>
+                        <li><strong>Rate Limited:</strong> {api_stats['rate_limited_requests']:,}</li>
+                    </ul>
+                </div>
+                
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <h3>🌐 API Mode Usage</h3>
+                    <ul>
+                        <li><strong>Primary API:</strong> {api_stats['api_mode_usage']['primary']:,}</li>
+                        <li><strong>Fallback API:</strong> {api_stats['api_mode_usage']['fallback']:,}</li>
+                    </ul>
+                </div>
+                
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                    <h3>⚡ Performance</h3>
+                    <ul>
+                        <li><strong>Avg Response Time:</strong> {api_stats['avg_response_time']:.3f}s</li>
+                        <li><strong>Last 24h Requests:</strong> {api_stats['requests_last_24h']:,}</li>
+                    </ul>
+                </div>
+            </div>
+            """
+            
+            # Add top endpoints if available
+            if api_stats['endpoint_usage']:
+                top_endpoints = sorted(
+                    api_stats['endpoint_usage'].items(), 
+                    key=lambda x: x[1], 
+                    reverse=True
+                )[:10]
+                
+                endpoints_html = "<h3>🔗 Top Endpoints</h3><ul>"
+                for endpoint, count in top_endpoints:
+                    endpoints_html += f"<li><strong>{endpoint}:</strong> {count:,} requests</li>"
+                endpoints_html += "</ul>"
+                
+                stats_html += f"""
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin-top: 20px;">
+                    {endpoints_html}
+                </div>
+                """
+            
+            # Add error details if any
+            if api_stats['auth_failed_requests'] > 0 or api_stats['permission_denied_requests'] > 0:
+                error_html = "<h3>⚠️ Error Details</h3><ul>"
+                if api_stats['auth_failed_requests'] > 0:
+                    error_html += f"<li><strong>Authentication Failed:</strong> {api_stats['auth_failed_requests']:,}</li>"
+                if api_stats['permission_denied_requests'] > 0:
+                    error_html += f"<li><strong>Permission Denied:</strong> {api_stats['permission_denied_requests']:,}</li>"
+                error_html += "</ul>"
+                
+                stats_html += f"""
+                <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffeaa7; margin-top: 20px;">
+                    {error_html}
+                </div>
+                """
+            
+            return {
+                "status": 0,
+                "web_content": {
+                    "source": stats_html
+                }
+            }
+            
+        except Exception as e:
+            return {
+                "status": 1,
+                "web_content": {
+                    "source": f"<p>Error loading API statistics: {str(e)}</p>"
+                },
+                "notifications": [{"message": f"Error loading API statistics: {str(e)}", "category": "error"}]
+            }
+
     @dashboard_page(name="lookup", description="SkySearch Aircraft Lookup", methods=("GET", "POST"), context_ids=["guild_id"])
     async def dashboard_aircraft_lookup(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
         cog = getattr(self, "_skysearch_cog", None)
