@@ -56,3 +56,9 @@ To use the SkySearch cog, follow these steps:
 - `[p]apikey` - Check API key status
 - `[p]clearapikey` - Clear API key
 - `[p]debugapi` - Debug API issues
+
+### API Monitoring Commands
+- `[p]skysearch apistats` - View comprehensive API request statistics and performance metrics
+- `[p]skysearch apistats_config` - View API statistics auto-save configuration (owner only)
+- `[p]skysearch apistats_reset` - Reset API statistics (owner only)
+- `[p]skysearch apistats_save` - Manually save API statistics (owner only)
