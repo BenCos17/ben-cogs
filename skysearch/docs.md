@@ -147,6 +147,27 @@ This sets a 15-minute cooldown.
 ```
 This shows the current cooldown.
 
+## API Monitoring
+
+### View API Statistics
+```
+*skysearch apistats
+```
+Shows comprehensive statistics about API usage:
+- Total requests and success rates
+- Performance metrics and response times
+- API mode usage (primary vs fallback)
+- Endpoint-specific usage patterns
+- Error tracking and rate limits
+
+### Dashboard Access
+Visit `/dashboard/apistats` in your web browser to view API statistics in a web interface.
+
+### Owner-Only Commands
+- `*skysearch apistats_config` - View auto-save configuration
+- `*skysearch apistats_reset` - Reset all statistics
+- `*skysearch apistats_save` - Manually save statistics
+
 ## Convenience Features
 
 ### Auto ICAO Lookup
