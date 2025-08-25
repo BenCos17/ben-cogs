@@ -45,13 +45,13 @@ Shows a comprehensive embed with:
 ```
 skysearch apistats_reset
 ```
-Resets all API statistics to zero (admin only)
+Resets all API statistics to zero (**bot owner only**)
 
 ### Manual Save
 ```
 skysearch apistats_save
 ```
-Manually saves current API statistics to config (useful for testing)
+Manually saves current API statistics to config (**bot owner only**)
 
 ## 🌐 Dashboard Integration
 
@@ -171,6 +171,12 @@ The system works alongside existing error handling:
 - **Performance degradation** detection
 
 ## 🔧 Configuration
+
+### Security & Permissions
+- **View Statistics**: Available to all users (transparency)
+- **Reset Statistics**: Bot owner only (prevents data loss)
+- **Manual Save**: Bot owner only (prevents abuse)
+- **Dashboard Access**: Available to all users with dashboard access
 
 ### No Additional Setup Required
 The tracking system is **enabled by default** and requires no configuration:

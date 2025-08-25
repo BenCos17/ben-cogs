@@ -249,11 +249,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 inline=True
             )
         
-        embed.set_footer(text="Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save")
+        embed.set_footer(text="Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save.")
         await ctx.send(embed=embed)
 
     @commands.guild_only()
-    @skysearch.command(name='apistats_reset', help='Reset API request statistics')
+    @commands.is_owner()
+    @skysearch.command(name='apistats_reset', help='Reset API request statistics (owner only)')
     async def apistats_reset(self, ctx):
         """Reset API request statistics."""
         self.api.reset_request_stats()
@@ -265,7 +266,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await ctx.send(embed=embed)
 
     @commands.guild_only()
-    @skysearch.command(name='apistats_save', help='Manually save API statistics to config')
+    @commands.is_owner()
+    @skysearch.command(name='apistats_save', help='Manually save API statistics to config (owner only)')
     async def apistats_save(self, ctx):
         """Manually save API statistics to config."""
         try:
