@@ -382,6 +382,40 @@ class Skysearch(commands.Cog, DashboardIntegration):
         except Exception:
             pass
 
+        # Total requests per day (last 30 days)
+        try:
+            daily = api_stats.get('daily_requests', {}) or {}
+            current_day = int(time.time() // 86400)
+            days = [current_day - i for i in reversed(range(30))]
+            labels = [datetime.datetime.fromtimestamp(d * 86400).strftime('%b %d') for d in days]
+            data_vals = [int(daily.get(d, 0)) for d in days]
+            if any(v > 0 for v in data_vals):
+                daily_chart = {
+                    'type': 'bar',
+                    'data': {
+                        'labels': labels,
+                        'datasets': [{
+                            'label': 'Total requests per day',
+                            'data': data_vals,
+                            'backgroundColor': '#2c3e50'
+                        }]
+                    },
+                    'options': {
+                        'plugins': {
+                            'legend': {'display': False}
+                        },
+                        'scales': {
+                            'y': {'beginAtZero': True}
+                        }
+                    }
+                }
+                daily_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(daily_chart))}&w=800&h=300&bkg=transparent"
+                e = discord.Embed(title="Total Requests (last 30 days)")
+                e.set_image(url=daily_url)
+                chart_embeds.append(e)
+        except Exception:
+            pass
+
         if chart_embeds:
             try:
                 await ctx.send(embeds=chart_embeds)
