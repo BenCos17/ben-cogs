@@ -199,12 +199,16 @@ class DashboardIntegration:
                         "notifications": [{"message": "Please enter a search value.", "category": "error"}],
                         "web_content": {
                             "source": """
-                            <h2>SkySearch Aircraft Lookup</h2>
-                            <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <h3>Search Aircraft:</h3>
-                                {{ form|safe }}
+                            <div style=\"background-color: #1e1f22; padding: 20px; border-radius: 8px; color: #e6e6e6;\">
+                                <h2 style=\"color: #ffffff;\">SkySearch Aircraft Lookup</h2>
+                                <p style=\"color: #cfcfcf;\">Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
+                                
+                                <div style=\"margin-bottom: 20px;\">
+                                    <h3 style=\"color: #ffffff;\">Search Aircraft:</h3>
+                                    <div style=\"background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;\">
+                                        {{ form|safe }}
+                                    </div>
+                                </div>
                             </div>
                             """,
                             "form": form,
@@ -227,12 +231,16 @@ class DashboardIntegration:
                         "notifications": [{"message": "Invalid search type.", "category": "error"}],
                         "web_content": {
                             "source": """
-                            <h2>SkySearch Aircraft Lookup</h2>
-                            <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <h3>Search Aircraft:</h3>
-                                {{ form|safe }}
+                            <div style=\"background-color: #1e1f22; padding: 20px; border-radius: 8px; color: #e6e6e6;\">
+                                <h2 style=\"color: #ffffff;\">SkySearch Aircraft Lookup</h2>
+                                <p style=\"color: #cfcfcf;\">Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
+                                
+                                <div style=\"margin-bottom: 20px;\">
+                                    <h3 style=\"color: #ffffff;\">Search Aircraft:</h3>
+                                    <div style=\"background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;\">
+                                        {{ form|safe }}
+                                    </div>
+                                </div>
                             </div>
                             """,
                             "form": form,
@@ -465,21 +473,21 @@ class DashboardIntegration:
                     else:
                         result_html = '''
                         <div style="margin-top: 20px;">
-                            <h3>No Results Found</h3>
-                            <p style="color: #666;">No aircraft found matching your search criteria. Please try a different search term.</p>
+                            <h3 style="color: #ffffff;">No Results Found</h3>
+                            <p style="color: #cfcfcf;">No aircraft found matching your search criteria. Please try a different search term.</p>
                         </div>
                         '''
                 else:
                     result_html = '''
                     <div style="margin-top: 20px;">
-                        <h3>Error</h3>
-                        <p style="color: #666;">Unable to retrieve aircraft information. Please check your search terms and try again.</p>
+                        <h3 style="color: #ffffff;">Error</h3>
+                        <p style="color: #cfcfcf;">Unable to retrieve aircraft information. Please check your search terms and try again.</p>
                     </div>
                     '''
                     
             except Exception as e:
                 result_html = f'''
-                <div style="margin-top: 20px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
                     <strong>Error:</strong> An error occurred while searching: {str(e)}
                 </div>
                 '''
@@ -495,17 +503,19 @@ class DashboardIntegration:
             "status": 0,
             "web_content": {
                 "source": """
-                <h2>SkySearch Aircraft Lookup</h2>
-                <p>Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
-                
-                <div style="margin-bottom: 20px;">
-                    <h3>Search Aircraft:</h3>
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-                        {{ form|safe }}
+                <div style=\"background-color: #1e1f22; padding: 20px; border-radius: 8px; color: #e6e6e6;\">
+                    <h2 style=\"color: #ffffff;\">SkySearch Aircraft Lookup</h2>
+                    <p style=\"color: #cfcfcf;\">Search for aircraft by ICAO code, callsign, registration, or aircraft type.</p>
+                    
+                    <div style=\"margin-bottom: 20px;\">
+                        <h3 style=\"color: #ffffff;\">Search Aircraft:</h3>
+                        <div style=\"background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;\">
+                            {{ form|safe }}
+                        </div>
                     </div>
+                    
+                    {{ result_html|safe }}
                 </div>
-                
-                {{ result_html|safe }}
                 """,
                 "form": form,
                 "result_html": result_html,
