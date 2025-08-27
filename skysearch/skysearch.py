@@ -8,6 +8,7 @@ import re
 import datetime
 import aiohttp
 import time
+import json
 import urllib.parse
 import logging
 from redbot.core import commands, Config
@@ -278,7 +279,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         }
                     }
                 }
-                success_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(success_chart))}&w=600&h=300&bkg=transparent"
+                success_json = json.dumps(success_chart, separators=(',', ':'))
+                success_url = (
+                    "https://quickchart.io/chart?" +
+                    "width=600&height=300&format=png&backgroundColor=transparent&devicePixelRatio=2&c=" +
+                    urllib.parse.quote(success_json)
+                )
                 e = discord.Embed(title="Success vs Failure")
                 e.set_image(url=success_url)
                 chart_embeds.append(e)
@@ -305,7 +311,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         }
                     }
                 }
-                mode_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(mode_chart))}&w=600&h=300&bkg=transparent"
+                mode_json = json.dumps(mode_chart, separators=(',', ':'))
+                mode_url = (
+                    "https://quickchart.io/chart?" +
+                    "width=600&height=300&format=png&backgroundColor=transparent&devicePixelRatio=2&c=" +
+                    urllib.parse.quote(mode_json)
+                )
                 e = discord.Embed(title="API Mode Usage")
                 e.set_image(url=mode_url)
                 chart_embeds.append(e)
@@ -339,7 +350,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         }
                     }
                 }
-                endpoint_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(endpoint_chart))}&w=800&h=300&bkg=transparent"
+                endpoint_json = json.dumps(endpoint_chart, separators=(',', ':'))
+                endpoint_url = (
+                    "https://quickchart.io/chart?" +
+                    "width=800&height=300&format=png&backgroundColor=transparent&devicePixelRatio=2&c=" +
+                    urllib.parse.quote(endpoint_json)
+                )
                 e = discord.Embed(title="Top Endpoints")
                 e.set_image(url=endpoint_url)
                 chart_embeds.append(e)
@@ -375,7 +391,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         }
                     }
                 }
-                hourly_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(hourly_chart))}&w=800&h=300&bkg=transparent"
+                hourly_json = json.dumps(hourly_chart, separators=(',', ':'))
+                hourly_url = (
+                    "https://quickchart.io/chart?" +
+                    "width=800&height=300&format=png&backgroundColor=transparent&devicePixelRatio=2&c=" +
+                    urllib.parse.quote(hourly_json)
+                )
                 e = discord.Embed(title="Hourly Requests (last 24h)")
                 e.set_image(url=hourly_url)
                 chart_embeds.append(e)
@@ -409,7 +430,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         }
                     }
                 }
-                daily_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(daily_chart))}&w=800&h=300&bkg=transparent"
+                daily_json = json.dumps(daily_chart, separators=(',', ':'))
+                daily_url = (
+                    "https://quickchart.io/chart?" +
+                    "width=800&height=300&format=png&backgroundColor=transparent&devicePixelRatio=2&c=" +
+                    urllib.parse.quote(daily_json)
+                )
                 e = discord.Embed(title="Total Requests (last 30 days)")
                 e.set_image(url=daily_url)
                 chart_embeds.append(e)
