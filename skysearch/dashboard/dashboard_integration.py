@@ -72,43 +72,43 @@ class DashboardIntegration:
             
             # Format the statistics for display
             stats_html = f"""
-            <div style="background-color: #f0f2f5; padding: 20px; border-radius: 8px;">
-                <h2>📊 Airplanes.live API Statistics</h2>
-                <p>Detailed request tracking and performance metrics for the airplanes.live API.</p>
+            <div style="background-color: #1e1f22; padding: 20px; border-radius: 8px; color: #e6e6e6;">
+                <h2 style="color: #ffffff;">📊 Airplanes.live API Statistics</h2>
+                <p style="color: #cfcfcf;">Detailed request tracking and performance metrics for the airplanes.live API.</p>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-                    <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-                    <h3>📈 Overall Statistics</h3>
-                    <ul>
-                        <li><strong>Total Requests:</strong> {api_stats['total_requests']:,}</li>
-                        <li><strong>Success Rate:</strong> {api_stats['success_rate']:.1f}%</li>
-                        <li><strong>Last Request:</strong> {api_stats.get('last_request_time_formatted', 'Never')}</li>
-                    </ul>
+                    <div style="background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41; color: #e6e6e6;">
+                        <h3 style="color: #ffffff;">📈 Overall Statistics</h3>
+                        <ul style="margin: 0; padding-left: 18px;">
+                            <li><strong>Total Requests:</strong> {api_stats['total_requests']:,}</li>
+                            <li><strong>Success Rate:</strong> {api_stats['success_rate']:.1f}%</li>
+                            <li><strong>Last Request:</strong> {api_stats.get('last_request_time_formatted', 'Never')}</li>
+                        </ul>
                     </div>
                 
-                    <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-                    <h3>✅ Success/Failure</h3>
-                    <ul>
-                        <li><strong>Successful:</strong> {api_stats['successful_requests']:,}</li>
-                        <li><strong>Failed:</strong> {api_stats['failed_requests']:,}</li>
-                        <li><strong>Rate Limited:</strong> {api_stats['rate_limited_requests']:,}</li>
-                    </ul>
+                    <div style="background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41; color: #e6e6e6;">
+                        <h3 style="color: #ffffff;">✅ Success/Failure</h3>
+                        <ul style="margin: 0; padding-left: 18px;">
+                            <li><strong>Successful:</strong> {api_stats['successful_requests']:,}</li>
+                            <li><strong>Failed:</strong> {api_stats['failed_requests']:,}</li>
+                            <li><strong>Rate Limited:</strong> {api_stats['rate_limited_requests']:,}</li>
+                        </ul>
                     </div>
                 
-                    <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-                    <h3>🌐 API Mode Usage</h3>
-                    <ul>
-                        <li><strong>Primary API:</strong> {api_stats['api_mode_usage']['primary']:,}</li>
-                        <li><strong>Fallback API:</strong> {api_stats['api_mode_usage']['fallback']:,}</li>
-                    </ul>
+                    <div style="background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41; color: #e6e6e6;">
+                        <h3 style="color: #ffffff;">🌐 API Mode Usage</h3>
+                        <ul style="margin: 0; padding-left: 18px;">
+                            <li><strong>Primary API:</strong> {api_stats['api_mode_usage']['primary']:,}</li>
+                            <li><strong>Fallback API:</strong> {api_stats['api_mode_usage']['fallback']:,}</li>
+                        </ul>
                     </div>
                 
-                    <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
-                    <h3>⚡ Performance</h3>
-                    <ul>
-                        <li><strong>Avg Response Time:</strong> {api_stats['avg_response_time']:.3f}s</li>
-                        <li><strong>Last 24h Requests:</strong> {api_stats['requests_last_24h']:,}</li>
-                    </ul>
+                    <div style="background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41; color: #e6e6e6;">
+                        <h3 style="color: #ffffff;">⚡ Performance</h3>
+                        <ul style="margin: 0; padding-left: 18px;">
+                            <li><strong>Avg Response Time:</strong> {api_stats['avg_response_time']:.3f}s</li>
+                            <li><strong>Last 24h Requests:</strong> {api_stats['requests_last_24h']:,}</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -128,7 +128,7 @@ class DashboardIntegration:
                 endpoints_html += "</ul>"
                 
                 stats_html += f"""
-                <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin-top: 20px;">
+                <div style="background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41; margin-top: 20px; color: #e6e6e6;">
                     {endpoints_html}
                 </div>
                 """
@@ -143,7 +143,7 @@ class DashboardIntegration:
                 error_html += "</ul>"
                 
                 stats_html += f"""
-                <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffeaa7; margin-top: 20px;">
+                <div style="background-color: #3a2f00; padding: 20px; border-radius: 8px; border: 1px solid #806b00; margin-top: 20px; color: #ffe58f;">
                     {error_html}
                 </div>
                 """
