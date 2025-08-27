@@ -7,6 +7,8 @@ import asyncio
 import re
 import datetime
 import aiohttp
+import time
+import urllib.parse
 import logging
 from redbot.core import commands, Config
 from discord.ext import tasks
@@ -252,6 +254,144 @@ class Skysearch(commands.Cog, DashboardIntegration):
         
         embed.set_footer(text="Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save.")
         await ctx.send(embed=embed)
+
+        # Build and send chart embeds using QuickChart
+        chart_embeds = []
+
+        # Success vs Failure pie chart
+        try:
+            total_success = int(api_stats.get('successful_requests', 0))
+            total_failed = int(api_stats.get('failed_requests', 0))
+            if (total_success + total_failed) > 0:
+                success_chart = {
+                    'type': 'pie',
+                    'data': {
+                        'labels': ['Successful', 'Failed'],
+                        'datasets': [{
+                            'data': [total_success, total_failed],
+                            'backgroundColor': ['#2ecc71', '#e74c3c']
+                        }]
+                    },
+                    'options': {
+                        'plugins': {
+                            'legend': {'position': 'bottom'}
+                        }
+                    }
+                }
+                success_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(success_chart))}&w=600&h=300&bkg=transparent"
+                e = discord.Embed(title="Success vs Failure")
+                e.set_image(url=success_url)
+                chart_embeds.append(e)
+        except Exception:
+            pass
+
+        # API Mode usage doughnut
+        try:
+            mode_primary = int(api_stats.get('api_mode_usage', {}).get('primary', 0))
+            mode_fallback = int(api_stats.get('api_mode_usage', {}).get('fallback', 0))
+            if (mode_primary + mode_fallback) > 0:
+                mode_chart = {
+                    'type': 'doughnut',
+                    'data': {
+                        'labels': ['Primary', 'Fallback'],
+                        'datasets': [{
+                            'data': [mode_primary, mode_fallback],
+                            'backgroundColor': ['#3498db', '#9b59b6']
+                        }]
+                    },
+                    'options': {
+                        'plugins': {
+                            'legend': {'position': 'bottom'}
+                        }
+                    }
+                }
+                mode_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(mode_chart))}&w=600&h=300&bkg=transparent"
+                e = discord.Embed(title="API Mode Usage")
+                e.set_image(url=mode_url)
+                chart_embeds.append(e)
+        except Exception:
+            pass
+
+        # Top endpoints bar chart
+        try:
+            endpoint_usage = api_stats.get('endpoint_usage', {}) or {}
+            if endpoint_usage:
+                top_items = sorted(endpoint_usage.items(), key=lambda x: x[1], reverse=True)[:5]
+                labels = [k for k, _ in top_items]
+                data_vals = [int(v) for _, v in top_items]
+                endpoint_chart = {
+                    'type': 'bar',
+                    'data': {
+                        'labels': labels,
+                        'datasets': [{
+                            'label': 'Requests',
+                            'data': data_vals,
+                            'backgroundColor': '#f1c40f'
+                        }]
+                    },
+                    'options': {
+                        'indexAxis': 'y',
+                        'plugins': {
+                            'legend': {'display': False}
+                        },
+                        'scales': {
+                            'x': {'beginAtZero': True}
+                        }
+                    }
+                }
+                endpoint_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(endpoint_chart))}&w=800&h=300&bkg=transparent"
+                e = discord.Embed(title="Top Endpoints")
+                e.set_image(url=endpoint_url)
+                chart_embeds.append(e)
+        except Exception:
+            pass
+
+        # Hourly requests (last 24h) line chart
+        try:
+            hourly = api_stats.get('hourly_requests', {}) or {}
+            current_hour = int(time.time() // 3600)
+            hours = [current_hour - i for i in reversed(range(24))]
+            labels = [datetime.datetime.fromtimestamp(h * 3600).strftime('%H:%M') for h in hours]
+            data_vals = [int(hourly.get(h, 0)) for h in hours]
+            if any(v > 0 for v in data_vals):
+                hourly_chart = {
+                    'type': 'line',
+                    'data': {
+                        'labels': labels,
+                        'datasets': [{
+                            'label': 'Requests per hour',
+                            'data': data_vals,
+                            'fill': False,
+                            'borderColor': '#1abc9c',
+                            'tension': 0.3
+                        }]
+                    },
+                    'options': {
+                        'plugins': {
+                            'legend': {'position': 'bottom'}
+                        },
+                        'scales': {
+                            'y': {'beginAtZero': True}
+                        }
+                    }
+                }
+                hourly_url = f"https://quickchart.io/chart?c={urllib.parse.quote(str(hourly_chart))}&w=800&h=300&bkg=transparent"
+                e = discord.Embed(title="Hourly Requests (last 24h)")
+                e.set_image(url=hourly_url)
+                chart_embeds.append(e)
+        except Exception:
+            pass
+
+        if chart_embeds:
+            try:
+                await ctx.send(embeds=chart_embeds)
+            except Exception:
+                # Fallback: send individually if bulk send fails
+                for e in chart_embeds:
+                    try:
+                        await ctx.send(embed=e)
+                    except Exception:
+                        continue
 
     @commands.guild_only()
     @commands.is_owner()
