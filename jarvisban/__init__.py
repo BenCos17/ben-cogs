@@ -8,6 +8,6 @@ from .jarvisban import JarvisBan
 
 __red_end_user_data_statement__ = "This cog does not persistently store data about users."
 
-def setup(bot):
+async def setup(bot):
     """Add the cog to the bot"""
-    bot.add_cog(JarvisBan(bot))
+    await bot.add_cog(JarvisBan(bot))
