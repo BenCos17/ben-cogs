@@ -19,6 +19,7 @@ class JarvisBan(commands.Cog):
             "enabled": True,
             "log_channel": None,
             "ban_reason": "Banned by Jarvis via 'jarvis ban this guy' command",
+            "allow_bot_owner_override": True,
             "trigger_phrases": [
                 "jarvis ban this guy",
                 "jarvis ban this person",
@@ -55,8 +56,11 @@ class JarvisBan(commands.Cog):
             return
             
         # Check if user has permission to ban - only proceed if they do
+        # Bot owners can override this permission requirement
         if not message.author.guild_permissions.ban_members:
-            return  # Silently ignore if no permission
+            # Check if user is bot owner and override is enabled
+            if not (await self.bot.is_owner(message.author) and await self.config.guild(message.guild).allow_bot_owner_override()):
+                return  # Silently ignore if no permission and not bot owner or override disabled
         
         # Find mentioned users
         if not message.mentions:
@@ -65,14 +69,16 @@ class JarvisBan(commands.Cog):
             
         target_user = message.mentions[0]
         
-        # Check if target can be banned
-        if target_user.top_role >= message.guild.me.top_role:
-            await message.channel.send("❌ I cannot ban this user due to role hierarchy!")
-            return
-            
-        if target_user.guild_permissions.administrator:
-            await message.channel.send("❌ I cannot ban administrators!")
-            return
+        # Bot owners can bypass all permission checks
+        if not await self.bot.is_owner(message.author):
+            # Check if target can be banned (only for non-bot-owners)
+            if target_user.top_role >= message.guild.me.top_role:
+                await message.channel.send("❌ I cannot ban this user due to role hierarchy!")
+                return
+                
+            if target_user.guild_permissions.administrator:
+                await message.channel.send("❌ I cannot ban administrators!")
+                return
             
         # First confirmation - ask if they really want to ban
         first_confirm = await message.channel.send(
