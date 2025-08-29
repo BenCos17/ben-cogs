@@ -190,7 +190,7 @@ class JarvisBan(commands.Cog):
     async def jarvisban(self, ctx):
         """Configure the Jarvis Ban system"""
         if not ctx.invoked_subcommand:
-            await ctx.send_help()
+            await ctx.send_help(ctx.command)
     
     @jarvisban.command(name="enable")
     async def jarvisban_enable(self, ctx):
