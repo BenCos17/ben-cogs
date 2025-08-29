@@ -52,7 +52,9 @@ class JarvisBan(commands.Cog):
         trigger_phrases = await self.config.guild(message.guild).trigger_phrases()
         
         message_content = message.content.lower().strip()
-        if not any(phrase in message_content for phrase in trigger_phrases):
+        
+        # Check if the message starts with any EXACT trigger phrase (to avoid partial matches)
+        if not any(message_content == phrase.lower() or message_content.startswith(phrase.lower() + " ") for phrase in trigger_phrases):
             return
             
         # Check if user has permission to ban - only proceed if they do
