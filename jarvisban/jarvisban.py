@@ -54,7 +54,13 @@ class JarvisBan(commands.Cog):
         message_content = message.content.lower().strip()
         
         # Check if the message starts with any EXACT trigger phrase (to avoid partial matches)
-        if not any(message_content == phrase.lower() or message_content.startswith(phrase.lower() + " ") for phrase in trigger_phrases):
+        # Only trigger if the message starts with the exact phrase followed by a space and a mention
+        if not any(message_content.startswith(phrase.lower() + " ") for phrase in trigger_phrases):
+            return
+            
+        # Additional check: ensure there's a mention after the phrase
+        # This prevents triggering on just "jarvis ban this guy" without a mention
+        if not message.mentions:
             return
             
         # Check if user has permission to ban - only proceed if they do
@@ -64,11 +70,7 @@ class JarvisBan(commands.Cog):
             if not (await self.bot.is_owner(message.author) and await self.config.guild(message.guild).allow_bot_owner_override()):
                 return  # Silently ignore if no permission and not bot owner or override disabled
         
-        # Find mentioned users
-        if not message.mentions:
-            await message.channel.send("❌ Please mention the user you want to ban!")
-            return
-            
+                # Find mentioned users (we already checked for mentions above, so this should always exist)
         target_user = message.mentions[0]
         
         # Bot owners can bypass all permission checks
