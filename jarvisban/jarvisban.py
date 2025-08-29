@@ -16,10 +16,10 @@ class JarvisBan(commands.Cog):
         
         # Default settings
         default_guild = {
-            "enabled": True,
+            "enabled": False,
             "log_channel": None,
             "ban_reason": "Banned by Jarvis via 'jarvis ban this guy' command",
-            "allow_bot_owner_override": True,
+            "allow_bot_owner_override": False,
             "trigger_phrases": [
                 "jarvis ban this guy",
                 "jarvis ban this person",
