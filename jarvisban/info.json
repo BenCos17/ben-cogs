@@ -1,0 +1,10 @@
+{
+    "name": "JarvisBan",
+    "author": ["Your Name"],
+    "version": "1.0.0",
+    "description": "A RedBot cog that allows users to ban someone by saying 'jarvis ban this guy'",
+    "short": "Ban users with 'jarvis ban this guy'",
+    "tags": ["moderation", "ban", "jarvis"],
+    "requirements": ["discord.py", "redbot"],
+    "end_user_data_statement": "This cog does not persistently store data about users."
+}
