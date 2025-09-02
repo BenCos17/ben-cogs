@@ -19,18 +19,19 @@ class HelperUtils:
             self.cog._http_client = aiohttp.ClientSession()
         
         # First try to get photo by hex ICAO directly (this is the correct endpoint)
-        try:
-            async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}') as response:
-                if response.status == 200:
-                    json_out = await response.json()
-                    if 'photos' in json_out and json_out['photos']:
-                        photo = json_out['photos'][0]
-                        url = photo.get('thumbnail_large', {}).get('src', '')
-                        photographer = photo.get('photographer', '')
-                        if url:  # Only return if we got a valid URL
-                            return url, photographer
-        except (KeyError, IndexError, aiohttp.ClientError):
-            pass
+        if hex_id:
+            try:
+                async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}') as response:
+                    if response.status == 200:
+                        json_out = await response.json()
+                        if 'photos' in json_out and json_out['photos']:
+                            photo = json_out['photos'][0]
+                            url = photo.get('thumbnail_large', {}).get('src', '')
+                            photographer = photo.get('photographer', '')
+                            if url:  # Only return if we got a valid URL
+                                return url, photographer
+            except (KeyError, IndexError, aiohttp.ClientError):
+                pass
 
         # If no photo found by hex, try by registration if provided
         if registration:
@@ -48,34 +49,50 @@ class HelperUtils:
                 pass
 
         # If still no photo found, try to get aircraft data to find registration and try again
-        try:
-            # Get aircraft data from airplanes.live to find registration
-            api_url = await self.cog.api.get_api_url()
-            url = f"{api_url}/?find_hex={hex_id}"
-            response = await self.cog.api.make_request(url)
-            
-            if response and 'aircraft' in response and response['aircraft']:
-                aircraft_data = response['aircraft'][0]
-                reg = aircraft_data.get('reg')
+        if hex_id:
+            try:
+                # Get aircraft data from airplanes.live to find registration
+                api_url = await self.cog.api.get_api_url()
+                url = f"{api_url}/?find_hex={hex_id}"
+                response = await self.cog.api.make_request(url)
                 
-                if reg:
-                    # Now try to get photo using the registration
-                    try:
-                        async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/reg/{reg}') as response:
-                            if response.status == 200:
-                                json_out = await response.json()
-                                if 'photos' in json_out and json_out['photos']:
-                                    photo = json_out['photos'][0]
-                                    url = photo.get('thumbnail_large', {}).get('src', '')
-                                    photographer = photo.get('photographer', '')
-                                    if url:  # Only return if we got a valid URL
-                                        return url, photographer
-                    except (KeyError, IndexError, aiohttp.ClientError):
-                        pass
-        except Exception:
-            pass
+                if response and 'aircraft' in response and response['aircraft']:
+                    aircraft_data = response['aircraft'][0]
+                    reg = aircraft_data.get('reg')
+                    
+                    if reg and reg != registration:  # Only try if we haven't already tried this registration
+                        # Now try to get photo using the registration
+                        try:
+                            async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/reg/{reg}') as response:
+                                if response.status == 200:
+                                    json_out = await response.json()
+                                    if 'photos' in json_out and json_out['photos']:
+                                        photo = json_out['photos'][0]
+                                        url = photo.get('thumbnail_large', {}).get('src', '')
+                                        photographer = photo.get('photographer', '')
+                                        if url:  # Only return if we got a valid URL
+                                            return url, photographer
+                        except (KeyError, IndexError, aiohttp.ClientError):
+                            pass
+            except Exception:
+                pass
 
         return None, None  # Return None if no photo found
+
+    async def get_photo_by_aircraft_data(self, aircraft_data):
+        """Get aircraft photo using full aircraft data (preferred method)."""
+        hex_id = aircraft_data.get('hex', '')
+        registration = aircraft_data.get('reg', '')
+        
+        # Clean up the data
+        if hex_id:
+            hex_id = hex_id.upper()
+        if registration and registration != 'N/A':
+            registration = registration.upper()
+        else:
+            registration = None
+            
+        return await self.get_photo_by_hex(hex_id, registration)
     
     def create_aircraft_embed(self, aircraft_data, image_url=None, photographer=None):
         """Create a Discord embed for aircraft information."""

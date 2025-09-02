@@ -33,15 +33,15 @@ class AircraftCommands:
         if aircraft_list:
             await ctx.typing()
             aircraft_data = aircraft_list[0]
-            # Get photo for the aircraft
-            icao = aircraft_data.get('hex', None)
-            if icao:
-                icao = icao.upper()
-            image_url, photographer = await self.helpers.get_photo_by_hex(icao)
+            # Get photo for the aircraft using full aircraft data
+            image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
             # Create embed
             embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
             # Create view with buttons
             view = discord.ui.View()
+            icao = aircraft_data.get('hex', '')
+            if icao:
+                icao = icao.upper()
             link = f"https://globe.airplanes.live/?icao={icao}"
             view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
 
@@ -308,7 +308,9 @@ class AircraftCommands:
                     embed.add_field(name="Speed", value=f"**`{aircraft_speed}`**", inline=True)
                     embed.add_field(name="ICAO", value=f"**`{aircraft_hex}`**", inline=True)
 
-                    photo_url, photographer = await self.helpers.get_photo_by_hex(aircraft_hex)
+                    # Create temporary aircraft data for photo lookup
+                    temp_aircraft_data = {'hex': aircraft_hex}
+                    photo_url, photographer = await self.helpers.get_photo_by_aircraft_data(temp_aircraft_data)
                     if photo_url:
                         embed.set_image(url=photo_url)
                         if photographer:
@@ -615,7 +617,8 @@ class AircraftCommands:
                 embed.add_field(name="Asset intelligence", value=":corn: Used for **agriculture surveys, easement validation, or land inspection**", inline=False)
             
             # Add photo if available
-            image_url, photographer = await self.helpers.get_photo_by_hex(icao)
+            temp_aircraft_data = {'hex': icao}
+            image_url, photographer = await self.helpers.get_photo_by_aircraft_data(temp_aircraft_data)
             if image_url and photographer:
                 embed.set_thumbnail(url=image_url)
                 embed.set_footer(text=f"Photo by {photographer}")
@@ -723,7 +726,7 @@ class AircraftCommands:
                     icao = aircraft_data.get('hex', None)
                     if icao:
                         icao = icao.upper()
-                    image_url, photographer = await self.helpers.get_photo_by_hex(icao)
+                    image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
                     embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
                     view = discord.ui.View()
                     link = f"https://globe.airplanes.live/?icao={icao}"

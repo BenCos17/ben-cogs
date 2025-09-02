@@ -513,7 +513,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     # (Assume send_aircraft_info returns embed/view or you can call a helper)
                                     # For now, let's use the helpers directly:
                                     aircraft_data = aircraft_info
-                                    image_url, photographer = await self.helpers.get_photo_by_hex(aircraft_data.get('hex', None))
+                                    image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
                                     embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
                                     view = None
                                     # If you use a view (buttons), create it here as before
@@ -670,7 +670,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         
         # Create embed and buttons (same as real background task)
         aircraft_data = fake_aircraft
-        image_url, photographer = await self.helpers.get_photo_by_hex(aircraft_data.get('hex', None))
+        image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
         embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
         
         # Create buttons (same as real emergency alerts)

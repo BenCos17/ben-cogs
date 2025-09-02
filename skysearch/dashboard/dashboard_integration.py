@@ -258,11 +258,13 @@ class DashboardIntegration:
                         result_html = '<div style="margin-top: 20px;"><h3>Search Results:</h3>'
                         
                         for i, aircraft_data in enumerate(aircraft_list[:5]):  # Limit to 5 results
-                            # Get photo for the aircraft
+                            # Get photo for the aircraft using full aircraft data
+                            image_url, photographer = await cog.helpers.get_photo_by_aircraft_data(aircraft_data)
+                            
+                            # Extract ICAO for later use
                             icao = aircraft_data.get('hex', '')
                             if icao:
                                 icao = icao.upper()
-                            image_url, photographer = await cog.helpers.get_photo_by_hex(icao)
                             
                             # Create comprehensive aircraft info HTML
                             description = f"{aircraft_data.get('desc', 'N/A')}"
