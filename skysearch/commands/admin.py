@@ -359,6 +359,7 @@ class AdminCommands:
             
             # Send the debug info in chunks if it's too long
             if len(debug_info) > 2000:
+                # Use 1900 as chunk size to stay under Discord's 2000 char limit and avoid errors
                 chunks = [debug_info[i:i+1900] for i in range(0, len(debug_info), 1900)]
                 for i, chunk in enumerate(chunks):
                     await ctx.author.send(f"**Debug Info (Part {i+1}/{len(chunks)}):**\n```{chunk}```")

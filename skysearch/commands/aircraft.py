@@ -136,7 +136,7 @@ class AircraftCommands:
             elapsed = time.monotonic() - start
             import json
             if response:
-                pretty = json.dumps(response, indent=2)[:1900]  # Discord message limit
+                pretty = json.dumps(response, indent=2)[:1900]  # Truncate to stay under Discord's 2000 char limit and avoid errors
                 await ctx.send(f"[DEBUG] Raw API response (truncated):\n```json\n{pretty}\n```\n⏱️ API Latency: {elapsed:.2f} seconds")
             else:
                 await ctx.send(f"[DEBUG] No response or empty response from the API.\n⏱️ API Latency: {elapsed:.2f} seconds")
