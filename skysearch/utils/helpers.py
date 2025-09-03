@@ -18,7 +18,7 @@ class HelperUtils:
         if not hasattr(self.cog, '_http_client'):
             self.cog._http_client = aiohttp.ClientSession()
         
-        # First try to get photo by hex ICAO directly (this is the correct endpoint)
+        # First try to get photo by hex ICAO directly 
         if hex_id:
             try:
                 async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}') as response:
@@ -61,7 +61,7 @@ class HelperUtils:
                     reg = aircraft_data.get('reg')
                     
                     if reg and reg != registration:  # Only try if we haven't already tried this registration
-                        # Now try to get photo using the registration
+                        #  try to get photo using the registration
                         try:
                             async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/reg/{reg}') as response:
                                 if response.status == 200:
