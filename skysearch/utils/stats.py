@@ -17,7 +17,11 @@ def _quickchart_url(chart_config: dict, width: int, height: int) -> str:
     )
 
 
-def build_stats_embed(api_stats: dict) -> discord.Embed:
+def build_stats_embed(api_stats: dict, _=None) -> discord.Embed:
+    # Fallback function if no translator provided
+    if _ is None:
+        def _(text): return text
+    
     embed = discord.Embed(
         title=_("📊 Airplanes.live API Statistics"),
         description=_("Detailed request tracking and performance metrics"),
@@ -89,7 +93,11 @@ def build_stats_embed(api_stats: dict) -> discord.Embed:
     return embed
 
 
-def build_stats_charts(api_stats: dict) -> list[discord.Embed]:
+def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
+    # Fallback function if no translator provided
+    if _ is None:
+        def _(text): return text
+    
     chart_embeds: list[discord.Embed] = []
 
     # Success vs Failure pie
@@ -233,39 +241,44 @@ def build_stats_charts(api_stats: dict) -> list[discord.Embed]:
     return chart_embeds
 
 
-def build_stats_config_embed(save_config: dict) -> discord.Embed:
+def build_stats_config_embed(save_config: dict, _=None) -> discord.Embed:
+    # Fallback function if no translator provided
+    if _ is None:
+        def _(text): return text
+    
     embed = discord.Embed(
-        title="⚙️ API Statistics Save Configuration",
-        description="Current configuration for automatic saving of API statistics",
+        title=_("⚙️ API Statistics Save Configuration"),
+        description=_("Current configuration for automatic saving of API statistics"),
         color=0x00AAFF,
     )
     embed.add_field(
-        name="📊 Batch Saving",
+        name=_("📊 Batch Saving"),
         value=(
-            f"**Batch Size:** {save_config['batch_size']} requests\n"
-            f"**Current Count:** {save_config['requests_since_last_save']} requests"
+            _("**Batch Size:** {batch_size} requests\n**Current Count:** {current_count} requests").format(
+                batch_size=save_config['batch_size'],
+                current_count=save_config['requests_since_last_save']
+            )
         ),
         inline=True,
     )
     embed.add_field(
-        name="⏰ Time-Based Saving",
+        name=_("⏰ Time-Based Saving"),
         value=(
-            f"**Interval:** {save_config['time_interval']} seconds\n"
-            f"**Time Since Last Save:** {save_config['seconds_since_last_save']:.1f} seconds"
+            _("**Interval:** {interval} seconds\n**Time Since Last Save:** {time_since:.1f} seconds").format(
+                interval=save_config['time_interval'],
+                time_since=save_config['seconds_since_last_save']
+            )
         ),
         inline=True,
     )
     embed.add_field(
-        name="🔄 Save Strategy",
+        name=_("🔄 Save Strategy"),
         value=(
-            "**Hybrid Approach:** Save when either:\n"
-            "• Batch size is reached (10 requests)\n"
-            "• Time interval is reached (30 seconds)\n"
-            "• Whichever comes first"
+            _("**Hybrid Approach:** Save when either:\n• Batch size is reached (10 requests)\n• Time interval is reached (30 seconds)\n• Whichever comes first")
         ),
         inline=False,
     )
-    embed.set_footer(text="This prevents config spam while ensuring data persistence")
+    embed.set_footer(text=_("This prevents config spam while ensuring data persistence"))
     return embed
 
 

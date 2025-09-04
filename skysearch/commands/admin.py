@@ -404,9 +404,9 @@ class AdminCommands:
         """Show comprehensive API request statistics and charts."""
         await self.cog.api.wait_for_stats_initialization()
         api_stats = self.cog.api.get_request_stats()
-        embed = build_stats_embed(api_stats)
+        embed = build_stats_embed(api_stats, _)
         await ctx.send(embed=embed)
-        chart_embeds = build_stats_charts(api_stats)
+        chart_embeds = build_stats_charts(api_stats, _)
         if chart_embeds:
             try:
                 await ctx.send(embeds=chart_embeds)
@@ -451,7 +451,7 @@ class AdminCommands:
         try:
             await self.cog.api.wait_for_stats_initialization()
             save_config = self.cog.api.get_save_config()
-            embed = build_stats_config_embed(save_config)
+            embed = build_stats_config_embed(save_config, _)
             await ctx.send(embed=embed)
         except Exception as e:
             embed = discord.Embed(

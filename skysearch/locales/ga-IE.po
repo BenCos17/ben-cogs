@@ -589,3 +589,31 @@ msgstr "⚠️ Mionsonraí Earráide"
 
 msgid "Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save."
 msgstr "Úsáid 'skysearch apistats_reset' chun staitisticí a athshocraigh | 'skysearch apistats_save' chun sábháil de láimh."
+
+# Additional Stats Config
+msgid "⚙️ API Statistics Save Configuration"
+msgstr "⚙️ Cumraíocht Sábhála Staitisticí API"
+
+msgid "Current configuration for automatic saving of API statistics"
+msgstr "Cumraíocht reatha le haghaidh sábhála uathoibríoch staitisticí API"
+
+msgid "📊 Batch Saving"
+msgstr "📊 Sábháil Baisc"
+
+msgid "**Batch Size:** {batch_size} requests\n**Current Count:** {current_count} requests"
+msgstr "**Méid Baisc:** {batch_size} iarratais\n**Comhaireamh Reatha:** {current_count} iarratais"
+
+msgid "⏰ Time-Based Saving"
+msgstr "⏰ Sábháil Bunaithe ar Am"
+
+msgid "**Interval:** {interval} seconds\n**Time Since Last Save:** {time_since:.1f} seconds"
+msgstr "**Idirbhealach:** {interval} soicind\n**Am ón Sábháil Deireanach:** {time_since:.1f} soicind"
+
+msgid "🔄 Save Strategy"
+msgstr "🔄 Straitéis Sábhála"
+
+msgid "**Hybrid Approach:** Save when either:\n• Batch size is reached (10 requests)\n• Time interval is reached (30 seconds)\n• Whichever comes first"
+msgstr "**Cur Chuige Hibrideach:** Sábháil nuair a bhíonn ceachtar:\n• Méid baisc bainte amach (10 iarratais)\n• Idirbhealach ama bainte amach (30 soicind)\n• Cibé a thagann ar dtús"
+
+msgid "This prevents config spam while ensuring data persistence"
+msgstr "Coscann sé seo spam cumraíochta agus cinntíonn sé leanúnachas sonraí"
