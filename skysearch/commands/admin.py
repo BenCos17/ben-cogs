@@ -7,9 +7,13 @@ import asyncio
 import datetime
 import aiohttp
 from discord.ext import commands
+from redbot.core.i18n import Translator, cog_i18n
 from ..utils.stats import build_stats_embed, build_stats_charts, build_stats_config_embed
 
+_ = Translator("AdminCommands", __file__)
 
+
+@cog_i18n(_)
 class AdminCommands:
     """Admin-related commands for SkySearch."""
     
@@ -21,7 +25,7 @@ class AdminCommands:
         if channel:
             try:
                 await self.cog.config.guild(ctx.guild).alert_channel.set(channel.id)
-                embed = discord.Embed(description=f"Alert channel set to {channel.mention}", color=0xfffffe)
+                embed = discord.Embed(description=_("Alert channel set to {channel}").format(channel=channel.mention), color=0xfffffe)
                 await ctx.send(embed=embed)
             except Exception as e:
                 embed = discord.Embed(description=f"Error setting alert channel: {e}", color=0xff4545)
@@ -29,7 +33,7 @@ class AdminCommands:
         else:
             try:
                 await self.cog.config.guild(ctx.guild).alert_channel.clear()
-                embed = discord.Embed(description="Alert channel cleared. No more alerts will be sent.", color=0xfffffe)
+                embed = discord.Embed(description=_("Alert channel cleared. No more alerts will be sent."), color=0xfffffe)
                 await ctx.send(embed=embed)
             except Exception as e:
                 embed = discord.Embed(description=f"Error clearing alert channel: {e}", color=0xff4545)
@@ -40,7 +44,7 @@ class AdminCommands:
         if role:
             try:
                 await self.cog.config.guild(ctx.guild).alert_role.set(role.id)
-                embed = discord.Embed(description=f"Alert role set to {role.mention}", color=0xfffffe)
+                embed = discord.Embed(description=_("Alert role set to {role}").format(role=role.mention), color=0xfffffe)
                 await ctx.send(embed=embed)
             except Exception as e:
                 embed = discord.Embed(description=f"Error setting alert role: {e}", color=0xff4545)
@@ -48,7 +52,7 @@ class AdminCommands:
         else:
             try:
                 await self.cog.config.guild(ctx.guild).alert_role.clear()
-                embed = discord.Embed(description="Alert role cleared. No more role mentions will be made.", color=0xfffffe)
+                embed = discord.Embed(description=_("Alert role cleared. No more role mentions will be made."), color=0xfffffe)
                 await ctx.send(embed=embed)
             except Exception as e:
                 embed = discord.Embed(description=f"Error clearing alert role: {e}", color=0xff4545)
@@ -77,22 +81,22 @@ class AdminCommands:
                     minutes = int(duration)
                 
                 if minutes < 0:
-                    await ctx.send("Cooldown must be a positive number.")
+                    await ctx.send(_("Cooldown must be a positive number."))
                     return
                 
                 await self.cog.config.guild(ctx.guild).emergency_cooldown.set(minutes)
                 if minutes < 1:
-                    await ctx.send(f"Emergency alert cooldown set to {int(minutes * 60)} seconds.")
+                    await ctx.send(_("Emergency alert cooldown set to {seconds} seconds.").format(seconds=int(minutes * 60)))
                 else:
-                    await ctx.send(f"Emergency alert cooldown set to {int(minutes)} minutes.")
+                    await ctx.send(_("Emergency alert cooldown set to {minutes} minutes.").format(minutes=int(minutes)))
             except ValueError:
-                await ctx.send("Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds ('30s')")
+                await ctx.send(_("Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds ('30s')"))
         else:
             cooldown = await self.cog.config.guild(ctx.guild).emergency_cooldown()
             if cooldown < 1:
-                await ctx.send(f"Current emergency alert cooldown is {int(cooldown * 60)} seconds.")
+                await ctx.send(_("Current emergency alert cooldown is {seconds} seconds.").format(seconds=int(cooldown * 60)))
             else:
-                await ctx.send(f"Current emergency alert cooldown is {int(cooldown)} minutes.")
+                await ctx.send(_("Current emergency alert cooldown is {minutes} minutes.").format(minutes=int(cooldown)))
 
     async def autoicao(self, ctx, state: bool = None):
         """Enable or disable automatic ICAO lookup."""
@@ -100,10 +104,10 @@ class AdminCommands:
             auto_icao_state = await self.cog.config.guild(ctx.guild).auto_icao()
             auto_delete_state = await self.cog.config.guild(ctx.guild).auto_delete_not_found()
             
-            embed = discord.Embed(title="Auto Settings Status", color=0x2BBD8E)
+            embed = discord.Embed(title=_("Auto Settings Status"), color=0x2BBD8E)
             
             if auto_icao_state:
-                embed.add_field(name="ICAO Lookup", value="✅ **Enabled** - Automatic ICAO lookup is active", inline=False)
+                embed.add_field(name=_("ICAO Lookup"), value=_("✅ **Enabled** - Automatic ICAO lookup is active"), inline=False)
             else:
                 embed.add_field(name="ICAO Lookup", value="❌ **Disabled** - Automatic ICAO lookup is inactive", inline=False)
                 

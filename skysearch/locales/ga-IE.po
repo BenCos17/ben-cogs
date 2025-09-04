@@ -506,3 +506,86 @@ msgstr "Glan gach sos fuaraithe foláirimh don ghild seo (úinéir amháin)."
 #: skysearch.py:764
 msgid "✅ All alert cooldowns cleared for this guild."
 msgstr "✅ Gach sos fuaraithe foláirimh glanta don ghild seo."
+
+# Admin Commands
+msgid "Alert channel set to {channel}"
+msgstr "Cainéal foláirimh socraithe go {channel}"
+
+msgid "Alert channel cleared. No more alerts will be sent."
+msgstr "Cainéal foláirimh glanta. Ní sheolfar a thuilleadh foláirimh."
+
+msgid "Alert role set to {role}"
+msgstr "Ról foláirimh socraithe go {role}"
+
+msgid "Alert role cleared. No more role mentions will be made."
+msgstr "Ról foláirimh glanta. Ní dhéanfar a thuilleadh lua ról."
+
+msgid "Cooldown must be a positive number."
+msgstr "Ní mór uimhir dheimhneach a bheith sa sos fuaraithe."
+
+msgid "Emergency alert cooldown set to {seconds} seconds."
+msgstr "Sos fuaraithe foláirimh éigeandála socraithe go {seconds} soicind."
+
+msgid "Emergency alert cooldown set to {minutes} minutes."
+msgstr "Sos fuaraithe foláirimh éigeandála socraithe go {minutes} nóiméad."
+
+msgid "Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds ('30s')"
+msgstr "Formáid fad neamhbhailí. Úsáid uimhir (m.sh. '5'), nóiméid ('5m'), nó soicind ('30s')"
+
+msgid "Current emergency alert cooldown is {seconds} seconds."
+msgstr "Is é {seconds} soicind an sos fuaraithe foláirimh éigeandála reatha."
+
+msgid "Current emergency alert cooldown is {minutes} minutes."
+msgstr "Is é {minutes} nóiméad an sos fuaraithe foláirimh éigeandála reatha."
+
+msgid "Auto Settings Status"
+msgstr "Stádas Socrú Uathoibríoch"
+
+msgid "ICAO Lookup"
+msgstr "Cuardach ICAO"
+
+msgid "✅ **Enabled** - Automatic ICAO lookup is active"
+msgstr "✅ **Cumasaithe** - Tá cuardach ICAO uathoibríoch gníomhach"
+
+# Stats Utils
+msgid "📊 Airplanes.live API Statistics"
+msgstr "📊 Staitisticí API Airplanes.live"
+
+msgid "Detailed request tracking and performance metrics"
+msgstr "Rianú mionsonraithe iarratais agus méadracht feidhmíochta"
+
+msgid "📈 Overall Stats"
+msgstr "📈 Staitisticí Foriomlána"
+
+msgid "**Total Requests:** {total:,}\n**Success Rate:** {rate:.1f}%\n**Last Request:** {last}"
+msgstr "**Iarratais Iomlána:** {total:,}\n**Ráta Ratha:** {rate:.1f}%\n**Iarratas Deireanach:** {last}"
+
+msgid "Never"
+msgstr "Riamh"
+
+msgid "✅ Success/Failure"
+msgstr "✅ Rath/Teip"
+
+msgid "**Successful:** {success:,}\n**Failed:** {failed:,}\n**Rate Limited:** {rate_limited:,}"
+msgstr "**Rathúil:** {success:,}\n**Teip:** {failed:,}\n**Teoranta Ráta:** {rate_limited:,}"
+
+msgid "🌐 API Mode Usage"
+msgstr "🌐 Úsáid Mód API"
+
+msgid "**Primary:** {primary:,}\n**Fallback:** {fallback:,}"
+msgstr "**Bunscoile:** {primary:,}\n**Cúlphlean:** {fallback:,}"
+
+msgid "⚡ Performance"
+msgstr "⚡ Feidhmíocht"
+
+msgid "**Avg Response:** {avg:.3f}s\n**Last 24h:** {requests:,} requests"
+msgstr "**Freagairt Meán:** {avg:.3f}s\n**24u anuas:** {requests:,} iarratais"
+
+msgid "🔗 Top Endpoints"
+msgstr "🔗 Pointe Deiridh Barr"
+
+msgid "⚠️ Error Details"
+msgstr "⚠️ Mionsonraí Earráide"
+
+msgid "Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save."
+msgstr "Úsáid 'skysearch apistats_reset' chun staitisticí a athshocraigh | 'skysearch apistats_save' chun sábháil de láimh."

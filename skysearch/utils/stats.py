@@ -3,6 +3,9 @@ import json
 import urllib.parse
 import datetime
 import time
+from redbot.core.i18n import Translator
+
+_ = Translator("StatsUtils", __file__)
 
 
 def _quickchart_url(chart_config: dict, width: int, height: int) -> str:
@@ -16,46 +19,54 @@ def _quickchart_url(chart_config: dict, width: int, height: int) -> str:
 
 def build_stats_embed(api_stats: dict) -> discord.Embed:
     embed = discord.Embed(
-        title="📊 Airplanes.live API Statistics",
-        description="Detailed request tracking and performance metrics",
+        title=_("📊 Airplanes.live API Statistics"),
+        description=_("Detailed request tracking and performance metrics"),
         color=0x00FF00,
     )
 
     embed.add_field(
-        name="📈 Overall Stats",
+        name=_("📈 Overall Stats"),
         value=(
-            f"**Total Requests:** {api_stats['total_requests']:,}\n"
-            f"**Success Rate:** {api_stats['success_rate']:.1f}%\n"
-            f"**Last Request:** {api_stats.get('last_request_time_formatted', 'Never')}"
+            _("**Total Requests:** {total:,}\n**Success Rate:** {rate:.1f}%\n**Last Request:** {last}").format(
+                total=api_stats['total_requests'],
+                rate=api_stats['success_rate'],
+                last=api_stats.get('last_request_time_formatted', _('Never'))
+            )
         ),
         inline=True,
     )
 
     embed.add_field(
-        name="✅ Success/Failure",
+        name=_("✅ Success/Failure"),
         value=(
-            f"**Successful:** {api_stats['successful_requests']:,}\n"
-            f"**Failed:** {api_stats['failed_requests']:,}\n"
-            f"**Rate Limited:** {api_stats['rate_limited_requests']:,}"
+            _("**Successful:** {success:,}\n**Failed:** {failed:,}\n**Rate Limited:** {rate_limited:,}").format(
+                success=api_stats['successful_requests'],
+                failed=api_stats['failed_requests'],
+                rate_limited=api_stats['rate_limited_requests']
+            )
         ),
         inline=True,
     )
 
     embed.add_field(
-        name="🌐 API Mode Usage",
+        name=_("🌐 API Mode Usage"),
         value=(
-            f"**Primary:** {api_stats['api_mode_usage']['primary']:,}\n"
-            f"**Fallback:** {api_stats['api_mode_usage']['fallback']:,}"
+            _("**Primary:** {primary:,}\n**Fallback:** {fallback:,}").format(
+                primary=api_stats['api_mode_usage']['primary'],
+                fallback=api_stats['api_mode_usage']['fallback']
+            )
         ),
         inline=True,
     )
 
     if api_stats.get("avg_response_time", 0) > 0:
         embed.add_field(
-            name="⚡ Performance",
+            name=_("⚡ Performance"),
             value=(
-                f"**Avg Response:** {api_stats['avg_response_time']:.3f}s\n"
-                f"**Last 24h:** {api_stats['requests_last_24h']:,} requests"
+                _("**Avg Response:** {avg:.3f}s\n**Last 24h:** {requests:,} requests").format(
+                    avg=api_stats['avg_response_time'],
+                    requests=api_stats['requests_last_24h']
+                )
             ),
             inline=True,
         )
@@ -64,7 +75,7 @@ def build_stats_embed(api_stats: dict) -> discord.Embed:
     if endpoint_usage:
         top_endpoints = sorted(endpoint_usage.items(), key=lambda x: x[1], reverse=True)[:5]
         endpoint_text = "\n".join([f"**{endpoint}:** {count:,}" for endpoint, count in top_endpoints])
-        embed.add_field(name="🔗 Top Endpoints", value=endpoint_text, inline=False)
+        embed.add_field(name=_("🔗 Top Endpoints"), value=endpoint_text, inline=False)
 
     if api_stats.get("auth_failed_requests", 0) > 0 or api_stats.get("permission_denied_requests", 0) > 0:
         error_parts = []
@@ -72,9 +83,9 @@ def build_stats_embed(api_stats: dict) -> discord.Embed:
             error_parts.append(f"**Auth Failed:** {api_stats['auth_failed_requests']:,}")
         if api_stats.get("permission_denied_requests", 0) > 0:
             error_parts.append(f"**Permission Denied:** {api_stats['permission_denied_requests']:,}")
-        embed.add_field(name="⚠️ Error Details", value="\n".join(error_parts), inline=True)
+        embed.add_field(name=_("⚠️ Error Details"), value="\n".join(error_parts), inline=True)
 
-    embed.set_footer(text="Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save.")
+    embed.set_footer(text=_("Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save."))
     return embed
 
 
