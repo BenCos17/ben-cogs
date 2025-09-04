@@ -4,6 +4,7 @@ Aircraft commands for SkySearch cog
 
 import discord
 from redbot.core import commands
+from redbot.core.i18n import Translator
 import asyncio
 import urllib
 import os
@@ -14,6 +15,9 @@ from urllib.parse import quote_plus
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
 from ..utils.export import ExportManager
+
+# Internationalization
+_ = Translator("Skysearch", __file__)
 
 
 class AircraftCommands:
@@ -84,8 +88,8 @@ class AircraftCommands:
 
             await ctx.send(embed=embed, view=view)
         else:
-            embed = discord.Embed(title='No results found for your query', color=discord.Colour(0xff4545))
-            embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
+            embed = discord.Embed(title=_("No results found for your query"), color=discord.Colour(0xff4545))
+            embed.add_field(name=_("Details"), value=_("No aircraft information found or the response format is incorrect."), inline=False)
             await ctx.send(embed=embed)
 
     async def set_debug(self, ctx, enabled: bool):
@@ -160,8 +164,8 @@ class AircraftCommands:
             else:
                 await self.send_aircraft_info(ctx, {key: aircraft_list})
         else:
-            embed = discord.Embed(title="No results found for your query", color=discord.Colour(0xff4545))
-            embed.add_field(name="Details", value="No aircraft information found or the response format is incorrect.", inline=False)
+            embed = discord.Embed(title=_("No results found for your query"), color=discord.Colour(0xff4545))
+            embed.add_field(name=_("Details"), value=_("No aircraft information found or the response format is incorrect."), inline=False)
             await ctx.send(embed=embed)
 
     async def aircraft_by_callsign(self, ctx, callsign: str):
@@ -172,7 +176,7 @@ class AircraftCommands:
         if response:
             await self.send_aircraft_info(ctx, response)
         else:
-            embed = discord.Embed(title="Error", description="No aircraft found with the specified callsign.", color=0xff4545)
+            embed = discord.Embed(title=_("Error"), description=_("No aircraft found with the specified callsign."), color=0xff4545)
             await ctx.send(embed=embed)
 
     async def aircraft_by_reg(self, ctx, registration: str):
@@ -183,7 +187,7 @@ class AircraftCommands:
         if response:
             await self.send_aircraft_info(ctx, response)
         else:
-            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            embed = discord.Embed(title=_("Error"), description=_("Error retrieving aircraft information."), color=0xff4545)
             await ctx.send(embed=embed)
 
     async def aircraft_by_type(self, ctx, aircraft_type: str):
@@ -194,7 +198,7 @@ class AircraftCommands:
         if response:
             await self.send_aircraft_info(ctx, response)
         else:
-            embed = discord.Embed(title="Error", description="Error retrieving aircraft information.", color=0xff4545)
+            embed = discord.Embed(title=_("Error"), description=_("Error retrieving aircraft information."), color=0xff4545)
             await ctx.send(embed=embed)
 
     async def aircraft_by_squawk(self, ctx, squawk_value: str):
@@ -212,12 +216,12 @@ class AircraftCommands:
         """Export aircraft data to various formats."""
         # Map search_type to new REST API query parameters
         if search_type not in ["icao", "callsign", "squawk", "type"]:
-            embed = discord.Embed(title="Error", description="Invalid search type specified. Use one of: icao, callsign, squawk, or type.", color=0xfa4545)
+            embed = discord.Embed(title=_("Error"), description=_("Invalid search type specified. Use one of: icao, callsign, squawk, or type."), color=0xfa4545)
             await ctx.send(embed=embed)
             return
 
         if file_format not in ["csv", "pdf", "txt", "html"]:
-            embed = discord.Embed(title="Error", description="Invalid file format specified. Use one of: csv, pdf, txt, or html.", color=0xfa4545)
+            embed = discord.Embed(title=_("Error"), description=_("Invalid file format specified. Use one of: csv, pdf, txt, or html."), color=0xfa4545)
             await ctx.send(embed=embed)
             return
 
@@ -228,7 +232,7 @@ class AircraftCommands:
             icao_codes = [code.strip() for code in search_value.split() if code.strip()]
             
             if not icao_codes:
-                embed = discord.Embed(title="Error", description="No valid ICAO codes provided.", color=0xfa4545)
+                embed = discord.Embed(title=_("Error"), description=_("No valid ICAO codes provided."), color=0xfa4545)
                 await ctx.send(embed=embed)
                 return
             
@@ -247,7 +251,7 @@ class AircraftCommands:
             elif search_type == "type":
                 url = f"/?find_type={search_value}"
             else:
-                embed = discord.Embed(title="Error", description="Invalid search type specified.", color=0xfa4545)
+                embed = discord.Embed(title=_("Error"), description=_("Invalid search type specified."), color=0xfa4545)
                 await ctx.send(embed=embed)
                 return
 
@@ -256,7 +260,7 @@ class AircraftCommands:
                 all_aircraft = response['aircraft']
 
         if not all_aircraft:
-            embed = discord.Embed(title="Error", description="No aircraft data found.", color=0xfa4545)
+            embed = discord.Embed(title=_("Error"), description=_("No aircraft data found."), color=0xfa4545)
             await ctx.send(embed=embed)
             return
 
@@ -268,12 +272,12 @@ class AircraftCommands:
         if file_path:
             with open(file_path, 'rb') as fp:
                 # Create success embed showing export details
-                embed = discord.Embed(title="Export Complete", description=f"Successfully exported {aircraft_count} aircraft to {file_format.upper()} format.", color=0x2BBD8E)
-                embed.add_field(name="Search Type", value=search_type.capitalize(), inline=True)
-                embed.add_field(name="Search Value", value=search_value, inline=True)
-                embed.add_field(name="File Format", value=file_format.upper(), inline=True)
-                embed.add_field(name="Aircraft Count", value=f"{aircraft_count} aircraft", inline=True)
-                embed.add_field(name="File Name", value=os.path.basename(file_path), inline=True)
+                embed = discord.Embed(title=_("Export Complete"), description=_("Successfully exported {count} aircraft to {format} format.").format(count=aircraft_count, format=file_format.upper()), color=0x2BBD8E)
+                embed.add_field(name=_("Search Type"), value=search_type.capitalize(), inline=True)
+                embed.add_field(name=_("Search Value"), value=search_value, inline=True)
+                embed.add_field(name=_("File Format"), value=file_format.upper(), inline=True)
+                embed.add_field(name=_("Aircraft Count"), value=f"{aircraft_count} aircraft", inline=True)
+                embed.add_field(name=_("File Name"), value=os.path.basename(file_path), inline=True)
                 
                 await ctx.send(embed=embed, file=discord.File(fp, filename=os.path.basename(file_path)))
         else:
@@ -535,7 +539,7 @@ class AircraftCommands:
             direction_deg = aircraft_data.get('dir', 'Unknown')
             
             if distance_nmi != 'Unknown' and direction_deg != 'Unknown':
-                embed.description = f"**Distance:** {distance_nmi:.1f} nautical miles\n**Direction:** {direction_deg}° from your location"
+                embed.description = _("**Distance:** {distance} nautical miles\n**Direction:** {direction}° from your location").format(distance=distance_nmi, direction=direction_deg)
             
             # Aircraft description
             description = f"{aircraft_data.get('desc', 'N/A')}"
@@ -638,10 +642,10 @@ class AircraftCommands:
             await ctx.send(embed=embed, view=view)
             
         elif response and 'aircraft' in response and not response['aircraft']:
-            embed = discord.Embed(title="No Aircraft Found", description=f"No aircraft found within {radius} nautical miles of the specified location.", color=0xff4545)
+            embed = discord.Embed(title=_("No Aircraft Found"), description=_("No aircraft found within {radius} nautical miles of the specified location.").format(radius=radius), color=0xff4545)
             await ctx.send(embed=embed)
         else:
-            embed = discord.Embed(title="Error", description="Error retrieving closest aircraft information.", color=0xff4545)
+            embed = discord.Embed(title=_("Error"), description=_("Error retrieving closest aircraft information."), color=0xff4545)
             await ctx.send(embed=embed)
 
     async def scroll_planes(self, ctx, category: str = 'mil'):
@@ -664,7 +668,7 @@ class AircraftCommands:
             # After make_request, print the final URL used (if possible)
             # (If you want to print the rewritten URL, you would need to modify APIManager to return it or log it.)
             if not response:
-                embed = discord.Embed(title="Error", description="No response from the API.", color=0xff4545)
+                embed = discord.Embed(title=_("Error"), description=_("No response from the API."), color=0xff4545)
                 await ctx.send(embed=embed)
                 return
             aircraft_list = response.get('aircraft') or response.get('ac')

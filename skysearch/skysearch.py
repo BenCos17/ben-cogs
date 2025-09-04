@@ -12,6 +12,7 @@ import json
 import urllib.parse
 import logging
 from redbot.core import commands, Config
+from redbot.core.i18n import Translator, cog_i18n, set_contextual_locales_from_guild
 from discord.ext import tasks
 
 from .data.icao_codes import (
@@ -32,6 +33,11 @@ from .api.command_api import CommandAPI
 log = logging.getLogger("red.skysearch")
 
 
+# Internationalization
+_ = Translator("Skysearch", __file__)
+
+
+@cog_i18n(_)
 class Skysearch(commands.Cog, DashboardIntegration):
     """SkySearch - Aircraft tracking and information cog."""
     
@@ -122,22 +128,22 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await self.api.close()
 
     @commands.guild_only()
-    @commands.group(name='skysearch', help='Core menu for the cog', invoke_without_command=True)
+    @commands.group(name='skysearch', help=_('Core menu for the cog'), invoke_without_command=True)
     async def skysearch(self, ctx):
         """SkySearch command group"""
-        embed = discord.Embed(title="Thanks for using SkySearch", description="SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft.", color=0xfffffe)
-        embed.add_field(name="aircraft", value="Use `aircraft` to show available commands to fetch information about live aircraft and configure emergency squawk alerts.", inline=False)
-        embed.add_field(name="airport", value="Use `airport` to show available commands to fetch information and imagery of airports around the world.", inline=False)
-        embed.add_field(name="📊 API Monitoring", value="Use `skysearch apistats` to view API performance and usage statistics", inline=False)
+        embed = discord.Embed(title=_("Thanks for using SkySearch"), description=_("SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft."), color=0xfffffe)
+        embed.add_field(name="aircraft", value=_("Use `aircraft` to show available commands to fetch information about live aircraft and configure emergency squawk alerts."), inline=False)
+        embed.add_field(name="airport", value=_("Use `airport` to show available commands to fetch information and imagery of airports around the world."), inline=False)
+        embed.add_field(name="📊 API Monitoring", value=_("Use `skysearch apistats` to view API performance and usage statistics"), inline=False)
         await ctx.send(embed=embed)
     
     @commands.guild_only()
-    @skysearch.command(name='stats', help='Get statistics about SkySearch and the data used here')
+    @skysearch.command(name='stats', help=_('Get statistics about SkySearch and the data used here'))
     async def stats(self, ctx):
         """Get SkySearch statistics."""
         data = await self.api.get_stats()
 
-        embed = discord.Embed(title="SkySearch Statistics", description="Consolidated statistics and data sources for SkySearch.", color=0xfffffe)
+        embed = discord.Embed(title=_("SkySearch Statistics"), description=_("Consolidated statistics and data sources for SkySearch."), color=0xfffffe)
         embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
 
         if data:
@@ -152,68 +158,68 @@ class Skysearch(commands.Cog, DashboardIntegration):
         else:
             embed.add_field(name="Aircraft tracked right now", value="?", inline=False)
 
-        embed.add_field(name="This data appears in the following commands", value="`callsign` `icao` `reg` `squawk` `type` `radius` `pia` `mil` `ladd` `export`", inline=False)
-        embed.add_field(name="Law enforcement aircraft", value="**{:,}** tagged".format(len(self.law_enforcement_icao_set)), inline=True)
-        embed.add_field(name="Military & government aircraft", value="**{:,}** tagged".format(len(self.military_icao_set)), inline=True)
-        embed.add_field(name="Medical aircraft", value="**{:,}** tagged".format(len(self.medical_icao_set)), inline=True)
-        embed.add_field(name="Media aircraft", value="**{:,}** known".format(len(self.newsagency_icao_set)), inline=True)
-        embed.add_field(name="Damaged aircraft", value="**{:,}** known".format(len(self.global_prior_known_accident_set)), inline=True)
-        embed.add_field(name="Wartime aircraft", value="**{:,}** observed".format(len(self.ukr_conflict_set)), inline=True)
-        embed.add_field(name="Utility aircraft", value="**{:,}** spotted".format(len(self.agri_utility_set)), inline=True)
-        embed.add_field(name="Balloons", value="**{:,}** known".format(len(self.balloons_icao_set)), inline=True)
-        embed.add_field(name="Suspicious aircraft", value="**{:,}** identifiers".format(len(self.suspicious_icao_set)), inline=True)
-        embed.add_field(name="This data appears in the following commands", value="`callsign` `icao` `reg` `squawk` `type` `radius` `pia` `mil` `ladd`", inline=False)
-        embed.add_field(name="Other services", value="Additional data used in this cog is shown below", inline=False)
-        embed.add_field(name="Photography", value="Photos are powered by community contributions at [planespotters.net](https://www.planespotters.net/)", inline=True)
-        embed.add_field(name="Airport data", value="Airport data is powered by the [airport-data.com](https://airport-data.com/) API service", inline=True)
-        embed.add_field(name="Runway data", value="Runway data is powered by the [airportdb.io](https://airportdb.io) API service", inline=True)
-        embed.add_field(name="Mapping and imagery", value="Mapping and ground imagery powered by [Google Maps](https://maps.google.com) and the [Maps Static API](https://developers.google.com/maps/documentation/maps-static)", inline=False)
+        embed.add_field(name=_("This data appears in the following commands"), value="`callsign` `icao` `reg` `squawk` `type` `radius` `pia` `mil` `ladd` `export`", inline=False)
+        embed.add_field(name=_("Law enforcement aircraft"), value="**{:,}** tagged".format(len(self.law_enforcement_icao_set)), inline=True)
+        embed.add_field(name=_("Military & government aircraft"), value="**{:,}** tagged".format(len(self.military_icao_set)), inline=True)
+        embed.add_field(name=_("Medical aircraft"), value="**{:,}** tagged".format(len(self.medical_icao_set)), inline=True)
+        embed.add_field(name=_("Media aircraft"), value="**{:,}** known".format(len(self.newsagency_icao_set)), inline=True)
+        embed.add_field(name=_("Damaged aircraft"), value="**{:,}** known".format(len(self.global_prior_known_accident_set)), inline=True)
+        embed.add_field(name=_("Wartime aircraft"), value="**{:,}** observed".format(len(self.ukr_conflict_set)), inline=True)
+        embed.add_field(name=_("Utility aircraft"), value="**{:,}** spotted".format(len(self.agri_utility_set)), inline=True)
+        embed.add_field(name=_("Balloons"), value="**{:,}** known".format(len(self.balloons_icao_set)), inline=True)
+        embed.add_field(name=_("Suspicious aircraft"), value="**{:,}** identifiers".format(len(self.suspicious_icao_set)), inline=True)
+        embed.add_field(name=_("This data appears in the following commands"), value="`callsign` `icao` `reg` `squawk` `type` `radius` `pia` `mil` `ladd`", inline=False)
+        embed.add_field(name=_("Other services"), value=_("Additional data used in this cog is shown below"), inline=False)
+        embed.add_field(name=_("Photography"), value=_("Photos are powered by community contributions at [planespotters.net](https://www.planespotters.net/)"), inline=True)
+        embed.add_field(name=_("Airport data"), value=_("Airport data is powered by the [airport-data.com](https://airport-data.com/) API service"), inline=True)
+        embed.add_field(name=_("Runway data"), value=_("Runway data is powered by the [airportdb.io](https://airportdb.io) API service"), inline=True)
+        embed.add_field(name=_("Mapping and imagery"), value=_("Mapping and ground imagery powered by [Google Maps](https://maps.google.com) and the [Maps Static API](https://developers.google.com/maps/documentation/maps-static)"), inline=False)
 
         await ctx.send(embed=embed)
 
     @commands.guild_only()
-    @skysearch.command(name='apistats', help='View comprehensive API request statistics, performance metrics, and usage analytics')
+    @skysearch.command(name='apistats', help=_('View comprehensive API request statistics, performance metrics, and usage analytics'))
     async def apistats(self, ctx):
         """Get detailed API request statistics (delegates to AdminCommands)."""
         await self.admin_commands.apistats(ctx)
 
     @commands.guild_only()
     @commands.is_owner()
-    @skysearch.command(name='apistats_reset', help='Reset API request statistics (owner only)')
+    @skysearch.command(name='apistats_reset', help=_('Reset API request statistics (owner only)'))
     async def apistats_reset(self, ctx):
         """Reset API request statistics (delegates to AdminCommands)."""
         await self.admin_commands.apistats_reset(ctx)
 
     @commands.guild_only()
     @commands.is_owner()
-    @skysearch.command(name='apistats_save', help='Manually save API statistics to config (owner only)')
+    @skysearch.command(name='apistats_save', help=_('Manually save API statistics to config (owner only)'))
     async def apistats_save(self, ctx):
         """Manually save API statistics to config (delegates to AdminCommands)."""
         await self.admin_commands.apistats_save(ctx)
 
     @commands.guild_only()
     @commands.is_owner()
-    @skysearch.command(name='apistats_config', help='View API statistics auto-save configuration and current status (owner only)')
+    @skysearch.command(name='apistats_config', help=_('View API statistics auto-save configuration and current status (owner only)'))
     async def apistats_config(self, ctx):
         """View API statistics saving configuration (delegates to AdminCommands)."""
         await self.admin_commands.apistats_config(ctx)
 
     # Aircraft commands
     @commands.guild_only()
-    @commands.group(name='aircraft', help='Command center for aircraft related commands and API monitoring', invoke_without_command=True)
+    @commands.group(name='aircraft', help=_('Command center for aircraft related commands and API monitoring'), invoke_without_command=True)
     async def aircraft_group(self, ctx):
         """Command center for aircraft related commands and API monitoring"""
-        embed = discord.Embed(title="Aircraft Commands", description="Available aircraft-related commands and API monitoring:", color=0xfffffe)
-        embed.add_field(name="Search Commands", value="`icao` `callsign` `reg` `type` `squawk` `radius` `closest`", inline=False)
-        embed.add_field(name="Special Aircraft", value="`military` `ladd` `pia`", inline=False)
-        embed.add_field(name="Export", value="`export` - Export aircraft data to CSV, PDF, TXT, or HTML", inline=False)
-        embed.add_field(name="Configuration", value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
-        embed.add_field(name="Other", value="`scroll` - Scroll through available planes", inline=False)
+        embed = discord.Embed(title=_("Aircraft Commands"), description=_("Available aircraft-related commands and API monitoring:"), color=0xfffffe)
+        embed.add_field(name=_("Search Commands"), value="`icao` `callsign` `reg` `type` `squawk` `radius` `closest`", inline=False)
+        embed.add_field(name=_("Special Aircraft"), value="`military` `ladd` `pia`", inline=False)
+        embed.add_field(name=_("Export"), value=_("`export` - Export aircraft data to CSV, PDF, TXT, or HTML"), inline=False)
+        embed.add_field(name=_("Configuration"), value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
+        embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes"), inline=False)
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
-            embed.add_field(name="Debug", value="`debugapi` - Debug API issues (owner only)\n`debugtoggle` - Toggle debug output for lookups (owner only)\n`debug` - Run a debug lookup (owner only)", inline=False)
-        embed.add_field(name="📊 API Monitoring", value="Use `skysearch apistats` to view API performance and usage statistics", inline=False)
-        embed.add_field(name="Detailed Help", value="Use `*help aircraft` for detailed command information", inline=False)
+            embed.add_field(name=_("Debug"), value=_("`debugapi` - Debug API issues (owner only)\n`debugtoggle` - Toggle debug output for lookups (owner only)\n`debug` - Run a debug lookup (owner only)"), inline=False)
+        embed.add_field(name="📊 API Monitoring", value=_("Use `skysearch apistats` to view API performance and usage statistics"), inline=False)
+        embed.add_field(name=_("Detailed Help"), value=_("Use `*help aircraft` for detailed command information"), inline=False)
         await ctx.send(embed=embed)
 
     # Delegate aircraft commands to the aircraft module
@@ -461,6 +467,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                             continue
                         guilds = self.bot.guilds
                         for guild in guilds:
+                            # In non-command contexts set locales explicitly
+                            await set_contextual_locales_from_guild(self.bot, guild)
                             guild_config = self.config.guild(guild)
                             alert_channel_id = await guild_config.alert_channel()
                             if alert_channel_id:
@@ -541,7 +549,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     
                                     # Check if aircraft has landed
                                     if aircraft_info.get('altitude') is not None and aircraft_info.get('altitude') < 25:
-                                        embed = discord.Embed(title="Aircraft landed", description=f"Aircraft {aircraft_info.get('hex')} has landed while squawking {squawk_code}.", color=0x00ff00)
+                                        embed = discord.Embed(title=_("Aircraft landed"), description=_("Aircraft {hex} has landed while squawking {squawk}.").format(hex=aircraft_info.get('hex'), squawk=squawk_code), color=0x00ff00)
                                         await alert_channel.send(embed=embed)
                                 else:
                                     # Only log if channel was set but not found (actual error)
@@ -564,6 +572,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
         if message.guild is None:
             return
+
+        # Ensure locales for non-command listener
+        await set_contextual_locales_from_guild(self.bot, message.guild)
 
         auto_icao = await self.config.guild(message.guild).auto_icao()
         if not auto_icao:
@@ -589,17 +600,17 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Validate squawk code
         emergency_squawk_codes = ['7500', '7600', '7700']
         if squawk_code not in emergency_squawk_codes:
-            await ctx.send(f"❌ Invalid squawk code. Valid codes are: {', '.join(emergency_squawk_codes)}")
+            await ctx.send(_("❌ Invalid squawk code. Valid codes are: {codes}").format(codes=', '.join(emergency_squawk_codes)))
             return
             
         # Validate hex code format
         if not hex_code or len(hex_code) != 6 or not all(c in '0123456789ABCDEFabcdef' for c in hex_code):
-            await ctx.send("❌ Invalid hex code. Must be 6 hexadecimal characters (e.g., ABC123)")
+            await ctx.send(_("❌ Invalid hex code. Must be 6 hexadecimal characters (e.g., ABC123)"))
             return
             
         hex_code = hex_code.upper()
         
-        await ctx.send(f"🧪 Simulating emergency alert: {hex_code} squawking {squawk_code}...")
+        await ctx.send(_("🧪 Simulating emergency alert: {hex} squawking {squawk}...").format(hex=hex_code, squawk=squawk_code))
         
         # Create realistic fake aircraft data
         fake_aircraft = {
@@ -620,7 +631,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         alert_channel_id = await guild_config.alert_channel()
         
         if not alert_channel_id:
-            await ctx.send("❌ No alert channel configured. Use `*aircraft alertchannel #channel` first.")
+            await ctx.send(_("❌ No alert channel configured. Use `*aircraft alertchannel #channel` first."))
             return
             
         # Check cooldown (same logic as background task)
@@ -640,7 +651,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         
         alert_channel = self.bot.get_channel(alert_channel_id)
         if not alert_channel:
-            await ctx.send(f"❌ Alert channel {alert_channel_id} not found")
+            await ctx.send(_("❌ Alert channel {channel_id} not found").format(channel_id=alert_channel_id))
             return
             
         # Update timestamp (same as background task)
@@ -742,7 +753,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Let other cogs react after the message is sent
         await self.squawk_api.run_post_send(guild, fake_aircraft, squawk_code, sent_message)
         
-        await ctx.send(f"✅ Simulated emergency alert sent! Check #{alert_channel.name} and console logs.")
+        await ctx.send(_("✅ Simulated emergency alert sent! Check #{channel} and console logs.").format(channel=alert_channel.name))
 
     @commands.is_owner()
     @aircraft_group.command(name="clearalertcooldowns")
@@ -750,6 +761,6 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Clear all alert cooldowns for this guild (owner only)."""
         guild_config = self.config.guild(ctx.guild)
         await guild_config.last_alerts.set({})
-        await ctx.send("✅ All alert cooldowns cleared for this guild.")
+        await ctx.send(_("✅ All alert cooldowns cleared for this guild."))
         
         
