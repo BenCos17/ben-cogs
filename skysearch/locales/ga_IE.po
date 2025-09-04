@@ -14,131 +14,141 @@ msgstr ""
 #: skysearch.py:42
 #, docstring
 msgid "SkySearch - Aircraft tracking and information cog."
-msgstr ""
+msgstr "SkySearch - Crog rianaithe agus eolais ar aerárthaí."
 
 #: skysearch.py:133
 #, docstring
 msgid "SkySearch command group"
-msgstr ""
+msgstr "Grúpa ordaithe SkySearch"
 
 #: skysearch.py:134
 msgid "Thanks for using SkySearch"
-msgstr ""
+msgstr "Go raibh maith agat as SkySearch a úsáid"
 
 #: skysearch.py:134
 msgid "SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft."
-msgstr ""
+msgstr "Is uirlis OSINT chumhachtach, éasca le húsáid é SkySearch chun aerárthaí a rianú."
 
 #: skysearch.py:135
 msgid ""
 "Use `aircraft` to show available commands to fetch information about live "
 "aircraft and configure emergency squawk alerts."
 msgstr ""
+"Úsáid `aircraft` chun orduithe atá ar fáil a thaispeáint chun eolas faoi "
+"aerárthaí beo a fháil agus foláirimh squawk éigeandála a chumrú."
 
 #: skysearch.py:136
 msgid ""
 "Use `airport` to show available commands to fetch information and imagery of"
 " airports around the world."
 msgstr ""
+"Úsáid `airport` chun orduithe atá ar fáil a thaispeáint chun eolas agus "
+"íomhánna d'aerfoirt ar fud an domhain a fháil."
 
 #: skysearch.py:137 skysearch.py:221
 msgid "Use `skysearch apistats` to view API performance and usage statistics"
-msgstr ""
+msgstr "Úsáid `skysearch apistats` chun feidhmíocht agus staitisticí úsáide API a fheiceáil"
 
 #: skysearch.py:143
 #, docstring
 msgid "Get SkySearch statistics."
-msgstr ""
+msgstr "Faigh staitisticí SkySearch."
 
 #: skysearch.py:146
 msgid "SkySearch Statistics"
-msgstr ""
+msgstr "Staitisticí SkySearch"
 
 #: skysearch.py:146
 msgid "Consolidated statistics and data sources for SkySearch."
-msgstr ""
+msgstr "Staitisticí comhdhlúite agus foinsí sonraí do SkySearch."
 
 #: skysearch.py:161 skysearch.py:171
 msgid "This data appears in the following commands"
-msgstr ""
+msgstr "Tá na sonraí seo le feiceáil sna horduithe seo a leanas"
 
 #: skysearch.py:162
 msgid "Law enforcement aircraft"
-msgstr ""
+msgstr "Aerárthaí forfheidhmithe dlí"
 
 #: skysearch.py:163
 msgid "Military & government aircraft"
-msgstr ""
+msgstr "Aerárthaí míleata agus rialtais"
 
 #: skysearch.py:164
 msgid "Medical aircraft"
-msgstr ""
+msgstr "Aerárthaí leighis"
 
 #: skysearch.py:165
 msgid "Media aircraft"
-msgstr ""
+msgstr "Aerárthaí meán"
 
 #: skysearch.py:166
 msgid "Damaged aircraft"
-msgstr ""
+msgstr "Aerárthaí damáistithe"
 
 #: skysearch.py:167
 msgid "Wartime aircraft"
-msgstr ""
+msgstr "Aerárthaí cogaidh"
 
 #: skysearch.py:168
 msgid "Utility aircraft"
-msgstr ""
+msgstr "Aerárthaí fóntais"
 
 #: skysearch.py:169
 msgid "Balloons"
-msgstr ""
+msgstr "Balúin"
 
 #: skysearch.py:170
 msgid "Suspicious aircraft"
-msgstr ""
+msgstr "Aerárthaí amhrasacha"
 
 #: skysearch.py:172
 msgid "Other services"
-msgstr ""
+msgstr "Seirbhísí eile"
 
 #: skysearch.py:172
 msgid "Additional data used in this cog is shown below"
-msgstr ""
+msgstr "Sonraí breise a úsáidtear sa chrog seo thíos"
 
 #: skysearch.py:173
 msgid "Photography"
-msgstr ""
+msgstr "Grianghrafadóireacht"
 
 #: skysearch.py:173
 msgid ""
 "Photos are powered by community contributions at "
 "[planespotters.net](https://www.planespotters.net/)"
 msgstr ""
+"Cumhachtaítear na grianghraif le ranníocaíochtaí pobail ag "
+"[planespotters.net](https://www.planespotters.net/)"
 
 #: skysearch.py:174
 msgid "Airport data"
-msgstr ""
+msgstr "Sonraí aerfoirt"
 
 #: skysearch.py:174
 msgid ""
 "Airport data is powered by the [airport-data.com](https://airport-data.com/)"
 " API service"
 msgstr ""
+"Cumhachtaítear sonraí aerfoirt ag seirbhís API "
+"[airport-data.com](https://airport-data.com/)"
 
 #: skysearch.py:175
 msgid "Runway data"
-msgstr ""
+msgstr "Sonraí ráillí"
 
 #: skysearch.py:175
 msgid ""
 "Runway data is powered by the [airportdb.io](https://airportdb.io) API "
 "service"
 msgstr ""
+"Cumhachtaítear sonraí ráillí ag seirbhís API "
+"[airportdb.io](https://airportdb.io)"
 
 #: skysearch.py:176
 msgid "Mapping and imagery"
-msgstr ""
+msgstr "Léarscáiliú agus íomhánna"
 
 #: skysearch.py:176
 msgid ""
@@ -146,71 +156,74 @@ msgid ""
 " and the [Maps Static "
 "API](https://developers.google.com/maps/documentation/maps-static)"
 msgstr ""
+"Cumhachtaítear léarscáiliú agus íomhánna talún ag "
+"[Google Maps](https://maps.google.com) agus an [Maps Static API]"
+"(https://developers.google.com/maps/documentation/maps-static)"
 
 #: skysearch.py:183
 #, docstring
 msgid "Get detailed API request statistics (delegates to AdminCommands)."
-msgstr ""
+msgstr "Faigh staitisticí mionsonraithe iarratais API (ionadaíonn do AdminCommands)."
 
 #: skysearch.py:190
 #, docstring
 msgid "Reset API request statistics (delegates to AdminCommands)."
-msgstr ""
+msgstr "Athshocraigh staitisticí iarratais API (úinéir amháin)."
 
 #: skysearch.py:197
 #, docstring
 msgid "Manually save API statistics to config (delegates to AdminCommands)."
-msgstr ""
+msgstr "Sábháil staitisticí API de láimh sa chumraíocht (úinéir amháin)."
 
 #: skysearch.py:204
 #, docstring
 msgid "View API statistics saving configuration (delegates to AdminCommands)."
-msgstr ""
+msgstr "Féach ar chumraíocht sábhála staitisticí API (úinéir amháin)."
 
 #: skysearch.py:211
 #, docstring
 msgid "Command center for aircraft related commands and API monitoring"
-msgstr ""
+msgstr "Lárionad orduithe le haghaidh orduithe aerárthaí agus monatóireacht API"
 
 #: skysearch.py:212
 msgid "Aircraft Commands"
-msgstr ""
+msgstr "Orduithe Aerárthaí"
 
 #: skysearch.py:212
 msgid "Available aircraft-related commands and API monitoring:"
-msgstr ""
+msgstr "Orduithe aerárthaí atá ar fáil agus monatóireacht API:"
 
 #: skysearch.py:213
 msgid "Search Commands"
-msgstr ""
+msgstr "Orduithe Cuardaigh"
 
 #: skysearch.py:214
 msgid "Special Aircraft"
-msgstr ""
+msgstr "Aerárthaí Speisialta"
 
 #: skysearch.py:215
 msgid "Export"
-msgstr ""
+msgstr "Easpórtáil"
 
 #: skysearch.py:215
 msgid "`export` - Export aircraft data to CSV, PDF, TXT, or HTML"
-msgstr ""
+msgstr "`export` - Easpórtáil sonraí aerárthaí go CSV, PDF, TXT, nó HTML"
 
 #: skysearch.py:216
 msgid "Configuration"
-msgstr ""
+msgstr "Cumraíocht"
 
 #: skysearch.py:217
 msgid "Other"
-msgstr ""
+msgstr "Eile"
 
 #: skysearch.py:217
 msgid "`scroll` - Scroll through available planes"
-msgstr ""
+msgstr "`scroll` - Scaoll trí eitleáin atá ar fáil"
 
 #: skysearch.py:220
 msgid "Debug"
-msgstr ""
+msgstr "Dífhabhtú"
 
 #: skysearch.py:220
 msgid ""
@@ -218,14 +231,17 @@ msgid ""
 "`debugtoggle` - Toggle debug output for lookups (owner only)\n"
 "`debug` - Run a debug lookup (owner only)"
 msgstr ""
+"`debugapi` - Ceisteanna API a dhífhabhtú (úinéir amháin)\n"
+"`debugtoggle` - Scoránaigh aschur dífhabhtaithe do chuardaigh (úinéir amháin)\n"
+"`debug` - Rith cuardach dífhabhtaithe (úinéir amháin)"
 
 #: skysearch.py:222
 msgid "Detailed Help"
-msgstr ""
+msgstr "Cabhair Mhionsonraithe"
 
 #: skysearch.py:222
 msgid "Use `*help aircraft` for detailed command information"
-msgstr ""
+msgstr "Úsáid `*help aircraft` le haghaidh faisnéise ordaithe mionsonraithe"
 
 #: skysearch.py:228
 #, docstring
