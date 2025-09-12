@@ -492,6 +492,92 @@ class Bible(commands.Cog):
         except Exception as e:
             await ctx.send(f"❌ **Error**: {str(e)}")
 
+    @bible_group.command(name="quickbible", aliases=["qb"])
+    @commands.is_owner()
+    async def quick_bible_test(self, ctx):
+        """Quick test to find a working English Bible."""
+        api_key = await self.config.api_key()
+        if not api_key:
+            await ctx.send("❌ API key not set.")
+            return
+
+        await ctx.send("🔍 Quick test - finding a working English Bible...")
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=15, connect=5)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                headers = {"api-key": api_key}
+                
+                # Get all Bibles without any filters
+                async with session.get(
+                    "https://api.scripture.api.bible/v1/bibles",
+                    headers=headers
+                ) as response:
+                    if response.status != 200:
+                        await ctx.send(f"❌ Failed to get Bibles: {response.status}")
+                        return
+                    
+                    data = await response.json()
+                    bibles = data.get("data", [])
+                    
+                    if not bibles:
+                        await ctx.send("❌ No Bibles found.")
+                        return
+                    
+                    # Look for English Bibles
+                    english_bibles = []
+                    for bible in bibles:
+                        lang = bible.get("language", {})
+                        lang_name = lang.get("name", "").lower()
+                        lang_id = lang.get("id", "").lower()
+                        
+                        if "english" in lang_name or lang_id == "eng":
+                            english_bibles.append(bible)
+                            if len(english_bibles) >= 3:  # Limit to 3 for quick test
+                                break
+                    
+                    if not english_bibles:
+                        await ctx.send("❌ No English Bibles found in the list.")
+                        return
+                    
+                    await ctx.send(f"📚 Found {len(english_bibles)} English Bibles. Testing for access...")
+                    
+                    # Test English Bibles for access
+                    working_bibles = []
+                    for i, bible in enumerate(english_bibles, 1):
+                        bible_id = bible.get("id")
+                        bible_name = bible.get("name", "Unknown")
+                        bible_abbr = bible.get("abbreviation", "N/A")
+                        
+                        if not bible_id:
+                            continue
+                            
+                        # Test basic access
+                        try:
+                            async with session.get(
+                                f"https://api.scripture.api.bible/v1/bibles/{bible_id}",
+                                headers=headers
+                            ) as test_response:
+                                if test_response.status == 200:
+                                    working_bibles.append((bible_id, bible_name, bible_abbr))
+                                    await ctx.send(f"✅ **{i}**: `{bible_id}` - {bible_name} ({bible_abbr})")
+                                else:
+                                    await ctx.send(f"❌ **{i}**: `{bible_id}` - {bible_name} - Error {test_response.status}")
+                        except Exception as e:
+                            await ctx.send(f"❌ **{i}**: `{bible_id}` - {bible_name} - Connection error")
+                    
+                    if working_bibles:
+                        # Use the first working English Bible
+                        test_bible_id, test_bible_name, test_bible_abbr = working_bibles[0]
+                        await ctx.send(f"\n🎉 **Found working English Bible**: {test_bible_name}")
+                        await ctx.send(f"💡 **Set as default**: `*bible config bible_id {test_bible_id}`")
+                        await ctx.send(f"💡 **Test it**: `*bible verse John 3:16`")
+                    else:
+                        await ctx.send("❌ No working English Bibles found.")
+                        
+        except Exception as e:
+            await ctx.send(f"❌ **Error**: {str(e)}")
+
     @bible_group.command(name="listbibles", aliases=["lb"])
     @commands.is_owner()
     async def list_all_bibles(self, ctx):
@@ -593,7 +679,9 @@ class Bible(commands.Cog):
             await ctx.send(f"🔍 Searching for Bibles in {language.upper()}" + (f" with abbreviation {abbreviation.upper()}" if abbreviation else ""))
 
         try:
-            async with aiohttp.ClientSession() as session:
+            # Add timeout and connection settings
+            timeout = aiohttp.ClientTimeout(total=30, connect=10)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 headers = {"api-key": api_key}
                 
                 # Build search parameters - try different approaches
