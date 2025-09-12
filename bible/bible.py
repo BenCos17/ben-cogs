@@ -597,7 +597,9 @@ class Bible(commands.Cog):
                 headers = {"api-key": api_key}
                 
                 # Build search parameters - try different approaches
-                params = {"language": language}
+                params = {}
+                if language:
+                    params["language"] = language
                 if abbreviation:
                     params["abbreviation"] = abbreviation
                 
@@ -622,7 +624,9 @@ class Bible(commands.Cog):
                 # If first attempt failed, try without abbreviation
                 if not response or response.status != 200:
                     try:
-                        params_no_abbr = {"language": language}
+                        params_no_abbr = {}
+                        if language:
+                            params_no_abbr["language"] = language
                         async with session.get(
                             "https://api.scripture.api.bible/v1/bibles",
                             headers=headers,
