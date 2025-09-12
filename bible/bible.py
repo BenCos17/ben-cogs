@@ -409,12 +409,20 @@ class Bible(commands.Cog):
                 headers = {"api-key": api_key}
                 
                 url = f"https://api.scripture.api.bible/v1/bibles/{bible_id}/search"
-                params = {"query": query, "limit": 10}
+                params = {
+                    "query": query, 
+                    "limit": 10,
+                    "sort": "relevance"
+                }
                 
                 async with session.get(url, headers=headers, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
                         await self._send_search_results(ctx, data, query)
+                    elif response.status == 401:
+                        await ctx.send("❌ Unauthorized. Please check your API key.")
+                    elif response.status == 403:
+                        await ctx.send("❌ Not authorized to search this Bible. Your API key may not have search permissions.")
                     elif response.status == 404:
                         await ctx.send("❌ No results found for your search.")
                     else:
@@ -523,14 +531,16 @@ class Bible(commands.Cog):
 
     async def _send_search_results(self, ctx, data, query):
         """Send search results as embeds."""
-        results = data.get("data", {}).get("verses", [])
+        search_data = data.get("data", {})
+        verses = search_data.get("verses", [])
+        total = search_data.get("total", 0)
         
-        if not results:
+        if not verses:
             await ctx.send(f"❌ No results found for '{query}'.")
             return
 
         embeds = []
-        for i, verse in enumerate(results[:5], 1):  # Limit to 5 results
+        for i, verse in enumerate(verses[:5], 1):  # Limit to 5 results
             content = verse.get("text", "")
             reference = verse.get("reference", "")
             
@@ -548,6 +558,15 @@ class Bible(commands.Cog):
                     color=discord.Color.green()
                 )
                 embed.add_field(name="Reference", value=reference, inline=False)
+                
+                # Add total results info
+                if i == 1 and total > 0:
+                    embed.add_field(
+                        name="Total Results", 
+                        value=f"{total} verses found", 
+                        inline=False
+                    )
+                
                 embed.set_footer(text=f"Search: '{query}' | Powered by API.Bible")
                 embeds.append(embed)
         
