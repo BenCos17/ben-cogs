@@ -492,74 +492,42 @@ class Bible(commands.Cog):
         except Exception as e:
             await ctx.send(f"❌ **Error**: {str(e)}")
 
-    @bible_group.command(name="searchbibles", aliases=["sb"])
+    @bible_group.command(name="listbibles", aliases=["lb"])
     @commands.is_owner()
-    async def search_bibles(self, ctx, language: str = "en", abbreviation: str = None):
-        """Search for specific Bible translations by language and abbreviation.
-        
-        Examples:
-        - [p]bible searchbibles en KJV
-        - [p]bible searchbibles en NIV
-        - [p]bible searchbibles es
-        """
+    async def list_all_bibles(self, ctx):
+        """List all available Bibles and test them for access."""
         api_key = await self.config.api_key()
         if not api_key:
             await ctx.send("❌ API key not set.")
             return
 
-        await ctx.send(f"🔍 Searching for Bibles in {language.upper()}" + (f" with abbreviation {abbreviation.upper()}" if abbreviation else ""))
+        await ctx.send("🔍 Getting all available Bibles...")
 
         try:
             async with aiohttp.ClientSession() as session:
                 headers = {"api-key": api_key}
                 
-                # Build search parameters - try different approaches
-                params = {"language": language}
-                if abbreviation:
-                    params["abbreviation"] = abbreviation
-                
-                # First try with the parameters
+                # Get all Bibles without any filters
                 async with session.get(
                     "https://api.scripture.api.bible/v1/bibles",
-                    headers=headers,
-                    params=params
+                    headers=headers
                 ) as response:
-                    if response.status == 400:
-                        # If 400 error, try without abbreviation first
-                        await ctx.send("⚠️ 400 error with abbreviation, trying without...")
-                        params = {"language": language}
-                        async with session.get(
-                            "https://api.scripture.api.bible/v1/bibles",
-                            headers=headers,
-                            params=params
-                        ) as response2:
-                            if response2.status != 200:
-                                await ctx.send(f"❌ Failed to search Bibles: {response2.status}")
-                                return
-                            response = response2
-                    elif response.status != 200:
-                        await ctx.send(f"❌ Failed to search Bibles: {response.status}")
+                    if response.status != 200:
+                        await ctx.send(f"❌ Failed to get Bibles: {response.status}")
                         return
                     
                     data = await response.json()
                     bibles = data.get("data", [])
                     
                     if not bibles:
-                        await ctx.send(f"❌ No Bibles found for language '{language}'" + (f" and abbreviation '{abbreviation}'" if abbreviation else ""))
+                        await ctx.send("❌ No Bibles found.")
                         return
                     
-                    # Filter by abbreviation if provided and we got results
-                    if abbreviation and len(bibles) > 1:
-                        filtered_bibles = [b for b in bibles if b.get("abbreviation", "").upper() == abbreviation.upper()]
-                        if filtered_bibles:
-                            bibles = filtered_bibles
-                            await ctx.send(f"🔍 Filtered to {len(bibles)} Bibles matching abbreviation '{abbreviation.upper()}'")
+                    await ctx.send(f"📚 Found {len(bibles)} total Bibles. Testing first 5 for access...")
                     
-                    await ctx.send(f"📚 Found {len(bibles)} Bibles. Testing first 3 for access...")
-                    
-                    # Test first 3 Bibles for access
+                    # Test first 5 Bibles for access
                     working_bibles = []
-                    for i, bible in enumerate(bibles[:3]):
+                    for i, bible in enumerate(bibles[:5]):
                         bible_id = bible.get("id")
                         bible_name = bible.get("name", "Unknown")
                         bible_abbr = bible.get("abbreviation", "N/A")
@@ -595,7 +563,152 @@ class Bible(commands.Cog):
                                 await ctx.send(f"❌ **Search Not Available**: {test_bible_name} (Error {search_response.status})")
                                 await ctx.send(f"💡 **Recommendation**: Use `[p]bible config bible_id {test_bible_id}` and use `[p]bible searchalt` for search")
                     else:
-                        await ctx.send("❌ No working Bibles found in this search.")
+                        await ctx.send("❌ No working Bibles found.")
+                        
+        except Exception as e:
+            await ctx.send(f"❌ **Error**: {str(e)}")
+
+    @bible_group.command(name="searchbibles", aliases=["sb"])
+    @commands.is_owner()
+    async def search_bibles(self, ctx, language: str = "eng", abbreviation: str = None):
+        """Search for specific Bible translations by language and abbreviation.
+        
+        Examples:
+        - [p]bible searchbibles eng KJV
+        - [p]bible searchbibles eng NIV
+        - [p]bible searchbibles spa
+        - [p]bible searchbibles (no language = all languages)
+        
+        Note: Use ISO 639-3 language codes (eng, spa, fra, etc.)
+        """
+        api_key = await self.config.api_key()
+        if not api_key:
+            await ctx.send("❌ API key not set.")
+            return
+
+        if language == "all" or language == "none":
+            await ctx.send("🔍 Searching for all Bibles" + (f" with abbreviation {abbreviation.upper()}" if abbreviation else ""))
+            language = None
+        else:
+            await ctx.send(f"🔍 Searching for Bibles in {language.upper()}" + (f" with abbreviation {abbreviation.upper()}" if abbreviation else ""))
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {"api-key": api_key}
+                
+                # Build search parameters - try different approaches
+                params = {"language": language}
+                if abbreviation:
+                    params["abbreviation"] = abbreviation
+                
+                # Try different approaches to handle API quirks
+                response = None
+                
+                # First try with all parameters
+                try:
+                    async with session.get(
+                        "https://api.scripture.api.bible/v1/bibles",
+                        headers=headers,
+                        params=params
+                    ) as resp:
+                        response = resp
+                        if response.status == 200:
+                            await ctx.send("✅ Found Bibles with full parameters")
+                        else:
+                            await ctx.send(f"⚠️ Full parameters failed ({response.status}), trying alternatives...")
+                except Exception as e:
+                    await ctx.send(f"⚠️ Request failed: {str(e)}, trying alternatives...")
+                
+                # If first attempt failed, try without abbreviation
+                if not response or response.status != 200:
+                    try:
+                        params_no_abbr = {"language": language}
+                        async with session.get(
+                            "https://api.scripture.api.bible/v1/bibles",
+                            headers=headers,
+                            params=params_no_abbr
+                        ) as resp:
+                            response = resp
+                            if response.status == 200:
+                                await ctx.send("✅ Found Bibles with language only")
+                            else:
+                                await ctx.send(f"⚠️ Language-only failed ({response.status}), trying no parameters...")
+                    except Exception as e:
+                        await ctx.send(f"⚠️ Language-only request failed: {str(e)}, trying no parameters...")
+                
+                # If still failing, try with no parameters at all
+                if not response or response.status != 200:
+                    try:
+                        async with session.get(
+                            "https://api.scripture.api.bible/v1/bibles",
+                            headers=headers
+                        ) as resp:
+                            response = resp
+                            if response.status == 200:
+                                await ctx.send("✅ Found Bibles with no filters")
+                            else:
+                                await ctx.send(f"❌ All search methods failed. Last error: {response.status}")
+                                return
+                    except Exception as e:
+                        await ctx.send(f"❌ All search methods failed: {str(e)}")
+                        return
+                
+                # Process the successful response
+                data = await response.json()
+                bibles = data.get("data", [])
+                
+                if not bibles:
+                    await ctx.send(f"❌ No Bibles found for language '{language}'" + (f" and abbreviation '{abbreviation}'" if abbreviation else ""))
+                    return
+                
+                # Filter by abbreviation if provided and we got results
+                if abbreviation and len(bibles) > 1:
+                    filtered_bibles = [b for b in bibles if b.get("abbreviation", "").upper() == abbreviation.upper()]
+                    if filtered_bibles:
+                        bibles = filtered_bibles
+                        await ctx.send(f"🔍 Filtered to {len(bibles)} Bibles matching abbreviation '{abbreviation.upper()}'")
+                
+                await ctx.send(f"📚 Found {len(bibles)} Bibles. Testing first 3 for access...")
+                
+                # Test first 3 Bibles for access
+                working_bibles = []
+                for i, bible in enumerate(bibles[:3]):
+                    bible_id = bible.get("id")
+                    bible_name = bible.get("name", "Unknown")
+                    bible_abbr = bible.get("abbreviation", "N/A")
+                    bible_lang = bible.get("language", {}).get("name", "Unknown")
+                    
+                    if not bible_id:
+                        continue
+                        
+                    # Test basic access
+                    async with session.get(
+                        f"https://api.scripture.api.bible/v1/bibles/{bible_id}",
+                        headers=headers
+                    ) as test_response:
+                        if test_response.status == 200:
+                            working_bibles.append((bible_id, bible_name, bible_abbr))
+                            await ctx.send(f"✅ **{i+1}**: `{bible_id}` - {bible_name} ({bible_abbr}) - {bible_lang}")
+                        else:
+                            await ctx.send(f"❌ **{i+1}**: `{bible_id}` - {bible_name} ({bible_abbr}) - Error {test_response.status}")
+                
+                if working_bibles:
+                    # Test search on the first working Bible
+                    test_bible_id, test_bible_name, test_bible_abbr = working_bibles[0]
+                    await ctx.send(f"\n🔍 Testing search on: {test_bible_name}")
+                    
+                    search_url = f"https://api.scripture.api.bible/v1/bibles/{test_bible_id}/search"
+                    search_params = {"query": "love", "limit": 1}
+                    
+                    async with session.get(search_url, headers=headers, params=search_params) as search_response:
+                        if search_response.status == 200:
+                            await ctx.send(f"✅ **Search Available**: {test_bible_name} supports search!")
+                            await ctx.send(f"💡 **Recommendation**: Use `[p]bible config bible_id {test_bible_id}` to set this as default")
+                        else:
+                            await ctx.send(f"❌ **Search Not Available**: {test_bible_name} (Error {search_response.status})")
+                            await ctx.send(f"💡 **Recommendation**: Use `[p]bible config bible_id {test_bible_id}` and use `[p]bible searchalt` for search")
+                else:
+                    await ctx.send("❌ No working Bibles found in this search.")
                         
         except Exception as e:
             await ctx.send(f"❌ **Error**: {str(e)}")
