@@ -636,7 +636,7 @@ class Bible(commands.Cog):
             "faith": [
                 ("Hebrews 11:1", "Now faith is confidence in what we hope for and assurance about what we do not see."),
                 ("Ephesians 2:8-9", "For it is by grace you have been saved, through faith—and this is not from yourselves, it is the gift of God—not by works, so that no one can boast."),
-                ("Matthew 17:20", "He replied, 'Because you have so little faith. Truly I tell you, if you have faith as small as a mustard seed, you can say to this mountain, "Move from here to there," and it will move. Nothing will be impossible for you.'")
+                ("Matthew 17:20", "He replied, 'Because you have so little faith. Truly I tell you, if you have faith as small as a mustard seed, you can say to this mountain, \"Move from here to there,\" and it will move. Nothing will be impossible for you.'")
             ],
             "hope": [
                 ("Jeremiah 29:11", "For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you, to give you hope and a future."),
