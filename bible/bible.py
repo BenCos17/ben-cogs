@@ -330,6 +330,168 @@ class Bible(commands.Cog):
         """
         await self._alternative_search(ctx, query)
 
+    @bible_group.command(name="testbible", aliases=["tb"])
+    @commands.is_owner()
+    async def test_bible_access(self, ctx, bible_id: str = None):
+        """Test access to a specific Bible ID and try search.
+        
+        Example: [p]bible testbible 61fd76eafa1577c2-03
+        """
+        if not bible_id:
+            bible_id = await self.config.default_bible_id()
+        
+        api_key = await self.config.api_key()
+        if not api_key:
+            await ctx.send("❌ API key not set.")
+            return
+
+        await ctx.send(f"🔍 Testing access to Bible ID: `{bible_id}`...")
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {"api-key": api_key}
+                
+                # Test basic access first
+                async with session.get(
+                    f"https://api.scripture.api.bible/v1/bibles/{bible_id}",
+                    headers=headers
+                ) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        bible_name = data.get("data", {}).get("name", "Unknown")
+                        await ctx.send(f"✅ **Basic Access**: Successfully connected to `{bible_name}`")
+                    elif response.status == 403:
+                        await ctx.send(f"❌ **Basic Access**: Not authorized to access Bible `{bible_id}`")
+                        return
+                    elif response.status == 404:
+                        await ctx.send(f"❌ **Basic Access**: Bible `{bible_id}` not found")
+                        return
+                    else:
+                        await ctx.send(f"❌ **Basic Access**: Error {response.status}")
+                        return
+                
+                # Test search access
+                await ctx.send("🔍 Testing search access...")
+                search_url = f"https://api.scripture.api.bible/v1/bibles/{bible_id}/search"
+                search_params = {"query": "love", "limit": 1}
+                
+                async with session.get(search_url, headers=headers, params=search_params) as response:
+                    if response.status == 200:
+                        await ctx.send("✅ **Search Access**: Search functionality is available!")
+                        # Try to get a verse to confirm everything works
+                        await self._test_verse_access(ctx, bible_id, api_key)
+                    elif response.status == 403:
+                        await ctx.send("❌ **Search Access**: Search not available for this Bible (403)")
+                        await ctx.send("💡 **Suggestion**: Try using `[p]bible searchalt` for alternative search")
+                    elif response.status == 401:
+                        await ctx.send("❌ **Search Access**: Invalid API key (401)")
+                    else:
+                        await ctx.send(f"❌ **Search Access**: Error {response.status}")
+                        
+        except Exception as e:
+            await ctx.send(f"❌ **Error**: {str(e)}")
+
+    async def _test_verse_access(self, ctx, bible_id: str, api_key: str):
+        """Test verse access to confirm the Bible works."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {"api-key": api_key}
+                
+                # Try to get John 3:16
+                url = f"https://api.scripture.api.bible/v1/bibles/{bible_id}/verses/JHN.3.16"
+                
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        verse_data = data.get("data", {})
+                        content = verse_data.get("content", "")
+                        if content:
+                            # Clean and truncate for display
+                            content = self._clean_content(content)
+                            if len(content) > 200:
+                                content = content[:200] + "..."
+                            await ctx.send(f"✅ **Verse Test**: Successfully retrieved John 3:16\n*{content}*")
+                        else:
+                            await ctx.send("⚠️ **Verse Test**: Retrieved verse but no content found")
+                    else:
+                        await ctx.send(f"❌ **Verse Test**: Failed to retrieve verse (Error {response.status})")
+        except Exception as e:
+            await ctx.send(f"❌ **Verse Test Error**: {str(e)}")
+
+    @bible_group.command(name="findbible", aliases=["fb"])
+    @commands.is_owner()
+    async def find_working_bible(self, ctx):
+        """Find a Bible ID that works with your API key."""
+        api_key = await self.config.api_key()
+        if not api_key:
+            await ctx.send("❌ API key not set.")
+            return
+
+        await ctx.send("🔍 Finding a working Bible ID...")
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {"api-key": api_key}
+                
+                # Get list of Bibles
+                async with session.get(
+                    "https://api.scripture.api.bible/v1/bibles",
+                    headers=headers
+                ) as response:
+                    if response.status != 200:
+                        await ctx.send(f"❌ Failed to get Bible list: {response.status}")
+                        return
+                    
+                    data = await response.json()
+                    bibles = data.get("data", [])
+                    
+                    if not bibles:
+                        await ctx.send("❌ No Bibles found in your account.")
+                        return
+                    
+                    await ctx.send(f"📚 Found {len(bibles)} Bibles. Testing first 5 for access...")
+                    
+                    # Test first 5 Bibles for basic access
+                    working_bibles = []
+                    for i, bible in enumerate(bibles[:5]):
+                        bible_id = bible.get("id")
+                        bible_name = bible.get("name", "Unknown")
+                        
+                        if not bible_id:
+                            continue
+                            
+                        # Test basic access
+                        async with session.get(
+                            f"https://api.scripture.api.bible/v1/bibles/{bible_id}",
+                            headers=headers
+                        ) as test_response:
+                            if test_response.status == 200:
+                                working_bibles.append((bible_id, bible_name))
+                                await ctx.send(f"✅ **{i+1}**: `{bible_id}` - {bible_name}")
+                            else:
+                                await ctx.send(f"❌ **{i+1}**: `{bible_id}` - {bible_name} (Error {test_response.status})")
+                    
+                    if working_bibles:
+                        # Test search on the first working Bible
+                        test_bible_id, test_bible_name = working_bibles[0]
+                        await ctx.send(f"\n🔍 Testing search on: {test_bible_name}")
+                        
+                        search_url = f"https://api.scripture.api.bible/v1/bibles/{test_bible_id}/search"
+                        search_params = {"query": "love", "limit": 1}
+                        
+                        async with session.get(search_url, headers=headers, params=search_params) as search_response:
+                            if search_response.status == 200:
+                                await ctx.send(f"✅ **Search Available**: {test_bible_name} supports search!")
+                                await ctx.send(f"💡 **Recommendation**: Use `[p]bible config bible_id {test_bible_id}` to set this as default")
+                            else:
+                                await ctx.send(f"❌ **Search Not Available**: {test_bible_name} (Error {search_response.status})")
+                                await ctx.send(f"💡 **Recommendation**: Use `[p]bible config bible_id {test_bible_id}` and use `[p]bible searchalt` for search")
+                    else:
+                        await ctx.send("❌ No working Bibles found. Please check your API key permissions.")
+                        
+        except Exception as e:
+            await ctx.send(f"❌ **Error**: {str(e)}")
+
     async def _get_verse(self, ctx, reference: str):
         """Internal method to get a specific verse."""
         api_key = await self.config.api_key()
