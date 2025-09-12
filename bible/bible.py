@@ -226,6 +226,7 @@ class Bible(commands.Cog):
         """Search for Bible verses containing specific text.
         
         Example: [p]bible search love
+        Note: Search requires API key with search permissions.
         """
         await self._search_bible(ctx, query)
 
@@ -306,12 +307,28 @@ class Bible(commands.Cog):
                             inline=True
                         )
                         
+                        # Test search permissions
+                        search_status = await self._test_search_permissions(api_key)
+                        embed.add_field(
+                            name="Search Permissions",
+                            value=search_status,
+                            inline=True
+                        )
+                        
                         embed.set_footer(text="Powered by API.Bible")
                         await ctx.send(embed=embed)
                     else:
                         await ctx.send(f"❌ Error fetching Bible information: {response.status}")
         except Exception as e:
             await ctx.send(f"❌ Error: {str(e)}")
+
+    @bible_group.command(name="searchalt", aliases=["sa"])
+    async def search_alternative(self, ctx, *, query: str):
+        """Alternative search using popular verses (when API search is not available).
+        
+        Example: [p]bible searchalt love
+        """
+        await self._alternative_search(ctx, query)
 
     async def _get_verse(self, ctx, reference: str):
         """Internal method to get a specific verse."""
@@ -574,6 +591,100 @@ class Bible(commands.Cog):
             await menu(ctx, embeds, DEFAULT_CONTROLS)
         else:
             await ctx.send(f"❌ No valid results found for '{query}'.")
+
+    async def _test_search_permissions(self, api_key: str) -> str:
+        """Test if the API key has search permissions."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {"api-key": api_key}
+                bible_id = await self.config.default_bible_id()
+                
+                # Try a simple search
+                url = f"https://api.scripture.api.bible/v1/bibles/{bible_id}/search"
+                params = {"query": "love", "limit": 1}
+                
+                async with session.get(url, headers=headers, params=params) as response:
+                    if response.status == 200:
+                        return "✅ Available"
+                    elif response.status == 403:
+                        return "❌ Not Available (403)"
+                    elif response.status == 401:
+                        return "❌ Invalid Key (401)"
+                    else:
+                        return f"❌ Error ({response.status})"
+        except Exception:
+            return "❌ Test Failed"
+
+    async def _alternative_search(self, ctx, query: str):
+        """Alternative search using predefined verses when API search is not available."""
+        query_lower = query.lower()
+        
+        # Popular verses organized by keywords
+        verse_database = {
+            "love": [
+                ("John 3:16", "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life."),
+                ("1 Corinthians 13:4-7", "Love is patient, love is kind. It does not envy, it does not boast, it is not proud. It does not dishonor others, it is not self-seeking, it is not easily angered, it keeps no record of wrongs. Love does not delight in evil but rejoices with the truth. It always protects, always trusts, always hopes, always perseveres."),
+                ("1 John 4:8", "Whoever does not love does not know God, because God is love."),
+                ("Matthew 22:37-39", "Jesus replied: 'Love the Lord your God with all your heart and with all your soul and with all your mind.' This is the first and greatest commandment. And the second is like it: 'Love your neighbor as yourself.'")
+            ],
+            "jesus": [
+                ("John 14:6", "Jesus answered, 'I am the way and the truth and the life. No one comes to the Father except through me.'"),
+                ("Matthew 28:19-20", "Therefore go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, and teaching them to obey everything I have commanded you."),
+                ("John 8:12", "When Jesus spoke again to the people, he said, 'I am the light of the world. Whoever follows me will never walk in darkness, but will have the light of life.'"),
+                ("Matthew 11:28", "Come to me, all you who are weary and burdened, and I will give you rest.")
+            ],
+            "faith": [
+                ("Hebrews 11:1", "Now faith is confidence in what we hope for and assurance about what we do not see."),
+                ("Ephesians 2:8-9", "For it is by grace you have been saved, through faith—and this is not from yourselves, it is the gift of God—not by works, so that no one can boast."),
+                ("Matthew 17:20", "He replied, 'Because you have so little faith. Truly I tell you, if you have faith as small as a mustard seed, you can say to this mountain, "Move from here to there," and it will move. Nothing will be impossible for you.'")
+            ],
+            "hope": [
+                ("Jeremiah 29:11", "For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you, to give you hope and a future."),
+                ("Romans 15:13", "May the God of hope fill you with all joy and peace as you trust in him, so that you may overflow with hope by the power of the Holy Spirit."),
+                ("Psalm 23:1-6", "The Lord is my shepherd, I lack nothing. He makes me lie down in green pastures, he leads me beside quiet waters, he refreshes my soul.")
+            ],
+            "peace": [
+                ("Philippians 4:7", "And the peace of God, which transcends all understanding, will guard your hearts and your minds in Christ Jesus."),
+                ("John 14:27", "Peace I leave with you; my peace I give you. I do not give to you as the world gives. Do not let your hearts be troubled and do not be afraid."),
+                ("Isaiah 26:3", "You will keep in perfect peace those whose minds are steadfast, because they trust in you.")
+            ],
+            "grace": [
+                ("Ephesians 2:8-9", "For it is by grace you have been saved, through faith—and this is not from yourselves, it is the gift of God—not by works, so that no one can boast."),
+                ("2 Corinthians 12:9", "But he said to me, 'My grace is sufficient for you, for my power is made perfect in weakness.'"),
+                ("Titus 2:11", "For the grace of God has appeared that offers salvation to all people.")
+            ]
+        }
+        
+        # Find matching verses
+        matching_verses = []
+        for keyword, verses in verse_database.items():
+            if keyword in query_lower:
+                matching_verses.extend(verses)
+        
+        if not matching_verses:
+            # If no keyword matches, show some general popular verses
+            matching_verses = [
+                ("John 3:16", "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life."),
+                ("Romans 8:28", "And we know that in all things God works for the good of those who love him, who have been called according to his purpose."),
+                ("Jeremiah 29:11", "For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you, to give you hope and a future.")
+            ]
+        
+        # Create embeds for the results
+        embeds = []
+        for i, (reference, text) in enumerate(matching_verses[:5], 1):
+            embed = discord.Embed(
+                title=f"🔍 Alternative Search Result {i}",
+                description=text,
+                color=discord.Color.orange()
+            )
+            embed.add_field(name="Reference", value=reference, inline=False)
+            embed.set_footer(text=f"Search: '{query}' | Alternative Search (API search not available)")
+            embeds.append(embed)
+        
+        if embeds:
+            await menu(ctx, embeds, DEFAULT_CONTROLS)
+        else:
+            await ctx.send(f"❌ No results found for '{query}' in alternative search.")
 
     def _clean_content(self, content: str) -> str:
         """Clean up Bible content for display."""
