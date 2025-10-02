@@ -1,4 +1,4 @@
 """
 Commands package for SkySearch cog
 """
-from . import dashboard_integration 
+from . import dashboard_integration

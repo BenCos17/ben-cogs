@@ -2,15 +2,16 @@
 Aircraft commands for SkySearch cog
 """
 
-import discord
-from redbot.core import commands
-from redbot.core.i18n import Translator
+
 import asyncio
-import urllib
+import json
 import os
-from discord.ext import commands
-from discord.ext import tasks
 from urllib.parse import quote_plus
+
+import discord
+from discord.ext import commands, tasks
+from redbot.core import commands as red_commands
+from redbot.core.i18n import Translator
 
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
@@ -50,7 +51,6 @@ class AircraftCommands:
             view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
 
             # Social media sharing logic 
-            import urllib.parse
             ground_speed_knots = aircraft_data.get('gs', 'N/A')
             ground_speed_mph = 'unknown'
             if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
@@ -80,10 +80,10 @@ class AircraftCommands:
                 tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
             else:
                 tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-            tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+            tweet_url = f"https://twitter.com/intent/tweet?text={quote_plus(tweet_text)}"
             view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
             whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
-            whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
+            whatsapp_url = f"https://api.whatsapp.com/send?text={quote_plus(whatsapp_text)}"
             view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
 
             await ctx.send(embed=embed, view=view)
@@ -735,7 +735,6 @@ class AircraftCommands:
                     view = discord.ui.View()
                     link = f"https://globe.airplanes.live/?icao={icao}"
                     view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
-                    import urllib.parse
                     ground_speed_knots = aircraft_data.get('gs', 'N/A')
                     ground_speed_mph = 'unknown'
                     if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
@@ -765,10 +764,10 @@ class AircraftCommands:
                         tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
                     else:
                         tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-                    tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+                    tweet_url = f"https://twitter.com/intent/tweet?text={quote_plus(tweet_text)}"
                     view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
                     whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
-                    whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
+                    whatsapp_url = f"https://api.whatsapp.com/send?text={quote_plus(whatsapp_text)}"
                     view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
                     return embed, view
                 else:
@@ -780,4 +779,117 @@ class AircraftCommands:
             await paginator.send_or_edit()
         except Exception as e:
             embed = discord.Embed(title="Error", description=f"Error scrolling through planes: {e}", color=0xff4545)
+            await ctx.send(embed=embed)
+
+    @red_commands.command(name="feeder")
+    async def extract_feeder_url(self, ctx, json_url: str):
+        """
+        Extract feeder URL from a JSON link containing feeder data.
+        
+        Args:
+            json_url: URL containing JSON data with feeder information
+        """
+        try:
+            # Fetch the JSON data from the URL
+            self.helpers._ensure_http_client()
+            
+            async with self.cog._http_client.get(json_url) as response:
+                if response.status != 200:
+                    embed = discord.Embed(
+                        title="Error", 
+                        description=f"Failed to fetch JSON data. Status: {response.status}", 
+                        color=0xff4545
+                    )
+                    await ctx.send(embed=embed)
+                    return
+                
+                json_data = await response.json()
+            
+            # Extract feeder information
+            embed = discord.Embed(
+                title="Feeder Information", 
+                color=0x00ff00
+            )
+            
+            # Extract host information
+            host = json_data.get('host', 'Unknown')
+            embed.add_field(name="Host", value=host, inline=True)
+            
+            # Extract map link if available
+            map_link = json_data.get('map_link')
+            if map_link:
+                embed.add_field(name="Map Link", value=f"[View on Globe]({map_link})", inline=False)
+                embed.url = map_link
+            
+            # Extract beast clients information
+            beast_clients = json_data.get('beast_clients', [])
+            if beast_clients:
+                embed.add_field(name="Beast Clients", value=f"{len(beast_clients)} active", inline=True)
+                
+                # Show details for first few clients
+                client_details = []
+                for i, client in enumerate(beast_clients[:3]):  # Show max 3 clients
+                    uuid = client.get('uuid', 'Unknown')[:8] + '...'  # Truncate UUID
+                    msgs_s = client.get('msgs_s', 0)
+                    pos_s = client.get('pos_s', 0)
+                    client_details.append(f"`{uuid}`: {msgs_s:.1f} msg/s, {pos_s:.1f} pos/s")
+                
+                if client_details:
+                    embed.add_field(name="Client Details", value='\n'.join(client_details), inline=False)
+            
+            # Extract mlat clients information
+            mlat_clients = json_data.get('mlat_clients', [])
+            if mlat_clients:
+                embed.add_field(name="MLAT Clients", value=f"{len(mlat_clients)} active", inline=True)
+                
+                # Show details for first few mlat clients
+                mlat_details = []
+                for i, client in enumerate(mlat_clients[:2]):  # Show max 2 mlat clients
+                    user = client.get('user', 'Unknown')
+                    message_rate = client.get('message_rate', 0)
+                    peer_count = client.get('peer_count', 0)
+                    mlat_details.append(f"`{user}`: {message_rate} msg/s, {peer_count} peers")
+                
+                if mlat_details:
+                    embed.add_field(name="MLAT Details", value='\n'.join(mlat_details), inline=False)
+            
+            # Add timestamp
+            embed.timestamp = discord.utils.utcnow()
+            embed.set_footer(text="Feeder data extracted from JSON")
+            
+            # Create view with buttons
+            view = discord.ui.View()
+            
+            if map_link:
+                view.add_item(discord.ui.Button(
+                    label="View on Globe", 
+                    emoji="🌍", 
+                    url=map_link, 
+                    style=discord.ButtonStyle.link
+                ))
+            
+            # Add button to view raw JSON
+            view.add_item(discord.ui.Button(
+                label="View Raw JSON", 
+                emoji="📄", 
+                url=json_url, 
+                style=discord.ButtonStyle.link
+            ))
+            
+            await ctx.send(embed=embed, view=view)
+            
+        except json.JSONDecodeError:
+            embed = discord.Embed(
+                title="Error", 
+                description="Invalid JSON data received from the URL.", 
+                color=0xff4545
+            )
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="Error", 
+                description=f"Failed to extract feeder information: {str(e)}", 
+                color=0xff4545
+            )
             await ctx.send(embed=embed) 

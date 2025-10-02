@@ -247,8 +247,7 @@ class AdminCommands:
             # Test basic connectivity
             debug_info += f"**Testing basic connectivity...**\n"
             try:
-                if not hasattr(self.cog, '_http_client'):
-                    self.cog._http_client = aiohttp.ClientSession()
+                self.helpers._ensure_http_client()
                 
                 # Use the correct base URL from APIManager
                 base_url = self.cog.api.get_primary_api_url() if api_mode == "primary" else self.cog.api.get_fallback_api_url()

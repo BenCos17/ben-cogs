@@ -13,12 +13,25 @@ class HelperUtils:
     def __init__(self, cog):
         self.cog = cog
     
-    async def get_photo_by_hex(self, hex_id, registration=None):
-        """Get aircraft photo by hex ICAO or registration."""
+    def _ensure_http_client(self):
+        """Ensure HTTP client is initialized."""
         if not hasattr(self.cog, '_http_client'):
             self.cog._http_client = aiohttp.ClientSession()
+    
+    async def get_photo_by_hex(self, hex_id, registration=None):
+        """
+        Get aircraft photo by hex ICAO or registration.
         
-        # First try to get photo by hex ICAO directly 
+        Args:
+            hex_id (str): Aircraft hex ICAO code
+            registration (str, optional): Aircraft registration code
+            
+        Returns:
+            tuple: (image_url, photographer) or (None, None) if no photo found
+        """
+        self._ensure_http_client()
+        
+        # First try to get photo by hex ICAO directly
         if hex_id:
             try:
                 async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}') as response:
@@ -61,7 +74,7 @@ class HelperUtils:
                     reg = aircraft_data.get('reg')
                     
                     if reg and reg != registration:  # Only try if we haven't already tried this registration
-                        #  try to get photo using the registration
+                        # try to get photo using the registration
                         try:
                             async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/reg/{reg}') as response:
                                 if response.status == 200:
@@ -80,7 +93,15 @@ class HelperUtils:
         return None, None  # Return None if no photo found
 
     async def get_photo_by_aircraft_data(self, aircraft_data):
-        """Get aircraft photo using full aircraft data (preferred method)."""
+        """
+        Get aircraft photo using full aircraft data (preferred method).
+        
+        Args:
+            aircraft_data (dict): Complete aircraft data dictionary
+            
+        Returns:
+            tuple: (image_url, photographer) or (None, None) if no photo found
+        """
         hex_id = aircraft_data.get('hex', '')
         registration = aircraft_data.get('reg', '')
         
@@ -95,7 +116,17 @@ class HelperUtils:
         return await self.get_photo_by_hex(hex_id, registration)
     
     def create_aircraft_embed(self, aircraft_data, image_url=None, photographer=None):
-        """Create a Discord embed for aircraft information."""
+        """
+        Create a Discord embed for aircraft information.
+        
+        Args:
+            aircraft_data (dict): Aircraft data dictionary
+            image_url (str, optional): URL of aircraft image
+            photographer (str, optional): Name of photographer
+            
+        Returns:
+            discord.Embed: Formatted Discord embed
+        """
         emergency_squawk_codes = ['7500', '7600', '7700']
         hex_id = aircraft_data.get('hex', '')
         registration = aircraft_data.get('reg', '')
@@ -269,12 +300,11 @@ class HelperUtils:
             embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
             embed.set_footer(text="No photo available")
 
-        return embed 
+        return embed
 
     async def get_airport_data(self, airport_code: str):
         """Get airport information by ICAO or IATA code."""
-        if not hasattr(self.cog, '_http_client'):
-            self.cog._http_client = aiohttp.ClientSession()
+        self._ensure_http_client()
         
         try:
             # Try airport-data.com API
@@ -294,8 +324,10 @@ class HelperUtils:
                         }
         except (aiohttp.ClientError, KeyError, ValueError):
             pass
-        
+
         return None
+        
+
 
     async def get_airport_image(self, lat: str, lon: str):
         """Get airport satellite image using OpenStreetMap static maps."""
@@ -312,8 +344,7 @@ class HelperUtils:
 
     async def get_runway_data(self, airport_code: str):
         """Get runway information for an airport."""
-        if not hasattr(self.cog, '_http_client'):
-            self.cog._http_client = aiohttp.ClientSession()
+        self._ensure_http_client()
         
         try:
             # Try airportdb.io API
@@ -332,8 +363,7 @@ class HelperUtils:
 
     async def get_navaid_data(self, airport_code: str):
         """Get navigational aids for an airport."""
-        if not hasattr(self.cog, '_http_client'):
-            self.cog._http_client = aiohttp.ClientSession()
+        self._ensure_http_client()
         
         try:
             # Try airportdb.io API for navaids
