@@ -38,14 +38,33 @@ class APIManager:
             # Try to load existing stats from config
             saved_stats = await self.cog.config.api_stats()
             if saved_stats:
-                self._request_stats = saved_stats
-                # Convert defaultdict back to defaultdict for endpoint_usage
-                if 'endpoint_usage' in self._request_stats:
-                    self._request_stats['endpoint_usage'] = defaultdict(int, self._request_stats['endpoint_usage'])
-                if 'hourly_requests' in self._request_stats:
-                    self._request_stats['hourly_requests'] = defaultdict(int, self._request_stats['hourly_requests'])
-                if 'daily_requests' in self._request_stats:
-                    self._request_stats['daily_requests'] = defaultdict(int, self._request_stats['daily_requests'])
+                # Start with default stats to ensure all fields exist
+                self._request_stats = self._get_default_stats()
+                
+                # Safely merge saved stats, validating each field
+                for key, value in saved_stats.items():
+                    if key in self._request_stats:
+                        if key in ['endpoint_usage', 'hourly_requests', 'daily_requests']:
+                            # Ensure these are defaultdicts with valid data
+                            if isinstance(value, dict) and value:
+                                self._request_stats[key] = defaultdict(int, value)
+                            else:
+                                # Keep default defaultdict if data is invalid
+                                pass
+                        elif key == 'api_mode_usage':
+                            # Ensure api_mode_usage has both primary and fallback
+                            if isinstance(value, dict):
+                                self._request_stats[key] = {
+                                    'primary': int(value.get('primary', 0)),
+                                    'fallback': int(value.get('fallback', 0))
+                                }
+                        else:
+                            # For numeric fields, ensure they're valid numbers
+                            try:
+                                if isinstance(value, (int, float)):
+                                    self._request_stats[key] = value
+                            except (ValueError, TypeError):
+                                pass
             else:
                 # Use default stats if none saved
                 self._request_stats = self._get_default_stats()

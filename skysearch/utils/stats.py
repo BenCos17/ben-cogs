@@ -179,62 +179,84 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
     # Hourly requests line
     try:
         hourly = api_stats.get("hourly_requests", {}) or {}
+        if not isinstance(hourly, dict):
+            hourly = {}
+        
         current_hour = int(time.time() // 3600)
         hours = [current_hour - i for i in reversed(range(24))]
         labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%H:%M") for h in hours]
-        data_vals = [int(hourly.get(h, 0)) for h in hours]
-        if any(v > 0 for v in data_vals):
-            chart = {
-                "type": "line",
-                "data": {
-                    "labels": labels,
-                    "datasets": [{
-                        "label": "Requests per hour",
-                        "data": data_vals,
-                        "fill": False,
-                        "borderColor": "#1abc9c",
-                        "tension": 0.3,
-                    }],
-                },
-                "options": {
-                    "plugins": {"legend": {"position": "bottom"}},
-                    "scales": {"y": {"beginAtZero": True}},
-                },
-            }
-            url = _quickchart_url(chart, 800, 300)
-            e = discord.Embed(title="Hourly Requests (last 24h)")
-            e.set_image(url=url)
-            chart_embeds.append(e)
+        data_vals = []
+        
+        for h in hours:
+            try:
+                val = int(hourly.get(h, 0))
+                data_vals.append(max(0, val))  # Ensure non-negative
+            except (ValueError, TypeError):
+                data_vals.append(0)
+        
+        # Always show the chart, even if all values are 0
+        chart = {
+            "type": "line",
+            "data": {
+                "labels": labels,
+                "datasets": [{
+                    "label": "Requests per hour",
+                    "data": data_vals,
+                    "fill": False,
+                    "borderColor": "#1abc9c",
+                    "tension": 0.3,
+                }],
+            },
+            "options": {
+                "plugins": {"legend": {"position": "bottom"}},
+                "scales": {"y": {"beginAtZero": True}},
+            },
+        }
+        url = _quickchart_url(chart, 800, 300)
+        e = discord.Embed(title="Hourly Requests (last 24h)")
+        e.set_image(url=url)
+        chart_embeds.append(e)
     except Exception:
         pass
 
     # Total requests per day bar
     try:
         daily = api_stats.get("daily_requests", {}) or {}
+        if not isinstance(daily, dict):
+            daily = {}
+            
         current_day = int(time.time() // 86400)
         days = [current_day - i for i in reversed(range(30))]
         labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%b %d") for d in days]
-        data_vals = [int(daily.get(d, 0)) for d in days]
-        if any(v > 0 for v in data_vals):
-            chart = {
-                "type": "bar",
-                "data": {
-                    "labels": labels,
-                    "datasets": [{
-                        "label": "Total requests per day",
-                        "data": data_vals,
-                        "backgroundColor": "#2c3e50",
-                    }],
-                },
-                "options": {
-                    "plugins": {"legend": {"display": False}},
-                    "scales": {"y": {"beginAtZero": True}},
-                },
-            }
-            url = _quickchart_url(chart, 800, 300)
-            e = discord.Embed(title="Total Requests (last 30 days)")
-            e.set_image(url=url)
-            chart_embeds.append(e)
+        data_vals = []
+        
+        for d in days:
+            try:
+                val = int(daily.get(d, 0))
+                data_vals.append(max(0, val))  # Ensure non-negative
+            except (ValueError, TypeError):
+                data_vals.append(0)
+        
+        # Always show the chart, even if all values are 0
+        chart = {
+            "type": "bar",
+            "data": {
+                "labels": labels,
+                "datasets": [{
+                    "label": "Total requests per day",
+                    "data": data_vals,
+                    "backgroundColor": "#2c3e50",
+                }],
+            },
+            "options": {
+                "plugins": {"legend": {"display": False}},
+                "scales": {"y": {"beginAtZero": True}},
+            },
+        }
+        url = _quickchart_url(chart, 800, 300)
+        e = discord.Embed(title="Total Requests (last 30 days)")
+        e.set_image(url=url)
+        chart_embeds.append(e)
     except Exception:
         pass
 
