@@ -295,6 +295,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @aircraft_group.command(name='feeder')
     async def aircraft_feeder(self, ctx, *, json_input: str):
         """Extract feeder URL from JSON data or a URL containing feeder data."""
+        # Debug: Check if we're getting the arguments
+        await ctx.send(f"Main command received: {len(json_input)} chars")
         await self.aircraft_commands.extract_feeder_url(ctx, json_input)
 
     # Admin commands
