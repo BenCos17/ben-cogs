@@ -298,7 +298,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Debug: Check if we're getting the arguments
         await ctx.send(f"Main command received: {len(json_input)} chars")
         try:
-            await self.aircraft_commands.extract_feeder_url(ctx, json_input)
+            await self.aircraft_commands.extract_feeder_url(ctx, json_input=json_input)
         except Exception as e:
             await ctx.send(f"Error in aircraft_commands.extract_feeder_url: {str(e)}")
             import traceback
