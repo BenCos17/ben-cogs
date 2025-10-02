@@ -781,7 +781,6 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description=f"Error scrolling through planes: {e}", color=0xff4545)
             await ctx.send(embed=embed)
 
-    @red_commands.command(name="feeder")
     async def extract_feeder_url(self, ctx, *, json_input: str):
         """
         Extract feeder URL from JSON data or a URL containing feeder data.
