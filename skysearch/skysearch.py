@@ -293,9 +293,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await self.aircraft_commands.scroll_planes(ctx, category)
 
     @aircraft_group.command(name='feeder')
-    async def aircraft_feeder(self, ctx, json_url: str):
-        """Extract feeder URL from a JSON link containing feeder data."""
-        await self.aircraft_commands.extract_feeder_url(ctx, json_url)
+    async def aircraft_feeder(self, ctx, *, json_input: str):
+        """Extract feeder URL from JSON data or a URL containing feeder data."""
+        await self.aircraft_commands.extract_feeder_url(ctx, json_input)
 
     # Admin commands
     @aircraft_group.command(name='alertchannel')

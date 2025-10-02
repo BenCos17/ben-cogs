@@ -2,6 +2,7 @@
 Helper utilities for SkySearch cog
 """
 
+import json
 import aiohttp
 import discord
 from urllib.parse import quote_plus
@@ -378,4 +379,132 @@ class HelperUtils:
         except (aiohttp.ClientError, KeyError, ValueError):
             pass
         
-        return None 
+        return None
+
+
+    # for feeder link command stuff
+    async def parse_json_input(self, json_input: str):
+        """
+        Parse JSON input from either a URL or direct JSON text.
+        
+        Args:
+            json_input (str): Either a URL containing JSON data OR direct JSON text
+            
+        Returns:
+            dict: Parsed JSON data
+            
+        Raises:
+            ValueError: If JSON is invalid or URL fails
+            aiohttp.ClientError: If URL request fails
+        """
+        # Check if input looks like a URL
+        if json_input.startswith(('http://', 'https://')):
+            # Fetch the JSON data from the URL
+            self._ensure_http_client()
+            
+            async with self.cog._http_client.get(json_input) as response:
+                if response.status != 200:
+                    raise ValueError(f"Failed to fetch JSON data. Status: {response.status}")
+                
+                return await response.json()
+        else:
+            # Try to parse as direct JSON
+            try:
+                return json.loads(json_input)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON format: {str(e)}")
+
+    def create_feeder_embed(self, json_data: dict):
+        """
+        Create a Discord embed for feeder information.
+        
+        Args:
+            json_data (dict): Parsed feeder JSON data
+            
+        Returns:
+            discord.Embed: Formatted Discord embed
+        """
+        embed = discord.Embed(
+            title="Feeder Information", 
+            color=0x00ff00
+        )
+        
+        # Extract host information
+        host = json_data.get('host', 'Unknown')
+        embed.add_field(name="Host", value=host, inline=True)
+        
+        # Extract map link if available
+        map_link = json_data.get('map_link')
+        if map_link:
+            embed.add_field(name="Map Link", value=f"[View on Globe]({map_link})", inline=False)
+            embed.url = map_link
+        
+        # Extract beast clients information
+        beast_clients = json_data.get('beast_clients', [])
+        if beast_clients:
+            embed.add_field(name="Beast Clients", value=f"{len(beast_clients)} active", inline=True)
+            
+            # Show details for first few clients
+            client_details = []
+            for i, client in enumerate(beast_clients[:3]):  # Show max 3 clients
+                uuid = client.get('uuid', 'Unknown')[:8] + '...'  # Truncate UUID
+                msgs_s = client.get('msgs_s', 0)
+                pos_s = client.get('pos_s', 0)
+                client_details.append(f"`{uuid}`: {msgs_s:.1f} msg/s, {pos_s:.1f} pos/s")
+            
+            if client_details:
+                embed.add_field(name="Client Details", value='\n'.join(client_details), inline=False)
+        
+        # Extract mlat clients information
+        mlat_clients = json_data.get('mlat_clients', [])
+        if mlat_clients:
+            embed.add_field(name="MLAT Clients", value=f"{len(mlat_clients)} active", inline=True)
+            
+            # Show details for first few mlat clients
+            mlat_details = []
+            for i, client in enumerate(mlat_clients[:2]):  # Show max 2 mlat clients
+                user = client.get('user', 'Unknown')
+                message_rate = client.get('message_rate', 0)
+                peer_count = client.get('peer_count', 0)
+                mlat_details.append(f"`{user}`: {message_rate} msg/s, {peer_count} peers")
+            
+            if mlat_details:
+                embed.add_field(name="MLAT Details", value='\n'.join(mlat_details), inline=False)
+        
+        # Add timestamp
+        embed.timestamp = discord.utils.utcnow()
+        embed.set_footer(text="Feeder data extracted from JSON")
+        
+        return embed
+
+    def create_feeder_view(self, json_input: str, map_link: str = None):
+        """
+        Create a Discord view with buttons for feeder information.
+        
+        Args:
+            json_input (str): Original JSON input (for URL detection)
+            map_link (str, optional): Map link URL
+            
+        Returns:
+            discord.ui.View: View with interactive buttons
+        """
+        view = discord.ui.View()
+        
+        if map_link:
+            view.add_item(discord.ui.Button(
+                label="View on Globe", 
+                emoji="🌍", 
+                url=map_link, 
+                style=discord.ButtonStyle.link
+            ))
+        
+        # Add button to view raw JSON (only if it's a URL)
+        if json_input.startswith(('http://', 'https://')):
+            view.add_item(discord.ui.Button(
+                label="View Raw JSON", 
+                emoji="📄", 
+                url=json_input, 
+                style=discord.ButtonStyle.link
+            ))
+        
+        return view 

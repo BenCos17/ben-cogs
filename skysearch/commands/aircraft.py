@@ -782,106 +782,30 @@ class AircraftCommands:
             await ctx.send(embed=embed)
 
     @red_commands.command(name="feeder")
-    async def extract_feeder_url(self, ctx, json_url: str):
+    async def extract_feeder_url(self, ctx, *, json_input: str):
         """
-        Extract feeder URL from a JSON link containing feeder data.
+        Extract feeder URL from JSON data or a URL containing feeder data.
         
         Args:
-            json_url: URL containing JSON data with feeder information
+            json_input: Either a URL containing JSON data OR direct JSON text
         """
         try:
-            # Fetch the JSON data from the URL
-            self.helpers._ensure_http_client()
+            # Parse JSON input using utility function
+            json_data = await self.helpers.parse_json_input(json_input)
             
-            async with self.cog._http_client.get(json_url) as response:
-                if response.status != 200:
-                    embed = discord.Embed(
-                        title="Error", 
-                        description=f"Failed to fetch JSON data. Status: {response.status}", 
-                        color=0xff4545
-                    )
-                    await ctx.send(embed=embed)
-                    return
-                
-                json_data = await response.json()
+            # Create embed using utility function
+            embed = self.helpers.create_feeder_embed(json_data)
             
-            # Extract feeder information
-            embed = discord.Embed(
-                title="Feeder Information", 
-                color=0x00ff00
-            )
-            
-            # Extract host information
-            host = json_data.get('host', 'Unknown')
-            embed.add_field(name="Host", value=host, inline=True)
-            
-            # Extract map link if available
+            # Create view using utility function
             map_link = json_data.get('map_link')
-            if map_link:
-                embed.add_field(name="Map Link", value=f"[View on Globe]({map_link})", inline=False)
-                embed.url = map_link
-            
-            # Extract beast clients information
-            beast_clients = json_data.get('beast_clients', [])
-            if beast_clients:
-                embed.add_field(name="Beast Clients", value=f"{len(beast_clients)} active", inline=True)
-                
-                # Show details for first few clients
-                client_details = []
-                for i, client in enumerate(beast_clients[:3]):  # Show max 3 clients
-                    uuid = client.get('uuid', 'Unknown')[:8] + '...'  # Truncate UUID
-                    msgs_s = client.get('msgs_s', 0)
-                    pos_s = client.get('pos_s', 0)
-                    client_details.append(f"`{uuid}`: {msgs_s:.1f} msg/s, {pos_s:.1f} pos/s")
-                
-                if client_details:
-                    embed.add_field(name="Client Details", value='\n'.join(client_details), inline=False)
-            
-            # Extract mlat clients information
-            mlat_clients = json_data.get('mlat_clients', [])
-            if mlat_clients:
-                embed.add_field(name="MLAT Clients", value=f"{len(mlat_clients)} active", inline=True)
-                
-                # Show details for first few mlat clients
-                mlat_details = []
-                for i, client in enumerate(mlat_clients[:2]):  # Show max 2 mlat clients
-                    user = client.get('user', 'Unknown')
-                    message_rate = client.get('message_rate', 0)
-                    peer_count = client.get('peer_count', 0)
-                    mlat_details.append(f"`{user}`: {message_rate} msg/s, {peer_count} peers")
-                
-                if mlat_details:
-                    embed.add_field(name="MLAT Details", value='\n'.join(mlat_details), inline=False)
-            
-            # Add timestamp
-            embed.timestamp = discord.utils.utcnow()
-            embed.set_footer(text="Feeder data extracted from JSON")
-            
-            # Create view with buttons
-            view = discord.ui.View()
-            
-            if map_link:
-                view.add_item(discord.ui.Button(
-                    label="View on Globe", 
-                    emoji="🌍", 
-                    url=map_link, 
-                    style=discord.ButtonStyle.link
-                ))
-            
-            # Add button to view raw JSON
-            view.add_item(discord.ui.Button(
-                label="View Raw JSON", 
-                emoji="📄", 
-                url=json_url, 
-                style=discord.ButtonStyle.link
-            ))
+            view = self.helpers.create_feeder_view(json_input, map_link)
             
             await ctx.send(embed=embed, view=view)
             
-        except json.JSONDecodeError:
+        except ValueError as e:
             embed = discord.Embed(
                 title="Error", 
-                description="Invalid JSON data received from the URL.", 
+                description=str(e), 
                 color=0xff4545
             )
             await ctx.send(embed=embed)
