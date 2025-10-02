@@ -640,80 +640,84 @@ msgstr ""
 
 #: skysearch\commands\aircraft.py:179
 msgid "No aircraft found with the specified callsign."
-msgstr ""
+msgstr "Níor aimsíodh aon aerárthach leis an nglaoch-ainm sonraithe."
 
 #: skysearch\commands\aircraft.py:190 skysearch\commands\aircraft.py:201
 msgid "Error retrieving aircraft information."
-msgstr ""
+msgstr "Earráid agus faisnéis aerárthaigh á fháil."
 
 #: skysearch\commands\aircraft.py:219
 msgid ""
 "Invalid search type specified. Use one of: icao, callsign, squawk, or type."
 msgstr ""
+"Cineál cuardaigh neamhbhailí sonraithe. Úsáid ceann de seo: icao, glaoch-ainm, "
+"squawk, nó cineál."
 
 #: skysearch\commands\aircraft.py:224
 msgid "Invalid file format specified. Use one of: csv, pdf, txt, or html."
-msgstr ""
+msgstr "Formáid comhaid neamhbhailí sonraithe. Úsáid ceann de seo: csv, pdf, txt, nó html."
 
 #: skysearch\commands\aircraft.py:235
 msgid "No valid ICAO codes provided."
-msgstr ""
+msgstr "Níor soláthraíodh aon chód ICAO bailí."
 
 #: skysearch\commands\aircraft.py:254
 msgid "Invalid search type specified."
-msgstr ""
+msgstr "Cineál cuardaigh neamhbhailí sonraithe."
 
 #: skysearch\commands\aircraft.py:263
 msgid "No aircraft data found."
-msgstr ""
+msgstr "Níor aimsíodh sonraí aerárthaigh."
 
 #: skysearch\commands\aircraft.py:275
 msgid "Export Complete"
-msgstr ""
+msgstr "Easpórtáil Críochnaithe"
 
 #: skysearch\commands\aircraft.py:275
 msgid "Successfully exported {count} aircraft to {format} format."
-msgstr ""
+msgstr "{count} aerárthach easpórtáilte go rathúil i bhformáid {format}."
 
 #: skysearch\commands\aircraft.py:276
 msgid "Search Type"
-msgstr ""
+msgstr "Cineál Cuardaigh"
 
 #: skysearch\commands\aircraft.py:277
 msgid "Search Value"
-msgstr ""
+msgstr "Luach Cuardaigh"
 
 #: skysearch\commands\aircraft.py:278
 msgid "File Format"
-msgstr ""
+msgstr "Formáid Comhaid"
 
 #: skysearch\commands\aircraft.py:279
 msgid "Aircraft Count"
-msgstr ""
+msgstr "Líon Aerárthaí"
 
 #: skysearch\commands\aircraft.py:280
 msgid "File Name"
-msgstr ""
+msgstr "Ainm Comhaid"
 
 #: skysearch\commands\aircraft.py:542
 msgid ""
 "**Distance:** {distance} nautical miles\n"
 "**Direction:** {direction}° from your location"
 msgstr ""
+"**Fad:** {distance} muirmhíle\n"
+"**Treoir:** {direction}° ó do shuíomh"
 
 #: skysearch\commands\aircraft.py:645
 msgid "No Aircraft Found"
-msgstr ""
+msgstr "Níor Aimsíodh Aerárthach"
 
 #: skysearch\commands\aircraft.py:645
 msgid ""
 "No aircraft found within {radius} nautical miles of the specified location."
-msgstr ""
+msgstr "Níor aimsíodh aon aerárthach laistigh de {radius} muirmhíle ón suíomh sonraithe."
 
 #: skysearch\commands\aircraft.py:648
 msgid "Error retrieving closest aircraft information."
-msgstr ""
+msgstr "Earráid agus faisnéis an aerárthaigh is gaire á fháil."
 
 #: skysearch\commands\aircraft.py:671
 msgid "No response from the API."
-msgstr ""
+msgstr "Gan freagra ón API."
