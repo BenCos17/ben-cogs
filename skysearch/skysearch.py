@@ -297,7 +297,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Extract feeder URL from JSON data or a URL containing feeder data."""
         # Debug: Check if we're getting the arguments
         await ctx.send(f"Main command received: {len(json_input)} chars")
-        await self.aircraft_commands.extract_feeder_url(ctx, json_input)
+        try:
+            await self.aircraft_commands.extract_feeder_url(ctx, json_input)
+        except Exception as e:
+            await ctx.send(f"Error in aircraft_commands.extract_feeder_url: {str(e)}")
+            import traceback
+            await ctx.send(f"Traceback: {traceback.format_exc()}")
 
     # Admin commands
     @aircraft_group.command(name='alertchannel')
