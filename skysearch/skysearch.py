@@ -204,6 +204,13 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """View API statistics saving configuration (delegates to AdminCommands)."""
         await self.admin_commands.apistats_config(ctx)
 
+    @commands.guild_only()
+    @commands.is_owner()
+    @skysearch.command(name='apistats_debug', help=_('Debug API statistics data structure and time-based data (owner only)'))
+    async def apistats_debug(self, ctx):
+        """Debug API statistics data structure (delegates to AdminCommands)."""
+        await self.admin_commands.apistats_debug(ctx)
+
     # Aircraft commands
     @commands.guild_only()
     @commands.group(name='aircraft', help=_('Command center for aircraft related commands and API monitoring'), invoke_without_command=True)

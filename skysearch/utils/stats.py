@@ -182,40 +182,72 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
         if not isinstance(hourly, dict):
             hourly = {}
         
-        current_hour = int(time.time() // 3600)
-        hours = [current_hour - i for i in reversed(range(24))]
-        labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%H:%M") for h in hours]
-        data_vals = []
+        # Get all available hours and sort them
+        available_hours = sorted([int(h) for h in hourly.keys() if hourly.get(h, 0) > 0])
         
-        for h in hours:
-            try:
-                val = int(hourly.get(h, 0))
-                data_vals.append(max(0, val))  # Ensure non-negative
-            except (ValueError, TypeError):
-                data_vals.append(0)
-        
-        # Always show the chart, even if all values are 0
-        chart = {
-            "type": "line",
-            "data": {
-                "labels": labels,
-                "datasets": [{
-                    "label": "Requests per hour",
-                    "data": data_vals,
-                    "fill": False,
-                    "borderColor": "#1abc9c",
-                    "tension": 0.3,
-                }],
-            },
-            "options": {
-                "plugins": {"legend": {"position": "bottom"}},
-                "scales": {"y": {"beginAtZero": True}},
-            },
-        }
-        url = _quickchart_url(chart, 800, 300)
-        e = discord.Embed(title="Hourly Requests (last 24h)")
-        e.set_image(url=url)
-        chart_embeds.append(e)
+        if available_hours:
+            # Use the most recent 24 hours of actual data, or all data if less than 24 hours
+            current_hour = int(time.time() // 3600)
+            if len(available_hours) <= 24:
+                # Show all available data
+                hours_to_show = available_hours
+            else:
+                # Show last 24 hours of data
+                hours_to_show = [h for h in available_hours if h >= (current_hour - 24)]
+            
+            if hours_to_show:
+                labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%m/%d %H:%M") for h in hours_to_show]
+                data_vals = [int(hourly.get(h, 0)) for h in hours_to_show]
+                
+                chart = {
+                    "type": "line",
+                    "data": {
+                        "labels": labels,
+                        "datasets": [{
+                            "label": "Requests per hour",
+                            "data": data_vals,
+                            "fill": False,
+                            "borderColor": "#1abc9c",
+                            "tension": 0.3,
+                        }],
+                    },
+                    "options": {
+                        "plugins": {"legend": {"position": "bottom"}},
+                        "scales": {"y": {"beginAtZero": True}},
+                    },
+                }
+                url = _quickchart_url(chart, 800, 300)
+                e = discord.Embed(title=f"Hourly Requests ({len(hours_to_show)} hours of data)")
+                e.set_image(url=url)
+                chart_embeds.append(e)
+        else:
+            # No data available, show empty chart
+            current_hour = int(time.time() // 3600)
+            hours = [current_hour - i for i in reversed(range(24))]
+            labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%H:%M") for h in hours]
+            data_vals = [0] * 24
+            
+            chart = {
+                "type": "line",
+                "data": {
+                    "labels": labels,
+                    "datasets": [{
+                        "label": "Requests per hour",
+                        "data": data_vals,
+                        "fill": False,
+                        "borderColor": "#1abc9c",
+                        "tension": 0.3,
+                    }],
+                },
+                "options": {
+                    "plugins": {"legend": {"position": "bottom"}},
+                    "scales": {"y": {"beginAtZero": True}},
+                },
+            }
+            url = _quickchart_url(chart, 800, 300)
+            e = discord.Embed(title="Hourly Requests (no data available)")
+            e.set_image(url=url)
+            chart_embeds.append(e)
     except Exception:
         pass
 
@@ -224,39 +256,69 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
         daily = api_stats.get("daily_requests", {}) or {}
         if not isinstance(daily, dict):
             daily = {}
+        
+        # Get all available days and sort them
+        available_days = sorted([int(d) for d in daily.keys() if daily.get(d, 0) > 0])
+        
+        if available_days:
+            # Use the most recent 30 days of actual data, or all data if less than 30 days
+            current_day = int(time.time() // 86400)
+            if len(available_days) <= 30:
+                # Show all available data
+                days_to_show = available_days
+            else:
+                # Show last 30 days of data
+                days_to_show = [d for d in available_days if d >= (current_day - 30)]
             
-        current_day = int(time.time() // 86400)
-        days = [current_day - i for i in reversed(range(30))]
-        labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%b %d") for d in days]
-        data_vals = []
-        
-        for d in days:
-            try:
-                val = int(daily.get(d, 0))
-                data_vals.append(max(0, val))  # Ensure non-negative
-            except (ValueError, TypeError):
-                data_vals.append(0)
-        
-        # Always show the chart, even if all values are 0
-        chart = {
-            "type": "bar",
-            "data": {
-                "labels": labels,
-                "datasets": [{
-                    "label": "Total requests per day",
-                    "data": data_vals,
-                    "backgroundColor": "#2c3e50",
-                }],
-            },
-            "options": {
-                "plugins": {"legend": {"display": False}},
-                "scales": {"y": {"beginAtZero": True}},
-            },
-        }
-        url = _quickchart_url(chart, 800, 300)
-        e = discord.Embed(title="Total Requests (last 30 days)")
-        e.set_image(url=url)
-        chart_embeds.append(e)
+            if days_to_show:
+                labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%m/%d") for d in days_to_show]
+                data_vals = [int(daily.get(d, 0)) for d in days_to_show]
+                
+                chart = {
+                    "type": "bar",
+                    "data": {
+                        "labels": labels,
+                        "datasets": [{
+                            "label": "Total requests per day",
+                            "data": data_vals,
+                            "backgroundColor": "#2c3e50",
+                        }],
+                    },
+                    "options": {
+                        "plugins": {"legend": {"display": False}},
+                        "scales": {"y": {"beginAtZero": True}},
+                    },
+                }
+                url = _quickchart_url(chart, 800, 300)
+                e = discord.Embed(title=f"Total Requests ({len(days_to_show)} days of data)")
+                e.set_image(url=url)
+                chart_embeds.append(e)
+        else:
+            # No data available, show empty chart
+            current_day = int(time.time() // 86400)
+            days = [current_day - i for i in reversed(range(30))]
+            labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%b %d") for d in days]
+            data_vals = [0] * 30
+            
+            chart = {
+                "type": "bar",
+                "data": {
+                    "labels": labels,
+                    "datasets": [{
+                        "label": "Total requests per day",
+                        "data": data_vals,
+                        "backgroundColor": "#2c3e50",
+                    }],
+                },
+                "options": {
+                    "plugins": {"legend": {"display": False}},
+                    "scales": {"y": {"beginAtZero": True}},
+                },
+            }
+            url = _quickchart_url(chart, 800, 300)
+            e = discord.Embed(title="Total Requests (no data available)")
+            e.set_image(url=url)
+            chart_embeds.append(e)
     except Exception:
         pass
 

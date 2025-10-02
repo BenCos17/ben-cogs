@@ -459,3 +459,99 @@ class AdminCommands:
                 color=0xff0000
             )
             await ctx.send(embed=embed)
+
+    async def apistats_debug(self, ctx):
+        """Debug API statistics data structure (owner only)."""
+        try:
+            await self.cog.api.wait_for_stats_initialization()
+            api_stats = self.cog.api.get_request_stats()
+            
+            # Get time-based data
+            hourly = api_stats.get("hourly_requests", {})
+            daily = api_stats.get("daily_requests", {})
+            
+            # Count non-zero entries
+            hourly_count = len([h for h in hourly.values() if h > 0])
+            daily_count = len([d for d in daily.values() if d > 0])
+            
+            # Get date ranges
+            if hourly:
+                hourly_hours = sorted([int(h) for h in hourly.keys() if hourly.get(h, 0) > 0])
+                if hourly_hours:
+                    oldest_hour = datetime.datetime.fromtimestamp(hourly_hours[0] * 3600).strftime("%Y-%m-%d %H:%M")
+                    newest_hour = datetime.datetime.fromtimestamp(hourly_hours[-1] * 3600).strftime("%Y-%m-%d %H:%M")
+                else:
+                    oldest_hour = newest_hour = "No data"
+            else:
+                oldest_hour = newest_hour = "No data"
+            
+            if daily:
+                daily_days = sorted([int(d) for d in daily.keys() if daily.get(d, 0) > 0])
+                if daily_days:
+                    oldest_day = datetime.datetime.fromtimestamp(daily_days[0] * 86400).strftime("%Y-%m-%d")
+                    newest_day = datetime.datetime.fromtimestamp(daily_days[-1] * 86400).strftime("%Y-%m-%d")
+                else:
+                    oldest_day = newest_day = "No data"
+            else:
+                oldest_day = newest_day = "No data"
+            
+            embed = discord.Embed(
+                title="🔍 API Statistics Debug Info",
+                description="Detailed breakdown of time-based data structures",
+                color=0x00AAFF
+            )
+            
+            embed.add_field(
+                name="📊 Data Summary",
+                value=(
+                    f"**Total Requests:** {api_stats.get('total_requests', 0):,}\n"
+                    f"**Hourly Entries:** {hourly_count} (with data > 0)\n"
+                    f"**Daily Entries:** {daily_count} (with data > 0)\n"
+                    f"**Last Request:** {api_stats.get('last_request_time_formatted', 'Never')}"
+                ),
+                inline=False
+            )
+            
+            embed.add_field(
+                name="⏰ Hourly Data Range",
+                value=(
+                    f"**Oldest:** {oldest_hour}\n"
+                    f"**Newest:** {newest_hour}\n"
+                    f"**Total Hours:** {len(hourly_hours) if hourly_hours else 0}"
+                ),
+                inline=True
+            )
+            
+            embed.add_field(
+                name="📅 Daily Data Range",
+                value=(
+                    f"**Oldest:** {oldest_day}\n"
+                    f"**Newest:** {newest_day}\n"
+                    f"**Total Days:** {len(daily_days) if daily_days else 0}"
+                ),
+                inline=True
+            )
+            
+            # Show sample data
+            if hourly_hours:
+                sample_hours = hourly_hours[-5:]  # Last 5 hours with data
+                sample_data = []
+                for h in sample_hours:
+                    count = hourly.get(h, 0)
+                    timestamp = datetime.datetime.fromtimestamp(h * 3600).strftime("%m/%d %H:%M")
+                    sample_data.append(f"{timestamp}: {count:,}")
+                embed.add_field(
+                    name="📈 Recent Hourly Data (last 5)",
+                    value="\n".join(sample_data) if sample_data else "No data",
+                    inline=False
+                )
+            
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Debug Error",
+                description=f"Error getting debug info: {str(e)}",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
