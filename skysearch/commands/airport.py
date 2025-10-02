@@ -10,8 +10,13 @@ from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
 from redbot.core import commands
+from redbot.core.i18n import Translator, cog_i18n
+
+# Internationalization
+_ = Translator("Skysearch", __file__)
 
 
+@cog_i18n(_)
 class AirportCommands:
     """Airport-related commands for SkySearch."""
     

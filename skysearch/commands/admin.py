@@ -10,7 +10,7 @@ from discord.ext import commands
 from redbot.core.i18n import Translator, cog_i18n
 from ..utils.stats import build_stats_embed, build_stats_charts, build_stats_config_embed
 
-_ = Translator("AdminCommands", __file__)
+_ = Translator("Skysearch", __file__)
 
 
 @cog_i18n(_)

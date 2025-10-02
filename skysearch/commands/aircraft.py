@@ -21,6 +21,7 @@ from ..utils.export import ExportManager
 _ = Translator("Skysearch", __file__)
 
 
+@cog_i18n(_)
 class AircraftCommands:
     """Aircraft-related commands for SkySearch."""
     

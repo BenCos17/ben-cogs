@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2025-09-04 17:30+0100\n"
+"POT-Creation-Date: 2025-10-02 22:52+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,295 +11,300 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: redgettext 3.4.2\n"
 
-#: skysearch.py:42
+#: skysearch\skysearch.py:42
 #, docstring
 msgid "SkySearch - Aircraft tracking and information cog."
 msgstr ""
 
-#: skysearch.py:133
+#: skysearch\skysearch.py:133
 #, docstring
 msgid "SkySearch command group"
 msgstr ""
 
-#: skysearch.py:134
+#: skysearch\skysearch.py:134
 msgid "Thanks for using SkySearch"
 msgstr ""
 
-#: skysearch.py:134
+#: skysearch\skysearch.py:134
 msgid "SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft."
 msgstr ""
 
-#: skysearch.py:135
+#: skysearch\skysearch.py:135
 msgid ""
 "Use `aircraft` to show available commands to fetch information about live "
 "aircraft and configure emergency squawk alerts."
 msgstr ""
 
-#: skysearch.py:136
+#: skysearch\skysearch.py:136
 msgid ""
 "Use `airport` to show available commands to fetch information and imagery of"
 " airports around the world."
 msgstr ""
 
-#: skysearch.py:137 skysearch.py:221
+#: skysearch\skysearch.py:137 skysearch\skysearch.py:221
 msgid "Use `skysearch apistats` to view API performance and usage statistics"
 msgstr ""
 
-#: skysearch.py:143
+#: skysearch\skysearch.py:143
 #, docstring
 msgid "Get SkySearch statistics."
 msgstr ""
 
-#: skysearch.py:146
+#: skysearch\skysearch.py:146
 msgid "SkySearch Statistics"
 msgstr ""
 
-#: skysearch.py:146
+#: skysearch\skysearch.py:146
 msgid "Consolidated statistics and data sources for SkySearch."
 msgstr ""
 
-#: skysearch.py:161 skysearch.py:171
+#: skysearch\skysearch.py:161 skysearch\skysearch.py:171
 msgid "This data appears in the following commands"
 msgstr ""
 
-#: skysearch.py:162
+#: skysearch\skysearch.py:162
 msgid "Law enforcement aircraft"
 msgstr ""
 
-#: skysearch.py:163
+#: skysearch\skysearch.py:163
 msgid "Military & government aircraft"
 msgstr ""
 
-#: skysearch.py:164
+#: skysearch\skysearch.py:164
 msgid "Medical aircraft"
 msgstr ""
 
-#: skysearch.py:165
+#: skysearch\skysearch.py:165
 msgid "Media aircraft"
 msgstr ""
 
-#: skysearch.py:166
+#: skysearch\skysearch.py:166
 msgid "Damaged aircraft"
 msgstr ""
 
-#: skysearch.py:167
+#: skysearch\skysearch.py:167
 msgid "Wartime aircraft"
 msgstr ""
 
-#: skysearch.py:168
+#: skysearch\skysearch.py:168
 msgid "Utility aircraft"
 msgstr ""
 
-#: skysearch.py:169
+#: skysearch\skysearch.py:169
 msgid "Balloons"
 msgstr ""
 
-#: skysearch.py:170
+#: skysearch\skysearch.py:170
 msgid "Suspicious aircraft"
 msgstr ""
 
-#: skysearch.py:172
+#: skysearch\skysearch.py:172
 msgid "Other services"
 msgstr ""
 
-#: skysearch.py:172
+#: skysearch\skysearch.py:172
 msgid "Additional data used in this cog is shown below"
 msgstr ""
 
-#: skysearch.py:173
+#: skysearch\skysearch.py:173
 msgid "Photography"
 msgstr ""
 
-#: skysearch.py:173
+#: skysearch\skysearch.py:173
 msgid ""
 "Photos are powered by community contributions at "
 "[planespotters.net](https://www.planespotters.net/)"
 msgstr ""
 
-#: skysearch.py:174
+#: skysearch\skysearch.py:174
 msgid "Airport data"
 msgstr ""
 
-#: skysearch.py:174
+#: skysearch\skysearch.py:174
 msgid ""
 "Airport data is powered by the [airport-data.com](https://airport-data.com/)"
 " API service"
 msgstr ""
 
-#: skysearch.py:175
+#: skysearch\skysearch.py:175
 msgid "Runway data"
 msgstr ""
 
-#: skysearch.py:175
+#: skysearch\skysearch.py:175
 msgid ""
 "Runway data is powered by the [airportdb.io](https://airportdb.io) API "
 "service"
 msgstr ""
 
-#: skysearch.py:176
+#: skysearch\skysearch.py:176
 msgid "Mapping and imagery"
 msgstr ""
 
-#: skysearch.py:176
+#: skysearch\skysearch.py:176
 msgid ""
 "Mapping and ground imagery powered by [Google Maps](https://maps.google.com)"
 " and the [Maps Static "
 "API](https://developers.google.com/maps/documentation/maps-static)"
 msgstr ""
 
-#: skysearch.py:183
+#: skysearch\skysearch.py:183
 #, docstring
 msgid "Get detailed API request statistics (delegates to AdminCommands)."
 msgstr ""
 
-#: skysearch.py:190
+#: skysearch\skysearch.py:190
 #, docstring
 msgid "Reset API request statistics (delegates to AdminCommands)."
 msgstr ""
 
-#: skysearch.py:197
+#: skysearch\skysearch.py:197
 #, docstring
 msgid "Manually save API statistics to config (delegates to AdminCommands)."
 msgstr ""
 
-#: skysearch.py:204
+#: skysearch\skysearch.py:204
 #, docstring
 msgid "View API statistics saving configuration (delegates to AdminCommands)."
 msgstr ""
 
-#: skysearch.py:211
+#: skysearch\skysearch.py:211
 #, docstring
 msgid "Command center for aircraft related commands and API monitoring"
 msgstr ""
 
-#: skysearch.py:212
+#: skysearch\skysearch.py:212
 msgid "Aircraft Commands"
 msgstr ""
 
-#: skysearch.py:212
+#: skysearch\skysearch.py:212
 msgid "Available aircraft-related commands and API monitoring:"
 msgstr ""
 
-#: skysearch.py:213
+#: skysearch\skysearch.py:213
 msgid "Search Commands"
 msgstr ""
 
-#: skysearch.py:214
+#: skysearch\skysearch.py:214
 msgid "Special Aircraft"
 msgstr ""
 
-#: skysearch.py:215
+#: skysearch\skysearch.py:215
 msgid "Export"
 msgstr ""
 
-#: skysearch.py:215
+#: skysearch\skysearch.py:215
 msgid "`export` - Export aircraft data to CSV, PDF, TXT, or HTML"
 msgstr ""
 
-#: skysearch.py:216
+#: skysearch\skysearch.py:216
 msgid "Configuration"
 msgstr ""
 
-#: skysearch.py:217
+#: skysearch\skysearch.py:217
 msgid "Other"
 msgstr ""
 
-#: skysearch.py:217
+#: skysearch\skysearch.py:217
 msgid "`scroll` - Scroll through available planes"
 msgstr ""
 
-#: skysearch.py:220
+#: skysearch\skysearch.py:220
 msgid "Debug"
 msgstr ""
 
-#: skysearch.py:220
+#: skysearch\skysearch.py:220
 msgid ""
 "`debugapi` - Debug API issues (owner only)\n"
 "`debugtoggle` - Toggle debug output for lookups (owner only)\n"
 "`debug` - Run a debug lookup (owner only)"
 msgstr ""
 
-#: skysearch.py:222
+#: skysearch\skysearch.py:222
 msgid "Detailed Help"
 msgstr ""
 
-#: skysearch.py:222
+#: skysearch\skysearch.py:222
 msgid "Use `*help aircraft` for detailed command information"
 msgstr ""
 
-#: skysearch.py:228
+#: skysearch\skysearch.py:228
 #, docstring
 msgid "Get aircraft information by ICAO hex code."
 msgstr ""
 
-#: skysearch.py:236
+#: skysearch\skysearch.py:236
 #, docstring
 msgid "Get aircraft information by callsign."
 msgstr ""
 
-#: skysearch.py:244
+#: skysearch\skysearch.py:244
 #, docstring
 msgid "Get aircraft information by registration."
 msgstr ""
 
-#: skysearch.py:249
+#: skysearch\skysearch.py:249
 #, docstring
 msgid "Get aircraft information by type."
 msgstr ""
 
-#: skysearch.py:254
+#: skysearch\skysearch.py:254
 #, docstring
 msgid "Get aircraft information by squawk code."
 msgstr ""
 
-#: skysearch.py:262
+#: skysearch\skysearch.py:262
 #, docstring
 msgid "Export aircraft data to various formats."
 msgstr ""
 
-#: skysearch.py:267
+#: skysearch\skysearch.py:267
 #, docstring
 msgid "Get information about military aircraft."
 msgstr ""
 
-#: skysearch.py:272
+#: skysearch\skysearch.py:272
 #, docstring
 msgid "Get information on LADD-restricted aircraft."
 msgstr ""
 
-#: skysearch.py:277
+#: skysearch\skysearch.py:277
 #, docstring
 msgid "View live aircraft using private ICAO addresses."
 msgstr ""
 
-#: skysearch.py:282
+#: skysearch\skysearch.py:282
 #, docstring
 msgid "Get information about aircraft within a specified radius."
 msgstr ""
 
-#: skysearch.py:287
+#: skysearch\skysearch.py:287
 #, docstring
 msgid "Find the closest aircraft to specified coordinates."
 msgstr ""
 
-#: skysearch.py:292
+#: skysearch\skysearch.py:292
 #, docstring
 msgid ""
 "Scroll through available planes. Optionally specify a category: mil, ladd, "
 "pia, or all."
 msgstr ""
 
-#: skysearch.py:298
+#: skysearch\skysearch.py:297
+#, docstring
+msgid "Extract feeder URL from JSON data or a URL containing feeder data."
+msgstr ""
+
+#: skysearch\skysearch.py:303
 #, docstring
 msgid "Set or clear a channel to send emergency squawk alerts to."
 msgstr ""
 
-#: skysearch.py:303
+#: skysearch\skysearch.py:308
 #, docstring
 msgid "Set or clear a role to mention when new emergency squawks occur."
 msgstr ""
 
-#: skysearch.py:308
+#: skysearch\skysearch.py:313
 #, docstring
 msgid ""
 "Set or show the cooldown for emergency squawk alerts.\n"
@@ -315,114 +320,114 @@ msgid ""
 "        "
 msgstr ""
 
-#: skysearch.py:323
+#: skysearch\skysearch.py:328
 #, docstring
 msgid "Enable or disable automatic ICAO lookup."
 msgstr ""
 
-#: skysearch.py:328
+#: skysearch\skysearch.py:333
 #, docstring
 msgid "Enable or disable automatic deletion of 'not found' messages."
 msgstr ""
 
-#: skysearch.py:333
+#: skysearch\skysearch.py:338
 #, docstring
 msgid "Show alert task status and output if set."
 msgstr ""
 
-#: skysearch.py:339
+#: skysearch\skysearch.py:344
 #, docstring
 msgid "Debug API key and connection issues (DM only)."
 msgstr ""
 
-#: skysearch.py:345
+#: skysearch\skysearch.py:350
 #, docstring
 msgid "Set which API to use globally: 'primary' or 'fallback'. (owner only)"
 msgstr ""
 
-#: skysearch.py:356
+#: skysearch\skysearch.py:361
 #, docstring
 msgid "Show the current global API mode. (owner only)"
 msgstr ""
 
-#: skysearch.py:363
+#: skysearch\skysearch.py:368
 #, docstring
 msgid ""
 "Debug an aircraft lookup: *aircraft debug <lookup_type> <value> "
 "(lookup_type: icao, callsign, reg, type, squawk)"
 msgstr ""
 
-#: skysearch.py:376
+#: skysearch\skysearch.py:381
 #, docstring
 msgid ""
 "Enable or disable aircraft debug output: *aircraft debugtoggle <on|off>"
 msgstr ""
 
-#: skysearch.py:386
+#: skysearch\skysearch.py:391
 #, docstring
 msgid "Set the airplanes.live API key."
 msgstr ""
 
-#: skysearch.py:392
+#: skysearch\skysearch.py:397
 #, docstring
 msgid "Show the current airplanes.live API key (partially masked)."
 msgstr ""
 
-#: skysearch.py:398
+#: skysearch\skysearch.py:403
 #, docstring
 msgid "Clear the airplanes.live API key."
 msgstr ""
 
-#: skysearch.py:405
+#: skysearch\skysearch.py:410
 #, docstring
 msgid "Command center for airport related commands"
 msgstr ""
 
-#: skysearch.py:415
+#: skysearch\skysearch.py:420
 #, docstring
 msgid "Get airport information by ICAO or IATA code."
 msgstr ""
 
-#: skysearch.py:420
+#: skysearch\skysearch.py:425
 #, docstring
 msgid "Get runway information for an airport."
 msgstr ""
 
-#: skysearch.py:425
+#: skysearch\skysearch.py:430
 #, docstring
 msgid "Get navigational aids for an airport."
 msgstr ""
 
-#: skysearch.py:430
+#: skysearch\skysearch.py:435
 #, docstring
 msgid ""
 "Get the weather for an airport by ICAO or IATA code (US airports only)."
 msgstr ""
 
-#: skysearch.py:436
+#: skysearch\skysearch.py:441
 #, docstring
 msgid "Set the OpenWeatherMap API key."
 msgstr ""
 
-#: skysearch.py:442
+#: skysearch\skysearch.py:447
 #, docstring
 msgid "Show the current OpenWeatherMap API key (partially masked)."
 msgstr ""
 
-#: skysearch.py:448
+#: skysearch\skysearch.py:453
 #, docstring
 msgid "Clear the OpenWeatherMap API key."
 msgstr ""
 
-#: skysearch.py:552
+#: skysearch\skysearch.py:557
 msgid "Aircraft landed"
 msgstr ""
 
-#: skysearch.py:552
+#: skysearch\skysearch.py:557
 msgid "Aircraft {hex} has landed while squawking {squawk}."
 msgstr ""
 
-#: skysearch.py:593
+#: skysearch\skysearch.py:598
 #, docstring
 msgid ""
 "Simulate a new emergency alert for testing callbacks (owner only).\n"
@@ -434,36 +439,36 @@ msgid ""
 "        "
 msgstr ""
 
-#: skysearch.py:603
+#: skysearch\skysearch.py:608
 msgid "❌ Invalid squawk code. Valid codes are: {codes}"
 msgstr ""
 
-#: skysearch.py:608
+#: skysearch\skysearch.py:613
 msgid "❌ Invalid hex code. Must be 6 hexadecimal characters (e.g., ABC123)"
 msgstr ""
 
-#: skysearch.py:613
+#: skysearch\skysearch.py:618
 msgid "🧪 Simulating emergency alert: {hex} squawking {squawk}..."
 msgstr ""
 
-#: skysearch.py:634
+#: skysearch\skysearch.py:639
 msgid ""
 "❌ No alert channel configured. Use `*aircraft alertchannel #channel` first."
 msgstr ""
 
-#: skysearch.py:654
+#: skysearch\skysearch.py:659
 msgid "❌ Alert channel {channel_id} not found"
 msgstr ""
 
-#: skysearch.py:756
+#: skysearch\skysearch.py:761
 msgid "✅ Simulated emergency alert sent! Check #{channel} and console logs."
 msgstr ""
 
-#: skysearch.py:761
+#: skysearch\skysearch.py:766
 #, docstring
 msgid "Clear all alert cooldowns for this guild (owner only)."
 msgstr ""
 
-#: skysearch.py:764
+#: skysearch\skysearch.py:769
 msgid "✅ All alert cooldowns cleared for this guild."
 msgstr ""

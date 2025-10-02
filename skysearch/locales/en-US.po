@@ -467,3 +467,157 @@ msgstr ""
 #: skysearch.py:764
 msgid "✅ All alert cooldowns cleared for this guild."
 msgstr ""
+
+#: skysearch\commands\admin.py:28
+msgid "Alert channel set to {channel}"
+msgstr ""
+
+#: skysearch\commands\admin.py:36
+msgid "Alert channel cleared. No more alerts will be sent."
+msgstr ""
+
+#: skysearch\commands\admin.py:47
+msgid "Alert role set to {role}"
+msgstr ""
+
+#: skysearch\commands\admin.py:55
+msgid "Alert role cleared. No more role mentions will be made."
+msgstr ""
+
+#: skysearch\commands\admin.py:84
+msgid "Cooldown must be a positive number."
+msgstr ""
+
+#: skysearch\commands\admin.py:89
+msgid "Emergency alert cooldown set to {seconds} seconds."
+msgstr ""
+
+#: skysearch\commands\admin.py:91
+msgid "Emergency alert cooldown set to {minutes} minutes."
+msgstr ""
+
+#: skysearch\commands\admin.py:93
+msgid ""
+"Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds"
+" ('30s')"
+msgstr ""
+
+#: skysearch\commands\admin.py:97
+msgid "Current emergency alert cooldown is {seconds} seconds."
+msgstr ""
+
+#: skysearch\commands\admin.py:99
+msgid "Current emergency alert cooldown is {minutes} minutes."
+msgstr ""
+
+#: skysearch\commands\admin.py:107
+msgid "Auto Settings Status"
+msgstr ""
+
+#: skysearch\commands\admin.py:110
+msgid "ICAO Lookup"
+msgstr ""
+
+#: skysearch\commands\admin.py:110
+msgid "✅ **Enabled** - Automatic ICAO lookup is active"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:91 skysearch\commands\aircraft.py:167
+msgid "No results found for your query"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:92 skysearch\commands\aircraft.py:168
+msgid "Details"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:92 skysearch\commands\aircraft.py:168
+msgid "No aircraft information found or the response format is incorrect."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:179 skysearch\commands\aircraft.py:190
+#: skysearch\commands\aircraft.py:201 skysearch\commands\aircraft.py:219
+#: skysearch\commands\aircraft.py:224 skysearch\commands\aircraft.py:235
+#: skysearch\commands\aircraft.py:254 skysearch\commands\aircraft.py:263
+#: skysearch\commands\aircraft.py:648 skysearch\commands\aircraft.py:671
+msgid "Error"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:179
+msgid "No aircraft found with the specified callsign."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:190 skysearch\commands\aircraft.py:201
+msgid "Error retrieving aircraft information."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:219
+msgid ""
+"Invalid search type specified. Use one of: icao, callsign, squawk, or type."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:224
+msgid "Invalid file format specified. Use one of: csv, pdf, txt, or html."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:235
+msgid "No valid ICAO codes provided."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:254
+msgid "Invalid search type specified."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:263
+msgid "No aircraft data found."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:275
+msgid "Export Complete"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:275
+msgid "Successfully exported {count} aircraft to {format} format."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:276
+msgid "Search Type"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:277
+msgid "Search Value"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:278
+msgid "File Format"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:279
+msgid "Aircraft Count"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:280
+msgid "File Name"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:542
+msgid ""
+"**Distance:** {distance} nautical miles\n"
+"**Direction:** {direction}° from your location"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:645
+msgid "No Aircraft Found"
+msgstr ""
+
+#: skysearch\commands\aircraft.py:645
+msgid ""
+"No aircraft found within {radius} nautical miles of the specified location."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:648
+msgid "Error retrieving closest aircraft information."
+msgstr ""
+
+#: skysearch\commands\aircraft.py:671
+msgid "No response from the API."
+msgstr ""
