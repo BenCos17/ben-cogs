@@ -292,6 +292,11 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Scroll through available planes. Optionally specify a category: mil, ladd, pia, or all."""
         await self.aircraft_commands.scroll_planes(ctx, category)
 
+    @aircraft_group.command(name='feeder')
+    async def aircraft_feeder(self, ctx, json_url: str):
+        """Extract feeder URL from a JSON link containing feeder data."""
+        await self.aircraft_commands.extract_feeder_url(ctx, json_url)
+
     # Admin commands
     @aircraft_group.command(name='alertchannel')
     async def aircraft_alertchannel(self, ctx, channel: discord.TextChannel = None):
