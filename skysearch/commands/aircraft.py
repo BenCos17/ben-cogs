@@ -11,7 +11,7 @@ from urllib.parse import quote_plus
 import discord
 from discord.ext import commands, tasks
 from redbot.core import commands as red_commands
-from redbot.core.i18n import Translator
+from redbot.core.i18n import Translator, cog_i18n
 
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
