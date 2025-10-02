@@ -244,13 +244,13 @@ class AdminCommands:
             headers = await self.cog.api.get_headers(api_mode=api_mode)
             debug_info += f"```{headers}```\n"
 
+            # Get the base URL for testing
+            base_url = self.cog.api.get_primary_api_url() if api_mode == "primary" else self.cog.api.get_fallback_api_url()
+            
             # Test basic connectivity
             debug_info += f"**Testing basic connectivity...**\n"
             try:
                 self.helpers._ensure_http_client()
-                
-                # Use the correct base URL from APIManager
-                base_url = self.cog.api.get_primary_api_url() if api_mode == "primary" else self.cog.api.get_fallback_api_url()
                 # Test without API key first
                 test_url = f"{base_url}/?all_with_pos"
                 debug_info += f"🔗 **Test URL:** `{test_url}`\n"
