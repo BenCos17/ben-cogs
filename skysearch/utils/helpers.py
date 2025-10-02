@@ -506,8 +506,9 @@ class HelperUtils:
             for i, client in enumerate(beast_clients[:5]):  # Limit to 5 buttons
                 uuid = client.get('uuid', '')
                 if uuid:
-                    # Create individual feed URL
-                    feed_url = f"https://globe.airplanes.live/?feed={uuid.replace('-', '')}"
+                    # Create individual feed URL - remove hyphens from UUID
+                    feed_uuid = uuid.replace('-', '')
+                    feed_url = f"https://globe.airplanes.live/?feed={feed_uuid}"
                     view.add_item(discord.ui.Button(
                         label=f"Feed {i+1}", 
                         emoji="📡", 
