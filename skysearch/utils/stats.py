@@ -186,14 +186,14 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
         available_hours = sorted([int(h) for h in hourly.keys() if hourly.get(h, 0) > 0])
         
         if available_hours:
-            # Use the most recent 24 hours of actual data, or all data if less than 24 hours
-            current_hour = int(time.time() // 3600)
-            if len(available_hours) <= 24:
-                # Show all available data
+            # Show all available historical data, but limit to reasonable display size
+            if len(available_hours) <= 50:
+                # Show all available data if 50 hours or less
                 hours_to_show = available_hours
             else:
-                # Show last 24 hours of data
-                hours_to_show = [h for h in available_hours if h >= (current_hour - 24)]
+                # Show the most recent 50 hours to keep chart readable
+                current_hour = int(time.time() // 3600)
+                hours_to_show = [h for h in available_hours if h >= (current_hour - 50)]
             
             if hours_to_show:
                 labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%m/%d %H:%M") for h in hours_to_show]
@@ -217,7 +217,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                     },
                 }
                 url = _quickchart_url(chart, 800, 300)
-                e = discord.Embed(title=f"Hourly Requests ({len(hours_to_show)} hours of data)")
+                e = discord.Embed(title=f"Hourly Requests (Historical: {len(hours_to_show)} hours from {datetime.datetime.fromtimestamp(hours_to_show[0] * 3600).strftime('%m/%d')} to {datetime.datetime.fromtimestamp(hours_to_show[-1] * 3600).strftime('%m/%d')})")
                 e.set_image(url=url)
                 chart_embeds.append(e)
         else:
@@ -261,14 +261,8 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
         available_days = sorted([int(d) for d in daily.keys() if daily.get(d, 0) > 0])
         
         if available_days:
-            # Use the most recent 30 days of actual data, or all data if less than 30 days
-            current_day = int(time.time() // 86400)
-            if len(available_days) <= 30:
-                # Show all available data
-                days_to_show = available_days
-            else:
-                # Show last 30 days of data
-                days_to_show = [d for d in available_days if d >= (current_day - 30)]
+            # Show all available historical data
+            days_to_show = available_days
             
             if days_to_show:
                 labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%m/%d") for d in days_to_show]
@@ -290,7 +284,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                     },
                 }
                 url = _quickchart_url(chart, 800, 300)
-                e = discord.Embed(title=f"Total Requests ({len(days_to_show)} days of data)")
+                e = discord.Embed(title=f"Total Requests (Historical: {len(days_to_show)} days from {datetime.datetime.fromtimestamp(days_to_show[0] * 86400).strftime('%m/%d')} to {datetime.datetime.fromtimestamp(days_to_show[-1] * 86400).strftime('%m/%d')})")
                 e.set_image(url=url)
                 chart_embeds.append(e)
         else:
