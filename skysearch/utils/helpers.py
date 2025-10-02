@@ -477,19 +477,21 @@ class HelperUtils:
         
         return embed
 
-    def create_feeder_view(self, json_input: str, map_link: str = None):
+    def create_feeder_view(self, json_input: str, json_data: dict = None):
         """
         Create a Discord view with buttons for feeder information.
         
         Args:
             json_input (str): Original JSON input (for URL detection)
-            map_link (str, optional): Map link URL
+            json_data (dict, optional): Parsed JSON data for additional buttons
             
         Returns:
             discord.ui.View: View with interactive buttons
         """
         view = discord.ui.View()
         
+        # Add main map link button
+        map_link = json_data.get('map_link') if json_data else None
         if map_link:
             view.add_item(discord.ui.Button(
                 label="View on Globe", 
@@ -497,6 +499,21 @@ class HelperUtils:
                 url=map_link, 
                 style=discord.ButtonStyle.link
             ))
+        
+        # Add individual Beast client feed buttons
+        if json_data:
+            beast_clients = json_data.get('beast_clients', [])
+            for i, client in enumerate(beast_clients[:5]):  # Limit to 5 buttons
+                uuid = client.get('uuid', '')
+                if uuid:
+                    # Create individual feed URL
+                    feed_url = f"https://globe.airplanes.live/?feed={uuid.replace('-', '')}"
+                    view.add_item(discord.ui.Button(
+                        label=f"Feed {i+1}", 
+                        emoji="📡", 
+                        url=feed_url, 
+                        style=discord.ButtonStyle.link
+                    ))
         
         # Add button to view raw JSON (only if it's a URL)
         if json_input.startswith(('http://', 'https://')):

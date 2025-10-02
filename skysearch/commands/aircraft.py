@@ -789,10 +789,6 @@ class AircraftCommands:
             json_input: Either a URL containing JSON data OR direct JSON text
         """
         try:
-            # Debug: Check what we received
-            await ctx.send(f"Debug: Received input length: {len(json_input)}")
-            await ctx.send(f"Debug: First 100 chars: {json_input[:100]}")
-            
             # Parse JSON input using utility function
             json_data = await self.helpers.parse_json_input(json_input)
             
@@ -800,8 +796,7 @@ class AircraftCommands:
             embed = self.helpers.create_feeder_embed(json_data)
             
             # Create view using utility function
-            map_link = json_data.get('map_link')
-            view = self.helpers.create_feeder_view(json_input, map_link)
+            view = self.helpers.create_feeder_view(json_input, json_data)
             
             await ctx.send(embed=embed, view=view)
             
