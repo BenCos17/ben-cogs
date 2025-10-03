@@ -250,12 +250,15 @@ class AdminCommands:
             # Test basic connectivity
             debug_info += f"**Testing basic connectivity...**\n"
             try:
-                self.helpers._ensure_http_client()
+                # Ensure HTTP client is initialized
+                if not self.cog.api._http_client:
+                    self.cog.api._http_client = aiohttp.ClientSession()
+                
                 # Test without API key first
                 test_url = f"{base_url}/?all_with_pos"
                 debug_info += f"🔗 **Test URL:** `{test_url}`\n"
                 
-                async with self.cog._http_client.get(test_url) as response:
+                async with self.cog.api._http_client.get(test_url) as response:
                     debug_info += f"📡 **Response Status:** {response.status}\n"
                     debug_info += f"📋 **Response Headers:** `{dict(response.headers)}`\n"
                     
@@ -274,7 +277,7 @@ class AdminCommands:
                     test_url_with_key = f"{base_url}/?all_with_pos"
                     import time
                     start = time.monotonic()
-                    async with self.cog._http_client.get(test_url_with_key, headers=headers) as response:
+                    async with self.cog.api._http_client.get(test_url_with_key, headers=headers) as response:
                         elapsed = time.monotonic() - start
                         debug_info += f"📡 **Authenticated Status:** {response.status}\n"
                         debug_info += f"⏱️ **API Latency:** {elapsed:.2f} seconds\n"
@@ -311,7 +314,7 @@ class AdminCommands:
             
             for endpoint_name, endpoint_url in test_endpoints:
                 try:
-                    async with self.cog._http_client.get(endpoint_url, headers=headers) as response:
+                    async with self.cog.api._http_client.get(endpoint_url, headers=headers) as response:
                         debug_info += f"🔗 **{endpoint_name}:** Status {response.status}\n"
                         if response.status == 200:
                             try:
@@ -333,7 +336,7 @@ class AdminCommands:
             try:
                 import time
                 start = time.monotonic()
-                async with self.cog._http_client.get(primary_url, headers=headers) as response:
+                async with self.cog.api._http_client.get(primary_url, headers=headers) as response:
                     elapsed = time.monotonic() - start
                     debug_info += f"📡 **Primary Status:** {response.status}\n"
                     debug_info += f"⏱️ **Primary API Latency:** {elapsed:.2f} seconds\n"
@@ -367,7 +370,7 @@ class AdminCommands:
                     start = time.monotonic()
                     # Note: Fallback API doesn't use API key in headers
                     fallback_headers = {}  # No API key for fallback
-                    async with self.cog._http_client.get(test_url, headers=fallback_headers) as response:
+                    async with self.cog.api._http_client.get(test_url, headers=fallback_headers) as response:
                         elapsed = time.monotonic() - start
                         debug_info += f"📡 **Fallback Status:** {response.status}\n"
                         debug_info += f"⏱️ **Fallback API Latency:** {elapsed:.2f} seconds\n"
