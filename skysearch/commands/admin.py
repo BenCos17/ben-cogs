@@ -323,34 +323,77 @@ class AdminCommands:
                 except Exception as e:
                     debug_info += f"❌ **{endpoint_name}:** Error - {str(e)}\n"
 
-            # Test both API modes with a real endpoint
+            # Test both API modes with comprehensive endpoints
             debug_info += f"\n**Testing both API modes...**\n"
-            for mode in ("primary", "fallback"):
-                base_url = self.cog.api.get_primary_api_url() if mode == "primary" else self.cog.api.get_fallback_api_url()
-                if mode == "primary":
-                    test_url = f"{base_url}/?all_with_pos"
-                else:
-                    test_url = f"{base_url}/v2/mil"  # Use a real fallback endpoint
-                debug_info += f"🔗 **{mode.title()} Test URL:** `{test_url}`\n"
+            
+            # Test Primary API
+            debug_info += f"\n**🔗 Primary API Testing:**\n"
+            primary_url = f"{self.cog.api.get_primary_api_url()}/?all_with_pos"
+            debug_info += f"🔗 **Primary Test URL:** `{primary_url}`\n"
+            try:
+                import time
+                start = time.monotonic()
+                async with self.cog._http_client.get(primary_url, headers=headers) as response:
+                    elapsed = time.monotonic() - start
+                    debug_info += f"📡 **Primary Status:** {response.status}\n"
+                    debug_info += f"⏱️ **Primary API Latency:** {elapsed:.2f} seconds\n"
+                    if response.status == 200:
+                        try:
+                            data = await response.json()
+                            debug_info += f"📊 **Primary Response Keys:** `{list(data.keys())}`\n"
+                            if 'aircraft' in data:
+                                debug_info += f"✈️ **Primary Aircraft Count:** {len(data['aircraft'])} aircraft\n"
+                        except Exception as e:
+                            debug_info += f"❌ **Primary JSON Parse Error:** {str(e)}\n"
+                    else:
+                        debug_info += f"❌ **Primary failed:** Status {response.status}\n"
+            except Exception as e:
+                debug_info += f"❌ **Primary Test Error:** {str(e)}\n"
+            
+            # Test Fallback API with multiple endpoints
+            debug_info += f"\n**🔗 Fallback API Testing:**\n"
+            fallback_endpoints = [
+                ("Military aircraft", f"{self.cog.api.get_fallback_api_url()}/v2/mil"),
+                ("LADD aircraft", f"{self.cog.api.get_fallback_api_url()}/v2/ladd"),
+                ("PIA aircraft", f"{self.cog.api.get_fallback_api_url()}/v2/pia"),
+                ("Emergency squawk 7700", f"{self.cog.api.get_fallback_api_url()}/v2/squawk/7700"),
+                ("All aircraft with positions", f"{self.cog.api.get_fallback_api_url()}/v2/all")
+            ]
+            
+            for endpoint_name, test_url in fallback_endpoints:
+                debug_info += f"🔗 **Fallback Test URL:** `{test_url}`\n"
                 try:
                     import time
                     start = time.monotonic()
-                    async with self.cog._http_client.get(test_url, headers=headers) as response:
+                    # Note: Fallback API doesn't use API key in headers
+                    fallback_headers = {}  # No API key for fallback
+                    async with self.cog._http_client.get(test_url, headers=fallback_headers) as response:
                         elapsed = time.monotonic() - start
-                        debug_info += f"📡 **{mode.title()} Status:** {response.status}\n"
-                        debug_info += f"⏱️ **{mode.title()} API Latency:** {elapsed:.2f} seconds\n"
+                        debug_info += f"📡 **Fallback Status:** {response.status}\n"
+                        debug_info += f"⏱️ **Fallback API Latency:** {elapsed:.2f} seconds\n"
                         if response.status == 200:
                             try:
                                 data = await response.json()
-                                debug_info += f"📊 **{mode.title()} Response Keys:** `{list(data.keys())}`\n"
+                                debug_info += f"📊 **Fallback Response Keys:** `{list(data.keys())}`\n"
+                                # Handle different response structures
+                                aircraft_count = 0
                                 if 'aircraft' in data:
-                                    debug_info += f"✈️ **{mode.title()} Aircraft Count:** {len(data['aircraft'])} aircraft\n"
+                                    aircraft_count = len(data['aircraft'])
+                                elif 'ac' in data:
+                                    aircraft_count = len(data['ac'])
+                                elif isinstance(data, list):
+                                    aircraft_count = len(data)
+                                
+                                if aircraft_count > 0:
+                                    debug_info += f"✈️ **Fallback Aircraft Count:** {aircraft_count} aircraft\n"
+                                else:
+                                    debug_info += f"✈️ **Fallback Aircraft Count:** 0 aircraft (endpoint may be empty)\n"
                             except Exception as e:
-                                debug_info += f"❌ **{mode.title()} JSON Parse Error:** {str(e)}\n"
+                                debug_info += f"❌ **Fallback JSON Parse Error:** {str(e)}\n"
                         else:
-                            debug_info += f"❌ **{mode.title()} failed:** Status {response.status}\n"
+                            debug_info += f"❌ **Fallback failed:** Status {response.status}\n"
                 except Exception as e:
-                    debug_info += f"❌ **{mode.title()} Test Error:** {str(e)}\n"
+                    debug_info += f"❌ **Fallback Test Error:** {str(e)}\n"
 
             # Final summary
             debug_info += f"\n**📋 Summary:**\n"
@@ -359,6 +402,11 @@ class AdminCommands:
             debug_info += f"• **Current Mode:** `{await self.cog.config.api_mode()}`\n"
             debug_info += f"• **API Key:** {'✅ Configured' if api_key else '❌ Not configured'}\n"
             debug_info += f"• **Session:** {'✅ Active' if hasattr(self.cog, '_http_client') else '❌ Not initialized'}\n"
+            debug_info += f"\n**🔍 Fallback API Notes:**\n"
+            debug_info += f"• Fallback API uses different endpoint structure (`/v2/` paths)\n"
+            debug_info += f"• Fallback API does not require API key authentication\n"
+            debug_info += f"• Fallback API has different response format (may use 'ac' instead of 'aircraft')\n"
+            debug_info += f"• Some fallback endpoints may return empty results depending on current aircraft activity\n"
             
             # Send the debug info in chunks if it's too long
             if len(debug_info) > 2000:
