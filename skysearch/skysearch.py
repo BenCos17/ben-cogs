@@ -586,7 +586,13 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     log.error(f"DEBUG: Finished callbacks for {icao_hex}")
 
                                     # Let other cogs modify the message before sending
+                                    original_view = message_data.get('view')
                                     message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
+                                    
+                                    # Ensure buttons are preserved if no other cog modified the view
+                                    if message_data.get('view') is None and original_view is not None:
+                                        log.warning(f"Pre-send callback removed view for {icao_hex}, restoring buttons")
+                                        message_data['view'] = original_view
 
                                     # Send the message using the possibly modified data
                                     sent_message = await alert_channel.send(
@@ -792,7 +798,13 @@ class Skysearch(commands.Cog, DashboardIntegration):
         log.info(f"SIMULATE: Finished calling squawk API callbacks for {hex_code}")
 
         # Let other cogs modify the message before sending
+        original_view = message_data.get('view')
         message_data = await self.squawk_api.run_pre_send(guild, fake_aircraft, squawk_code, message_data)
+        
+        # Ensure buttons are preserved if no other cog modified the view
+        if message_data.get('view') is None and original_view is not None:
+            log.warning(f"Pre-send callback removed view for {hex_code}, restoring buttons")
+            message_data['view'] = original_view
 
         # Send the message using the possibly modified data
         sent_message = await alert_channel.send(
