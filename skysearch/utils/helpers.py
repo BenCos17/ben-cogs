@@ -298,7 +298,17 @@ class HelperUtils:
             embed.set_footer(text=f"Photo by {photographer}")
         else:
             # Set default aircraft image when no photo is available
-            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            try:
+                # Try to use local icon first
+                icon_path = self.cog.get_airplane_icon_path()
+                if icon_path.exists():
+                    embed.set_thumbnail(url=f"attachment://defaultairplane.png")
+                else:
+                    # Fallback to external URL
+                    embed.set_thumbnail(url="https://raw.githubusercontent.com/BenCos17/ben-cogs/main/skysearch/data/defaultairplane.png")
+            except Exception:
+                # Fallback to external URL
+                embed.set_thumbnail(url="https://raw.githubusercontent.com/BenCos17/ben-cogs/main/skysearch/data/defaultairplane.png")
             embed.set_footer(text="No photo available")
 
         return embed
