@@ -44,8 +44,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
     def __init__(self, bot):
         self.bot = bot
         self._skysearch_cog = self  # For dashboard integration access
-        self.config = Config.get_conf(self, identifier=492089091320446976)
-        self.cog_data_folder = self.cog_data_folder  
+        self.config = Config.get_conf(self, identifier=492089091320446976)  
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
@@ -81,10 +80,6 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
         # Command execution API
         self.command_api = CommandAPI()
-
-    def get_airplane_icon_path(self):
-        """Get the path to the local airplane icon."""
-        return self.cog_data_folder / "defaultairplane.png"
 
     def register_squawk_alert_callback(self, callback):
         """
