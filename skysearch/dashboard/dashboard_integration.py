@@ -2,6 +2,7 @@ import typing
 import discord
 import wtforms
 from redbot.core import commands
+import datetime
 
 # Decorator for dashboard pages
 
@@ -833,5 +834,218 @@ class DashboardIntegration:
                 "alert_role_name": alert_role_name,
                 "auto_icao_status": "Enabled" if auto_icao else "Disabled",
                 "auto_delete_status": "Enabled" if auto_delete else "Disabled",
+            },
+        }
+
+    @dashboard_page(name="alerts", description="SkySearch Custom Alerts Management", methods=("GET", "POST"), context_ids=["guild_id"])
+    async def dashboard_custom_alerts(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
+        cog = getattr(self, "_skysearch_cog", None)
+        if not cog:
+            return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
+        
+        config = cog.config.guild(guild)
+        custom_alerts = await config.custom_alerts()
+        
+        # WTForms form definition for adding alerts
+        class AlertForm(kwargs["Form"]):
+            def __init__(self):
+                super().__init__(prefix="alert_")
+            alert_type = wtforms.SelectField("Alert Type", choices=[
+                ("icao", "ICAO Hex Code"),
+                ("callsign", "Flight Callsign"),
+                ("squawk", "Squawk Code"),
+                ("type", "Aircraft Type"),
+                ("reg", "Registration")
+            ], render_kw={"class": "form-select"})
+            alert_value = wtforms.StringField("Alert Value", render_kw={"class": "form-field", "placeholder": "Enter value to monitor..."})
+            cooldown = wtforms.IntegerField("Cooldown (minutes)", render_kw={"class": "form-field", "placeholder": "5", "min": "1", "max": "1440"})
+            submit = wtforms.SubmitField("Add Alert", render_kw={"class": "form-submit"})
+        
+        form = AlertForm()
+        result_html = ""
+        
+        # Handle form submission
+        if form.validate_on_submit():
+            try:
+                alert_type = form.alert_type.data
+                alert_value = form.alert_value.data.strip()
+                cooldown = form.cooldown.data or 5
+                
+                if not alert_value:
+                    result_html = '''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                        <strong>Error:</strong> Please enter a value for the alert.
+                    </div>
+                    '''
+                elif cooldown < 1 or cooldown > 1440:
+                    result_html = '''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                        <strong>Error:</strong> Cooldown must be between 1 and 1440 minutes.
+                    </div>
+                    '''
+                else:
+                    alert_id = f"{alert_type}_{alert_value.lower()}"
+                    
+                    if alert_id in custom_alerts:
+                        result_html = '''
+                        <div style="margin-top: 20px; padding: 10px; background-color: #2b2e18; border: 1px solid #5a5a24; border-radius: 4px; color: #ffffb8;">
+                            <strong>Warning:</strong> An alert for this value already exists.
+                        </div>
+                        '''
+                    else:
+                        custom_alerts[alert_id] = {
+                            'type': alert_type,
+                            'value': alert_value,
+                            'cooldown': cooldown,
+                            'created_by': 'dashboard_user',
+                            'created_at': datetime.datetime.utcnow().isoformat(),
+                            'last_triggered': None
+                        }
+                        
+                        await config.custom_alerts.set(custom_alerts)
+                        result_html = f'''
+                        <div style="margin-top: 20px; padding: 10px; background-color: #152b15; border: 1px solid #245a24; border-radius: 4px; color: #b8ffb8;">
+                            <strong>Success:</strong> Added alert for {alert_type} '{alert_value}' with {cooldown} minute cooldown.
+                        </div>
+                        '''
+                        
+            except Exception as e:
+                result_html = f'''
+                <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                    <strong>Error:</strong> An error occurred while adding the alert: {str(e)}
+                </div>
+                '''
+        
+        # Build alerts list HTML
+        alerts_html = ""
+        if custom_alerts:
+            alerts_html = '<div style="margin-top: 20px;"><h3>Current Alerts:</h3><div style="background-color: #2b2e34; padding: 15px; border-radius: 8px; border: 1px solid #3a3d41;">'
+            for alert_id, alert_data in custom_alerts.items():
+                created_at = datetime.datetime.fromisoformat(alert_data['created_at'])
+                last_triggered = "Never"
+                if alert_data['last_triggered']:
+                    last_triggered = datetime.datetime.fromisoformat(alert_data['last_triggered']).strftime("%Y-%m-%d %H:%M UTC")
+                
+                alerts_html += f'''
+                <div style="margin-bottom: 15px; padding: 10px; background-color: #1e1f22; border-radius: 4px; border-left: 4px solid #5865f2;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>🔔 {alert_id}</strong><br>
+                            <span style="color: #cfcfcf;">Type: {alert_data['type']} | Value: {alert_data['value']} | Cooldown: {alert_data['cooldown']} min</span><br>
+                            <span style="color: #8a8a8a; font-size: 12px;">Created: {created_at.strftime('%Y-%m-%d %H:%M UTC')} | Last Triggered: {last_triggered}</span>
+                        </div>
+                        <form method="POST" action="/dashboard/alerts" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="remove">
+                            <input type="hidden" name="alert_id" value="{alert_id}">
+                            <button type="submit" style="background-color: #ff4545; border: none; border-radius: 4px; color: white; padding: 5px 10px; cursor: pointer; font-size: 12px;">Remove</button>
+                        </form>
+                    </div>
+                </div>
+                '''
+            alerts_html += '</div></div>'
+        else:
+            alerts_html = '''
+            <div style="margin-top: 20px; padding: 20px; background-color: #2b2e34; border-radius: 8px; border: 1px solid #3a3d41; text-align: center; color: #8a8a8a;">
+                <h3>No Custom Alerts</h3>
+                <p>No custom alerts are currently configured for this server.</p>
+            </div>
+            '''
+        
+        # Handle remove action
+        if kwargs.get("request") and kwargs["request"].method == "POST":
+            form_data = kwargs["request"].form
+            if form_data.get("action") == "remove":
+                alert_id = form_data.get("alert_id")
+                if alert_id and alert_id in custom_alerts:
+                    del custom_alerts[alert_id]
+                    await config.custom_alerts.set(custom_alerts)
+                    result_html = f'''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #152b15; border: 1px solid #245a24; border-radius: 4px; color: #b8ffb8;">
+                        <strong>Success:</strong> Removed alert {alert_id}.
+                    </div>
+                    '''
+        
+        return {
+            "status": 0,
+            "web_content": {
+                "source": """
+                <div style="background-color: #1e1f22; padding: 20px; border-radius: 8px; color: #e6e6e6;">
+                    <h2 style="color: #ffffff;">SkySearch Custom Alerts</h2>
+                    <p style="color: #cfcfcf;">Set up custom alerts to be notified when specific aircraft or squawks are spotted.</p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #ffffff;">Add New Alert:</h3>
+                        <div style="background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;">
+                            <style>
+                                .form-container {
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 15px;
+                                }
+                                .form-row {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 10px;
+                                    flex-wrap: wrap;
+                                }
+                                .form-label {
+                                    color: #ffffff;
+                                    font-weight: bold;
+                                    min-width: 100px;
+                                }
+                                .form-field {
+                                    background-color: #1e1f22;
+                                    border: 1px solid #3a3d41;
+                                    border-radius: 4px;
+                                    color: #e6e6e6;
+                                    padding: 8px 12px;
+                                    font-size: 14px;
+                                }
+                                .form-field:focus {
+                                    outline: none;
+                                    border-color: #5865f2;
+                                    box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
+                                }
+                                .form-select {
+                                    background-color: #1e1f22;
+                                    border: 1px solid #3a3d41;
+                                    border-radius: 4px;
+                                    color: #e6e6e6;
+                                    padding: 8px 12px;
+                                    font-size: 14px;
+                                    min-width: 150px;
+                                }
+                                .form-submit {
+                                    background-color: #5865f2;
+                                    border: none;
+                                    border-radius: 4px;
+                                    color: #ffffff;
+                                    padding: 10px 20px;
+                                    font-size: 14px;
+                                    font-weight: bold;
+                                    cursor: pointer;
+                                    transition: background-color 0.2s;
+                                }
+                                .form-submit:hover {
+                                    background-color: #4752c4;
+                                }
+                                .form-submit:active {
+                                    background-color: #3c45a5;
+                                }
+                            </style>
+                            <div class="form-container">
+                                {{ form|safe }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {{ alerts_html|safe }}
+                    {{ result_html|safe }}
+                </div>
+                """,
+                "form": form,
+                "alerts_html": alerts_html,
+                "result_html": result_html,
             },
         } 

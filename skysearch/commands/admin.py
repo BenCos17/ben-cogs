@@ -606,3 +606,186 @@ class AdminCommands:
                 color=0xff0000
             )
             await ctx.send(embed=embed)
+    
+    async def add_custom_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5):
+        """Add a custom alert for specific aircraft or squawks.
+        
+        Alert types:
+        - icao: Alert when specific ICAO hex code is spotted
+        - callsign: Alert when specific callsign is spotted  
+        - squawk: Alert when specific squawk code is used
+        - type: Alert when specific aircraft type is spotted
+        - reg: Alert when specific registration is spotted
+        """
+        if alert_type not in ['icao', 'callsign', 'squawk', 'type', 'reg']:
+            embed = discord.Embed(
+                title="❌ Invalid Alert Type",
+                description="Alert type must be one of: icao, callsign, squawk, type, reg",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        if cooldown < 1 or cooldown > 1440:  # 1 minute to 24 hours
+            embed = discord.Embed(
+                title="❌ Invalid Cooldown",
+                description="Cooldown must be between 1 and 1440 minutes (24 hours)",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        try:
+            guild_config = self.cog.config.guild(ctx.guild)
+            custom_alerts = await guild_config.custom_alerts()
+            
+            alert_id = f"{alert_type}_{value.lower()}"
+            
+            if alert_id in custom_alerts:
+                embed = discord.Embed(
+                    title="⚠️ Alert Already Exists",
+                    description=f"An alert for {alert_type} '{value}' already exists",
+                    color=0xffaa00
+                )
+                await ctx.send(embed=embed)
+                return
+            
+            custom_alerts[alert_id] = {
+                'type': alert_type,
+                'value': value,
+                'cooldown': cooldown,
+                'created_by': ctx.author.id,
+                'created_at': datetime.datetime.utcnow().isoformat(),
+                'last_triggered': None
+            }
+            
+            await guild_config.custom_alerts.set(custom_alerts)
+            
+            embed = discord.Embed(
+                title="✅ Custom Alert Added",
+                description=f"Added alert for {alert_type} '{value}' with {cooldown} minute cooldown",
+                color=0x00ff00
+            )
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Error Adding Alert",
+                description=f"Error adding custom alert: {str(e)}",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+    
+    async def remove_custom_alert(self, ctx, alert_id: str):
+        """Remove a custom alert by its ID."""
+        try:
+            guild_config = self.cog.config.guild(ctx.guild)
+            custom_alerts = await guild_config.custom_alerts()
+            
+            if alert_id not in custom_alerts:
+                embed = discord.Embed(
+                    title="❌ Alert Not Found",
+                    description=f"No alert found with ID: {alert_id}",
+                    color=0xff0000
+                )
+                await ctx.send(embed=embed)
+                return
+            
+            alert_info = custom_alerts[alert_id]
+            del custom_alerts[alert_id]
+            await guild_config.custom_alerts.set(custom_alerts)
+            
+            embed = discord.Embed(
+                title="✅ Custom Alert Removed",
+                description=f"Removed alert for {alert_info['type']} '{alert_info['value']}'",
+                color=0x00ff00
+            )
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Error Removing Alert",
+                description=f"Error removing custom alert: {str(e)}",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+    
+    async def list_custom_alerts(self, ctx):
+        """List all custom alerts for this server."""
+        try:
+            guild_config = self.cog.config.guild(ctx.guild)
+            custom_alerts = await guild_config.custom_alerts()
+            
+            if not custom_alerts:
+                embed = discord.Embed(
+                    title="📋 Custom Alerts",
+                    description="No custom alerts configured for this server",
+                    color=0x00aaff
+                )
+                await ctx.send(embed=embed)
+                return
+            
+            embed = discord.Embed(
+                title="📋 Custom Alerts",
+                description=f"Found {len(custom_alerts)} custom alert(s)",
+                color=0x00aaff
+            )
+            
+            for alert_id, alert_info in custom_alerts.items():
+                created_at = datetime.datetime.fromisoformat(alert_info['created_at'])
+                last_triggered = "Never"
+                if alert_info['last_triggered']:
+                    last_triggered = datetime.datetime.fromisoformat(alert_info['last_triggered']).strftime("%Y-%m-%d %H:%M UTC")
+                
+                embed.add_field(
+                    name=f"🔔 {alert_id}",
+                    value=f"**Type:** {alert_info['type']}\n"
+                          f"**Value:** {alert_info['value']}\n"
+                          f"**Cooldown:** {alert_info['cooldown']} minutes\n"
+                          f"**Created:** {created_at.strftime('%Y-%m-%d %H:%M UTC')}\n"
+                          f"**Last Triggered:** {last_triggered}",
+                    inline=False
+                )
+            
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Error Listing Alerts",
+                description=f"Error listing custom alerts: {str(e)}",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+    
+    async def clear_custom_alerts(self, ctx):
+        """Clear all custom alerts for this server."""
+        try:
+            guild_config = self.cog.config.guild(ctx.guild)
+            custom_alerts = await guild_config.custom_alerts()
+            
+            if not custom_alerts:
+                embed = discord.Embed(
+                    title="⚠️ No Alerts to Clear",
+                    description="No custom alerts configured for this server",
+                    color=0xffaa00
+                )
+                await ctx.send(embed=embed)
+                return
+            
+            alert_count = len(custom_alerts)
+            await guild_config.custom_alerts.set({})
+            
+            embed = discord.Embed(
+                title="✅ Custom Alerts Cleared",
+                description=f"Cleared {alert_count} custom alert(s) for this server",
+                color=0x00ff00
+            )
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Error Clearing Alerts",
+                description=f"Error clearing custom alerts: {str(e)}",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)

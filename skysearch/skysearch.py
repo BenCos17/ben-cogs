@@ -49,7 +49,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(openweathermap_api=None)  # OWM API key
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
         self.config.register_global(api_stats=None)  # API request statistics for persistence
-        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={})
+        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={})
         
         # Initialize utility managers
         self.api = APIManager(self)
@@ -225,6 +225,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name=_("Special Aircraft"), value="`military` `ladd` `pia`", inline=False)
         embed.add_field(name=_("Export"), value=_("`export` - Export aircraft data to CSV, PDF, TXT, or HTML"), inline=False)
         embed.add_field(name=_("Configuration"), value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
+        embed.add_field(name=_("Custom Alerts"), value="`addalert` `removealert` `listalerts` `clearalerts`", inline=False)
         embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes\n`feeder` - Parse feeder JSON data (secure modal)"), inline=False)
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
@@ -365,6 +366,35 @@ class Skysearch(commands.Cog, DashboardIntegration):
             return
         await self.config.api_mode.set(mode)
         await ctx.send(f"✅ API mode set to **{mode}**.")
+    
+    # Custom Alerts Commands
+    @commands.guild_only()
+    @aircraft_group.command(name='addalert')
+    async def aircraft_add_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5):
+        """Add a custom alert for specific aircraft or squawks.
+        
+        Alert types: icao, callsign, squawk, type, reg
+        Cooldown: 1-1440 minutes (default: 5)
+        """
+        await self.admin_commands.add_custom_alert(ctx, alert_type, value, cooldown)
+    
+    @commands.guild_only()
+    @aircraft_group.command(name='removealert')
+    async def aircraft_remove_alert(self, ctx, alert_id: str):
+        """Remove a custom alert by its ID."""
+        await self.admin_commands.remove_custom_alert(ctx, alert_id)
+    
+    @commands.guild_only()
+    @aircraft_group.command(name='listalerts')
+    async def aircraft_list_alerts(self, ctx):
+        """List all custom alerts for this server."""
+        await self.admin_commands.list_custom_alerts(ctx)
+    
+    @commands.guild_only()
+    @aircraft_group.command(name='clearalerts')
+    async def aircraft_clear_alerts(self, ctx):
+        """Clear all custom alerts for this server."""
+        await self.admin_commands.clear_custom_alerts(ctx)
 
     @commands.is_owner()
     @aircraft_group.command(name='apimode')
@@ -612,10 +642,18 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     if aircraft_info.get('altitude') is not None and aircraft_info.get('altitude') < 25:
                                         embed = discord.Embed(title=_("Aircraft landed"), description=_("Aircraft {hex} has landed while squawking {squawk}.").format(hex=aircraft_info.get('hex'), squawk=squawk_code), color=0x00ff00)
                                         await alert_channel.send(embed=embed)
-                                else:
-                                    # Only log if channel was set but not found (actual error)
-                                    log.warning(f"Alert channel {alert_channel_id} not found for guild {guild.name} - channel may have been deleted")
-                            # Removed the "No alert channel set" message - this is normal behavior
+                
+                # Check custom alerts for all aircraft (not just emergency squawks)
+                if response and 'aircraft' in response:
+                    for aircraft_info in response['aircraft']:
+                        # Ignore aircraft with the hex 00000000
+                        if aircraft_info.get('hex') == '00000000':
+                            continue
+                        await self.check_custom_alerts(aircraft_info)
+                else:
+                    # Only log if channel was set but not found (actual error)
+                    log.warning(f"Alert channel {alert_channel_id} not found for guild {guild.name} - channel may have been deleted")
+                # Removed the "No alert channel set" message - this is normal behavior
                 await asyncio.sleep(2)
         except Exception as e:
             log.error(f"Error checking emergency squawks: {e}", exc_info=True)
@@ -624,6 +662,143 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def before_check_emergency_squawks(self):
         """Wait for bot to be ready before starting the task."""
         await self.bot.wait_until_ready()
+    
+    async def check_custom_alerts(self, aircraft_info):
+        """Check if aircraft matches any custom alerts for all guilds."""
+        try:
+            guilds = self.bot.guilds
+            for guild in guilds:
+                await set_contextual_locales_from_guild(self.bot, guild)
+                guild_config = self.config.guild(guild)
+                alert_channel_id = await guild_config.alert_channel()
+                
+                if not alert_channel_id:
+                    continue
+                
+                custom_alerts = await guild_config.custom_alerts()
+                if not custom_alerts:
+                    continue
+                
+                alert_channel = self.bot.get_channel(alert_channel_id)
+                if not alert_channel:
+                    continue
+                
+                # Check each custom alert
+                for alert_id, alert_data in custom_alerts.items():
+                    if await self._check_aircraft_matches_alert(aircraft_info, alert_data):
+                        if await self._is_alert_cooldown_active(guild_config, alert_id, alert_data):
+                            continue
+                        
+                        # Send custom alert
+                        await self._send_custom_alert(alert_channel, guild_config, aircraft_info, alert_data, alert_id)
+                        
+                        # Update last triggered timestamp
+                        custom_alerts[alert_id]['last_triggered'] = datetime.datetime.utcnow().isoformat()
+                        await guild_config.custom_alerts.set(custom_alerts)
+                        
+        except Exception as e:
+            log.error(f"Error checking custom alerts: {e}", exc_info=True)
+    
+    async def _check_aircraft_matches_alert(self, aircraft_info, alert_data):
+        """Check if aircraft matches the alert criteria."""
+        alert_type = alert_data['type']
+        alert_value = alert_data['value'].lower()
+        
+        if alert_type == 'icao':
+            return aircraft_info.get('hex', '').lower() == alert_value
+        elif alert_type == 'callsign':
+            return aircraft_info.get('flight', '').lower() == alert_value
+        elif alert_type == 'squawk':
+            return aircraft_info.get('squawk', '') == alert_value
+        elif alert_type == 'type':
+            return aircraft_info.get('t', '').lower() == alert_value
+        elif alert_type == 'reg':
+            return aircraft_info.get('r', '').lower() == alert_value
+        
+        return False
+    
+    async def _is_alert_cooldown_active(self, guild_config, alert_id, alert_data):
+        """Check if alert is in cooldown period."""
+        cooldown_minutes = alert_data['cooldown']
+        last_triggered = alert_data.get('last_triggered')
+        
+        if not last_triggered:
+            return False
+        
+        last_triggered_time = datetime.datetime.fromisoformat(last_triggered)
+        now = datetime.datetime.utcnow()
+        time_since_last = (now - last_triggered_time).total_seconds()
+        
+        return time_since_last < (cooldown_minutes * 60)
+    
+    async def _send_custom_alert(self, alert_channel, guild_config, aircraft_info, alert_data, alert_id):
+        """Send a custom alert message."""
+        try:
+            # Get the alert role
+            alert_role_id = await guild_config.alert_role()
+            alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
+            
+            # Create embed
+            aircraft_data = aircraft_info
+            image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
+            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+            
+            # Add custom alert header
+            embed.title = f"🔔 Custom Alert: {alert_data['type'].upper()} '{alert_data['value']}'"
+            embed.color = 0xffaa00  # Orange color for custom alerts
+            
+            # Create view with buttons
+            view = discord.ui.View()
+            icao = aircraft_data.get('hex', '').upper()
+            link = f"https://globe.airplanes.live/?icao={icao}"
+            view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
+            
+            # Add social media sharing buttons
+            import urllib.parse
+            ground_speed_knots = aircraft_data.get('gs', aircraft_data.get('ground_speed', 'N/A'))
+            ground_speed_mph = 'unknown'
+            if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
+                try:
+                    ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+                except Exception:
+                    ground_speed_mph = 'unknown'
+            
+            lat = aircraft_data.get('lat', 'N/A')
+            lon = aircraft_data.get('lon', 'N/A')
+            if lat != 'N/A' and lat is not None:
+                try:
+                    lat_formatted = round(float(lat), 2)
+                    lat_dir = "N" if lat_formatted >= 0 else "S"
+                    lat = f"{abs(lat_formatted)}{lat_dir}"
+                except Exception:
+                    pass
+            if lon != 'N/A' and lon is not None:
+                try:
+                    lon_formatted = round(float(lon), 2)
+                    lon_dir = "E" if lon_formatted >= 0 else "W"
+                    lon = f"{abs(lon_formatted)}{lon_dir}"
+                except Exception:
+                    pass
+            
+            tweet_text = f"Custom alert triggered! {alert_data['type'].upper()} '{alert_data['value']}' spotted - Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #CustomAlert\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+            tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+            view.add_item(discord.ui.Button(label="Post on X", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
+            
+            whatsapp_text = f"Custom alert! {alert_data['type'].upper()} '{alert_data['value']}' spotted - Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
+            whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
+            view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+            
+            # Send the alert
+            await alert_channel.send(
+                content=alert_role_mention if alert_role_mention else None,
+                embed=embed,
+                view=view
+            )
+            
+            log.info(f"Sent custom alert for {alert_id} in {alert_channel.guild.name}")
+            
+        except Exception as e:
+            log.error(f"Error sending custom alert {alert_id}: {e}", exc_info=True)
 
     @commands.Cog.listener()
     async def on_message(self, message):
