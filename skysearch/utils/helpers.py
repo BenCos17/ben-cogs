@@ -487,71 +487,144 @@ class HelperUtils:
         
         return embed
 
-    def create_feeder_view(self, json_input: str, json_data: dict = None):
-        """
-        Create a Discord view with buttons for feeder information.
+class JSONInputModal(discord.ui.Modal):
+    """Modal for securely inputting JSON data."""
+    
+    def __init__(self, cog):
+        super().__init__(title="Input Feeder JSON Data")
+        self.cog = cog
         
-        Args:
-            json_input (str): Original JSON input (for URL detection)
-            json_data (dict, optional): Parsed JSON data for additional buttons
+        # Add text input for JSON data
+        self.json_input = discord.ui.TextInput(
+            label="JSON Data or URL",
+            placeholder="Paste your JSON data here or enter a URL containing JSON...",
+            style=discord.TextStyle.paragraph,
+            required=True,
+            max_length=4000  # Discord's limit for text inputs
+        )
+        self.add_item(self.json_input)
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        """Handle modal submission."""
+        json_input = self.json_input.value.strip()
+        
+        if not json_input:
+            embed = discord.Embed(
+                title="Error", 
+                description="JSON input cannot be empty.", 
+                color=0xff4545
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        try:
+            # Parse JSON input using utility function
+            json_data = await self.cog.helpers.parse_json_input(json_input)
             
-        Returns:
-            discord.ui.View: View with interactive buttons
-        """
-        view = discord.ui.View()
+            # Create embed using utility function
+            embed = self.cog.helpers.create_feeder_embed(json_data)
+            
+            # Create view using utility function
+            view = self.cog.helpers.create_feeder_view(json_input, json_data)
+            
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            
+        except ValueError as e:
+            embed = discord.Embed(
+                title="Error", 
+                description=str(e), 
+                color=0xff4545
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="Error", 
+                description=f"Failed to parse JSON data: {str(e)}", 
+                color=0xff4545
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class JSONInputButton(discord.ui.View):
+    """Button view to trigger JSON input modal."""
+    
+    def __init__(self, cog):
+        super().__init__(timeout=300)  # 5 minute timeout
+        self.cog = cog
+    
+    @discord.ui.button(label="Input JSON Data", style=discord.ButtonStyle.primary, emoji="📄")
+    async def input_json_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Open modal to input JSON data."""
+        modal = JSONInputModal(self.cog)
+        await interaction.response.send_modal(modal)
+
+
+def create_feeder_view(json_input: str, json_data: dict = None):
+    """
+    Create a Discord view with buttons for feeder information.
+    
+    Args:
+        json_input (str): Original JSON input (for URL detection)
+        json_data (dict, optional): Parsed JSON data for additional buttons
         
-        # Add main map link button
-        map_link = json_data.get('map_link') if json_data else None
-        if map_link:
-            view.add_item(discord.ui.Button(
-                label="View on Globe", 
-                emoji="🌍", 
-                url=map_link, 
-                style=discord.ButtonStyle.link
-            ))
-        
-        # Add individual Beast client feed buttons
-        if json_data:
-            beast_clients = json_data.get('beast_clients', [])
-            for i, client in enumerate(beast_clients[:5]):  # Limit to 5 buttons
-                uuid = client.get('uuid', '')
-                if uuid:
-                    # Create individual feed URL - use first 16 characters of UUID without hyphens
-                    # This matches the pattern from the map_link in the JSON
-                    feed_uuid = uuid.replace('-', '')[:16]
-                    feed_url = f"https://globe.airplanes.live/?feed={feed_uuid}"
-                    
-                    # Create feed name using first part of UUID
-                    # Use first 8 characters of UUID for a clean, short identifier
-                    feed_name = uuid[:8]
-                    
-                    # Add performance info if available
-                    msgs_s = client.get('msgs_s', 0)
-                    if msgs_s > 0:
-                        feed_name += f" ({msgs_s:.1f} msg/s)"
-                    
-                    # Truncate if too long for Discord button (max 80 characters)
-                    if len(feed_name) > 80:
-                        feed_name = feed_name[:77] + "..."
-                    
-                    view.add_item(discord.ui.Button(
-                        label=feed_name, 
-                        emoji="📡", 
-                        url=feed_url, 
-                        style=discord.ButtonStyle.link
-                    ))
-        
-        # Note: MLAT clients don't have individual feed URLs like beast clients
-        # They are part of the overall feeder system, so we don't create individual buttons for them
-        # The MLAT information is already displayed in the embed above
-        
-        # Add button to view raw JSON (only if it's a URL)
-        if json_input.startswith(('http://', 'https://')):
-            view.add_item(discord.ui.Button(
-                label="View Raw JSON", 
-                emoji="📄", 
-                url=json_input, 
-                style=discord.ButtonStyle.link
-            ))
-        
-        return view 
+    Returns:
+        discord.ui.View: View with interactive buttons
+    """
+    view = discord.ui.View()
+    
+    # Add main map link button
+    map_link = json_data.get('map_link') if json_data else None
+    if map_link:
+        view.add_item(discord.ui.Button(
+            label="View on Globe", 
+            emoji="🌍", 
+            url=map_link, 
+            style=discord.ButtonStyle.link
+        ))
+    
+    # Add individual Beast client feed buttons
+    if json_data:
+        beast_clients = json_data.get('beast_clients', [])
+        for i, client in enumerate(beast_clients[:5]):  # Limit to 5 buttons
+            uuid = client.get('uuid', '')
+            if uuid:
+                # Create individual feed URL - use first 16 characters of UUID without hyphens
+                # This matches the pattern from the map_link in the JSON
+                feed_uuid = uuid.replace('-', '')[:16]
+                feed_url = f"https://globe.airplanes.live/?feed={feed_uuid}"
+                
+                # Create feed name using first part of UUID
+                # Use first 8 characters of UUID for a clean, short identifier
+                feed_name = uuid[:8]
+                
+                # Add performance info if available
+                msgs_s = client.get('msgs_s', 0)
+                if msgs_s > 0:
+                    feed_name += f" ({msgs_s:.1f} msg/s)"
+                
+                # Truncate if too long for Discord button (max 80 characters)
+                if len(feed_name) > 80:
+                    feed_name = feed_name[:77] + "..."
+                
+                view.add_item(discord.ui.Button(
+                    label=feed_name, 
+                    emoji="📡", 
+                    url=feed_url, 
+                    style=discord.ButtonStyle.link
+                ))
+    
+    # Note: MLAT clients don't have individual feed URLs like beast clients
+    # They are part of the overall feeder system, so we don't create individual buttons for them
+    # The MLAT information is already displayed in the embed above
+    
+    # Add button to view raw JSON (only if it's a URL)
+    if json_input.startswith(('http://', 'https://')):
+        view.add_item(discord.ui.Button(
+            label="View Raw JSON", 
+            emoji="📄", 
+            url=json_input, 
+            style=discord.ButtonStyle.link
+        ))
+    
+    return view 

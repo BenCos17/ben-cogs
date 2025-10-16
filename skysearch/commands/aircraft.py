@@ -782,37 +782,49 @@ class AircraftCommands:
             embed = discord.Embed(title="Error", description=f"Error scrolling through planes: {e}", color=0xff4545)
             await ctx.send(embed=embed)
 
-    async def extract_feeder_url(self, ctx, *, json_input: str):
+    async def extract_feeder_url(self, ctx, *, json_input: str = None):
         """
         Extract feeder URL from JSON data or a URL containing feeder data.
         
         Args:
-            json_input: Either a URL containing JSON data OR direct JSON text
+            json_input: Either a URL containing JSON data OR direct JSON text (optional)
         """
-        try:
-            # Parse JSON input using utility function
-            json_data = await self.helpers.parse_json_input(json_input)
-            
-            # Create embed using utility function
-            embed = self.helpers.create_feeder_embed(json_data)
-            
-            # Create view using utility function
-            view = self.helpers.create_feeder_view(json_input, json_data)
-            
-            await ctx.send(embed=embed, view=view)
-            
-        except ValueError as e:
+        if json_input:
+            # Legacy support - if JSON input provided directly, parse it
+            try:
+                # Parse JSON input using utility function
+                json_data = await self.helpers.parse_json_input(json_input)
+                
+                # Create embed using utility function
+                embed = self.helpers.create_feeder_embed(json_data)
+                
+                # Create view using utility function
+                view = self.helpers.create_feeder_view(json_input, json_data)
+                
+                await ctx.send(embed=embed, view=view)
+                
+            except ValueError as e:
+                embed = discord.Embed(
+                    title="Error", 
+                    description=str(e), 
+                    color=0xff4545
+                )
+                await ctx.send(embed=embed)
+                
+            except Exception as e:
+                embed = discord.Embed(
+                    title="Error", 
+                    description=f"Failed to extract feeder information: {str(e)}", 
+                    color=0xff4545
+                )
+                await ctx.send(embed=embed)
+        else:
+            # Use modal for secure input
             embed = discord.Embed(
-                title="Error", 
-                description=str(e), 
-                color=0xff4545
+                title="Feeder JSON Parser", 
+                description="Click the button below to securely input your JSON data using a text input modal.\n\n**Benefits:**\n• JSON data won't be visible in chat history\n• More secure than pasting in chat\n• Ephemeral response (only you can see it)\n• Supports both JSON text and URLs", 
+                color=0x2BBD8E
             )
-            await ctx.send(embed=embed)
-            
-        except Exception as e:
-            embed = discord.Embed(
-                title="Error", 
-                description=f"Failed to extract feeder information: {str(e)}", 
-                color=0xff4545
-            )
-            await ctx.send(embed=embed) 
+            from ..utils.helpers import JSONInputButton
+            view = JSONInputButton(self.cog)
+            await ctx.send(embed=embed, view=view) 

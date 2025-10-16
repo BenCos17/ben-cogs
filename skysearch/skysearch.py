@@ -225,7 +225,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name=_("Special Aircraft"), value="`military` `ladd` `pia`", inline=False)
         embed.add_field(name=_("Export"), value=_("`export` - Export aircraft data to CSV, PDF, TXT, or HTML"), inline=False)
         embed.add_field(name=_("Configuration"), value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
-        embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes"), inline=False)
+        embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes\n`feeder` - Parse feeder JSON data (secure modal)"), inline=False)
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
             embed.add_field(name=_("Debug"), value=_("`debugapi` - Debug API issues (owner only)\n`debugtoggle` - Toggle debug output for lookups (owner only)\n`debug` - Run a debug lookup (owner only)"), inline=False)
@@ -304,8 +304,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await self.aircraft_commands.scroll_planes(ctx, category)
 
     @aircraft_group.command(name='feeder')
-    async def aircraft_feeder(self, ctx, *, json_input: str):
-        """Extract feeder URL from JSON data or a URL containing feeder data."""
+    async def aircraft_feeder(self, ctx, *, json_input: str = None):
+        """Extract feeder URL from JSON data or a URL containing feeder data using secure modal."""
         await self.aircraft_commands.extract_feeder_url(ctx, json_input=json_input)
 
     # Admin commands
