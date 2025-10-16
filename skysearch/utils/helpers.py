@@ -298,7 +298,17 @@ class HelperUtils:
             embed.set_footer(text=f"Photo by {photographer}")
         else:
             # Set default aircraft image when no photo is available
-            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            try:
+                # Try to use local icon first
+                icon_path = self.cog.get_airplane_icon_path()
+                if icon_path.exists():
+                    embed.set_thumbnail(url=f"attachment://defaultairplane.png")
+                else:
+                    # Fallback to external URL
+                    embed.set_thumbnail(url="https://raw.githubusercontent.com/BenCos17/ben-cogs/main/skysearch/data/defaultairplane.png")
+            except Exception:
+                # Fallback to external URL
+                embed.set_thumbnail(url="https://raw.githubusercontent.com/BenCos17/ben-cogs/main/skysearch/data/defaultairplane.png")
             embed.set_footer(text="No photo available")
 
         return embed
@@ -510,9 +520,66 @@ class HelperUtils:
                     # This matches the pattern from the map_link in the JSON
                     feed_uuid = uuid.replace('-', '')[:16]
                     feed_url = f"https://globe.airplanes.live/?feed={feed_uuid}"
+                    
+                    # Create a descriptive feed name from available fields
+                    # Try to use ingest_id if available, otherwise use port or host info
+                    ingest_id = client.get('ingest_id', '')
+                    port = client.get('port', '')
+                    msgs_s = client.get('msgs_s', 0)
+                    pos_s = client.get('pos_s', 0)
+                    
+                    if ingest_id:
+                        feed_name = f"Feed {ingest_id}"
+                    elif port:
+                        feed_name = f"Port {port}"
+                    else:
+                        # Fallback to first 8 characters of UUID
+                        feed_name = f"Feed {uuid[:8]}"
+                    
+                    # Add performance info if available
+                    if msgs_s > 0 or pos_s > 0:
+                        feed_name += f" ({msgs_s:.1f} msg/s)"
+                    
+                    # Truncate if too long for Discord button (max 80 characters)
+                    if len(feed_name) > 80:
+                        feed_name = feed_name[:77] + "..."
+                    
                     view.add_item(discord.ui.Button(
-                        label=f"Feed {i+1}", 
+                        label=feed_name, 
                         emoji="📡", 
+                        url=feed_url, 
+                        style=discord.ButtonStyle.link
+                    ))
+        
+        # Add individual MLAT client feed buttons
+        if json_data:
+            mlat_clients = json_data.get('mlat_clients', [])
+            for i, client in enumerate(mlat_clients[:3]):  # Limit to 3 MLAT buttons
+                user = client.get('user', '')
+                if user:
+                    # For MLAT clients, we'll use the user field as the feed identifier
+                    # Create a feed URL using the user field
+                    feed_url = f"https://globe.airplanes.live/?feed={user}"
+                    
+                    # Get additional info for more descriptive naming
+                    message_rate = client.get('message_rate', 0)
+                    peer_count = client.get('peer_count', 0)
+                    ingest_id = client.get('ingest_id', '')
+                    
+                    # Create descriptive name with user and performance info
+                    feed_name = user
+                    if message_rate > 0 or peer_count > 0:
+                        feed_name += f" ({message_rate} msg/s, {peer_count} peers)"
+                    elif ingest_id:
+                        feed_name += f" ({ingest_id})"
+                    
+                    # Truncate if too long for Discord button (max 80 characters)
+                    if len(feed_name) > 80:
+                        feed_name = feed_name[:77] + "..."
+                    
+                    view.add_item(discord.ui.Button(
+                        label=f"MLAT: {feed_name}", 
+                        emoji="🛰️", 
                         url=feed_url, 
                         style=discord.ButtonStyle.link
                     ))
