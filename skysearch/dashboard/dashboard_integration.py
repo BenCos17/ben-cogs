@@ -180,9 +180,9 @@ class DashboardIntegration:
                 ("callsign", "Flight Callsign"),
                 ("reg", "Registration"),
                 ("type", "Aircraft Type")
-            ])
-            search_value = wtforms.StringField("Search Value")
-            submit = wtforms.SubmitField("Search Aircraft")
+            ], render_kw={"class": "form-select"})
+            search_value = wtforms.StringField("Search Value", render_kw={"class": "form-field", "placeholder": "Enter search value..."})
+            submit = wtforms.SubmitField("Search Aircraft", render_kw={"class": "form-submit"})
         
         form = LookupForm()
         result_html = ""
@@ -206,7 +206,66 @@ class DashboardIntegration:
                                 <div style=\"margin-bottom: 20px;\">
                                     <h3 style=\"color: #ffffff;\">Search Aircraft:</h3>
                                     <div style=\"background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;\">
-                                        {{ form|safe }}
+                                        <style>
+                                            .form-container {
+                                                display: flex;
+                                                flex-direction: column;
+                                                gap: 15px;
+                                            }
+                                            .form-row {
+                                                display: flex;
+                                                align-items: center;
+                                                gap: 10px;
+                                                flex-wrap: wrap;
+                                            }
+                                            .form-label {
+                                                color: #ffffff;
+                                                font-weight: bold;
+                                                min-width: 100px;
+                                            }
+                                            .form-field {
+                                                background-color: #1e1f22;
+                                                border: 1px solid #3a3d41;
+                                                border-radius: 4px;
+                                                color: #e6e6e6;
+                                                padding: 8px 12px;
+                                                font-size: 14px;
+                                            }
+                                            .form-field:focus {
+                                                outline: none;
+                                                border-color: #5865f2;
+                                                box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
+                                            }
+                                            .form-select {
+                                                background-color: #1e1f22;
+                                                border: 1px solid #3a3d41;
+                                                border-radius: 4px;
+                                                color: #e6e6e6;
+                                                padding: 8px 12px;
+                                                font-size: 14px;
+                                                min-width: 150px;
+                                            }
+                                            .form-submit {
+                                                background-color: #5865f2;
+                                                border: none;
+                                                border-radius: 4px;
+                                                color: #ffffff;
+                                                padding: 10px 20px;
+                                                font-size: 14px;
+                                                font-weight: bold;
+                                                cursor: pointer;
+                                                transition: background-color 0.2s;
+                                            }
+                                            .form-submit:hover {
+                                                background-color: #4752c4;
+                                            }
+                                            .form-submit:active {
+                                                background-color: #3c45a5;
+                                            }
+                                        </style>
+                                        <div class=\"form-container\">
+                                            {{ form|safe }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -238,7 +297,66 @@ class DashboardIntegration:
                                 <div style=\"margin-bottom: 20px;\">
                                     <h3 style=\"color: #ffffff;\">Search Aircraft:</h3>
                                     <div style=\"background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;\">
-                                        {{ form|safe }}
+                                        <style>
+                                            .form-container {
+                                                display: flex;
+                                                flex-direction: column;
+                                                gap: 15px;
+                                            }
+                                            .form-row {
+                                                display: flex;
+                                                align-items: center;
+                                                gap: 10px;
+                                                flex-wrap: wrap;
+                                            }
+                                            .form-label {
+                                                color: #ffffff;
+                                                font-weight: bold;
+                                                min-width: 100px;
+                                            }
+                                            .form-field {
+                                                background-color: #1e1f22;
+                                                border: 1px solid #3a3d41;
+                                                border-radius: 4px;
+                                                color: #e6e6e6;
+                                                padding: 8px 12px;
+                                                font-size: 14px;
+                                            }
+                                            .form-field:focus {
+                                                outline: none;
+                                                border-color: #5865f2;
+                                                box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
+                                            }
+                                            .form-select {
+                                                background-color: #1e1f22;
+                                                border: 1px solid #3a3d41;
+                                                border-radius: 4px;
+                                                color: #e6e6e6;
+                                                padding: 8px 12px;
+                                                font-size: 14px;
+                                                min-width: 150px;
+                                            }
+                                            .form-submit {
+                                                background-color: #5865f2;
+                                                border: none;
+                                                border-radius: 4px;
+                                                color: #ffffff;
+                                                padding: 10px 20px;
+                                                font-size: 14px;
+                                                font-weight: bold;
+                                                cursor: pointer;
+                                                transition: background-color 0.2s;
+                                            }
+                                            .form-submit:hover {
+                                                background-color: #4752c4;
+                                            }
+                                            .form-submit:active {
+                                                background-color: #3c45a5;
+                                            }
+                                        </style>
+                                        <div class=\"form-container\">
+                                            {{ form|safe }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -512,7 +630,66 @@ class DashboardIntegration:
                     <div style=\"margin-bottom: 20px;\">
                         <h3 style=\"color: #ffffff;\">Search Aircraft:</h3>
                         <div style=\"background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;\">
-                            {{ form|safe }}
+                            <style>
+                                .form-container {
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 15px;
+                                }
+                                .form-row {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 10px;
+                                    flex-wrap: wrap;
+                                }
+                                .form-label {
+                                    color: #ffffff;
+                                    font-weight: bold;
+                                    min-width: 100px;
+                                }
+                                .form-field {
+                                    background-color: #1e1f22;
+                                    border: 1px solid #3a3d41;
+                                    border-radius: 4px;
+                                    color: #e6e6e6;
+                                    padding: 8px 12px;
+                                    font-size: 14px;
+                                }
+                                .form-field:focus {
+                                    outline: none;
+                                    border-color: #5865f2;
+                                    box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
+                                }
+                                .form-select {
+                                    background-color: #1e1f22;
+                                    border: 1px solid #3a3d41;
+                                    border-radius: 4px;
+                                    color: #e6e6e6;
+                                    padding: 8px 12px;
+                                    font-size: 14px;
+                                    min-width: 150px;
+                                }
+                                .form-submit {
+                                    background-color: #5865f2;
+                                    border: none;
+                                    border-radius: 4px;
+                                    color: #ffffff;
+                                    padding: 10px 20px;
+                                    font-size: 14px;
+                                    font-weight: bold;
+                                    cursor: pointer;
+                                    transition: background-color 0.2s;
+                                }
+                                .form-submit:hover {
+                                    background-color: #4752c4;
+                                }
+                                .form-submit:active {
+                                    background-color: #3c45a5;
+                                }
+                            </style>
+                            <div class=\"form-container\">
+                                {{ form|safe }}
+                            </div>
                         </div>
                     </div>
                     
