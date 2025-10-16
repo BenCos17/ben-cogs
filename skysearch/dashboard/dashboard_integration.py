@@ -751,6 +751,7 @@ class DashboardIntegration:
             ], render_kw={"class": "form-select"})
             alert_value = wtforms.StringField("Alert Value", render_kw={"class": "form-field", "placeholder": "Enter value to monitor..."})
             cooldown = wtforms.IntegerField("Cooldown (minutes)", render_kw={"class": "form-field", "placeholder": "5", "min": "1", "max": "1440"})
+            custom_channel = wtforms.StringField("Custom Channel ID (optional)", render_kw={"class": "form-field", "placeholder": "Leave empty to use default alert channel"})
             submit_alert = wtforms.SubmitField("Add Alert", render_kw={"class": "form-submit"})
         
         settings_form = SettingsForm()
@@ -804,6 +805,7 @@ class DashboardIntegration:
                 alert_type = alert_form.alert_type.data
                 alert_value = alert_form.alert_value.data.strip()
                 cooldown = alert_form.cooldown.data or 5
+                custom_channel_id = alert_form.custom_channel.data.strip() if alert_form.custom_channel.data else None
                 
                 if not alert_value:
                     result_html = '''
@@ -815,6 +817,18 @@ class DashboardIntegration:
                     result_html = '''
                     <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
                         <strong>Error:</strong> Cooldown must be between 1 and 1440 minutes.
+                    </div>
+                    '''
+                elif custom_channel_id and not custom_channel_id.isdigit():
+                    result_html = '''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                        <strong>Error:</strong> Custom channel ID must be a valid numeric ID.
+                    </div>
+                    '''
+                elif custom_channel_id and not guild.get_channel(int(custom_channel_id)):
+                    result_html = '''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                        <strong>Error:</strong> Custom channel not found. Please enter a valid channel ID.
                     </div>
                     '''
                 else:
@@ -831,15 +845,24 @@ class DashboardIntegration:
                             'type': alert_type,
                             'value': alert_value,
                             'cooldown': cooldown,
+                            'custom_channel': int(custom_channel_id) if custom_channel_id else None,
                             'created_by': 'dashboard_user',
                             'created_at': datetime.datetime.utcnow().isoformat(),
                             'last_triggered': None
                         }
                         
                         await config.custom_alerts.set(custom_alerts)
+                        channel_info = ""
+                        if custom_channel_id:
+                            channel = guild.get_channel(int(custom_channel_id))
+                            channel_name = channel.name if channel else f"Channel {custom_channel_id}"
+                            channel_info = f" to #{channel_name}"
+                        else:
+                            channel_info = " to default alert channel"
+                        
                         result_html = f'''
                         <div style="margin-top: 20px; padding: 10px; background-color: #152b15; border: 1px solid #245a24; border-radius: 4px; color: #b8ffb8;">
-                            <strong>Success:</strong> Added alert for {alert_type} '{alert_value}' with {cooldown} minute cooldown.
+                            <strong>Success:</strong> Added alert for {alert_type} '{alert_value}' with {cooldown} minute cooldown{channel_info}.
                         </div>
                         '''
                         
@@ -874,12 +897,22 @@ class DashboardIntegration:
                 if alert_data['last_triggered']:
                     last_triggered = datetime.datetime.fromisoformat(alert_data['last_triggered']).strftime("%Y-%m-%d %H:%M UTC")
                 
+                # Get channel information
+                custom_channel_id = alert_data.get('custom_channel')
+                channel_info = ""
+                if custom_channel_id:
+                    channel = guild.get_channel(custom_channel_id)
+                    channel_name = channel.name if channel else f"Channel {custom_channel_id}"
+                    channel_info = f" | Channel: #{channel_name}"
+                else:
+                    channel_info = " | Channel: Default"
+                
                 alerts_html += f'''
                 <div style="margin-bottom: 15px; padding: 10px; background-color: #1e1f22; border-radius: 4px; border-left: 4px solid #5865f2;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>🔔 {alert_id}</strong><br>
-                            <span style="color: #cfcfcf;">Type: {alert_data['type']} | Value: {alert_data['value']} | Cooldown: {alert_data['cooldown']} min</span><br>
+                            <span style="color: #cfcfcf;">Type: {alert_data['type']} | Value: {alert_data['value']} | Cooldown: {alert_data['cooldown']} min{channel_info}</span><br>
                             <span style="color: #8a8a8a; font-size: 12px;">Created: {created_at.strftime('%Y-%m-%d %H:%M UTC')} | Last Triggered: {last_triggered}</span>
                         </div>
                         <form method="POST" action="/dashboard/guild" style="display: inline;">

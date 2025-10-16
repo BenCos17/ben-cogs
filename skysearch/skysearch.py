@@ -225,7 +225,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name=_("Special Aircraft"), value="`military` `ladd` `pia`", inline=False)
         embed.add_field(name=_("Export"), value=_("`export` - Export aircraft data to CSV, PDF, TXT, or HTML"), inline=False)
         embed.add_field(name=_("Configuration"), value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
-        embed.add_field(name=_("Custom Alerts"), value="`addalert` `removealert` `listalerts` `clearalerts`", inline=False)
+        embed.add_field(name=_("Custom Alerts"), value="`addalert` `removealert` `listalerts` `clearalerts`\n*Use `addalert` with optional channel parameter*", inline=False)
         embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes\n`feeder` - Parse feeder JSON data (secure modal)"), inline=False)
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
@@ -370,13 +370,14 @@ class Skysearch(commands.Cog, DashboardIntegration):
     # Custom Alerts Commands
     @commands.guild_only()
     @aircraft_group.command(name='addalert')
-    async def aircraft_add_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5):
+    async def aircraft_add_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5, channel: discord.TextChannel = None):
         """Add a custom alert for specific aircraft or squawks.
         
         Alert types: icao, callsign, squawk, type, reg
         Cooldown: 1-1440 minutes (default: 5)
+        Channel: Optional channel to send alerts to (default: uses alert channel)
         """
-        await self.admin_commands.add_custom_alert(ctx, alert_type, value, cooldown)
+        await self.admin_commands.add_custom_alert(ctx, alert_type, value, cooldown, channel)
     
     @commands.guild_only()
     @aircraft_group.command(name='removealert')
@@ -734,6 +735,15 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def _send_custom_alert(self, alert_channel, guild_config, aircraft_info, alert_data, alert_id):
         """Send a custom alert message."""
         try:
+            # Use custom channel if specified, otherwise use the default alert channel
+            custom_channel_id = alert_data.get('custom_channel')
+            if custom_channel_id:
+                custom_channel = self.bot.get_channel(custom_channel_id)
+                if custom_channel:
+                    alert_channel = custom_channel
+                else:
+                    log.warning(f"Custom channel {custom_channel_id} not found for alert {alert_id}, using default channel")
+            
             # Get the alert role
             alert_role_id = await guild_config.alert_role()
             alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
