@@ -487,6 +487,76 @@ class HelperUtils:
         
         return embed
 
+    def create_feeder_view(self, json_input: str, json_data: dict = None):
+        """
+        Create a Discord view with buttons for feeder information.
+        
+        Args:
+            json_input (str): Original JSON input (for URL detection)
+            json_data (dict, optional): Parsed JSON data for additional buttons
+            
+        Returns:
+            discord.ui.View: View with interactive buttons
+        """
+        view = discord.ui.View()
+        
+        # Add main map link button
+        map_link = json_data.get('map_link') if json_data else None
+        if map_link:
+            view.add_item(discord.ui.Button(
+                label="View on Globe", 
+                emoji="🌍", 
+                url=map_link, 
+                style=discord.ButtonStyle.link
+            ))
+        
+        # Add individual Beast client feed buttons
+        if json_data:
+            beast_clients = json_data.get('beast_clients', [])
+            for i, client in enumerate(beast_clients[:5]):  # Limit to 5 buttons
+                uuid = client.get('uuid', '')
+                if uuid:
+                    # Create individual feed URL - use first 16 characters of UUID without hyphens
+                    # This matches the pattern from the map_link in the JSON
+                    feed_uuid = uuid.replace('-', '')[:16]
+                    feed_url = f"https://globe.airplanes.live/?feed={feed_uuid}"
+                    
+                    # Create feed name using first part of UUID
+                    # Use first 8 characters of UUID for a clean, short identifier
+                    feed_name = uuid[:8]
+                    
+                    # Add performance info if available
+                    msgs_s = client.get('msgs_s', 0)
+                    if msgs_s > 0:
+                        feed_name += f" ({msgs_s:.1f} msg/s)"
+                    
+                    # Truncate if too long for Discord button (max 80 characters)
+                    if len(feed_name) > 80:
+                        feed_name = feed_name[:77] + "..."
+                    
+                    view.add_item(discord.ui.Button(
+                        label=feed_name, 
+                        emoji="📡", 
+                        url=feed_url, 
+                        style=discord.ButtonStyle.link
+                    ))
+        
+        # Note: MLAT clients don't have individual feed URLs like beast clients
+        # They are part of the overall feeder system, so we don't create individual buttons for them
+        # The MLAT information is already displayed in the embed above
+        
+        # Add button to view raw JSON (only if it's a URL)
+        if json_input.startswith(('http://', 'https://')):
+            view.add_item(discord.ui.Button(
+                label="View Raw JSON", 
+                emoji="📄", 
+                url=json_input, 
+                style=discord.ButtonStyle.link
+            ))
+        
+        return view
+
+
 class JSONInputModal(discord.ui.Modal):
     """Modal for securely inputting JSON data."""
     
@@ -557,74 +627,4 @@ class JSONInputButton(discord.ui.View):
     async def input_json_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Open modal to input JSON data."""
         modal = JSONInputModal(self.cog)
-        await interaction.response.send_modal(modal)
-
-
-def create_feeder_view(json_input: str, json_data: dict = None):
-    """
-    Create a Discord view with buttons for feeder information.
-    
-    Args:
-        json_input (str): Original JSON input (for URL detection)
-        json_data (dict, optional): Parsed JSON data for additional buttons
-        
-    Returns:
-        discord.ui.View: View with interactive buttons
-    """
-    view = discord.ui.View()
-    
-    # Add main map link button
-    map_link = json_data.get('map_link') if json_data else None
-    if map_link:
-        view.add_item(discord.ui.Button(
-            label="View on Globe", 
-            emoji="🌍", 
-            url=map_link, 
-            style=discord.ButtonStyle.link
-        ))
-    
-    # Add individual Beast client feed buttons
-    if json_data:
-        beast_clients = json_data.get('beast_clients', [])
-        for i, client in enumerate(beast_clients[:5]):  # Limit to 5 buttons
-            uuid = client.get('uuid', '')
-            if uuid:
-                # Create individual feed URL - use first 16 characters of UUID without hyphens
-                # This matches the pattern from the map_link in the JSON
-                feed_uuid = uuid.replace('-', '')[:16]
-                feed_url = f"https://globe.airplanes.live/?feed={feed_uuid}"
-                
-                # Create feed name using first part of UUID
-                # Use first 8 characters of UUID for a clean, short identifier
-                feed_name = uuid[:8]
-                
-                # Add performance info if available
-                msgs_s = client.get('msgs_s', 0)
-                if msgs_s > 0:
-                    feed_name += f" ({msgs_s:.1f} msg/s)"
-                
-                # Truncate if too long for Discord button (max 80 characters)
-                if len(feed_name) > 80:
-                    feed_name = feed_name[:77] + "..."
-                
-                view.add_item(discord.ui.Button(
-                    label=feed_name, 
-                    emoji="📡", 
-                    url=feed_url, 
-                    style=discord.ButtonStyle.link
-                ))
-    
-    # Note: MLAT clients don't have individual feed URLs like beast clients
-    # They are part of the overall feeder system, so we don't create individual buttons for them
-    # The MLAT information is already displayed in the embed above
-    
-    # Add button to view raw JSON (only if it's a URL)
-    if json_input.startswith(('http://', 'https://')):
-        view.add_item(discord.ui.Button(
-            label="View Raw JSON", 
-            emoji="📄", 
-            url=json_input, 
-            style=discord.ButtonStyle.link
-        ))
-    
-    return view 
+        await interaction.response.send_modal(modal) 
