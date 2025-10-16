@@ -521,23 +521,13 @@ class HelperUtils:
                     feed_uuid = uuid.replace('-', '')[:16]
                     feed_url = f"https://globe.airplanes.live/?feed={feed_uuid}"
                     
-                    # Create a descriptive feed name from available fields
-                    # Try to use ingest_id if available, otherwise use port or host info
-                    ingest_id = client.get('ingest_id', '')
-                    port = client.get('port', '')
-                    msgs_s = client.get('msgs_s', 0)
-                    pos_s = client.get('pos_s', 0)
-                    
-                    if ingest_id:
-                        feed_name = f"Feed {ingest_id}"
-                    elif port:
-                        feed_name = f"Port {port}"
-                    else:
-                        # Fallback to first 8 characters of UUID
-                        feed_name = f"Feed {uuid[:8]}"
+                    # Create feed name using first part of UUID
+                    # Use first 8 characters of UUID for a clean, short identifier
+                    feed_name = uuid[:8]
                     
                     # Add performance info if available
-                    if msgs_s > 0 or pos_s > 0:
+                    msgs_s = client.get('msgs_s', 0)
+                    if msgs_s > 0:
                         feed_name += f" ({msgs_s:.1f} msg/s)"
                     
                     # Truncate if too long for Discord button (max 80 characters)
@@ -561,17 +551,13 @@ class HelperUtils:
                     # Create a feed URL using the user field
                     feed_url = f"https://globe.airplanes.live/?feed={user}"
                     
-                    # Get additional info for more descriptive naming
-                    message_rate = client.get('message_rate', 0)
-                    peer_count = client.get('peer_count', 0)
-                    ingest_id = client.get('ingest_id', '')
-                    
-                    # Create descriptive name with user and performance info
+                    # Use the user name as the primary identifier
                     feed_name = user
-                    if message_rate > 0 or peer_count > 0:
-                        feed_name += f" ({message_rate} msg/s, {peer_count} peers)"
-                    elif ingest_id:
-                        feed_name += f" ({ingest_id})"
+                    
+                    # Add performance info if available
+                    message_rate = client.get('message_rate', 0)
+                    if message_rate > 0:
+                        feed_name += f" ({message_rate} msg/s)"
                     
                     # Truncate if too long for Discord button (max 80 characters)
                     if len(feed_name) > 80:
