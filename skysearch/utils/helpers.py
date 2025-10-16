@@ -541,34 +541,9 @@ class HelperUtils:
                         style=discord.ButtonStyle.link
                     ))
         
-        # Add individual MLAT client feed buttons
-        if json_data:
-            mlat_clients = json_data.get('mlat_clients', [])
-            for i, client in enumerate(mlat_clients[:3]):  # Limit to 3 MLAT buttons
-                user = client.get('user', '')
-                if user:
-                    # For MLAT clients, we'll use the user field as the feed identifier
-                    # Create a feed URL using the user field
-                    feed_url = f"https://globe.airplanes.live/?feed={user}"
-                    
-                    # Use the user name as the primary identifier
-                    feed_name = user
-                    
-                    # Add performance info if available
-                    message_rate = client.get('message_rate', 0)
-                    if message_rate > 0:
-                        feed_name += f" ({message_rate} msg/s)"
-                    
-                    # Truncate if too long for Discord button (max 80 characters)
-                    if len(feed_name) > 80:
-                        feed_name = feed_name[:77] + "..."
-                    
-                    view.add_item(discord.ui.Button(
-                        label=f"MLAT: {feed_name}", 
-                        emoji="🛰️", 
-                        url=feed_url, 
-                        style=discord.ButtonStyle.link
-                    ))
+        # Note: MLAT clients don't have individual feed URLs like beast clients
+        # They are part of the overall feeder system, so we don't create individual buttons for them
+        # The MLAT information is already displayed in the embed above
         
         # Add button to view raw JSON (only if it's a URL)
         if json_input.startswith(('http://', 'https://')):
