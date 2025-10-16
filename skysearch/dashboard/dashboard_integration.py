@@ -713,6 +713,7 @@ class DashboardIntegration:
             alert_role_id = await config.alert_role()
             auto_icao = await config.auto_icao()
             auto_delete = await config.auto_delete_not_found()
+            custom_alerts = await config.custom_alerts()
         except Exception as e:
             return {"status": 1, "web_content": {"source": f"<p>Error loading config: {e}</p>"}, "notifications": [{"message": f"Error loading config: {e}", "category": "error"}]}
         # Get channel and role names for display
@@ -727,7 +728,7 @@ class DashboardIntegration:
             role = guild.get_role(alert_role_id)
             alert_role_name = role.name if role else f"Unknown Role ({alert_role_id})"
         
-        # WTForms form definition
+        # WTForms form definition for settings
         class SettingsForm(kwargs["Form"]):
             def __init__(self):
                 super().__init__(prefix="settings_")
@@ -736,115 +737,6 @@ class DashboardIntegration:
             auto_icao = wtforms.BooleanField("Auto ICAO Lookup")
             auto_delete = wtforms.BooleanField("Auto Delete Not Found")
             submit = wtforms.SubmitField("Save Settings")
-        
-        form = SettingsForm()
-        
-        # Handle form submission using WTForms validation
-        if form.validate_on_submit():
-            try:
-                # Validate and update config
-                alert_channel_val = int(form.alert_channel.data) if form.alert_channel.data else None
-                alert_role_val = int(form.alert_role.data) if form.alert_role.data else None
-                
-                await config.alert_channel.set(alert_channel_val)
-                await config.alert_role.set(alert_role_val)
-                await config.auto_icao.set(form.auto_icao.data)
-                await config.auto_delete_not_found.set(form.auto_delete.data)
-                
-                # Update the display values to reflect the new settings
-                if alert_channel_val:
-                    channel = guild.get_channel(alert_channel_val)
-                    alert_channel_name = channel.name if channel else f"Unknown Channel ({alert_channel_val})"
-                else:
-                    alert_channel_name = "None"
-                    
-                if alert_role_val:
-                    role = guild.get_role(alert_role_val)
-                    alert_role_name = role.name if role else f"Unknown Role ({alert_role_val})"
-                else:
-                    alert_role_name = "None"
-                
-                return {
-                    "status": 0,
-                    "notifications": [{"message": "Settings updated!", "category": "success"}],
-                    "web_content": {
-                        "source": """
-                        <h2>SkySearch Guild Settings</h2>
-                        <p>Configure SkySearch settings for this guild.</p>
-                        
-                        <div style="margin-bottom: 20px;">
-                            <h3>Current Settings:</h3>
-                            <ul>
-                                <li><strong>Alert Channel:</strong> {{ alert_channel_name }}</li>
-                                <li><strong>Alert Role:</strong> {{ alert_role_name }}</li>
-                                <li><strong>Auto ICAO Lookup:</strong> {{ auto_icao_status }}</li>
-                                <li><strong>Auto Delete Not Found:</strong> {{ auto_delete_status }}</li>
-                            </ul>
-                        </div>
-                        
-                        <h3>Update Settings:</h3>
-                        {{ form|safe }}
-                        """,
-                        "form": form,
-                        "alert_channel_name": alert_channel_name,
-                        "alert_role_name": alert_role_name,
-                        "auto_icao_status": "Enabled" if form.auto_icao.data else "Disabled",
-                        "auto_delete_status": "Enabled" if form.auto_delete.data else "Disabled",
-                    },
-                }
-            except ValueError:
-                return {
-                    "status": 1,
-                    "notifications": [{"message": "Invalid channel or role ID. Please enter valid numeric IDs.", "category": "error"}]
-                }
-            except Exception as e:
-                return {
-                    "status": 1,
-                    "notifications": [{"message": f"Error updating settings: {e}", "category": "error"}]
-                }
-        
-        # Populate form with current values (only if not a successful submission)
-        form.alert_channel.data = str(alert_channel_id or "")
-        form.alert_role.data = str(alert_role_id or "")
-        form.auto_icao.data = auto_icao
-        form.auto_delete.data = auto_delete
-        # Render the form using WTForms template
-        return {
-            "status": 0,
-            "web_content": {
-                "source": """
-                <h2>SkySearch Guild Settings</h2>
-                <p>Configure SkySearch settings for this guild.</p>
-                
-                <div style="margin-bottom: 20px;">
-                    <h3>Current Settings:</h3>
-                    <ul>
-                        <li><strong>Alert Channel:</strong> {{ alert_channel_name }}</li>
-                        <li><strong>Alert Role:</strong> {{ alert_role_name }}</li>
-                        <li><strong>Auto ICAO Lookup:</strong> {{ auto_icao_status }}</li>
-                        <li><strong>Auto Delete Not Found:</strong> {{ auto_delete_status }}</li>
-                    </ul>
-                </div>
-                
-                <h3>Update Settings:</h3>
-                {{ form|safe }}
-                """,
-                "form": form,
-                "alert_channel_name": alert_channel_name,
-                "alert_role_name": alert_role_name,
-                "auto_icao_status": "Enabled" if auto_icao else "Disabled",
-                "auto_delete_status": "Enabled" if auto_delete else "Disabled",
-            },
-        }
-
-    @dashboard_page(name="alerts", description="SkySearch Custom Alerts Management", methods=("GET", "POST"), context_ids=["guild_id"])
-    async def dashboard_custom_alerts(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        cog = getattr(self, "_skysearch_cog", None)
-        if not cog:
-            return {"status": 0, "web_content": {"source": "<p>SkySearch cog not loaded.</p>"}}
-        
-        config = cog.config.guild(guild)
-        custom_alerts = await config.custom_alerts()
         
         # WTForms form definition for adding alerts
         class AlertForm(kwargs["Form"]):
@@ -859,17 +751,59 @@ class DashboardIntegration:
             ], render_kw={"class": "form-select"})
             alert_value = wtforms.StringField("Alert Value", render_kw={"class": "form-field", "placeholder": "Enter value to monitor..."})
             cooldown = wtforms.IntegerField("Cooldown (minutes)", render_kw={"class": "form-field", "placeholder": "5", "min": "1", "max": "1440"})
-            submit = wtforms.SubmitField("Add Alert", render_kw={"class": "form-submit"})
+            submit_alert = wtforms.SubmitField("Add Alert", render_kw={"class": "form-submit"})
         
-        form = AlertForm()
+        settings_form = SettingsForm()
+        alert_form = AlertForm()
         result_html = ""
         
-        # Handle form submission
-        if form.validate_on_submit():
+        # Handle settings form submission
+        if settings_form.validate_on_submit():
             try:
-                alert_type = form.alert_type.data
-                alert_value = form.alert_value.data.strip()
-                cooldown = form.cooldown.data or 5
+                # Validate and update config
+                alert_channel_val = int(settings_form.alert_channel.data) if settings_form.alert_channel.data else None
+                alert_role_val = int(settings_form.alert_role.data) if settings_form.alert_role.data else None
+                
+                await config.alert_channel.set(alert_channel_val)
+                await config.alert_role.set(alert_role_val)
+                await config.auto_icao.set(settings_form.auto_icao.data)
+                await config.auto_delete_not_found.set(settings_form.auto_delete.data)
+                
+                # Update the display values to reflect the new settings
+                if alert_channel_val:
+                    channel = guild.get_channel(alert_channel_val)
+                    alert_channel_name = channel.name if channel else f"Unknown Channel ({alert_channel_val})"
+                else:
+                    alert_channel_name = "None"
+                    
+                if alert_role_val:
+                    role = guild.get_role(alert_role_val)
+                    alert_role_name = role.name if role else f"Unknown Role ({alert_role_val})"
+                else:
+                    alert_role_name = "None"
+                
+                result_html = '''
+                <div style="margin-top: 20px; padding: 10px; background-color: #152b15; border: 1px solid #245a24; border-radius: 4px; color: #b8ffb8;">
+                    <strong>Success:</strong> Settings updated successfully!
+                </div>
+                '''
+            except ValueError:
+                return {
+                    "status": 1,
+                    "notifications": [{"message": "Invalid channel or role ID. Please enter valid numeric IDs.", "category": "error"}]
+                }
+            except Exception as e:
+                return {
+                    "status": 1,
+                    "notifications": [{"message": f"Error updating settings: {e}", "category": "error"}]
+                }
+        
+        # Handle alert form submission
+        if alert_form.validate_on_submit():
+            try:
+                alert_type = alert_form.alert_type.data
+                alert_value = alert_form.alert_value.data.strip()
+                cooldown = alert_form.cooldown.data or 5
                 
                 if not alert_value:
                     result_html = '''
@@ -916,10 +850,24 @@ class DashboardIntegration:
                 </div>
                 '''
         
+        # Handle remove alert action
+        if kwargs.get("request") and kwargs["request"].method == "POST":
+            form_data = kwargs["request"].form
+            if form_data.get("action") == "remove_alert":
+                alert_id = form_data.get("alert_id")
+                if alert_id and alert_id in custom_alerts:
+                    del custom_alerts[alert_id]
+                    await config.custom_alerts.set(custom_alerts)
+                    result_html = f'''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #152b15; border: 1px solid #245a24; border-radius: 4px; color: #b8ffb8;">
+                        <strong>Success:</strong> Removed alert {alert_id}.
+                    </div>
+                    '''
+        
         # Build alerts list HTML
         alerts_html = ""
         if custom_alerts:
-            alerts_html = '<div style="margin-top: 20px;"><h3>Current Alerts:</h3><div style="background-color: #2b2e34; padding: 15px; border-radius: 8px; border: 1px solid #3a3d41;">'
+            alerts_html = '<div style="margin-top: 20px;"><h3>Current Custom Alerts:</h3><div style="background-color: #2b2e34; padding: 15px; border-radius: 8px; border: 1px solid #3a3d41;">'
             for alert_id, alert_data in custom_alerts.items():
                 created_at = datetime.datetime.fromisoformat(alert_data['created_at'])
                 last_triggered = "Never"
@@ -934,9 +882,9 @@ class DashboardIntegration:
                             <span style="color: #cfcfcf;">Type: {alert_data['type']} | Value: {alert_data['value']} | Cooldown: {alert_data['cooldown']} min</span><br>
                             <span style="color: #8a8a8a; font-size: 12px;">Created: {created_at.strftime('%Y-%m-%d %H:%M UTC')} | Last Triggered: {last_triggered}</span>
                         </div>
-                        <form method="POST" action="/dashboard/alerts" style="display: inline;">
+                        <form method="POST" action="/dashboard/guild" style="display: inline;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="action" value="remove">
+                            <input type="hidden" name="action" value="remove_alert">
                             <input type="hidden" name="alert_id" value="{alert_id}">
                             <button type="submit" style="background-color: #ff4545; border: none; border-radius: 4px; color: white; padding: 5px 10px; cursor: pointer; font-size: 12px;">Remove</button>
                         </form>
@@ -952,30 +900,34 @@ class DashboardIntegration:
             </div>
             '''
         
-        # Handle remove action
-        if kwargs.get("request") and kwargs["request"].method == "POST":
-            form_data = kwargs["request"].form
-            if form_data.get("action") == "remove":
-                alert_id = form_data.get("alert_id")
-                if alert_id and alert_id in custom_alerts:
-                    del custom_alerts[alert_id]
-                    await config.custom_alerts.set(custom_alerts)
-                    result_html = f'''
-                    <div style="margin-top: 20px; padding: 10px; background-color: #152b15; border: 1px solid #245a24; border-radius: 4px; color: #b8ffb8;">
-                        <strong>Success:</strong> Removed alert {alert_id}.
-                    </div>
-                    '''
-        
+        # Populate form with current values (only if not a successful submission)
+        settings_form.alert_channel.data = str(alert_channel_id or "")
+        settings_form.alert_role.data = str(alert_role_id or "")
+        settings_form.auto_icao.data = auto_icao
+        settings_form.auto_delete.data = auto_delete
+        # Render the form using WTForms template
         return {
             "status": 0,
             "web_content": {
                 "source": """
                 <div style="background-color: #1e1f22; padding: 20px; border-radius: 8px; color: #e6e6e6;">
-                    <h2 style="color: #ffffff;">SkySearch Custom Alerts</h2>
-                    <p style="color: #cfcfcf;">Set up custom alerts to be notified when specific aircraft or squawks are spotted.</p>
+                    <h2 style="color: #ffffff;">SkySearch Guild Settings</h2>
+                    <p style="color: #cfcfcf;">Configure SkySearch settings and custom alerts for this guild.</p>
                     
-                    <div style="margin-bottom: 20px;">
-                        <h3 style="color: #ffffff;">Add New Alert:</h3>
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #ffffff;">Current Settings:</h3>
+                        <div style="background-color: #2b2e34; padding: 15px; border-radius: 8px; border: 1px solid #3a3d41;">
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li><strong>Alert Channel:</strong> {{ alert_channel_name }}</li>
+                                <li><strong>Alert Role:</strong> {{ alert_role_name }}</li>
+                                <li><strong>Auto ICAO Lookup:</strong> {{ auto_icao_status }}</li>
+                                <li><strong>Auto Delete Not Found:</strong> {{ auto_delete_status }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #ffffff;">Update Settings:</h3>
                         <div style="background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;">
                             <style>
                                 .form-container {
@@ -1035,7 +987,16 @@ class DashboardIntegration:
                                 }
                             </style>
                             <div class="form-container">
-                                {{ form|safe }}
+                                {{ settings_form|safe }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #ffffff;">Add Custom Alert:</h3>
+                        <div style="background-color: #2b2e34; padding: 20px; border-radius: 8px; border: 1px solid #3a3d41;">
+                            <div class="form-container">
+                                {{ alert_form|safe }}
                             </div>
                         </div>
                     </div>
@@ -1044,8 +1005,13 @@ class DashboardIntegration:
                     {{ result_html|safe }}
                 </div>
                 """,
-                "form": form,
+                "settings_form": settings_form,
+                "alert_form": alert_form,
                 "alerts_html": alerts_html,
                 "result_html": result_html,
+                "alert_channel_name": alert_channel_name,
+                "alert_role_name": alert_role_name,
+                "auto_icao_status": "Enabled" if auto_icao else "Disabled",
+                "auto_delete_status": "Enabled" if auto_delete else "Disabled",
             },
-        } 
+        }
