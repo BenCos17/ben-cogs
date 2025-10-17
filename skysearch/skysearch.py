@@ -797,21 +797,27 @@ class Skysearch(commands.Cog, DashboardIntegration):
             alert_role_id = await guild_config.alert_role()
             alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
             
+            # Prepare message data to mirror emergency alert style (pre/post hooks support)
+            message_data = {
+                'content': alert_role_mention if alert_role_mention else None,
+                'embed': None,
+                'view': None,
+            }
+
             # Create embed
             aircraft_data = aircraft_info
             image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
             embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
-            
             # Add custom alert header
             embed.title = f"🔔 Custom Alert: {alert_data['type'].upper()} '{alert_data['value']}'"
             embed.color = 0xffaa00  # Orange color for custom alerts
-            
+
             # Create view with buttons
             view = discord.ui.View()
             icao = aircraft_data.get('hex', '').upper()
             link = f"https://globe.airplanes.live/?icao={icao}"
             view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
-            
+
             # Add social media sharing buttons
             import urllib.parse
             ground_speed_knots = aircraft_data.get('gs', aircraft_data.get('ground_speed', 'N/A'))
@@ -821,7 +827,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
                     ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
                 except Exception:
                     ground_speed_mph = 'unknown'
-            
+
             lat = aircraft_data.get('lat', 'N/A')
             lon = aircraft_data.get('lon', 'N/A')
             if lat != 'N/A' and lat is not None:
@@ -838,22 +844,39 @@ class Skysearch(commands.Cog, DashboardIntegration):
                     lon = f"{abs(lon_formatted)}{lon_dir}"
                 except Exception:
                     pass
-            
+
             tweet_text = f"Custom alert triggered! {alert_data['type'].upper()} '{alert_data['value']}' spotted - Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #CustomAlert\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
             tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
             view.add_item(discord.ui.Button(label="Post on X", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
-            
+
             whatsapp_text = f"Custom alert! {alert_data['type'].upper()} '{alert_data['value']}' spotted - Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
             whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
             view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
-            
-            # Send the alert
-            await alert_channel.send(
-                content=alert_role_mention if alert_role_mention else None,
-                embed=embed,
-                view=view
+
+            # Attach embed and view to message_data
+            message_data['embed'] = embed
+            message_data['view'] = view
+
+            # Allow other cogs to modify the message before sending (mirror emergency flow)
+            original_view = message_data.get('view')
+            squawk_code = aircraft_data.get('squawk', 'CUSTOM')
+            message_data = await self.squawk_api.run_pre_send(alert_channel.guild, aircraft_data, squawk_code, message_data)
+
+            # Ensure buttons are preserved if no other cog modified the view
+            if message_data.get('view') is None and original_view is not None:
+                log.warning(f"Pre-send callback removed view for custom alert {alert_id}, restoring buttons")
+                message_data['view'] = original_view
+
+            # Send the message using the possibly modified data
+            sent_message = await alert_channel.send(
+                content=message_data.get('content'),
+                embed=message_data.get('embed'),
+                view=message_data.get('view')
             )
-            
+
+            # Let other cogs react after the message is sent
+            await self.squawk_api.run_post_send(alert_channel.guild, aircraft_data, squawk_code, sent_message)
+
             log.info(f"Sent custom alert for {alert_id} in {alert_channel.guild.name}")
             
         except Exception as e:
