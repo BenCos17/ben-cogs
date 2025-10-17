@@ -100,32 +100,31 @@ class EmojiLink(commands.Cog):
         view.message = await ctx.send(embed=pages[0], view=view)
     emojilink.add_command(list_emojis)
 
-    @commands.command(name="info")
-    async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
-        """Get information about a specific emoji."""
-        if isinstance(emoji, discord.PartialEmoji):
-            emoji_str = str(emoji)
-            emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{ 'gif' if emoji.animated else 'png'}"
-            emoji_name = emoji.name
-            emoji_id = emoji.id
-            emoji_created_at = emoji.created_at
-        elif isinstance(emoji, str):
-            emoji_str = emoji
-            emoji_url = None
-            emoji_name = None
-            emoji_id = None
-            emoji_created_at = None
-        else:
-            raise commands.BadArgument("Invalid emoji provided.")
+@emojilink.command(name="info")
+async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
+    """Get information about a specific emoji."""
+    if isinstance(emoji, discord.PartialEmoji):
+        emoji_str = str(emoji)
+        emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{ 'gif' if emoji.animated else 'png'}"
+        emoji_name = emoji.name
+        emoji_id = emoji.id
+        emoji_created_at = emoji.created_at
+    elif isinstance(emoji, str):
+        emoji_str = emoji
+        emoji_url = None
+        emoji_name = None
+        emoji_id = None
+        emoji_created_at = None
+    else:
+        raise commands.BadArgument("Invalid emoji provided.")
 
-        if emoji_name:
-            await ctx.send(f"Emoji: {emoji_str}\nName: {emoji_name}\nID: {emoji_id}\nCreation Date: {emoji_created_at}")
-        else:
-            await ctx.send(f"Emoji: {emoji_str}")
+    if emoji_name:
+        await ctx.send(f"Emoji: {emoji_str}\nName: {emoji_name}\nID: {emoji_id}\nCreation Date: {emoji_created_at}")
+    else:
+        await ctx.send(f"Emoji: {emoji_str}")
 
-        if emoji_url:
-            await ctx.send(f"Emoji link: {emoji_url}")
-    emojilink.add_command(emoji_info)
+    if emoji_url:
+        await ctx.send(f"Emoji link: {emoji_url}")
 
     @commands.command(name="random")
     async def random_emoji(self, ctx: commands.Context):
