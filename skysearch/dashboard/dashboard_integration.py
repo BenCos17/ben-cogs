@@ -757,7 +757,7 @@ class DashboardIntegration:
         # Lightweight CSRF-only form for remove action
         class RemoveAlertForm(kwargs["Form"]):
             def __init__(self):
-                super().__init__(prefix="remove_")
+                super().__init__()
         
         settings_form = SettingsForm()
         alert_form = AlertForm()
