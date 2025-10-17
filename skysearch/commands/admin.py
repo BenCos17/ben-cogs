@@ -888,3 +888,21 @@ class AdminCommands:
                 color=0xff0000
             )
             await ctx.send(embed=embed)
+
+    async def clear_custom_alert_cooldown(self, ctx, alert_id: str):
+        """Clear cooldown for a single custom alert (resets last_triggered)."""
+        try:
+            guild_config = self.cog.config.guild(ctx.guild)
+            custom_alerts = await guild_config.custom_alerts()
+
+            if alert_id not in custom_alerts:
+                await ctx.send(f"❌ Alert `{alert_id}` not found.")
+                return
+
+            # Reset last_triggered
+            custom_alerts[alert_id]['last_triggered'] = None
+            await guild_config.custom_alerts.set(custom_alerts)
+
+            await ctx.send(f"✅ Cleared cooldown for `{alert_id}`.")
+        except Exception as e:
+            await ctx.send(f"❌ Error clearing cooldown: {e}")

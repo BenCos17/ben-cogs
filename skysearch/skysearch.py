@@ -226,6 +226,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name=_("Export"), value=_("`export` - Export aircraft data to CSV, PDF, TXT, or HTML"), inline=False)
         embed.add_field(name=_("Configuration"), value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
         embed.add_field(name=_("Custom Alerts"), value="`addalert` `removealert` `listalerts` `clearalerts`\n*Use `addalert` with optional channel parameter*", inline=False)
+        # Add brief mention of force and cooldown clear for owners
+        if await ctx.bot.is_owner(ctx.author):
+            embed.add_field(name=_("Custom Alert Admin"), value="`forcealert` (owner) `clearalertcooldown`", inline=False)
         embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes\n`feeder` - Parse feeder JSON data (secure modal)"), inline=False)
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
@@ -396,6 +399,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def aircraft_clear_alerts(self, ctx):
         """Clear all custom alerts for this server."""
         await self.admin_commands.clear_custom_alerts(ctx)
+
+    @commands.guild_only()
+    @aircraft_group.command(name='clearalertcooldown')
+    async def aircraft_clear_alert_cooldown(self, ctx, alert_id: str):
+        """Clear cooldown for a specific custom alert."""
+        await self.admin_commands.clear_custom_alert_cooldown(ctx, alert_id)
 
     @commands.guild_only()
     @commands.is_owner()
