@@ -762,7 +762,8 @@ class DashboardIntegration:
         settings_form = SettingsForm()
         alert_form = AlertForm()
         remove_form = RemoveAlertForm()
-        csrf_value = getattr(getattr(remove_form, "csrf_token", None), "current_token", "")
+        csrf_tuple = kwargs.get("csrf_token", ("csrf_token", ""))
+        csrf_name, csrf_value = (csrf_tuple[0], csrf_tuple[1]) if isinstance(csrf_tuple, (list, tuple)) and len(csrf_tuple) == 2 else ("csrf_token", "")
         result_html = ""
         
         # Handle settings form submission
@@ -884,7 +885,7 @@ class DashboardIntegration:
         if kwargs.get("request") and kwargs["request"].method == "POST":
             form_data = kwargs["request"].form
             # Manually validate CSRF using the token we injected to avoid prefix/name mismatches
-            if form_data.get("action") == "remove_alert" and form_data.get("csrf_token") == csrf_value:
+            if form_data.get("action") == "remove_alert" and form_data.get(csrf_name) == csrf_value:
                 alert_id = form_data.get("alert_id")
                 if alert_id and alert_id in custom_alerts:
                     del custom_alerts[alert_id]
@@ -894,6 +895,12 @@ class DashboardIntegration:
                         <strong>Success:</strong> Removed alert {alert_id}.
                     </div>
                     '''
+            elif form_data.get("action") == "remove_alert":
+                result_html = '''
+                <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                    <strong>Error:</strong> Invalid CSRF token. Please refresh the page and try again.
+                </div>
+                '''
         
         # Build alerts list HTML
         alerts_html = ""
@@ -924,7 +931,7 @@ class DashboardIntegration:
                             <span style="color: #8a8a8a; font-size: 12px;">Created: {created_at.strftime('%Y-%m-%d %H:%M UTC')} | Last Triggered: {last_triggered}</span>
                         </div>
                         <form method="POST" style="display: inline;">
-                            <input type="hidden" name="csrf_token" value="{csrf_value}">
+                            <input type="hidden" name="{csrf_name}" value="{csrf_value}">
                             <input type="hidden" name="action" value="remove_alert">
                             <input type="hidden" name="alert_id" value="{alert_id}">
                             <button type="submit" style="background-color: #ff4545; border: none; border-radius: 4px; color: white; padding: 5px 10px; cursor: pointer; font-size: 12px;">Remove</button>
