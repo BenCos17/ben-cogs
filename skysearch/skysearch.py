@@ -397,6 +397,13 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Clear all custom alerts for this server."""
         await self.admin_commands.clear_custom_alerts(ctx)
 
+    @commands.guild_only()
+    @commands.is_owner()
+    @aircraft_group.command(name='forcealert', aliases=['forcecustomalert'])
+    async def aircraft_force_alert(self, ctx, alert_id: str):
+        """Force trigger a configured custom alert immediately by its ID (owner only)."""
+        await self.admin_commands.force_custom_alert(ctx, alert_id)
+
     @commands.is_owner()
     @aircraft_group.command(name='apimode')
     async def aircraft_show_api_mode(self, ctx):
