@@ -888,6 +888,7 @@ class DashboardIntegration:
                     '''
         
         # Build alerts list HTML
+        csrf_token_val = kwargs.get("csrf_token", "")
         alerts_html = ""
         if custom_alerts:
             alerts_html = '<div style="margin-top: 20px;"><h3>Current Custom Alerts:</h3><div style="background-color: #2b2e34; padding: 15px; border-radius: 8px; border: 1px solid #3a3d41;">'
@@ -915,8 +916,8 @@ class DashboardIntegration:
                             <span style="color: #cfcfcf;">Type: {alert_data['type']} | Value: {alert_data['value']} | Cooldown: {alert_data['cooldown']} min{channel_info}</span><br>
                             <span style="color: #8a8a8a; font-size: 12px;">Created: {created_at.strftime('%Y-%m-%d %H:%M UTC')} | Last Triggered: {last_triggered}</span>
                         </div>
-                        <form method="POST" action="/dashboard/guild" style="display: inline;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{csrf_token_val}">
                             <input type="hidden" name="action" value="remove_alert">
                             <input type="hidden" name="alert_id" value="{alert_id}">
                             <button type="submit" style="background-color: #ff4545; border: none; border-radius: 4px; color: white; padding: 5px 10px; cursor: pointer; font-size: 12px;">Remove</button>

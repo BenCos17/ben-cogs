@@ -672,17 +672,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 await set_contextual_locales_from_guild(self.bot, guild)
                 guild_config = self.config.guild(guild)
                 alert_channel_id = await guild_config.alert_channel()
-                
-                if not alert_channel_id:
-                    continue
-                
+                # Default alert channel may be unset; some alerts might target a custom channel.
                 custom_alerts = await guild_config.custom_alerts()
                 if not custom_alerts:
                     continue
                 
-                alert_channel = self.bot.get_channel(alert_channel_id)
-                if not alert_channel:
-                    continue
+                alert_channel = self.bot.get_channel(alert_channel_id) if alert_channel_id else None
                 
                 # Check each custom alert
                 for alert_id, alert_data in custom_alerts.items():
@@ -690,8 +685,20 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         if await self._is_alert_cooldown_active(guild_config, alert_id, alert_data):
                             continue
                         
+                        # Determine if we have a destination channel: use custom channel if set, else default
+                        destination_channel = alert_channel
+                        custom_channel_id = alert_data.get('custom_channel')
+                        if custom_channel_id:
+                            custom_channel = self.bot.get_channel(custom_channel_id)
+                            if custom_channel:
+                                destination_channel = custom_channel
+                        
+                        if destination_channel is None:
+                            log.warning(f"No alert channel configured for guild {guild.name} and no valid custom channel for alert {alert_id}; skipping send")
+                            continue
+                        
                         # Send custom alert
-                        await self._send_custom_alert(alert_channel, guild_config, aircraft_info, alert_data, alert_id)
+                        await self._send_custom_alert(destination_channel, guild_config, aircraft_info, alert_data, alert_id)
                         
                         # Update last triggered timestamp
                         custom_alerts[alert_id]['last_triggered'] = datetime.datetime.utcnow().isoformat()
