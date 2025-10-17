@@ -881,9 +881,10 @@ class DashboardIntegration:
                 '''
         
         # Handle remove alert action (validate CSRF via WTForms)
-        if kwargs.get("request") and kwargs["request"].method == "POST" and remove_form.validate_on_submit():
+        if kwargs.get("request") and kwargs["request"].method == "POST":
             form_data = kwargs["request"].form
-            if form_data.get("action") == "remove_alert":
+            # Manually validate CSRF using the token we injected to avoid prefix/name mismatches
+            if form_data.get("action") == "remove_alert" and form_data.get("csrf_token") == csrf_value:
                 alert_id = form_data.get("alert_id")
                 if alert_id and alert_id in custom_alerts:
                     del custom_alerts[alert_id]
