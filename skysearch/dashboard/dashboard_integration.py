@@ -883,9 +883,16 @@ class DashboardIntegration:
                 </div>
                 '''
         
-        # Handle remove alert action (validate CSRF via WTForms)
-        if kwargs.get("request") and kwargs["request"].method == "POST":
-            form_data = kwargs["request"].form
+        # Handle remove alert action (accept both request.form and data.form from dashboard)
+        is_post = (kwargs.get("request") and kwargs["request"].method == "POST") or kwargs.get("method") == "POST"
+        if is_post:
+            form_data = None
+            if kwargs.get("request") and hasattr(kwargs["request"], "form"):
+                form_data = kwargs["request"].form
+            elif isinstance(kwargs.get("data"), dict) and "form" in kwargs["data"]:
+                form_data = kwargs["data"]["form"]
+            else:
+                form_data = {}
             # Rely on Dashboard's CSRF validation; if we're here, CSRF passed
             if form_data.get("action") == "remove_alert":
                 alert_id = form_data.get("alert_id")
@@ -895,6 +902,12 @@ class DashboardIntegration:
                     result_html = f'''
                     <div style="margin-top: 20px; padding: 10px; background-color: #152b15; border: 1px solid #245a24; border-radius: 4px; color: #b8ffb8;">
                         <strong>Success:</strong> Removed alert {alert_id}.
+                    </div>
+                    '''
+                else:
+                    result_html = f'''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                        <strong>Error:</strong> Alert ID not found or missing.
                     </div>
                     '''
         

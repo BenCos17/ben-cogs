@@ -51,6 +51,19 @@ To use the SkySearch cog, follow these steps:
 - `[p]aircraft autodelete [true/false]` - Configure auto-deletion
 - `[p]aircraft showalertchannel` - Show alert status
 
+### Custom Alerts
+- `[p]aircraft addalert <type> <value> [cooldown] [#channel]`
+  - Types: `icao`, `callsign`, `squawk`, `type`, `reg`
+  - Cooldown minutes (default: 5). Optional custom destination channel.
+- `[p]aircraft removealert <alert_id>`
+- `[p]aircraft listalerts`
+- `[p]aircraft clearalerts`
+- `[p]aircraft forcealert <alert_id>` (owner only) — send immediately, ignoring cooldown
+
+Notes:
+- The background scanner runs every 2 minutes and checks the full aircraft feed.
+- Custom alerts use the same embed/buttons and pre/post hooks as emergency alerts.
+
 ### Owner Commands
 - `[p]setapikey <key>` - Set airplanes.live API key
 - `[p]apikey` - Check API key status

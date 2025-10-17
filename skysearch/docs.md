@@ -132,6 +132,34 @@ Shows all aircraft within 50 miles of the coordinates.
 - Notifies when aircraft lands
 - Runs automatically every 2 minutes
 
+### Custom Alerts (New)
+Custom alerts let you watch for specific aircraft criteria and receive styled alerts like emergencies.
+
+Supported types:
+- `icao` — specific ICAO hex
+- `callsign` — flight callsign
+- `squawk` — squawk code (e.g., 7700)
+- `type` — aircraft type code
+- `reg` — registration
+
+Commands:
+```
+*aircraft addalert <type> <value> [cooldown_minutes] [#channel]
+*aircraft listalerts
+*aircraft removealert <alert_id>
+*aircraft clearalerts
+```
+
+Owner testing command:
+```
+*aircraft forcealert <alert_id>
+```
+
+Behavior:
+- Runs automatically every 2 minutes (full-aircraft feed scan)
+- Uses the same embed, buttons, and pre/post hooks as emergency alerts
+- Sends to the alert channel by default, or to a per-alert custom channel if set
+
 ### Alert Cooldown
 You can set a cooldown to prevent the bot from spamming alerts for the same aircraft.
 
