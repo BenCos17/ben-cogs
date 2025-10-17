@@ -870,8 +870,8 @@ class AdminCommands:
             # Send using the cog helper
             await self.cog._send_custom_alert(destination_channel, guild_config, aircraft_info, alert_data, alert_id)
 
-            # Update last triggered timestamp
-            custom_alerts[alert_id]['last_triggered'] = datetime.datetime.utcnow().isoformat()
+            # Update last triggered timestamp (timezone-aware UTC)
+            custom_alerts[alert_id]['last_triggered'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
             await guild_config.custom_alerts.set(custom_alerts)
 
             embed = discord.Embed(

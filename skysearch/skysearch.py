@@ -690,8 +690,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                         if destination_channel is None:
                                             continue
                                         await self._send_custom_alert(destination_channel, guild_config, aircraft_info, alert_data, alert_id)
-                                        # update last triggered
-                                        custom_alerts[alert_id]['last_triggered'] = datetime.datetime.utcnow().isoformat()
+                                        # update last triggered (timezone-aware UTC)
+                                        custom_alerts[alert_id]['last_triggered'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
                                         await guild_config.custom_alerts.set(custom_alerts)
                 except Exception as e:
                     log.error(f"Error checking custom alerts feed: {e}", exc_info=True)
@@ -742,8 +742,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         # Send custom alert
                         await self._send_custom_alert(destination_channel, guild_config, aircraft_info, alert_data, alert_id)
                         
-                        # Update last triggered timestamp
-                        custom_alerts[alert_id]['last_triggered'] = datetime.datetime.utcnow().isoformat()
+                        # Update last triggered timestamp (timezone-aware UTC)
+                        custom_alerts[alert_id]['last_triggered'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
                         await guild_config.custom_alerts.set(custom_alerts)
                         
         except Exception as e:
@@ -776,7 +776,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
             return False
         
         last_triggered_time = datetime.datetime.fromisoformat(last_triggered)
-        now = datetime.datetime.utcnow()
+        # Ensure timezone-aware comparison for backward compatibility
+        if last_triggered_time.tzinfo is None:
+            last_triggered_time = last_triggered_time.replace(tzinfo=datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.timezone.utc)
         time_since_last = (now - last_triggered_time).total_seconds()
         
         return time_since_last < (cooldown_minutes * 60)
