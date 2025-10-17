@@ -763,6 +763,9 @@ class DashboardIntegration:
         alert_form = AlertForm()
         remove_form = RemoveAlertForm()
         remove_csrf_html = str(getattr(remove_form, "csrf_token", ""))
+        # Also get dashboard-provided CSRF tuple to insert matching name/value
+        dash_csrf_tuple = kwargs.get("csrf_token", ("csrf_token", ""))
+        dash_csrf_name, dash_csrf_value = (dash_csrf_tuple[0], dash_csrf_tuple[1]) if isinstance(dash_csrf_tuple, (list, tuple)) and len(dash_csrf_tuple) == 2 else ("csrf_token", "")
         result_html = ""
         
         # Handle settings form submission
@@ -925,6 +928,7 @@ class DashboardIntegration:
                         </div>
                         <form method="POST" style="display: inline;">
                             {remove_csrf_html}
+                            <input type="hidden" name="{dash_csrf_name}" value="{dash_csrf_value}">
                             <input type="hidden" name="action" value="remove_alert">
                             <input type="hidden" name="alert_id" value="{alert_id}">
                             <button type="submit" style="background-color: #ff4545; border: none; border-radius: 4px; color: white; padding: 5px 10px; cursor: pointer; font-size: 12px;">Remove</button>
