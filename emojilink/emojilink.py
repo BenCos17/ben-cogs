@@ -132,18 +132,19 @@ class EmojiLink(commands.Cog):
         else:
             await ctx.send("No custom emojis found in this server.")
 
-    @emojilink.command(name="search")
-    async def emoji_search(self, ctx: commands.Context, keyword: str):
-        """Search custom emojis by name."""
-        matching_emojis = [
-            f"{emoji}: [Link]({emoji_url})"
-            for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis)
-            if keyword.lower() in emoji.name.lower() if hasattr(emoji, "name") else False
-        ]
-        if matching_emojis:
-            await ctx.send("\n".join(matching_emojis))
-        else:
-            await ctx.send(f"No custom emojis found matching '{keyword}'.")
+@emojilink.command(name="search")
+async def emoji_search(self, ctx: commands.Context, keyword: str):
+    """Search custom emojis by name."""
+    matching_emojis = [
+        f"{emoji}: [Link]({emoji_url})"
+        for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis)
+        if hasattr(emoji, "name") and keyword.lower() in emoji.name.lower()
+    ]
+    if matching_emojis:
+        await ctx.send("\n".join(matching_emojis))
+    else:
+        await ctx.send(f"No custom emojis found matching '{keyword}'.")
+
 
     def get_all_emojis(self, emojis):
         all_emojis = []
