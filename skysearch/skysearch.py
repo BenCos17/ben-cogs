@@ -663,11 +663,36 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         elif 'ac' in all_response and isinstance(all_response['ac'], list):
                             aircraft_list = all_response['ac']
                     if aircraft_list:
-                        for aircraft_info in aircraft_list:
-                            # Ignore aircraft with the hex 00000000
-                            if aircraft_info.get('hex') == '00000000':
+                        guilds = self.bot.guilds
+                        for guild in guilds:
+                            # Set locales once per guild per cycle
+                            await set_contextual_locales_from_guild(self.bot, guild)
+                            guild_config = self.config.guild(guild)
+                            alert_channel_id = await guild_config.alert_channel()
+                            custom_alerts = await guild_config.custom_alerts()
+                            if not custom_alerts:
                                 continue
-                            await self.check_custom_alerts(aircraft_info)
+                            default_channel = self.bot.get_channel(alert_channel_id) if alert_channel_id else None
+                            for aircraft_info in aircraft_list:
+                                if aircraft_info.get('hex') == '00000000':
+                                    continue
+                                for alert_id, alert_data in custom_alerts.items():
+                                    if await self._check_aircraft_matches_alert(aircraft_info, alert_data):
+                                        if await self._is_alert_cooldown_active(guild_config, alert_id, alert_data):
+                                            continue
+                                        # resolve destination channel
+                                        destination_channel = default_channel
+                                        custom_channel_id = alert_data.get('custom_channel')
+                                        if custom_channel_id:
+                                            custom_channel = self.bot.get_channel(custom_channel_id)
+                                            if custom_channel:
+                                                destination_channel = custom_channel
+                                        if destination_channel is None:
+                                            continue
+                                        await self._send_custom_alert(destination_channel, guild_config, aircraft_info, alert_data, alert_id)
+                                        # update last triggered
+                                        custom_alerts[alert_id]['last_triggered'] = datetime.datetime.utcnow().isoformat()
+                                        await guild_config.custom_alerts.set(custom_alerts)
                 except Exception as e:
                     log.error(f"Error checking custom alerts feed: {e}", exc_info=True)
 
