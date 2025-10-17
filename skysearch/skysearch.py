@@ -651,26 +651,16 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                         embed = discord.Embed(title=_("Aircraft landed"), description=_("Aircraft {hex} has landed while squawking {squawk}.").format(hex=aircraft_info.get('hex'), squawk=squawk_code), color=0x00ff00)
                                         await alert_channel.send(embed=embed)
                 
-                # Check custom alerts against the full aircraft feed (not just emergency squawks)
-                try:
-                    all_url = f"{await self.api.get_api_url()}/?all_with_pos"
-                    all_response = await self.api.make_request(all_url)
-                    # Support both primary ('aircraft') and fallback ('ac') response formats
-                    aircraft_list = []
-                    if all_response:
-                        if 'aircraft' in all_response:
-                            aircraft_list = all_response['aircraft']
-                        elif 'ac' in all_response and isinstance(all_response['ac'], list):
-                            aircraft_list = all_response['ac']
-                    if aircraft_list:
-                        for aircraft_info in aircraft_list:
-                            # Ignore aircraft with the hex 00000000
-                            if aircraft_info.get('hex') == '00000000':
-                                continue
-                            await self.check_custom_alerts(aircraft_info)
-                except Exception as e:
-                    log.error(f"Error checking custom alerts feed: {e}", exc_info=True)
-
+                # Check custom alerts for all aircraft (not just emergency squawks)
+                if response and 'aircraft' in response:
+                    for aircraft_info in response['aircraft']:
+                        # Ignore aircraft with the hex 00000000
+                        if aircraft_info.get('hex') == '00000000':
+                            continue
+                        await self.check_custom_alerts(aircraft_info)
+                else:
+                    # Only log if channel was set but not found (actual error)
+                    log.warning(f"Alert channel {alert_channel_id} not found for guild {guild.name} - channel may have been deleted")
                 # Removed the "No alert channel set" message - this is normal behavior
                 await asyncio.sleep(2)
         except Exception as e:
