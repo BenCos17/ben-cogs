@@ -804,3 +804,87 @@ class AdminCommands:
                 color=0xff0000
             )
             await ctx.send(embed=embed)
+
+    async def force_custom_alert(self, ctx, alert_id: str):
+        """Force trigger a configured custom alert immediately by its ID.
+
+        Usage: *admin forcecustomalert <alert_id>
+        Example: *admin forcecustomalert callsign_united123
+        """
+        try:
+            guild = ctx.guild
+            guild_config = self.cog.config.guild(guild)
+            custom_alerts = await guild_config.custom_alerts()
+
+            if alert_id not in custom_alerts:
+                embed = discord.Embed(
+                    title="❌ Alert Not Found",
+                    description=f"No custom alert found with ID: `{alert_id}`",
+                    color=0xff0000
+                )
+                await ctx.send(embed=embed)
+                return
+
+            alert_data = custom_alerts[alert_id]
+
+            # Resolve destination channel: prefer custom channel, else default alert channel
+            destination_channel = None
+            custom_channel_id = alert_data.get('custom_channel')
+            if custom_channel_id:
+                destination_channel = self.cog.bot.get_channel(custom_channel_id)
+
+            if destination_channel is None:
+                alert_channel_id = await guild_config.alert_channel()
+                if alert_channel_id:
+                    destination_channel = self.cog.bot.get_channel(alert_channel_id)
+
+            if destination_channel is None:
+                await ctx.send("❌ No valid destination channel found. Set an alert channel or specify a valid custom channel on the alert.")
+                return
+
+            # Build minimal aircraft info based on alert type/value
+            alert_type = alert_data.get('type')
+            value = alert_data.get('value')
+            aircraft_info = {
+                'hex': '',
+                'flight': '',
+                'squawk': '',
+                't': '',
+                'r': '',
+                'lat': None,
+                'lon': None,
+                'ground_speed': None,
+            }
+
+            if alert_type == 'icao':
+                aircraft_info['hex'] = str(value).upper()
+            elif alert_type == 'callsign':
+                aircraft_info['flight'] = str(value).upper()
+            elif alert_type == 'squawk':
+                aircraft_info['squawk'] = str(value)
+            elif alert_type == 'type':
+                aircraft_info['t'] = str(value).upper()
+            elif alert_type == 'reg':
+                aircraft_info['r'] = str(value).upper()
+
+            # Send using the cog helper
+            await self.cog._send_custom_alert(destination_channel, guild_config, aircraft_info, alert_data, alert_id)
+
+            # Update last triggered timestamp
+            custom_alerts[alert_id]['last_triggered'] = datetime.datetime.utcnow().isoformat()
+            await guild_config.custom_alerts.set(custom_alerts)
+
+            embed = discord.Embed(
+                title="✅ Custom Alert Sent",
+                description=f"Forced alert `{alert_id}` to {destination_channel.mention}",
+                color=0x00ff00
+            )
+            await ctx.send(embed=embed)
+
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Error Forcing Alert",
+                description=f"Error sending custom alert: {str(e)}",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
