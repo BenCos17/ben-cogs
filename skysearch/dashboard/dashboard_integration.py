@@ -753,9 +753,16 @@ class DashboardIntegration:
             cooldown = wtforms.IntegerField("Cooldown (minutes)", render_kw={"class": "form-field", "placeholder": "5", "min": "1", "max": "1440"})
             custom_channel = wtforms.StringField("Custom Channel ID (optional)", render_kw={"class": "form-field", "placeholder": "Leave empty to use default alert channel"})
             submit_alert = wtforms.SubmitField("Add Alert", render_kw={"class": "form-submit"})
+
+        # WTForms form for removing alerts (to leverage CSRF like other forms)
+        class RemoveAlertForm(kwargs["Form"]):
+            def __init__(self):
+                super().__init__(prefix="remove_")
+            submit_remove = wtforms.SubmitField("Remove")
         
         settings_form = SettingsForm()
         alert_form = AlertForm()
+        remove_form = RemoveAlertForm()
         result_html = ""
         
         # Handle settings form submission
@@ -873,8 +880,8 @@ class DashboardIntegration:
                 </div>
                 '''
         
-        # Handle remove alert action
-        if kwargs.get("request") and kwargs["request"].method == "POST":
+        # Handle remove alert action (validate CSRF via WTForms)
+        if kwargs.get("request") and kwargs["request"].method == "POST" and remove_form.validate_on_submit():
             form_data = kwargs["request"].form
             if form_data.get("action") == "remove_alert":
                 alert_id = form_data.get("alert_id")
@@ -888,7 +895,6 @@ class DashboardIntegration:
                     '''
         
         # Build alerts list HTML
-        csrf_token_val = kwargs.get("csrf_token", "")
         alerts_html = ""
         if custom_alerts:
             alerts_html = '<div style="margin-top: 20px;"><h3>Current Custom Alerts:</h3><div style="background-color: #2b2e34; padding: 15px; border-radius: 8px; border: 1px solid #3a3d41;">'
@@ -917,7 +923,7 @@ class DashboardIntegration:
                             <span style="color: #8a8a8a; font-size: 12px;">Created: {created_at.strftime('%Y-%m-%d %H:%M UTC')} | Last Triggered: {last_triggered}</span>
                         </div>
                         <form method="POST" style="display: inline;">
-                            <input type="hidden" name="csrf_token" value="{csrf_token_val}">
+                            {{ remove_form.csrf_token }}
                             <input type="hidden" name="action" value="remove_alert">
                             <input type="hidden" name="alert_id" value="{alert_id}">
                             <button type="submit" style="background-color: #ff4545; border: none; border-radius: 4px; color: white; padding: 5px 10px; cursor: pointer; font-size: 12px;">Remove</button>
@@ -1041,6 +1047,7 @@ class DashboardIntegration:
                 """,
                 "settings_form": settings_form,
                 "alert_form": alert_form,
+                "remove_form": remove_form,
                 "alerts_html": alerts_html,
                 "result_html": result_html,
                 "alert_channel_name": alert_channel_name,
