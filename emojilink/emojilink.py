@@ -18,7 +18,11 @@ class EmojiLink(commands.Cog):
         """Emoji related commands."""
         await ctx.send_help(str(ctx.command))
 
-    @emojilink.command(name="getlink")
+    # -----------------------------
+    # Subcommands
+    # -----------------------------
+
+    @commands.command(name="getlink")
     async def get_emoji_link(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
         """Get the link for a Discord emoji."""
         if isinstance(emoji, discord.PartialEmoji):
@@ -31,8 +35,9 @@ class EmojiLink(commands.Cog):
             raise commands.BadArgument("Invalid emoji provided.")
         await ctx.send(f"Emoji: {emoji_str}")
         await ctx.send(f"Emoji link: {emoji_url}")
+    emojilink.add_command(get_emoji_link)
 
-    @emojilink.command(name="list", aliases=["all"])
+    @commands.command(name="list", aliases=["all"])
     async def list_emojis(self, ctx: commands.Context):
         """List all custom emojis in the server with names and links."""
         if not ctx.guild.emojis:
@@ -93,8 +98,9 @@ class EmojiLink(commands.Cog):
 
         view = PaginationView()
         view.message = await ctx.send(embed=pages[0], view=view)
+    emojilink.add_command(list_emojis)
 
-    @emojilink.command(name="info")
+    @commands.command(name="info")
     async def emoji_info(self, ctx: commands.Context, emoji: typing.Union[discord.PartialEmoji, str]):
         """Get information about a specific emoji."""
         if isinstance(emoji, discord.PartialEmoji):
@@ -119,8 +125,9 @@ class EmojiLink(commands.Cog):
 
         if emoji_url:
             await ctx.send(f"Emoji link: {emoji_url}")
+    emojilink.add_command(emoji_info)
 
-    @emojilink.command(name="random")
+    @commands.command(name="random")
     async def random_emoji(self, ctx: commands.Context):
         """Get a random custom emoji."""
         emojis = ctx.guild.emojis
@@ -131,20 +138,25 @@ class EmojiLink(commands.Cog):
             await ctx.send(f"Emoji link: {emoji_url}")
         else:
             await ctx.send("No custom emojis found in this server.")
+    emojilink.add_command(random_emoji)
 
-@emojilink.command(name="search")
-async def emoji_search(self, ctx: commands.Context, keyword: str):
-    """Search custom emojis by name."""
-    matching_emojis = [
-        f"{emoji}: [Link]({emoji_url})"
-        for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis)
-        if hasattr(emoji, "name") and keyword.lower() in emoji.name.lower()
-    ]
-    if matching_emojis:
-        await ctx.send("\n".join(matching_emojis))
-    else:
-        await ctx.send(f"No custom emojis found matching '{keyword}'.")
+    @commands.command(name="search")
+    async def emoji_search(self, ctx: commands.Context, keyword: str):
+        """Search custom emojis by name."""
+        matching_emojis = [
+            f"{emoji}: [Link]({emoji_url})"
+            for emoji, emoji_url in self.get_all_emojis(ctx.guild.emojis)
+            if hasattr(emoji, "name") and keyword.lower() in emoji.name.lower()
+        ]
+        if matching_emojis:
+            await ctx.send("\n".join(matching_emojis))
+        else:
+            await ctx.send(f"No custom emojis found matching '{keyword}'.")
+    emojilink.add_command(emoji_search)
 
+    # -----------------------------
+    # Helpers
+    # -----------------------------
 
     def get_all_emojis(self, emojis):
         all_emojis = []
@@ -156,7 +168,11 @@ async def emoji_search(self, ctx: commands.Context, keyword: str):
                 all_emojis.append((emoji, None))
         return all_emojis
 
-    @emojilink.command(name="add", aliases=["create"])
+    # -----------------------------
+    # Add / Copy / Delete / Rename
+    # -----------------------------
+
+    @commands.command(name="add", aliases=["create"])
     @commands.has_permissions(manage_emojis=True)
     async def add_emoji(self, ctx: commands.Context, name: str, source: typing.Union[discord.PartialEmoji, str] = None):
         """Add a custom emoji with automatic background removal."""
@@ -208,8 +224,9 @@ async def emoji_search(self, ctx: commands.Context, keyword: str):
             await ctx.send("I do not have permissions to add emojis.")
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
+    emojilink.add_command(add_emoji)
 
-    @emojilink.command(name="copy", require_var_positional=True)
+    @commands.command(name="copy")
     @commands.has_permissions(manage_emojis=True)
     async def copy_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji):
         """Copy a custom emoji with automatic background removal."""
@@ -251,8 +268,9 @@ async def emoji_search(self, ctx: commands.Context, keyword: str):
             await ctx.send("I do not have permissions to add emojis.")
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
+    emojilink.add_command(copy_emoji)
 
-    @emojilink.command(name="delete", require_var_positional=True)
+    @commands.command(name="delete")
     @commands.has_permissions(manage_emojis=True)
     async def delete_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji):
         """Delete a custom emoji from the server."""
@@ -288,8 +306,9 @@ async def emoji_search(self, ctx: commands.Context, keyword: str):
             await ctx.send(f"Are you sure you want to delete the emoji {emoji}?", view=view)
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
+    emojilink.add_command(delete_emoji)
 
-    @emojilink.command(name="rename", aliases=["edit"])
+    @commands.command(name="rename", aliases=["edit"])
     @commands.has_permissions(manage_emojis=True)
     async def rename_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji, new_name: str):
         """Rename a custom emoji in the server."""
@@ -311,3 +330,4 @@ async def emoji_search(self, ctx: commands.Context, keyword: str):
             await ctx.send("I do not have permissions to rename emojis.")
         except Exception as e:
             await ctx.send(f"An unexpected error occurred: {e}")
+    emojilink.add_command(rename_emoji)
