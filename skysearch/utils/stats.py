@@ -68,7 +68,7 @@ def build_stats_embed(api_stats: dict, _=None) -> discord.Embed:
             name=_("⚡ Performance"),
             value=(
                 _("**Avg Response:** {avg:.3f}s\n**Last 24h:** {requests:,} requests").format(
-                    avg=api_stats['avg_response_time'] * 1000,
+                    avg=api_stats['avg_response_time'],
                     requests=api_stats['requests_last_24h']
                 )
             ),
