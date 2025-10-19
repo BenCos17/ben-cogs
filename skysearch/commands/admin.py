@@ -160,6 +160,9 @@ class AdminCommands:
                 next_iteration = self.cog.check_emergency_squawks.next_iteration
                 now = datetime.datetime.now(datetime.timezone.utc)
                 if next_iteration:
+                    # Ensure timezone-aware arithmetic by coercing naive datetime to UTC
+                    if next_iteration.tzinfo is None:
+                        next_iteration = next_iteration.replace(tzinfo=datetime.timezone.utc)
                     time_remaining = (next_iteration - now).total_seconds()
                     if time_remaining > 0: 
                         time_remaining_formatted = f"<t:{int(now.timestamp() + time_remaining)}:R>"
