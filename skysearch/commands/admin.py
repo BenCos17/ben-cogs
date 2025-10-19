@@ -610,7 +610,7 @@ class AdminCommands:
             )
             await ctx.send(embed=embed)
     
-    async def add_custom_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5, channel: discord.TextChannel = None):
+    async def add_custom_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5, channel: discord.TextChannel = None, role: discord.Role = None):
         """Add a custom alert for specific aircraft or squawks.
         
         Alert types:
@@ -660,6 +660,7 @@ class AdminCommands:
                 'value': value,
                 'cooldown': cooldown,
                 'custom_channel': channel.id if channel else None,
+                'custom_role': role.id if role else None,
                 'created_by': ctx.author.id,
                 'created_at': datetime.datetime.utcnow().isoformat(),
                 'last_triggered': None
@@ -668,9 +669,10 @@ class AdminCommands:
             await guild_config.custom_alerts.set(custom_alerts)
             
             channel_info = f" to {channel.mention}" if channel else " to default alert channel"
+            role_info = f" and will mention {role.mention}" if role else ""
             embed = discord.Embed(
                 title="✅ Custom Alert Added",
-                description=f"Added alert for {alert_type} '{value}' with {cooldown} minute cooldown{channel_info}",
+                description=f"Added alert for {alert_type} '{value}' with {cooldown} minute cooldown{channel_info}{role_info}",
                 color=0x00ff00
             )
             await ctx.send(embed=embed)
@@ -744,7 +746,7 @@ class AdminCommands:
                 if alert_info['last_triggered']:
                     last_triggered = datetime.datetime.fromisoformat(alert_info['last_triggered']).strftime("%Y-%m-%d %H:%M UTC")
                 
-                # Get channel information
+                # Get channel and role information
                 custom_channel_id = alert_info.get('custom_channel')
                 channel_info = ""
                 if custom_channel_id:
@@ -753,6 +755,13 @@ class AdminCommands:
                     channel_info = f"**Channel:** {channel_name}\n"
                 else:
                     channel_info = "**Channel:** Default\n"
+
+                custom_role_id = alert_info.get('custom_role')
+                role_info = ""
+                if custom_role_id:
+                    role_obj = ctx.guild.get_role(custom_role_id)
+                    role_name = role_obj.mention if role_obj else f"<@&{custom_role_id}>"
+                    role_info = f"**Role:** {role_name}\n"
                 
                 embed.add_field(
                     name=f"🔔 {alert_id}",
@@ -760,6 +769,7 @@ class AdminCommands:
                           f"**Value:** {alert_info['value']}\n"
                           f"**Cooldown:** {alert_info['cooldown']} minutes\n"
                           f"{channel_info}"
+                          f"{role_info}"
                           f"**Created:** {created_at.strftime('%Y-%m-%d %H:%M UTC')}\n"
                           f"**Last Triggered:** {last_triggered}",
                     inline=False

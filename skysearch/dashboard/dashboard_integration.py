@@ -752,6 +752,7 @@ class DashboardIntegration:
             alert_value = wtforms.StringField("Alert Value", render_kw={"class": "form-field", "placeholder": "Enter value to monitor..."})
             cooldown = wtforms.IntegerField("Cooldown (minutes)", render_kw={"class": "form-field", "placeholder": "5", "min": "1", "max": "1440"})
             custom_channel = wtforms.StringField("Custom Channel ID (optional)", render_kw={"class": "form-field", "placeholder": "Leave empty to use default alert channel"})
+            custom_role = wtforms.StringField("Custom Role ID (optional)", render_kw={"class": "form-field", "placeholder": "Leave empty to use default alert role"})
             submit_alert = wtforms.SubmitField("Add Alert", render_kw={"class": "form-submit"})
 
         # Lightweight CSRF-only form for remove action
@@ -816,6 +817,7 @@ class DashboardIntegration:
                 alert_value = alert_form.alert_value.data.strip()
                 cooldown = alert_form.cooldown.data or 5
                 custom_channel_id = alert_form.custom_channel.data.strip() if alert_form.custom_channel.data else None
+                custom_role_id = alert_form.custom_role.data.strip() if alert_form.custom_role.data else None
                 
                 if not alert_value:
                     result_html = '''
@@ -841,6 +843,18 @@ class DashboardIntegration:
                         <strong>Error:</strong> Custom channel not found. Please enter a valid channel ID.
                     </div>
                     '''
+                elif custom_role_id and not custom_role_id.isdigit():
+                    result_html = '''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                        <strong>Error:</strong> Custom role ID must be a valid numeric ID.
+                    </div>
+                    '''
+                elif custom_role_id and not guild.get_role(int(custom_role_id)):
+                    result_html = '''
+                    <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
+                        <strong>Error:</strong> Custom role not found. Please enter a valid role ID.
+                    </div>
+                    '''
                 else:
                     alert_id = f"{alert_type}_{alert_value.lower()}"
                     
@@ -856,6 +870,7 @@ class DashboardIntegration:
                             'value': alert_value,
                             'cooldown': cooldown,
                             'custom_channel': int(custom_channel_id) if custom_channel_id else None,
+                            'custom_role': int(custom_role_id) if custom_role_id else None,
                             'created_by': 'dashboard_user',
                             'created_at': datetime.datetime.utcnow().isoformat(),
                             'last_triggered': None
@@ -869,10 +884,15 @@ class DashboardIntegration:
                             channel_info = f" to #{channel_name}"
                         else:
                             channel_info = " to default alert channel"
+                        role_info = ""
+                        if custom_role_id:
+                            role_obj = guild.get_role(int(custom_role_id))
+                            role_name = f"@{role_obj.name}" if role_obj else f"<@&{custom_role_id}>"
+                            role_info = f" and will mention {role_name}"
                         
                         result_html = f'''
                         <div style="margin-top: 20px; padding: 10px; background-color: #152b15; border: 1px solid #245a24; border-radius: 4px; color: #b8ffb8;">
-                            <strong>Success:</strong> Added alert for {alert_type} '{alert_value}' with {cooldown} minute cooldown{channel_info}.
+                            <strong>Success:</strong> Added alert for {alert_type} '{alert_value}' with {cooldown} minute cooldown{channel_info}{role_info}.
                         </div>
                         '''
                         
@@ -921,7 +941,7 @@ class DashboardIntegration:
                 if alert_data['last_triggered']:
                     last_triggered = datetime.datetime.fromisoformat(alert_data['last_triggered']).strftime("%Y-%m-%d %H:%M UTC")
                 
-                # Get channel information
+                # Get channel and role information
                 custom_channel_id = alert_data.get('custom_channel')
                 channel_info = ""
                 if custom_channel_id:
@@ -930,13 +950,19 @@ class DashboardIntegration:
                     channel_info = f" | Channel: #{channel_name}"
                 else:
                     channel_info = " | Channel: Default"
+                role_info = ""
+                custom_role_id = alert_data.get('custom_role')
+                if custom_role_id:
+                    role_obj = guild.get_role(custom_role_id)
+                    role_name = f"@{role_obj.name}" if role_obj else f"<@&{custom_role_id}>"
+                    role_info = f" | Role: {role_name}"
                 
                 alerts_html += f'''
                 <div style="margin-bottom: 15px; padding: 10px; background-color: #1e1f22; border-radius: 4px; border-left: 4px solid #5865f2;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>🔔 {alert_id}</strong><br>
-                            <span style="color: #cfcfcf;">Type: {alert_data['type']} | Value: {alert_data['value']} | Cooldown: {alert_data['cooldown']} min{channel_info}</span><br>
+                            <span style="color: #cfcfcf;">Type: {alert_data['type']} | Value: {alert_data['value']} | Cooldown: {alert_data['cooldown']} min{channel_info}{role_info}</span><br>
                             <span style="color: #8a8a8a; font-size: 12px;">Created: {created_at.strftime('%Y-%m-%d %H:%M UTC')} | Last Triggered: {last_triggered}</span>
                         </div>
                         <form method="POST" style="display: inline;">

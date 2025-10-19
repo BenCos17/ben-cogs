@@ -225,7 +225,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name=_("Special Aircraft"), value="`military` `ladd` `pia`", inline=False)
         embed.add_field(name=_("Export"), value=_("`export` - Export aircraft data to CSV, PDF, TXT, or HTML"), inline=False)
         embed.add_field(name=_("Configuration"), value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
-        embed.add_field(name=_("Custom Alerts"), value="`addalert` `removealert` `listalerts` `clearalerts`\n*Use `addalert` with optional channel parameter*", inline=False)
+        embed.add_field(name=_("Custom Alerts"), value="`addalert` `removealert` `listalerts` `clearalerts`\n*Use `addalert` with optional channel and role parameters*", inline=False)
         # Add brief mention of force and cooldown clear for owners
         if await ctx.bot.is_owner(ctx.author):
             embed.add_field(name=_("Custom Alert Admin"), value="`forcealert` (owner) `clearalertcooldown`", inline=False)
@@ -312,6 +312,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Extract feeder URL from JSON data or a URL containing feeder data using secure modal."""
         await self.aircraft_commands.extract_feeder_url(ctx, json_input=json_input)
 
+
+
+
+
     # Admin commands
     @aircraft_group.command(name='alertchannel')
     async def aircraft_alertchannel(self, ctx, channel: discord.TextChannel = None):
@@ -370,17 +374,23 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await self.config.api_mode.set(mode)
         await ctx.send(f"✅ API mode set to **{mode}**.")
     
+
+
+
+
+    
     # Custom Alerts Commands
     @commands.guild_only()
     @aircraft_group.command(name='addalert')
-    async def aircraft_add_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5, channel: discord.TextChannel = None):
+    async def aircraft_add_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5, channel: discord.TextChannel = None, role: discord.Role = None):
         """Add a custom alert for specific aircraft or squawks.
         
         Alert types: icao, callsign, squawk, type, reg
         Cooldown: 1-1440 minutes (default: 5)
         Channel: Optional channel to send alerts to (default: uses alert channel)
+        Role: Optional role to ping for this alert (overrides default alert role)
         """
-        await self.admin_commands.add_custom_alert(ctx, alert_type, value, cooldown, channel)
+        await self.admin_commands.add_custom_alert(ctx, alert_type, value, cooldown, channel, role)
     
     @commands.guild_only()
     @aircraft_group.command(name='removealert')
@@ -805,8 +815,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 else:
                     log.warning(f"Custom channel {custom_channel_id} not found for alert {alert_id}, using default channel")
             
-            # Get the alert role
-            alert_role_id = await guild_config.alert_role()
+            # Get the alert role (prefer per-alert custom_role, else guild default)
+            custom_role_id = alert_data.get('custom_role')
+            alert_role_id = custom_role_id if custom_role_id else await guild_config.alert_role()
             alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
             
             # Prepare message data to mirror emergency alert style (pre/post hooks support)
