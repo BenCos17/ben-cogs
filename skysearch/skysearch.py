@@ -882,7 +882,6 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
             # Allow other cogs to modify the message before sending (mirror emergency flow)
             original_view = message_data.get('view')
-            original_content = message_data.get('content')
             squawk_code = aircraft_data.get('squawk', 'CUSTOM')
             message_data = await self.squawk_api.run_pre_send(alert_channel.guild, aircraft_data, squawk_code, message_data)
 
@@ -890,24 +889,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
             if message_data.get('view') is None and original_view is not None:
                 log.warning(f"Pre-send callback removed view for custom alert {alert_id}, restoring buttons")
                 message_data['view'] = original_view
-            # Ensure role mention content is preserved if removed by callbacks
-            if message_data.get('content') is None and original_content is not None:
-                log.warning(f"Pre-send callback removed content for custom alert {alert_id}, restoring mention content")
-                message_data['content'] = original_content
 
-            # Send the message using the possibly modified data (allow role mentions)
-            allowed_mentions = None
-            if alert_role_id:
-                role_obj = alert_channel.guild.get_role(alert_role_id)
-                if role_obj:
-                    allowed_mentions = discord.AllowedMentions(roles=[role_obj])
-                else:
-                    allowed_mentions = discord.AllowedMentions(roles=True)
+            # Send the message using the possibly modified data
             sent_message = await alert_channel.send(
                 content=message_data.get('content'),
                 embed=message_data.get('embed'),
-                view=message_data.get('view'),
-                allowed_mentions=allowed_mentions
+                view=message_data.get('view')
             )
 
             # Let other cogs react after the message is sent
