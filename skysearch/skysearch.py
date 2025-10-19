@@ -582,6 +582,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     alert_role_id = await guild_config.alert_role()
                                     alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
                                     
+                                    # Debug logging for emergency alerts
+                                    log.info(f"EMERGENCY ALERT {icao_hex}: alert_role_id={alert_role_id}, mention='{alert_role_mention}'")
+                                    
                                     # Prepare message data for pre-send hooks
                                     message_data = {
                                         'content': alert_role_mention if alert_role_mention else None,
@@ -648,12 +651,20 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
                                     # Let other cogs modify the message before sending
                                     original_view = message_data.get('view')
+                                    original_content = message_data.get('content')
                                     message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
                                     
                                     # Ensure buttons are preserved if no other cog modified the view
                                     if message_data.get('view') is None and original_view is not None:
                                         log.warning(f"Pre-send callback removed view for {icao_hex}, restoring buttons")
                                         message_data['view'] = original_view
+                                    # Ensure role mention content is preserved if removed by callbacks
+                                    if message_data.get('content') is None and original_content is not None:
+                                        log.warning(f"Pre-send callback removed content for {icao_hex}, restoring mention content")
+                                        message_data['content'] = original_content
+                                    
+                                    # Debug final content before sending
+                                    log.info(f"EMERGENCY ALERT {icao_hex}: Final content before send: '{message_data.get('content')}'")
 
                                     # Send the message using the possibly modified data (allow role mentions)
                                     allowed_mentions = None
