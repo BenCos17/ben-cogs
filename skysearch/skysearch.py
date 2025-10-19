@@ -890,11 +890,19 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 log.warning(f"Pre-send callback removed view for custom alert {alert_id}, restoring buttons")
                 message_data['view'] = original_view
 
-            # Send the message using the possibly modified data
+            # Send the message using the possibly modified data (allow role mentions)
+            allowed_mentions = None
+            if alert_role_id:
+                role_obj = alert_channel.guild.get_role(alert_role_id)
+                if role_obj:
+                    allowed_mentions = discord.AllowedMentions(roles=[role_obj])
+                else:
+                    allowed_mentions = discord.AllowedMentions(roles=True)
             sent_message = await alert_channel.send(
                 content=message_data.get('content'),
                 embed=message_data.get('embed'),
-                view=message_data.get('view')
+                view=message_data.get('view'),
+                allowed_mentions=allowed_mentions
             )
 
             # Let other cogs react after the message is sent
