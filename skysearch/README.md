@@ -77,4 +77,4 @@ Notes:
 - `[p]skysearch apistats_save` - Manually save API statistics (owner only)
 
 ### Dashboard Integration
-- `/dashboard/apistats` - Web interface for viewing API statistics and performance metrics
+- `/third-parties/Skysearch` - Web interface for cog 
