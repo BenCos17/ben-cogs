@@ -53,7 +53,7 @@ jobs:
       # For dworld cog d-back and wtforms are required
       - name: Install dependencies
         run: |
-          uv pip install d-back wtforms --system
+          uv pip install d-back wtforms requests --system
 
       # Actual magic: test that cogs can be loaded/unloaded via RPC
       - name: Test cogs via RPC
