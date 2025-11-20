@@ -225,7 +225,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name=_("Special Aircraft"), value="`military` `ladd` `pia`", inline=False)
         embed.add_field(name=_("Export"), value=_("`export` - Export aircraft data to CSV, PDF, TXT, or HTML"), inline=False)
         embed.add_field(name=_("Configuration"), value="`alertchannel` `alertrole` `autoicao` `autodelete` `showalertchannel` `setapimode` `apimode`", inline=False)
-        embed.add_field(name=_("Custom Alerts"), value="`addalert` `removealert` `listalerts` `clearalerts`\n*Use `addalert` with optional channel parameter*", inline=False)
+        embed.add_field(name=_("Custom Alerts"), value="`addalert` `removealert` `listalerts` `clearalerts`\n*Use `addalert` with optional channel and role parameters*", inline=False)
         # Add brief mention of force and cooldown clear for owners
         if await ctx.bot.is_owner(ctx.author):
             embed.add_field(name=_("Custom Alert Admin"), value="`forcealert` (owner) `clearalertcooldown`", inline=False)
@@ -312,6 +312,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Extract feeder URL from JSON data or a URL containing feeder data using secure modal."""
         await self.aircraft_commands.extract_feeder_url(ctx, json_input=json_input)
 
+
+
+
+
     # Admin commands
     @aircraft_group.command(name='alertchannel')
     async def aircraft_alertchannel(self, ctx, channel: discord.TextChannel = None):
@@ -370,17 +374,23 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await self.config.api_mode.set(mode)
         await ctx.send(f"✅ API mode set to **{mode}**.")
     
+
+
+
+
+    
     # Custom Alerts Commands
     @commands.guild_only()
     @aircraft_group.command(name='addalert')
-    async def aircraft_add_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5, channel: discord.TextChannel = None):
+    async def aircraft_add_alert(self, ctx, alert_type: str, value: str, cooldown: int = 5, channel: discord.TextChannel = None, role: discord.Role = None):
         """Add a custom alert for specific aircraft or squawks.
         
         Alert types: icao, callsign, squawk, type, reg
         Cooldown: 1-1440 minutes (default: 5)
         Channel: Optional channel to send alerts to (default: uses alert channel)
+        Role: Optional role to ping for this alert (overrides default alert role)
         """
-        await self.admin_commands.add_custom_alert(ctx, alert_type, value, cooldown, channel)
+        await self.admin_commands.add_custom_alert(ctx, alert_type, value, cooldown, channel, role)
     
     @commands.guild_only()
     @aircraft_group.command(name='removealert')
@@ -572,6 +582,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     alert_role_id = await guild_config.alert_role()
                                     alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
                                     
+                                    # Debug logging for emergency alerts
+                                    log.info(f"EMERGENCY ALERT {icao_hex}: alert_role_id={alert_role_id}, mention='{alert_role_mention}'")
+                                    
                                     # Prepare message data for pre-send hooks
                                     message_data = {
                                         'content': alert_role_mention if alert_role_mention else None,
@@ -617,11 +630,11 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                             pass
                                     
                                     if squawk_code in ['7500', '7600', '7700']:
-                                        tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+                                        tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
                                     else:
-                                        tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+                                        tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
                                     
-                                    tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+                                    tweet_url = f"https://x.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
                                     view.add_item(discord.ui.Button(label="Post on X", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
                                     
                                     whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
@@ -638,18 +651,34 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
                                     # Let other cogs modify the message before sending
                                     original_view = message_data.get('view')
+                                    original_content = message_data.get('content')
                                     message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
                                     
                                     # Ensure buttons are preserved if no other cog modified the view
                                     if message_data.get('view') is None and original_view is not None:
                                         log.warning(f"Pre-send callback removed view for {icao_hex}, restoring buttons")
                                         message_data['view'] = original_view
+                                    # Ensure role mention content is preserved if removed by callbacks
+                                    if message_data.get('content') is None and original_content is not None:
+                                        log.warning(f"Pre-send callback removed content for {icao_hex}, restoring mention content")
+                                        message_data['content'] = original_content
+                                    
+                                    # Debug final content before sending
+                                    log.info(f"EMERGENCY ALERT {icao_hex}: Final content before send: '{message_data.get('content')}'")
 
-                                    # Send the message using the possibly modified data
+                                    # Send the message using the possibly modified data (allow role mentions)
+                                    allowed_mentions = None
+                                    if alert_role_id:
+                                        role_obj = guild.get_role(alert_role_id)
+                                        if role_obj:
+                                            allowed_mentions = discord.AllowedMentions(roles=[role_obj])
+                                        else:
+                                            allowed_mentions = discord.AllowedMentions(roles=True)
                                     sent_message = await alert_channel.send(
                                         content=message_data.get('content'),
                                         embed=message_data.get('embed'),
-                                        view=message_data.get('view')
+                                        view=message_data.get('view'),
+                                        allowed_mentions=allowed_mentions
                                     )
 
                                     # Let other cogs react after the message is sent
@@ -805,8 +834,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 else:
                     log.warning(f"Custom channel {custom_channel_id} not found for alert {alert_id}, using default channel")
             
-            # Get the alert role
-            alert_role_id = await guild_config.alert_role()
+            # Get the alert role (prefer per-alert custom_role, else guild default)
+            custom_role_id = alert_data.get('custom_role')
+            alert_role_id = custom_role_id if custom_role_id else await guild_config.alert_role()
             alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
             
             # Prepare message data to mirror emergency alert style (pre/post hooks support)
@@ -857,8 +887,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 except Exception:
                     pass
 
-            tweet_text = f"Custom alert triggered! {alert_data['type'].upper()} '{alert_data['value']}' spotted - Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #CustomAlert\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-            tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+            tweet_text = f"alert triggered! {alert_data['type'].upper()} '{alert_data['value']}' spotted - Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #discordAlert\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
+            tweet_url = f"https://x.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
             view.add_item(discord.ui.Button(label="Post on X", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
 
             whatsapp_text = f"Custom alert! {alert_data['type'].upper()} '{alert_data['value']}' spotted - Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
@@ -879,11 +909,19 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 log.warning(f"Pre-send callback removed view for custom alert {alert_id}, restoring buttons")
                 message_data['view'] = original_view
 
-            # Send the message using the possibly modified data
+            # Send the message using the possibly modified data (allow role mentions)
+            allowed_mentions = None
+            if alert_role_id:
+                role_obj = alert_channel.guild.get_role(alert_role_id)
+                if role_obj:
+                    allowed_mentions = discord.AllowedMentions(roles=[role_obj])
+                else:
+                    allowed_mentions = discord.AllowedMentions(roles=True)
             sent_message = await alert_channel.send(
                 content=message_data.get('content'),
                 embed=message_data.get('embed'),
-                view=message_data.get('view')
+                view=message_data.get('view'),
+                allowed_mentions=allowed_mentions
             )
 
             # Let other cogs react after the message is sent
@@ -1048,11 +1086,11 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 pass
         
         if squawk_code in ['7500', '7600', '7700']:
-            tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+            tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
         else:
-            tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
+            tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
         
-        tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+        tweet_url = f"https://x.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
         view.add_item(discord.ui.Button(label="Post on X", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
         
         whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
@@ -1079,11 +1117,19 @@ class Skysearch(commands.Cog, DashboardIntegration):
             log.warning(f"Pre-send callback removed view for {hex_code}, restoring buttons")
             message_data['view'] = original_view
 
-        # Send the message using the possibly modified data
+        # Send the message using the possibly modified data (allow role mentions)
+        allowed_mentions = None
+        if alert_role_id:
+            role_obj = guild.get_role(alert_role_id)
+            if role_obj:
+                allowed_mentions = discord.AllowedMentions(roles=[role_obj])
+            else:
+                allowed_mentions = discord.AllowedMentions(roles=True)
         sent_message = await alert_channel.send(
             content=message_data.get('content'),
             embed=message_data.get('embed'),
-            view=message_data.get('view')
+            view=message_data.get('view'),
+            allowed_mentions=allowed_mentions
         )
 
         # Let other cogs react after the message is sent

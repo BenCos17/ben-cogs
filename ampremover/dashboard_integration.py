@@ -197,24 +197,37 @@ class DashboardIntegration:
     @dashboard_page(name="stats", description="View AMP URL conversion statistics", methods=("GET",))
     async def stats_page(self, user: discord.User, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
         """Dashboard page for viewing conversion statistics."""
-        # Get guild settings
+        # Get guild settings and stats
         opted_in = await self.config.guild(guild).opted_in()
-        
-        # For now, we'll show basic stats. You can expand this later with actual conversion tracking
+        stats = await self.config.guild(guild).stats()
+
+        total_conversions = int(stats.get("total_conversions", 0))
+        total_urls_detected = int(stats.get("total_urls_detected", 0))
+        total_canonical_returned = int(stats.get("total_canonical_returned", 0))
+        last_ts = int(stats.get("last_conversion_ts", 0))
+
+        # Compute simple rate
+        success_rate = 0.0
+        if total_urls_detected > 0:
+            success_rate = (total_canonical_returned / total_urls_detected) * 100.0
+
+        # Format last conversion time (Dashboard templates can format raw epoch too; keep simple here)
+        last_conversion = "Never" if last_ts == 0 else f"<code>{last_ts}</code>"
+
         stats_html = f"""
-        <div class="container">
+        <div class=\"container\">
             <h2>📊 AMP Remover Statistics</h2>
             <p>Statistics for <strong>{guild.name}</strong></p>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
+
+            <div class=\"row\">
+                <div class=\"col-md-6\">
+                    <div class=\"card\">
+                        <div class=\"card-header\">
                             <h5>Guild Settings</h5>
                         </div>
-                        <div class="card-body">
-                            <p><strong>Automatic Conversion:</strong> 
-                                <span class="badge badge-{'success' if opted_in else 'danger'}">
+                        <div class=\"card-body\">
+                            <p><strong>Automatic Conversion:</strong>
+                                <span class=\"badge badge-{'success' if opted_in else 'danger'}\">
                                     {'Enabled' if opted_in else 'Disabled'}
                                 </span>
                             </p>
@@ -223,32 +236,22 @@ class DashboardIntegration:
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5>Bot Information</h5>
+
+                <div class=\"col-md-6\">
+                    <div class=\"card\">
+                        <div class=\"card-header\">
+                            <h5>Conversion Stats</h5>
                         </div>
-                        <div class="card-body">
-                            <p><strong>Bot Name:</strong> {self.bot.user.display_name}</p>
-                            <p><strong>API Used:</strong> AmputatorBot API</p>
-                            <p><strong>Commands Available:</strong></p>
-                            <ul>
-                                <li><code>[p]amputator convert</code> - Manual conversion</li>
-                                <li><code>[p]amputator optin</code> - Enable auto-conversion</li>
-                                <li><code>[p]amputator optout</code> - Disable auto-conversion</li>
-                                <li><code>[p]amputator settings</code> - View settings</li>
+                        <div class=\"card-body\">
+                            <ul class=\"list-unstyled\">
+                                <li><strong>Total conversion events:</strong> {total_conversions}</li>
+                                <li><strong>Total URLs detected:</strong> {total_urls_detected}</li>
+                                <li><strong>Total canonical returned:</strong> {total_canonical_returned}</li>
+                                <li><strong>Success rate:</strong> {success_rate:.1f}%</li>
+                                <li><strong>Last conversion (epoch):</strong> {last_conversion}</li>
                             </ul>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="mt-3">
-                <div class="alert alert-info">
-                    <h5>💡 Tip</h5>
-                    <p>To track conversion statistics, you would need to add logging functionality to the main cog. 
-                    This could include tracking the number of URLs converted, success rates, and user activity.</p>
                 </div>
             </div>
         </div>

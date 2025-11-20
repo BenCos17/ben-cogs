@@ -5,6 +5,7 @@ from discord import Embed
 import aiohttp
 import asyncio
 from .dashboard_integration import DashboardIntegration
+import time
 
 class AmputatorBot(DashboardIntegration, commands.Cog):
     """Cog to convert AMP URLs to canonical forms using the AmputatorBot API.
@@ -14,8 +15,17 @@ class AmputatorBot(DashboardIntegration, commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=492089091320446976)  # Use a unique identifier for your cog
-        self.config.register_guild(opted_in=False)  # Register a guild-specific variable for opted-in status
+        self.config = Config.get_conf(self, identifier=492089091320446976)  
+        # Register a guild-specific variable for opted-in status and basic stats
+        self.config.register_guild(
+            opted_in=False,
+            stats={
+                "total_conversions": 0,
+                "total_urls_detected": 0,
+                "total_canonical_returned": 0,
+                "last_conversion_ts": 0,
+            },
+        )
         self.opted_in_users = set()
 
     async def initialize_config(self, guild):
@@ -54,6 +64,9 @@ class AmputatorBot(DashboardIntegration, commands.Cog):
             return
 
         canonical_links = await self.fetch_canonical_links(urls)
+        # Update stats if invoked in a guild context
+        if ctx.guild is not None:
+            await self._update_guild_stats(ctx.guild, urls_detected=len(urls), canonical_returned=len(canonical_links))
         if canonical_links:
             if ctx.guild:  # If in a server, respond in the channel
                 await ctx.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
@@ -91,6 +104,8 @@ class AmputatorBot(DashboardIntegration, commands.Cog):
                 urls = self.extract_urls(message.content)
                 if urls:
                     canonical_links = await self.fetch_canonical_links(urls)
+                    # Update stats for guild automatic conversion checks
+                    await self._update_guild_stats(message.guild, urls_detected=len(urls), canonical_returned=len(canonical_links))
                     if canonical_links:
                         await message.channel.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
         else:  # DM context
@@ -100,6 +115,17 @@ class AmputatorBot(DashboardIntegration, commands.Cog):
                     canonical_links = await self.fetch_canonical_links(urls)
                     if canonical_links:
                         await message.author.send(f"Canonical URL(s): {'; '.join(canonical_links)}")
+
+    async def _update_guild_stats(self, guild, *, urls_detected: int, canonical_returned: int) -> None:
+        """Update guild-level stats used by the dashboard.
+
+        Increments total conversion events, accumulates counts, and records the last conversion timestamp.
+        """
+        async with self.config.guild(guild).stats() as stats:
+            stats["total_conversions"] = int(stats.get("total_conversions", 0)) + 1
+            stats["total_urls_detected"] = int(stats.get("total_urls_detected", 0)) + int(urls_detected)
+            stats["total_canonical_returned"] = int(stats.get("total_canonical_returned", 0)) + int(canonical_returned)
+            stats["last_conversion_ts"] = int(time.time())
 
     @amputator.command(name='settings')
     async def show_settings(self, ctx):
