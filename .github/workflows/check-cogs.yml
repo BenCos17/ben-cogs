@@ -22,7 +22,7 @@ jobs:
 
       # DEMO: how to install Red-DiscordBot, can install from PyPI directly!
       - name: Build Red-DiscordBot
-        uses: nntin/d-flows/actions/build-red-discordbot@feature/improve-check-cog
+        uses: nntin/d-flows/actions/build-red-discordbot@v1
         with:
           red_commit: ""                  # optional commit SHA
           artifact_name: ${{ env.BUILD_ARTIFACT_NAME }}  # optional artifact name
@@ -36,14 +36,14 @@ jobs:
 
       # Skip artifact_name if installing from PyPI directly
       - name: Install Red-DiscordBot
-        uses: nntin/d-flows/actions/install-red-discordbot@feature/improve-check-cog
+        uses: nntin/d-flows/actions/install-red-discordbot@v1
         with:
           artifact_name: ${{ env.BUILD_ARTIFACT_NAME }}  # same artifact name used for build
 
       # Configure Red-DiscordBot with instance name "tinkerer"
       # todo: add input for skipping --dry-run
       - name: Configure Red-DiscordBot
-        uses: nntin/d-flows/actions/setup-red-discordbot@feature/improve-check-cog
+        uses: nntin/d-flows/actions/setup-red-discordbot@v1
         with:
           token: ${{ secrets.DISCORD_BOT_TOKEN }}
           optional_args: "--no-cogs"  # Example optional argument to run without loading any cogs
@@ -52,7 +52,7 @@ jobs:
 
       # Actual magic: test that cogs can be loaded/unloaded via RPC
       - name: Test cogs via RPC
-        uses: nntin/d-flows/actions/test-red-discordbot@feature/improve-check-cog
+        uses: nntin/d-flows/actions/test-red-discordbot@v1
         with:
           token: ${{ secrets.DISCORD_BOT_TOKEN }}
           cog_paths: ${{ env.COG_PATHS }}
@@ -128,7 +128,7 @@ jobs:
 
     steps:
       - name: Write Step Summary
-        uses: nntin/d-flows/actions/step-summary@feature/improve-check-cog
+        uses: nntin/d-flows/actions/step-summary@v1
         with:
           title: 'Cog Validation Results'
           markdown: |
@@ -155,7 +155,7 @@ jobs:
 
     steps:
       - name: Send Discord Notification
-        uses: nntin/d-flows/actions/discord-notify@feature/improve-check-cog
+        uses: nntin/d-flows/actions/discord-notify@v1
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           message_type: 'embed'
