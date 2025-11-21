@@ -49,11 +49,6 @@ jobs:
           optional_args: "--no-cogs"  # Example optional argument to run without loading any cogs
         # --dry-run fails due to bug in Red-DiscordBot https://github.com/Cog-Creators/Red-DiscordBot/issues/6572
         continue-on-error: true
-      
-      # For dworld cog d-back and wtforms are required
-      - name: Install dependencies
-        run: |
-          uv pip install d-back wtforms requests --system
 
       # Actual magic: test that cogs can be loaded/unloaded via RPC
       - name: Test cogs via RPC

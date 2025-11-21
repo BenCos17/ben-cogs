@@ -2,9 +2,9 @@
     "author": ["bencos18 (492089091320446976)"],
     "install_msg": "thank for adding my repo\n feel free to message me on discord or create a github issue if you need support or help with anything.",
     "short": "some random cogs I made for my own use and decided to make public.",
-    "requirements": ["Pillow"],
-    "description": "commands to get emoji links and other info.",
-    "tags": ["emoji", "emojis"],
+    "requirements": ["yt_dlp"],
+    "description": "-",
+    "tags": [],
     "end_user_data_statement": "This cog does not store any End User Data.",
     "type": "COG"
 }
