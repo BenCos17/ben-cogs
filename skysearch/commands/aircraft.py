@@ -43,49 +43,11 @@ class AircraftCommands:
             image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
             # Create embed
             embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
-            # Create view with buttons
-            view = discord.ui.View()
+            # Create view with buttons using helper methods
             icao = aircraft_data.get('hex', '')
-            if icao:
-                icao = icao.upper()
-            link = f"https://globe.airplanes.live/?icao={icao}"
-            view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
-
-            # Social media sharing logic 
-            ground_speed_knots = aircraft_data.get('gs', 'N/A')
-            ground_speed_mph = 'unknown'
-            if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
-                try:
-                    ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
-                except Exception:
-                    ground_speed_mph = 'unknown'
+            view = self.helpers.create_base_aircraft_view(icao)
             squawk_code = aircraft_data.get('squawk', 'N/A')
-            emergency_squawk_codes = ['7500', '7600', '7700']
-            lat = aircraft_data.get('lat', 'N/A')
-            lon = aircraft_data.get('lon', 'N/A')
-            if lat != 'N/A' and lat is not None:
-                try:
-                    lat = round(float(lat), 2)
-                    lat_dir = "N" if lat >= 0 else "S"
-                    lat = f"{abs(lat)}{lat_dir}"
-                except Exception:
-                    pass
-            if lon != 'N/A' and lon is not None:
-                try:
-                    lon = round(float(lon), 2)
-                    lon_dir = "E" if lon >= 0 else "W"
-                    lon = f"{abs(lon)}{lon_dir}"
-                except Exception:
-                    pass
-            if squawk_code in emergency_squawk_codes:
-                tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-            else:
-                tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-            tweet_url = f"https://twitter.com/intent/tweet?text={quote_plus(tweet_text)}"
-            view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
-            whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
-            whatsapp_url = f"https://api.whatsapp.com/send?text={quote_plus(whatsapp_text)}"
-            view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+            self.helpers.add_social_media_buttons(view, aircraft_data, squawk_code=squawk_code if squawk_code != 'N/A' else None)
 
             await ctx.send(embed=embed, view=view)
         else:
@@ -733,43 +695,10 @@ class AircraftCommands:
                         icao = icao.upper()
                     image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
                     embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
-                    view = discord.ui.View()
-                    link = f"https://globe.airplanes.live/?icao={icao}"
-                    view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
-                    ground_speed_knots = aircraft_data.get('gs', 'N/A')
-                    ground_speed_mph = 'unknown'
-                    if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
-                        try:
-                            ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
-                        except Exception:
-                            ground_speed_mph = 'unknown'
+                    # Create view with buttons using helper methods
+                    view = self.helpers.create_base_aircraft_view(icao)
                     squawk_code = aircraft_data.get('squawk', 'N/A')
-                    emergency_squawk_codes = ['7500', '7600', '7700']
-                    lat = aircraft_data.get('lat', 'N/A')
-                    lon = aircraft_data.get('lon', 'N/A')
-                    if lat != 'N/A' and lat is not None:
-                        try:
-                            lat = round(float(lat), 2)
-                            lat_dir = "N" if lat >= 0 else "S"
-                            lat = f"{abs(lat)}{lat_dir}"
-                        except Exception:
-                            pass
-                    if lon != 'N/A' and lon is not None:
-                        try:
-                            lon = round(float(lon), 2)
-                            lon_dir = "E" if lon >= 0 else "W"
-                            lon = f"{abs(lon)}{lon_dir}"
-                        except Exception:
-                            pass
-                    if squawk_code in emergency_squawk_codes:
-                        tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-                    else:
-                        tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-                    tweet_url = f"https://twitter.com/intent/tweet?text={quote_plus(tweet_text)}"
-                    view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
-                    whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
-                    whatsapp_url = f"https://api.whatsapp.com/send?text={quote_plus(whatsapp_text)}"
-                    view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+                    self.helpers.add_social_media_buttons(view, aircraft_data, squawk_code=squawk_code if squawk_code != 'N/A' else None)
                     return embed, view
                 else:
                     embed = discord.Embed(title='No results found for your query', color=discord.Colour(0xff4545))
