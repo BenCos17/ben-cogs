@@ -77,4 +77,9 @@ Notes:
 - `[p]skysearch apistats_save` - Manually save API statistics (owner only)
 
 ### Dashboard Integration
-- `/dashboard/apistats` - Web interface for viewing API statistics and performance metrics
+- `/third-parties/Skysearch` - Web interface for the cog
+there is 4 total pages in it 
+ - `Main Page` - shows stats for airplanes.live and tagged aircraft (tags aren't currently updated)
+ - `Apistats` - shows apistats for the cog itself
+ - `Guild` - allows you to change cog settings in the dashboard (uses ids, to get them enable developer mode on discord)
+ - `Lookup` - allows you to lookup data directly in the cog dashboard page
