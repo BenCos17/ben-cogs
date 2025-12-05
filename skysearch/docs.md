@@ -207,6 +207,8 @@ Create your own personal watchlist of aircraft to monitor. You'll receive notifi
 ```
 Adds the aircraft with ICAO code `A03B67` to your watchlist.
 
+**Note:** If the aircraft is already online when you add it, you'll immediately see its current status (callsign, altitude, speed, position) instead of waiting for the next notification.
+
 ### Viewing Your Watchlist
 ```
 *aircraft watchlist list
@@ -236,11 +238,28 @@ Removes the aircraft from your watchlist.
 ```
 Removes all aircraft from your watchlist.
 
+### Configuring Notification Cooldown
+```
+*aircraft watchlist cooldown          # Check current cooldown
+*aircraft watchlist cooldown 5        # Set to 5 minutes
+*aircraft watchlist cooldown 30       # Set to 30 minutes
+*aircraft watchlist cooldown 1440     # Set to 24 hours (maximum)
+```
+
+**Cooldown Settings:**
+- **Default:** 10 minutes
+- **Range:** 1-1440 minutes (1 minute to 24 hours)
+- **Per-user:** Each user can set their own cooldown preference
+- **Purpose:** Prevents spam notifications for the same aircraft
+
+After receiving a notification for a watched aircraft, you won't receive another notification for the same aircraft until your configured cooldown period expires.
+
 ### Watchlist Notifications
 - **Automatic notifications** when watched aircraft come online
 - Notifications sent via **DM** (if enabled) or in a **shared guild channel**
-- **10-minute cooldown** per aircraft to prevent spam
+- **Configurable cooldown** per user (default: 10 minutes) to prevent spam
 - Background task checks every **3 minutes**
+- If aircraft is **already online** when added, you'll see its status immediately
 
 ### How It Works
 1. Add aircraft to your watchlist using their ICAO hex code

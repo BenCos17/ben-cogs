@@ -45,11 +45,13 @@ To use the SkySearch cog, follow these steps:
 - `[p]aircraft watchlist list` - List all watched aircraft with online/offline status
 - `[p]aircraft watchlist status` - Get detailed status of all watched aircraft
 - `[p]aircraft watchlist clear` - Clear your entire watchlist
+- `[p]aircraft watchlist cooldown [minutes]` - Set or view notification cooldown (default: 10 minutes)
 
 **Features:**
 - Personal watchlist per user
 - Automatic notifications when watched aircraft come online (via DM or guild channel)
-- 10-minute cooldown per aircraft to prevent spam
+- If aircraft is already online when added, you'll see its current status immediately
+- Configurable cooldown per user (1-1440 minutes, default: 10 minutes) to prevent spam
 - Background task checks every 3 minutes
 
 ### Airport Commands

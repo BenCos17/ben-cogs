@@ -1082,4 +1082,56 @@ class AircraftCommands:
             description=_("Removed **{count}** aircraft from your watchlist.").format(count=count),
             color=0x00ff00
         )
+        await ctx.send(embed=embed)
+    
+    async def watchlist_cooldown(self, ctx, minutes: int = None):
+        """Set or view the watchlist notification cooldown."""
+        user_config = self.cog.config.user(ctx.author)
+        
+        if minutes is None:
+            # Show current cooldown
+            current_cooldown = await user_config.watchlist_cooldown()
+            embed = discord.Embed(
+                title=_("Watchlist Cooldown"),
+                description=_("Current notification cooldown: **{minutes} minutes**\n\nUse `{prefix}aircraft watchlist cooldown <minutes>` to change it.").format(
+                    minutes=current_cooldown,
+                    prefix=ctx.prefix
+                ),
+                color=0xfffffe
+            )
+            embed.add_field(
+                name=_("How it works"),
+                value=_("After you receive a notification for a watched aircraft, you won't receive another notification for the same aircraft until the cooldown period expires."),
+                inline=False
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        # Validate cooldown value
+        if minutes < 1:
+            embed = discord.Embed(
+                title=_("Invalid Cooldown"),
+                description=_("Cooldown must be at least 1 minute."),
+                color=0xff4545
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        if minutes > 1440:  # 24 hours
+            embed = discord.Embed(
+                title=_("Invalid Cooldown"),
+                description=_("Cooldown cannot exceed 1440 minutes (24 hours)."),
+                color=0xff4545
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        # Set cooldown
+        await user_config.watchlist_cooldown.set(minutes)
+        
+        embed = discord.Embed(
+            title=_("✅ Cooldown Updated"),
+            description=_("Watchlist notification cooldown set to **{minutes} minutes**.").format(minutes=minutes),
+            color=0x00ff00
+        )
         await ctx.send(embed=embed) 

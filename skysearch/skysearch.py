@@ -50,7 +50,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
         self.config.register_global(api_stats=None)  # API request statistics for persistence
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={})
-        self.config.register_user(watchlist=[], watchlist_notifications={})  # User watchlist: list of ICAO codes, and dict of last notification times
+        self.config.register_user(watchlist=[], watchlist_notifications={}, watchlist_cooldown=10)  # User watchlist: list of ICAO codes, dict of last notification times, and cooldown in minutes (default: 10)
         
         # Initialize utility managers
         self.api = APIManager(self)
@@ -233,7 +233,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Add brief mention of force and cooldown clear for owners
         if await ctx.bot.is_owner(ctx.author):
             embed.add_field(name=_("Custom Alert Admin"), value="`forcealert` (owner) `clearalertcooldown`", inline=False)
-        embed.add_field(name=_("Watchlist"), value="`watchlist` - Manage your personal aircraft watchlist\n`watchlist add <icao>` - Add aircraft to watchlist\n`watchlist remove <icao>` - Remove from watchlist\n`watchlist list` - List watched aircraft\n`watchlist status` - Get detailed status", inline=False)
+        embed.add_field(name=_("Watchlist"), value="`watchlist` - Manage your personal aircraft watchlist\n`watchlist add <icao>` - Add aircraft to watchlist\n`watchlist remove <icao>` - Remove from watchlist\n`watchlist list` - List watched aircraft\n`watchlist status` - Get detailed status\n`watchlist cooldown [minutes]` - Set notification cooldown", inline=False)
         embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes\n`feeder` - Parse feeder JSON data (secure modal)"), inline=False)
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
@@ -353,6 +353,18 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def aircraft_watchlist_clear(self, ctx):
         """Clear your entire watchlist."""
         await self.aircraft_commands.watchlist_clear(ctx)
+    
+    @commands.guild_only()
+    @aircraft_watchlist.command(name='cooldown')
+    async def aircraft_watchlist_cooldown(self, ctx, minutes: int = None):
+        """Set or view the watchlist notification cooldown (in minutes). Use without a value to check current setting."""
+        await self.aircraft_commands.watchlist_cooldown(ctx, minutes)
+    
+    @commands.guild_only()
+    @aircraft_watchlist.command(name='cooldown')
+    async def aircraft_watchlist_cooldown(self, ctx, minutes: int = None):
+        """Set or view the watchlist notification cooldown (in minutes). Use without a value to check current setting."""
+        await self.aircraft_commands.watchlist_cooldown(ctx, minutes)
 
 
 
@@ -848,10 +860,11 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         user_config = self.config.user(user)
                         notifications = await user_config.watchlist_notifications()
                         
-                        # Check if we've notified recently (cooldown: 10 minutes)
+                        # Check if we've notified recently (configurable cooldown)
                         last_notification = notifications.get(icao, 0)
                         current_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
-                        cooldown_seconds = 10 * 60  # 10 minutes
+                        cooldown_minutes = await user_config.watchlist_cooldown()
+                        cooldown_seconds = cooldown_minutes * 60
                         
                         if current_time - last_notification < cooldown_seconds:
                             continue  # Still in cooldown
