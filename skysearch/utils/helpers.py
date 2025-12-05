@@ -717,6 +717,93 @@ class HelperUtils:
                 aircraft_data.get('lon', 'N/A')
             )
         }
+    
+    def is_aircraft_landed(self, aircraft_data):
+        """
+        Check if aircraft is landed based on altitude.
+        
+        Args:
+            aircraft_data: Aircraft data dictionary
+            
+        Returns:
+            bool: True if aircraft is landed (altitude < 25 or 'ground'), False otherwise
+        """
+        altitude = aircraft_data.get('altitude') or aircraft_data.get('alt_baro')
+        if altitude == 'ground':
+            return True
+        if altitude is not None and altitude != 'N/A':
+            try:
+                return float(altitude) < 25
+            except (ValueError, TypeError):
+                return False
+        return False
+    
+    def create_watchlist_landing_embed(self, icao, aircraft_data):
+        """
+        Create a landing notification embed for watchlist aircraft.
+        
+        Args:
+            icao: ICAO hex code
+            aircraft_data: Aircraft data dictionary
+            
+        Returns:
+            discord.Embed: Formatted landing notification embed
+        """
+        from redbot.core.i18n import Translator
+        _watchlist = Translator("Skysearch", __file__)
+        
+        embed = discord.Embed(
+            title=_watchlist("🛬 Aircraft Landed"),
+            description=_watchlist("**{icao}** from your watchlist has landed!").format(icao=icao),
+            color=0x00ff00
+        )
+        
+        callsign = self.format_callsign(aircraft_data.get('flight', 'N/A'))
+        position = self.format_position(
+            aircraft_data.get('lat', 'N/A'),
+            aircraft_data.get('lon', 'N/A')
+        )
+        
+        embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
+        embed.add_field(name=_watchlist("Status"), value=_watchlist("On ground"), inline=True)
+        embed.add_field(name=_watchlist("Position"), value=position, inline=False)
+        
+        return embed
+    
+    def create_watchlist_takeoff_embed(self, icao, aircraft_data):
+        """
+        Create a takeoff notification embed for watchlist aircraft.
+        
+        Args:
+            icao: ICAO hex code
+            aircraft_data: Aircraft data dictionary
+            
+        Returns:
+            discord.Embed: Formatted takeoff notification embed
+        """
+        from redbot.core.i18n import Translator
+        _watchlist = Translator("Skysearch", __file__)
+        
+        embed = discord.Embed(
+            title=_watchlist("✈️ Aircraft Took Off"),
+            description=_watchlist("**{icao}** from your watchlist has taken off!").format(icao=icao),
+            color=0x0099ff
+        )
+        
+        callsign = self.format_callsign(aircraft_data.get('flight', 'N/A'))
+        altitude = self.format_altitude(aircraft_data.get('alt_baro', 'N/A'))
+        speed = self.format_speed(aircraft_data.get('gs', 'N/A'))
+        position = self.format_position(
+            aircraft_data.get('lat', 'N/A'),
+            aircraft_data.get('lon', 'N/A')
+        )
+        
+        embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
+        embed.add_field(name=_watchlist("Altitude"), value=altitude, inline=True)
+        embed.add_field(name=_watchlist("Speed"), value=speed, inline=True)
+        embed.add_field(name=_watchlist("Position"), value=position, inline=False)
+        
+        return embed
 
 
 class JSONInputModal(discord.ui.Modal):

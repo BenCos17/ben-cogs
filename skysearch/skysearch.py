@@ -50,7 +50,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
         self.config.register_global(api_stats=None)  # API request statistics for persistence
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={})
-        self.config.register_user(watchlist=[], watchlist_notifications={}, watchlist_cooldown=10)  # User watchlist: list of ICAO codes, dict of last notification times, and cooldown in minutes (default: 10)
+        self.config.register_user(watchlist=[], watchlist_notifications={}, watchlist_cooldown=10, watchlist_aircraft_state={})  # User watchlist: list of ICAO codes, dict of last notification times, cooldown in minutes (default: 10), and dict of last known aircraft state (flying/landed)
         
         # Initialize utility managers
         self.api = APIManager(self)
@@ -853,15 +853,118 @@ class Skysearch(commands.Cog, DashboardIntegration):
                     try:
                         user_config = self.config.user(user)
                         notifications = await user_config.watchlist_notifications()
+                        aircraft_state = await user_config.watchlist_aircraft_state()
                         
-                        # Check if we've notified recently (configurable cooldown)
-                        last_notification = notifications.get(icao, 0)
                         current_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
                         cooldown_minutes = await user_config.watchlist_cooldown()
                         cooldown_seconds = cooldown_minutes * 60
                         
+                        # Check if aircraft has landed
+                        is_landed = self.helpers.is_aircraft_landed(aircraft_data)
+                        last_state = aircraft_state.get(icao, 'unknown')
+                        
+                        # Check for takeoff transition (was landed, now flying)
+                        if last_state == 'landed' and not is_landed:
+                            # Aircraft just took off - send takeoff notification
+                            last_takeoff_notification = notifications.get(f"{icao}_takeoff", 0)
+                            if current_time - last_takeoff_notification >= cooldown_seconds:
+                                try:
+                                    embed = self.helpers.create_watchlist_takeoff_embed(icao, aircraft_data)
+                                    view = self.helpers.create_watchlist_view(icao)
+                                    
+                                    try:
+                                        await user.send(embed=embed, view=view)
+                                        notifications[f"{icao}_takeoff"] = current_time
+                                        await user_config.watchlist_notifications.set(notifications)
+                                        aircraft_state[icao] = 'flying'
+                                        await user_config.watchlist_aircraft_state.set(aircraft_state)
+                                        log.info(f"Sent watchlist takeoff notification to {user.id} for aircraft {icao}")
+                                    except discord.Forbidden:
+                                        if guild:
+                                            for channel in guild.text_channels:
+                                                if channel.permissions_for(guild.me).send_messages:
+                                                    try:
+                                                        await channel.send(
+                                                            content=_("{user} - Your watched aircraft **{icao}** has taken off!").format(
+                                                                user=user.mention,
+                                                                icao=icao
+                                                            ),
+                                                            embed=embed,
+                                                            view=view
+                                                        )
+                                                        notifications[f"{icao}_takeoff"] = current_time
+                                                        await user_config.watchlist_notifications.set(notifications)
+                                                        aircraft_state[icao] = 'flying'
+                                                        await user_config.watchlist_aircraft_state.set(aircraft_state)
+                                                        log.info(f"Sent watchlist takeoff notification to {user.id} in {guild.name} for aircraft {icao}")
+                                                        break
+                                                    except Exception:
+                                                        continue
+                                    except Exception as e:
+                                        log.debug(f"Error sending watchlist takeoff notification to {user.id}: {e}")
+                                except Exception as e:
+                                    log.debug(f"Error creating takeoff notification for user {user.id}: {e}")
+                            continue  # Skip online notification if we just sent takeoff notification
+                        
+                        # Check for landing transition (was flying, now landed)
+                        if last_state == 'flying' and is_landed:
+                            # Aircraft just landed - send landing notification
+                            last_landing_notification = notifications.get(f"{icao}_landing", 0)
+                            if current_time - last_landing_notification >= cooldown_seconds:
+                                try:
+                                    embed = self.helpers.create_watchlist_landing_embed(icao, aircraft_data)
+                                    view = self.helpers.create_watchlist_view(icao)
+                                    
+                                    try:
+                                        await user.send(embed=embed, view=view)
+                                        notifications[f"{icao}_landing"] = current_time
+                                        await user_config.watchlist_notifications.set(notifications)
+                                        aircraft_state[icao] = 'landed'
+                                        await user_config.watchlist_aircraft_state.set(aircraft_state)
+                                        log.info(f"Sent watchlist landing notification to {user.id} for aircraft {icao}")
+                                    except discord.Forbidden:
+                                        if guild:
+                                            for channel in guild.text_channels:
+                                                if channel.permissions_for(guild.me).send_messages:
+                                                    try:
+                                                        await channel.send(
+                                                            content=_("{user} - Your watched aircraft **{icao}** has landed!").format(
+                                                                user=user.mention,
+                                                                icao=icao
+                                                            ),
+                                                            embed=embed,
+                                                            view=view
+                                                        )
+                                                        notifications[f"{icao}_landing"] = current_time
+                                                        await user_config.watchlist_notifications.set(notifications)
+                                                        aircraft_state[icao] = 'landed'
+                                                        await user_config.watchlist_aircraft_state.set(aircraft_state)
+                                                        log.info(f"Sent watchlist landing notification to {user.id} in {guild.name} for aircraft {icao}")
+                                                        break
+                                                    except Exception:
+                                                        continue
+                                    except Exception as e:
+                                        log.debug(f"Error sending watchlist landing notification to {user.id}: {e}")
+                                except Exception as e:
+                                    log.debug(f"Error creating landing notification for user {user.id}: {e}")
+                            continue  # Skip online notification if we just sent landing notification
+                        
+                        # Update aircraft state
+                        if is_landed:
+                            aircraft_state[icao] = 'landed'
+                        else:
+                            aircraft_state[icao] = 'flying'
+                        await user_config.watchlist_aircraft_state.set(aircraft_state)
+                        
+                        # Check if we've notified recently (configurable cooldown) for online notifications
+                        last_notification = notifications.get(icao, 0)
+                        
                         if current_time - last_notification < cooldown_seconds:
                             continue  # Still in cooldown
+                        
+                        # Only notify if aircraft is flying (not landed)
+                        if is_landed:
+                            continue  # Skip online notification if aircraft is on ground
                         
                         # Check if aircraft was offline before (we only notify when it comes online)
                         # For now, we'll notify every time it's found (user can remove if they don't want notifications)

@@ -888,7 +888,17 @@ class AircraftCommands:
         notifications = await user_config.watchlist_notifications()
         if icao in notifications:
             del notifications[icao]
-            await user_config.watchlist_notifications.set(notifications)
+        if f"{icao}_landing" in notifications:
+            del notifications[f"{icao}_landing"]
+        if f"{icao}_takeoff" in notifications:
+            del notifications[f"{icao}_takeoff"]
+        await user_config.watchlist_notifications.set(notifications)
+        
+        # Remove from aircraft state tracking
+        aircraft_state = await user_config.watchlist_aircraft_state()
+        if icao in aircraft_state:
+            del aircraft_state[icao]
+        await user_config.watchlist_aircraft_state.set(aircraft_state)
         
         embed = discord.Embed(
             title=_("✅ Removed from Watchlist"),
@@ -1076,6 +1086,7 @@ class AircraftCommands:
         count = len(watchlist)
         await user_config.watchlist.set([])
         await user_config.watchlist_notifications.set({})
+        await user_config.watchlist_aircraft_state.set({})
         
         embed = discord.Embed(
             title=_("✅ Watchlist Cleared"),
