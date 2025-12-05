@@ -196,6 +196,58 @@ Visit `/dashboard/apistats` in your web browser to view API statistics in a web 
 - `*skysearch apistats_reset` - Reset all statistics
 - `*skysearch apistats_save` - Manually save statistics
 
+## Aircraft Watchlist
+
+### Personal Watchlist
+Create your own personal watchlist of aircraft to monitor. You'll receive notifications when watched aircraft come online.
+
+### Adding Aircraft to Watchlist
+```
+*aircraft watchlist add A03B67
+```
+Adds the aircraft with ICAO code `A03B67` to your watchlist.
+
+### Viewing Your Watchlist
+```
+*aircraft watchlist list
+```
+Shows all aircraft in your watchlist with their current online/offline status.
+
+### Detailed Status
+```
+*aircraft watchlist status
+```
+Shows detailed information about all watched aircraft including:
+- Callsign
+- Altitude
+- Speed
+- Position
+- Online/offline status
+
+### Removing Aircraft
+```
+*aircraft watchlist remove A03B67
+```
+Removes the aircraft from your watchlist.
+
+### Clearing Watchlist
+```
+*aircraft watchlist clear
+```
+Removes all aircraft from your watchlist.
+
+### Watchlist Notifications
+- **Automatic notifications** when watched aircraft come online
+- Notifications sent via **DM** (if enabled) or in a **shared guild channel**
+- **10-minute cooldown** per aircraft to prevent spam
+- Background task checks every **3 minutes**
+
+### How It Works
+1. Add aircraft to your watchlist using their ICAO hex code
+2. The bot automatically checks your watchlist every 3 minutes
+3. When a watched aircraft comes online, you receive a notification
+4. Notifications include aircraft details and a link to track on airplanes.live
+
 ## Convenience Features
 
 ### Auto ICAO Lookup

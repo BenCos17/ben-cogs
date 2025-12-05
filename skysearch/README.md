@@ -38,6 +38,20 @@ To use the SkySearch cog, follow these steps:
 - `[p]aircraft export <type> <value> <format>` - Export data
 - `[p]aircraft scroll` - Scroll through aircraft
 
+### Watchlist Commands
+- `[p]aircraft watchlist` - View your watchlist
+- `[p]aircraft watchlist add <icao>` - Add aircraft to your personal watchlist
+- `[p]aircraft watchlist remove <icao>` - Remove aircraft from watchlist
+- `[p]aircraft watchlist list` - List all watched aircraft with online/offline status
+- `[p]aircraft watchlist status` - Get detailed status of all watched aircraft
+- `[p]aircraft watchlist clear` - Clear your entire watchlist
+
+**Features:**
+- Personal watchlist per user
+- Automatic notifications when watched aircraft come online (via DM or guild channel)
+- 10-minute cooldown per aircraft to prevent spam
+- Background task checks every 3 minutes
+
 ### Airport Commands
 - `[p]airport info <code>` - Get airport information
 - `[p]airport runway <code>` - Get runway information
