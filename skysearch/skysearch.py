@@ -895,6 +895,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                                 continue
                             except Exception as e:
                                 log.debug(f"Error sending watchlist notification to {user.id}: {e}")
+                        except Exception as e:
+                            log.debug(f"Error creating notification for user {user.id}: {e}")
                         
                     except Exception as e:
                         log.debug(f"Error processing watchlist notification for user {user.id}: {e}")
