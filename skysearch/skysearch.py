@@ -359,12 +359,6 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def aircraft_watchlist_cooldown(self, ctx, minutes: int = None):
         """Set or view the watchlist notification cooldown (in minutes). Use without a value to check current setting."""
         await self.aircraft_commands.watchlist_cooldown(ctx, minutes)
-    
-    @commands.guild_only()
-    @aircraft_watchlist.command(name='cooldown')
-    async def aircraft_watchlist_cooldown(self, ctx, minutes: int = None):
-        """Set or view the watchlist notification cooldown (in minutes). Use without a value to check current setting."""
-        await self.aircraft_commands.watchlist_cooldown(ctx, minutes)
 
 
 
