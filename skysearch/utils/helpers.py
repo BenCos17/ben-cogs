@@ -555,6 +555,168 @@ class HelperUtils:
             ))
         
         return view
+    
+    def format_altitude(self, altitude):
+        """
+        Format altitude value for display.
+        
+        Args:
+            altitude: Altitude value (can be 'ground', 'N/A', int, or str)
+            
+        Returns:
+            str: Formatted altitude text
+        """
+        if altitude == 'ground':
+            return "On ground"
+        elif altitude != 'N/A' and altitude is not None:
+            if isinstance(altitude, (int, float)):
+                return f"{int(altitude):,} ft"
+            return f"{altitude} ft"
+        return "N/A"
+    
+    def format_speed(self, speed_knots):
+        """
+        Format speed from knots to mph for display.
+        
+        Args:
+            speed_knots: Speed in knots (can be 'N/A', None, int, or float)
+            
+        Returns:
+            str: Formatted speed text in mph
+        """
+        if speed_knots != 'N/A' and speed_knots is not None:
+            try:
+                speed_mph = round(float(speed_knots) * 1.15078)
+                return f"{speed_mph} mph"
+            except (ValueError, TypeError):
+                return "N/A"
+        return "N/A"
+    
+    def format_position(self, lat, lon):
+        """
+        Format latitude and longitude for display.
+        
+        Args:
+            lat: Latitude value
+            lon: Longitude value
+            
+        Returns:
+            str: Formatted position text or "N/A"
+        """
+        if lat != 'N/A' and lat is not None and lon != 'N/A' and lon is not None:
+            try:
+                lat_rounded = round(float(lat), 2)
+                lon_rounded = round(float(lon), 2)
+                return f"{lat_rounded}, {lon_rounded}"
+            except (ValueError, TypeError):
+                return "N/A"
+        return "N/A"
+    
+    def format_callsign(self, callsign):
+        """
+        Format callsign for display (handles blocked/empty callsigns).
+        
+        Args:
+            callsign: Callsign string
+            
+        Returns:
+            str: Formatted callsign or "BLOCKED"
+        """
+        if not callsign or callsign.strip() == '' or callsign == 'N/A':
+            return 'BLOCKED'
+        return callsign.strip()
+    
+    def validate_icao(self, icao):
+        """
+        Validate ICAO hex code format.
+        
+        Args:
+            icao: ICAO code to validate
+            
+        Returns:
+            tuple: (is_valid: bool, error_message: str or None)
+        """
+        icao = icao.upper().strip()
+        if len(icao) != 6:
+            return False, "ICAO code must be exactly 6 characters."
+        if not all(c in '0123456789ABCDEF' for c in icao):
+            return False, "ICAO code must contain only hexadecimal characters (0-9, A-F)."
+        return True, None
+    
+    def create_watchlist_notification_embed(self, icao, aircraft_data):
+        """
+        Create a notification embed for watchlist aircraft coming online.
+        
+        Args:
+            icao: ICAO hex code
+            aircraft_data: Aircraft data dictionary
+            
+        Returns:
+            discord.Embed: Formatted notification embed
+        """
+        from redbot.core.i18n import Translator
+        _watchlist = Translator("Skysearch", __file__)
+        
+        embed = discord.Embed(
+            title=_watchlist("🟢 Aircraft Online"),
+            description=_watchlist("**{icao}** from your watchlist is now online!").format(icao=icao),
+            color=0x00ff00
+        )
+        
+        callsign = self.format_callsign(aircraft_data.get('flight', 'N/A'))
+        altitude = self.format_altitude(aircraft_data.get('alt_baro', 'N/A'))
+        speed = self.format_speed(aircraft_data.get('gs', 'N/A'))
+        position = self.format_position(
+            aircraft_data.get('lat', 'N/A'),
+            aircraft_data.get('lon', 'N/A')
+        )
+        
+        embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
+        embed.add_field(name=_watchlist("Altitude"), value=altitude, inline=True)
+        embed.add_field(name=_watchlist("Speed"), value=speed, inline=True)
+        embed.add_field(name=_watchlist("Position"), value=position, inline=False)
+        
+        return embed
+    
+    def create_watchlist_view(self, icao):
+        """
+        Create a view with buttons for watchlist aircraft.
+        
+        Args:
+            icao: ICAO hex code
+            
+        Returns:
+            discord.ui.View: View with link button
+        """
+        view = discord.ui.View()
+        link = f"https://globe.airplanes.live/?icao={icao}"
+        view.add_item(discord.ui.Button(
+            label="View on airplanes.live",
+            emoji="🗺️",
+            url=link,
+            style=discord.ButtonStyle.link
+        ))
+        return view
+    
+    def extract_aircraft_status(self, aircraft_data):
+        """
+        Extract formatted status information from aircraft data.
+        
+        Args:
+            aircraft_data: Aircraft data dictionary
+            
+        Returns:
+            dict: Dictionary with formatted status fields (callsign, altitude, speed, position)
+        """
+        return {
+            'callsign': self.format_callsign(aircraft_data.get('flight', 'N/A')),
+            'altitude': self.format_altitude(aircraft_data.get('alt_baro', 'N/A')),
+            'speed': self.format_speed(aircraft_data.get('gs', 'N/A')),
+            'position': self.format_position(
+                aircraft_data.get('lat', 'N/A'),
+                aircraft_data.get('lon', 'N/A')
+            )
+        }
 
 
 class JSONInputModal(discord.ui.Modal):

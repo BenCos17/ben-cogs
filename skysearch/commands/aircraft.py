@@ -827,4 +827,260 @@ class AircraftCommands:
             )
             from ..utils.helpers import JSONInputButton
             view = JSONInputButton(self.cog)
+    
+    async def watchlist_add(self, ctx, icao: str):
+        """Add an aircraft to the user's watchlist."""
+        # Validate ICAO using helper function
+        is_valid, error_msg = self.helpers.validate_icao(icao)
+        if not is_valid:
+            embed = discord.Embed(
+                title=_("Invalid ICAO Code"),
+                description=error_msg,
+                color=0xff4545
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        icao = icao.upper().strip()
+        
+        user_config = self.cog.config.user(ctx.author)
+        watchlist = await user_config.watchlist()
+        
+        if icao in watchlist:
+            embed = discord.Embed(
+                title=_("Already in Watchlist"),
+                description=_("Aircraft {icao} is already in your watchlist.").format(icao=icao),
+                color=0xffaa00
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        watchlist.append(icao)
+        await user_config.watchlist.set(watchlist)
+        
+        embed = discord.Embed(
+            title=_("✅ Added to Watchlist"),
+            description=_("Aircraft **{icao}** has been added to your watchlist.\n\nYou will be notified when this aircraft appears online.").format(icao=icao),
+            color=0x00ff00
+        )
+        await ctx.send(embed=embed)
+    
+    async def watchlist_remove(self, ctx, icao: str):
+        """Remove an aircraft from the user's watchlist."""
+        icao = icao.upper().strip()
+        
+        user_config = self.cog.config.user(ctx.author)
+        watchlist = await user_config.watchlist()
+        
+        if icao not in watchlist:
+            embed = discord.Embed(
+                title=_("Not in Watchlist"),
+                description=_("Aircraft {icao} is not in your watchlist.").format(icao=icao),
+                color=0xff4545
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        watchlist.remove(icao)
+        await user_config.watchlist.set(watchlist)
+        
+        # Also remove from notifications dict if present
+        notifications = await user_config.watchlist_notifications()
+        if icao in notifications:
+            del notifications[icao]
+            await user_config.watchlist_notifications.set(notifications)
+        
+        embed = discord.Embed(
+            title=_("✅ Removed from Watchlist"),
+            description=_("Aircraft **{icao}** has been removed from your watchlist.").format(icao=icao),
+            color=0x00ff00
+        )
+        await ctx.send(embed=embed)
+    
+    async def watchlist_list(self, ctx):
+        """List all aircraft in the user's watchlist."""
+        user_config = self.cog.config.user(ctx.author)
+        watchlist = await user_config.watchlist()
+        
+        if not watchlist:
+            embed = discord.Embed(
+                title=_("Watchlist Empty"),
+                description=_("Your watchlist is empty. Use `{prefix}aircraft watchlist add <icao>` to add aircraft.").format(prefix=ctx.prefix),
+                color=0xffaa00
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        # Check status of all watched aircraft
+        embed = discord.Embed(
+            title=_("Your Watchlist"),
+            description=_("You are watching **{count}** aircraft:").format(count=len(watchlist)),
+            color=0xfffffe
+        )
+        
+        # Check each aircraft's status
+        online_aircraft = []
+        offline_aircraft = []
+        
+        for icao in watchlist:
+            url = f"/?find_hex={icao}"
+            response = await self.api.make_request(url, ctx)
+            api_mode = await self.cog.config.api_mode()
+            key = 'aircraft' if api_mode == 'primary' else 'ac'
+            aircraft_list = response.get(key) if response else None
+            
+            if aircraft_list and len(aircraft_list) > 0:
+                aircraft_data = aircraft_list[0]
+                callsign = self.helpers.format_callsign(aircraft_data.get('flight', 'N/A'))
+                online_aircraft.append(f"**{icao}** - {callsign}")
+            else:
+                offline_aircraft.append(f"**{icao}** - Offline")
+        
+        if online_aircraft:
+            embed.add_field(
+                name=_("🟢 Online ({count})").format(count=len(online_aircraft)),
+                value="\n".join(online_aircraft[:10]),  # Limit to 10 to avoid embed limits
+                inline=False
+            )
+            if len(online_aircraft) > 10:
+                embed.add_field(
+                    name=_("..."),
+                    value=_("And {count} more online aircraft").format(count=len(online_aircraft) - 10),
+                    inline=False
+                )
+        
+        if offline_aircraft:
+            embed.add_field(
+                name=_("⚫ Offline ({count})").format(count=len(offline_aircraft)),
+                value="\n".join(offline_aircraft[:10]),  # Limit to 10
+                inline=False
+            )
+            if len(offline_aircraft) > 10:
+                embed.add_field(
+                    name=_("..."),
+                    value=_("And {count} more offline aircraft").format(count=len(offline_aircraft) - 10),
+                    inline=False
+                )
+        
+        embed.set_footer(text=_("Use `{prefix}aircraft watchlist status` for detailed status of all aircraft.").format(prefix=ctx.prefix))
+        await ctx.send(embed=embed)
+    
+    async def watchlist_status(self, ctx):
+        """Get detailed status of all watched aircraft."""
+        user_config = self.cog.config.user(ctx.author)
+        watchlist = await user_config.watchlist()
+        
+        if not watchlist:
+            embed = discord.Embed(
+                title=_("Watchlist Empty"),
+                description=_("Your watchlist is empty. Use `{prefix}aircraft watchlist add <icao>` to add aircraft.").format(prefix=ctx.prefix),
+                color=0xffaa00
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        await ctx.typing()
+        
+        # Check each aircraft
+        online_count = 0
+        offline_count = 0
+        aircraft_details = []
+        
+        for icao in watchlist:
+            url = f"/?find_hex={icao}"
+            response = await self.api.make_request(url, ctx)
+            api_mode = await self.cog.config.api_mode()
+            key = 'aircraft' if api_mode == 'primary' else 'ac'
+            aircraft_list = response.get(key) if response else None
+            
+            if aircraft_list and len(aircraft_list) > 0:
+                aircraft_data = aircraft_list[0]
+                online_count += 1
+                
+                # Get aircraft details using helper function
+                status = self.helpers.extract_aircraft_status(aircraft_data)
+                aircraft_details.append({
+                    'icao': icao,
+                    **status,
+                    'online': True
+                })
+            else:
+                offline_count += 1
+                aircraft_details.append({
+                    'icao': icao,
+                    'callsign': 'N/A',
+                    'altitude': 'N/A',
+                    'speed': 'N/A',
+                    'position': 'N/A',
+                    'online': False
+                })
+        
+        # Create embed with details
+        embed = discord.Embed(
+            title=_("Watchlist Status"),
+            description=_("**{total}** aircraft in watchlist | **{online}** online | **{offline}** offline").format(
+                total=len(watchlist),
+                online=online_count,
+                offline=offline_count
+            ),
+            color=0xfffffe
+        )
+        
+        # Add aircraft details (limit to avoid embed limits)
+        online_details = [a for a in aircraft_details if a['online']]
+        offline_details = [a for a in aircraft_details if not a['online']]
+        
+        if online_details:
+            online_text = ""
+            for aircraft in online_details[:5]:  # Limit to 5 per field
+                online_text += f"**{aircraft['icao']}** - {aircraft['callsign']}\n"
+                online_text += f"  Alt: {aircraft['altitude']} | Speed: {aircraft['speed']}\n"
+                online_text += f"  Position: {aircraft['position']}\n\n"
+            
+            if len(online_details) > 5:
+                online_text += _("... and {count} more online aircraft").format(count=len(online_details) - 5)
+            
+            embed.add_field(
+                name=_("🟢 Online Aircraft"),
+                value=online_text or _("None"),
+                inline=False
+            )
+        
+        if offline_details:
+            offline_text = "\n".join([f"**{a['icao']}**" for a in offline_details[:10]])
+            if len(offline_details) > 10:
+                offline_text += f"\n... and {len(offline_details) - 10} more"
+            
+            embed.add_field(
+                name=_("⚫ Offline Aircraft"),
+                value=offline_text or _("None"),
+                inline=False
+            )
+        
+        await ctx.send(embed=embed)
+    
+    async def watchlist_clear(self, ctx):
+        """Clear the user's entire watchlist."""
+        user_config = self.cog.config.user(ctx.author)
+        watchlist = await user_config.watchlist()
+        
+        if not watchlist:
+            embed = discord.Embed(
+                title=_("Watchlist Already Empty"),
+                description=_("Your watchlist is already empty."),
+                color=0xffaa00
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        count = len(watchlist)
+        await user_config.watchlist.set([])
+        await user_config.watchlist_notifications.set({})
+        
+        embed = discord.Embed(
+            title=_("✅ Watchlist Cleared"),
+            description=_("Removed **{count}** aircraft from your watchlist.").format(count=count),
+            color=0x00ff00
+        )
+        await ctx.send(embed=embed)
             await ctx.send(embed=embed, view=view) 
