@@ -81,7 +81,7 @@ class AircraftCommands:
                 tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
             else:
                 tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-            tweet_url = f"https://twitter.com/intent/tweet?text={quote_plus(tweet_text)}"
+            tweet_url = f"https://x.com/intent/tweet?text={quote_plus(tweet_text)}"
             view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
             whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
             whatsapp_url = f"https://api.whatsapp.com/send?text={quote_plus(whatsapp_text)}"
@@ -1084,17 +1084,30 @@ class AircraftCommands:
         )
         await ctx.send(embed=embed)
     
-    async def watchlist_cooldown(self, ctx, minutes: int = None):
-        """Set or view the watchlist notification cooldown."""
+    async def watchlist_cooldown(self, ctx, duration: str = None):
+        """Set or view the watchlist notification cooldown.
+        
+        Accepts time formats:
+        - Minutes: "20", "20m", "20.5m"
+        - Seconds: "30s", "120s"
+        - Hours: "1h", "2.5h"
+        """
         user_config = self.cog.config.user(ctx.author)
         
-        if minutes is None:
+        if duration is None:
             # Show current cooldown
             current_cooldown = await user_config.watchlist_cooldown()
+            if current_cooldown < 1:
+                cooldown_text = _("{seconds} seconds").format(seconds=int(current_cooldown * 60))
+            elif current_cooldown == int(current_cooldown):
+                cooldown_text = _("{minutes} minutes").format(minutes=int(current_cooldown))
+            else:
+                cooldown_text = _("{minutes} minutes").format(minutes=current_cooldown)
+            
             embed = discord.Embed(
                 title=_("Watchlist Cooldown"),
-                description=_("Current notification cooldown: **{minutes} minutes**\n\nUse `{prefix}aircraft watchlist cooldown <minutes>` to change it.").format(
-                    minutes=current_cooldown,
+                description=_("Current notification cooldown: **{cooldown}**\n\nUse `{prefix}aircraft watchlist cooldown <duration>` to change it.\n\nExamples: `20m`, `30s`, `1h`, `15.5m`").format(
+                    cooldown=cooldown_text,
                     prefix=ctx.prefix
                 ),
                 color=0xfffffe
@@ -1104,34 +1117,75 @@ class AircraftCommands:
                 value=_("After you receive a notification for a watched aircraft, you won't receive another notification for the same aircraft until the cooldown period expires."),
                 inline=False
             )
-            await ctx.send(embed=embed)
-            return
-        
-        # Validate cooldown value
-        if minutes < 1:
-            embed = discord.Embed(
-                title=_("Invalid Cooldown"),
-                description=_("Cooldown must be at least 1 minute."),
-                color=0xff4545
+            embed.add_field(
+                name=_("Time formats"),
+                value=_("You can use:\n• Minutes: `20`, `20m`, `20.5m`\n• Seconds: `30s`, `120s`\n• Hours: `1h`, `2.5h`"),
+                inline=False
             )
             await ctx.send(embed=embed)
             return
         
-        if minutes > 1440:  # 24 hours
+        # Parse duration string
+        try:
+            duration = duration.strip().lower()
+            minutes = None
+            
+            if duration.endswith('s'):
+                # Convert seconds to minutes
+                seconds = float(duration[:-1])
+                minutes = seconds / 60.0
+            elif duration.endswith('m'):
+                # Minutes
+                minutes = float(duration[:-1])
+            elif duration.endswith('h'):
+                # Convert hours to minutes
+                hours = float(duration[:-1])
+                minutes = hours * 60.0
+            else:
+                # Assume minutes if no suffix
+                minutes = float(duration)
+            
+            # Validate cooldown value
+            if minutes < 0.0167:  # Less than 1 second
+                embed = discord.Embed(
+                    title=_("Invalid Cooldown"),
+                    description=_("Cooldown must be at least 1 second."),
+                    color=0xff4545
+                )
+                await ctx.send(embed=embed)
+                return
+            
+            if minutes > 1440:  # 24 hours
+                embed = discord.Embed(
+                    title=_("Invalid Cooldown"),
+                    description=_("Cooldown cannot exceed 1440 minutes (24 hours)."),
+                    color=0xff4545
+                )
+                await ctx.send(embed=embed)
+                return
+            
+            # Set cooldown (store as float to support decimals)
+            await user_config.watchlist_cooldown.set(minutes)
+            
+            # Format response message
+            if minutes < 1:
+                cooldown_text = _("{seconds} seconds").format(seconds=int(minutes * 60))
+            elif minutes == int(minutes):
+                cooldown_text = _("{minutes} minutes").format(minutes=int(minutes))
+            else:
+                cooldown_text = _("{minutes} minutes").format(minutes=minutes)
+            
             embed = discord.Embed(
-                title=_("Invalid Cooldown"),
-                description=_("Cooldown cannot exceed 1440 minutes (24 hours)."),
-                color=0xff4545
+                title=_("✅ Cooldown Updated"),
+                description=_("Watchlist notification cooldown set to **{cooldown}**.").format(cooldown=cooldown_text),
+                color=0x00ff00
             )
             await ctx.send(embed=embed)
-            return
-        
-        # Set cooldown
-        await user_config.watchlist_cooldown.set(minutes)
-        
-        embed = discord.Embed(
-            title=_("✅ Cooldown Updated"),
-            description=_("Watchlist notification cooldown set to **{minutes} minutes**.").format(minutes=minutes),
-            color=0x00ff00
-        )
-        await ctx.send(embed=embed) 
+            
+        except ValueError:
+            embed = discord.Embed(
+                title=_("Invalid Duration Format"),
+                description=_("Invalid duration format. Use a number (e.g. '20'), minutes ('20m'), seconds ('30s'), or hours ('1h').\n\nExamples:\n• `20m` - 20 minutes\n• `30s` - 30 seconds\n• `1h` - 1 hour\n• `15.5m` - 15.5 minutes"),
+                color=0xff4545
+            )
+            await ctx.send(embed=embed) 
