@@ -671,6 +671,11 @@ class HelperUtils:
             aircraft_data.get('lon', 'N/A')
         )
         
+        # Determine status
+        is_landed = self.is_aircraft_landed(aircraft_data)
+        status = _watchlist("On ground") if is_landed else _watchlist("In flight")
+        
+        embed.add_field(name=_watchlist("Status"), value=status, inline=True)
         embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
         embed.add_field(name=_watchlist("Altitude"), value=altitude, inline=True)
         embed.add_field(name=_watchlist("Speed"), value=speed, inline=True)
@@ -764,8 +769,8 @@ class HelperUtils:
             aircraft_data.get('lon', 'N/A')
         )
         
-        embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
         embed.add_field(name=_watchlist("Status"), value=_watchlist("On ground"), inline=True)
+        embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
         embed.add_field(name=_watchlist("Position"), value=position, inline=False)
         
         return embed
@@ -798,6 +803,7 @@ class HelperUtils:
             aircraft_data.get('lon', 'N/A')
         )
         
+        embed.add_field(name=_watchlist("Status"), value=_watchlist("In flight"), inline=True)
         embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
         embed.add_field(name=_watchlist("Altitude"), value=altitude, inline=True)
         embed.add_field(name=_watchlist("Speed"), value=speed, inline=True)
