@@ -863,6 +863,16 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         is_landed = self.helpers.is_aircraft_landed(aircraft_data)
                         last_state = aircraft_state.get(icao, 'unknown')
                         
+                        # If state is unknown and aircraft is found, initialize state (but don't notify yet)
+                        if last_state == 'unknown':
+                            if is_landed:
+                                aircraft_state[icao] = 'landed'
+                            else:
+                                aircraft_state[icao] = 'flying'
+                            await user_config.watchlist_aircraft_state.set(aircraft_state)
+                            # Don't send notification on first detection - wait for actual transitions
+                            continue
+                        
                         # Check for takeoff transition (was landed, now flying)
                         if last_state == 'landed' and not is_landed:
                             # Aircraft just took off - send takeoff notification
@@ -962,12 +972,20 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         if current_time - last_notification < cooldown_seconds:
                             continue  # Still in cooldown
                         
-                        # Only notify if aircraft is flying (not landed)
-                        if is_landed:
-                            continue  # Skip online notification if aircraft is on ground
+                        # Only send "online" notification if aircraft was previously offline
+                        # (unknown state is handled above - we initialize it without notifying)
+                        # If it was already flying/landed, we don't need to notify again (takeoff/landing notifications handle those)
+                        if last_state != 'offline':
+                            # Already tracking this aircraft, skip generic online notification
+                            continue
                         
-                        # Check if aircraft was offline before (we only notify when it comes online)
-                        # For now, we'll notify every time it's found (user can remove if they don't want notifications)
+                        # Aircraft was offline and just came online
+                        # Only notify if aircraft is flying (not landed) when coming online
+                        if is_landed:
+                            # Aircraft came online but is on ground - just update state, don't notify
+                            aircraft_state[icao] = 'landed'
+                            await user_config.watchlist_aircraft_state.set(aircraft_state)
+                            continue
                         
                         # Try to send DM to user
                         try:

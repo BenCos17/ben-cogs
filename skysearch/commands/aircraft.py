@@ -858,9 +858,28 @@ class AircraftCommands:
         watchlist.append(icao)
         await user_config.watchlist.set(watchlist)
         
+        # Initialize aircraft state - check if currently online
+        aircraft_state = await user_config.watchlist_aircraft_state()
+        url = f"/?find_hex={icao}"
+        response = await self.api.make_request(url, ctx)
+        api_mode = await self.cog.config.api_mode()
+        key = 'aircraft' if api_mode == 'primary' else 'ac'
+        aircraft_list = response.get(key) if response else None
+        
+        if aircraft_list and len(aircraft_list) > 0:
+            # Aircraft is online - initialize state
+            aircraft_data = aircraft_list[0]
+            is_landed = self.helpers.is_aircraft_landed(aircraft_data)
+            aircraft_state[icao] = 'landed' if is_landed else 'flying'
+            await user_config.watchlist_aircraft_state.set(aircraft_state)
+        else:
+            # Aircraft is offline - set to 'offline' so we can detect when it comes online
+            aircraft_state[icao] = 'offline'
+            await user_config.watchlist_aircraft_state.set(aircraft_state)
+        
         embed = discord.Embed(
             title=_("✅ Added to Watchlist"),
-            description=_("Aircraft **{icao}** has been added to your watchlist.\n\nYou will be notified when this aircraft appears online.").format(icao=icao),
+            description=_("Aircraft **{icao}** has been added to your watchlist.\n\nYou will be notified when this aircraft appears online, takes off, or lands.").format(icao=icao),
             color=0x00ff00
         )
         await ctx.send(embed=embed)
