@@ -1082,5 +1082,4 @@ class AircraftCommands:
             description=_("Removed **{count}** aircraft from your watchlist.").format(count=count),
             color=0x00ff00
         )
-        await ctx.send(embed=embed)
-            await ctx.send(embed=embed, view=view) 
+        await ctx.send(embed=embed) 
