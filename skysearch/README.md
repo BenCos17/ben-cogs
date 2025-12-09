@@ -9,7 +9,7 @@ To use the SkySearch cog, follow these steps:
 1. ** Dependencies**:
  red discord bot: https://docs.discord.red/en/stable/
 
-2. **Configure API Keys**:
+2. **Configure API Keys** :
    - Set up airplanes.live API key: `[p]setapikey <your-api-key>`
    - Optional: Configure Google Maps API for airport imagery
    - Optional: Configure OpenAI API for airport summaries
