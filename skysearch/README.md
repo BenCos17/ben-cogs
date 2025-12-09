@@ -6,7 +6,7 @@ A powerful, modular Discord bot cog for tracking aircraft and airport informatio
 
 To use the SkySearch cog, follow these steps:
 
-1. ** Dependencies**:
+1. **Dependencies**:
  red discord bot: https://docs.discord.red/en/stable/
 
 2. **Configure API Keys** :
