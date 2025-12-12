@@ -199,10 +199,12 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name=_("Suspicious aircraft"), value="**{:,}** identifiers".format(len(self.suspicious_icao_set)), inline=True)
         embed.add_field(name=_("This data appears in the following commands"), value="`callsign` `icao` `reg` `squawk` `type` `radius` `pia` `mil` `ladd`", inline=False)
         embed.add_field(name=_("Other services"), value=_("Additional data used in this cog is shown below"), inline=False)
+        embed.add_field(name=_("ADSB-B Data"), value=_("adsb tracking data is powered by [airplanes.live](https://airplanes.live)"), inline=True)
         embed.add_field(name=_("Photography"), value=_("Photos are powered by community contributions at [planespotters.net](https://www.planespotters.net/)"), inline=True)
         embed.add_field(name=_("Airport data"), value=_("Airport data is powered by the [airport-data.com](https://airport-data.com/) API service"), inline=True)
         embed.add_field(name=_("Runway data"), value=_("Runway data is powered by the [airportdb.io](https://airportdb.io) API service"), inline=True)
         embed.add_field(name=_("Mapping and imagery"), value=_("Mapping and ground imagery powered by [Google Maps](https://maps.google.com) and the [Maps Static API](https://developers.google.com/maps/documentation/maps-static)"), inline=False)
+
 
         await ctx.send(embed=embed)
 
