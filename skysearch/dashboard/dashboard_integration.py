@@ -779,6 +779,11 @@ class DashboardIntegration:
                 await config.alert_channel.set(alert_channel_val)
                 await config.alert_role.set(alert_role_val)
                 await config.auto_icao.set(settings_form.auto_icao.data)
+                # Update cache when auto_icao is toggled via dashboard
+                if settings_form.auto_icao.data:
+                    cog._auto_icao_enabled_guilds.add(guild.id)
+                else:
+                    cog._auto_icao_enabled_guilds.discard(guild.id)
                 await config.auto_delete_not_found.set(settings_form.auto_delete.data)
                 
                 # Update the display values to reflect the new settings

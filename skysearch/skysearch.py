@@ -82,6 +82,27 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
         # Command execution API
         self.command_api = CommandAPI()
+        
+        # Cache for guilds with auto_icao enabled (optimization to avoid config reads on every message)
+        self._auto_icao_enabled_guilds = set()
+        # Track guilds we've checked and confirmed have auto_icao disabled (to avoid repeated checks)
+        self._auto_icao_checked_guilds = set()
+        
+        # Pre-compile regex pattern for ICAO matching
+        self._icao_pattern = re.compile(r'^[a-fA-F0-9]{6}$')
+
+    async def _refresh_auto_icao_cache(self):
+        """Refresh the cache of guilds with auto_icao enabled."""
+        self._auto_icao_enabled_guilds.clear()
+        self._auto_icao_checked_guilds.clear()
+        for guild in self.bot.guilds:
+            if await self.config.guild(guild).auto_icao():
+                self._auto_icao_enabled_guilds.add(guild.id)
+            self._auto_icao_checked_guilds.add(guild.id)
+    
+    async def cog_load(self):
+        """Called when the cog is loaded - refresh cache."""
+        await self._refresh_auto_icao_cache()
 
     def get_airplane_icon_path(self):
         """Get the path to the local airplane icon."""
@@ -1229,23 +1250,42 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Handle automatic ICAO lookup."""
+        # Fast early returns - no async operations
         if message.author == self.bot.user:
             return
 
         if message.guild is None:
             return
+        
+        guild_id = message.guild.id
+        
+        # Fast cache check - avoid expensive config reads if auto_icao is disabled
+        if guild_id in self._auto_icao_enabled_guilds:
+            # Guild is known to have auto_icao enabled - proceed with processing
+            # Double-check config in case cache is stale (should be rare)
+            auto_icao = await self.config.guild(message.guild).auto_icao()
+            if not auto_icao:
+                # Update cache if it was stale
+                self._auto_icao_enabled_guilds.discard(guild_id)
+                return
+        elif guild_id in self._auto_icao_checked_guilds:
+            # Guild is known to have auto_icao disabled - fast return
+            return
+        else:
+            # First time seeing this guild - do one-time config check
+            auto_icao = await self.config.guild(message.guild).auto_icao()
+            self._auto_icao_checked_guilds.add(guild_id)
+            if auto_icao:
+                self._auto_icao_enabled_guilds.add(guild_id)
+            else:
+                return
 
-        # Ensure locales for non-command listener
+        # Ensure locales for non-command listener (only if auto_icao is enabled)
         await set_contextual_locales_from_guild(self.bot, message.guild)
 
-        auto_icao = await self.config.guild(message.guild).auto_icao()
-        if not auto_icao:
-            return
-
         content = message.content
-        icao_pattern = re.compile(r'^[a-fA-F0-9]{6}$')
-
-        if icao_pattern.match(content):
+        # Use pre-compiled pattern
+        if self._icao_pattern.match(content):
             ctx = await self.bot.get_context(message)
             await self.aircraft_commands.aircraft_by_icao(ctx, content)
         

@@ -119,10 +119,13 @@ class AdminCommands:
             await ctx.send(embed=embed)
         else:
             await self.cog.config.guild(ctx.guild).auto_icao.set(state)
+            # Update cache when auto_icao is toggled
             if state:
+                self.cog._auto_icao_enabled_guilds.add(ctx.guild.id)
                 embed = discord.Embed(title="ICAO Lookup Status", description="Automatic ICAO lookup has been enabled.", color=0x2BBD8E)
                 await ctx.send(embed=embed)
             else:
+                self.cog._auto_icao_enabled_guilds.discard(ctx.guild.id)
                 embed = discord.Embed(title="ICAO Lookup Status", description="Automatic ICAO lookup has been disabled.", color=0xff4545)
                 await ctx.send(embed=embed)
 
