@@ -10,7 +10,6 @@ class Counter(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # Unique identifier for Config. Large random-ish int to avoid collisions.
         self.config = Config.get_conf(self, identifier=492089091320446976)
         default_guild = {"counters": {}}
         default_user = {"counters": {}}
