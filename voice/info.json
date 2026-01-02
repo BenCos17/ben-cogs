@@ -1,0 +1,10 @@
+{
+    "name": "Voice",
+    "author": ["bencos17"],
+    "description": "Voice receive cog that integrates with discord-ext-voice-recv to record audio per user.",
+    "install_msg": "This cog requires discord-ext-voice-recv to receive audio. Install with: \"python -m pip install discord-ext-voice-recv\". Use `[p]vjoin` to join voice and `[p]vlisten` to start recording.",
+    "short": "Voice receive and recording",
+    "requirements": ["discord-ext-voice-recv"],
+    "tags": ["voice", "utility", "recording"],
+    "end_user_data_statement": "This cog may write audio recordings containing user speech to disk. The bot owner controls storage and retention; recordings are not uploaded by default, but can be optionally uploaded to the text channel that initiated the recording (the requesting user will be mentioned)."
+}
