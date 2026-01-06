@@ -42,6 +42,11 @@ for example this is my current output on my bot
 
 <new\_name> what you want the cluter to be called from now on
 
+this is how it's used 
+
+<img width="391" height="120" alt="image" src="https://github.com/user-attachments/assets/43378549-920d-4443-8ea1-fb2ccd6430e0" />
+
+
 
 
 
