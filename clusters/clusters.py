@@ -1,7 +1,8 @@
 import discord
 from redbot.core import commands
-import psutil, time, random
+import psutil, time
 
+# Fixed Marvel-themed names, mapped by shard index
 MARVEL_NAMES = [
     "IronMan", "Thor", "Hulk", "BlackWidow", "CaptainAmerica", "Loki",
     "DoctorStrange", "SpiderMan", "BlackPanther", "ScarletWitch"
@@ -17,10 +18,11 @@ class Clusters(commands.Cog):
         self._assign_shard_names()
 
     def _assign_shard_names(self):
-        shard_ids = list(self.bot.shards.keys())
-        shard_count = len(shard_ids)
-        names = random.sample(MARVEL_NAMES, shard_count)
-        self.shard_names = dict(zip(shard_ids, names))
+        """Assign a persistent cluster name to each shard based on its ID."""
+        for shard_id in self.bot.shards.keys():
+            # Cycle through MARVEL_NAMES if more shards than names
+            name = MARVEL_NAMES[shard_id % len(MARVEL_NAMES)]
+            self.shard_names[shard_id] = name
 
     def uptime(self):
         seconds = int(time.time() - self.start_time)
@@ -43,7 +45,6 @@ class Clusters(commands.Cog):
             ram = psutil.virtual_memory().used / 1024**3
             latency = round(self.bot.shards[shard_id].latency * 1000)
 
-            # Get all guilds on this shard
             guilds = [g for g in self.bot.guilds if g.shard_id == shard_id]
             servers = len(guilds)
             users = sum(g.member_count or 0 for g in guilds)
