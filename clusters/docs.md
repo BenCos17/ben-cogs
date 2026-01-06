@@ -1,12 +1,11 @@
-\# How to Use SkySearch
+# How to Use Clusters
+
+
+## Getting Started
 
 
 
-\## Getting Started
-
-
-
-\### First Time Setup
+### First Time Setup
 
 1\. \*\*Load the cog\*\* in your Red-DiscordBot instance
 
