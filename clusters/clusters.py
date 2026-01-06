@@ -31,8 +31,12 @@ class Clusters(commands.Cog):
 
     @commands.command()
     async def clusters(self, ctx):
-        """Shows the status of all clusters."""
-        lines = []
+        """Shows the status of all clusters using an embed."""
+        embed = discord.Embed(
+            title="Cluster Status",
+            description=f"Bot started: {self.uptime()}",
+            color=discord.Color.blue()
+        )
 
         for shard_id, name in self.shard_names.items():
             cpu = psutil.cpu_percent(interval=None)
@@ -44,15 +48,16 @@ class Clusters(commands.Cog):
             servers = len(guilds)
             users = sum(g.member_count or 0 for g in guilds)
 
-            lines.append(
-                f"Cluster#{name} Alive Running\n"
-                f"CPU    : {cpu:.1f}%\n"
-                f"RAM    : {ram:.1f} GiB\n"
-                f"Latency: {latency}ms\n"
-                f"Servers: {servers}\n"
-                f"Users  : {users}\n"
-                f"Shards : [{shard_id}]\n"
-                f"Started: {self.uptime()}\n"
+            value = (
+                f"**Status:** Alive Running\n"
+                f"**CPU:** {cpu:.1f}%\n"
+                f"**RAM:** {ram:.1f} GiB\n"
+                f"**Latency:** {latency} ms\n"
+                f"**Servers:** {servers}\n"
+                f"**Users:** {users}\n"
+                f"**Shards:** [{shard_id}]"
             )
 
-        await ctx.send("```\n" + "\n".join(lines) + "```")
+            embed.add_field(name=f"Cluster #{name}", value=value, inline=False)
+
+        await ctx.send(embed=embed)
