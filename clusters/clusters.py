@@ -1,28 +1,31 @@
 import discord
-from redbot.core import commands
+from redbot.core import commands, Config
 import psutil, time
 
-# Fixed Marvel-themed names, mapped by shard index
 MARVEL_NAMES = [
     "IronMan", "Thor", "Hulk", "BlackWidow", "CaptainAmerica", "Loki",
     "DoctorStrange", "SpiderMan", "BlackPanther", "ScarletWitch"
 ]
 
 class Clusters(commands.Cog):
-    """Shows dynamic Marvel-themed cluster status."""
+    """Shows dynamic Marvel-themed cluster status with customizable names."""
 
     def __init__(self, bot):
         self.bot = bot
         self.start_time = time.time()
+        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config.register_global(custom_names={})
         self.shard_names = {}
-        self._assign_shard_names()
 
-    def _assign_shard_names(self):
-        """Assign a persistent cluster name to each shard based on its ID."""
+    async def initialize_shard_names(self):
+        """Load names from config or assign defaults based on shard ID."""
+        custom_names = await self.config.custom_names()
         for shard_id in self.bot.shards.keys():
-            # Cycle through MARVEL_NAMES if more shards than names
-            name = MARVEL_NAMES[shard_id % len(MARVEL_NAMES)]
-            self.shard_names[shard_id] = name
+            if str(shard_id) in custom_names:
+                self.shard_names[shard_id] = custom_names[str(shard_id)]
+            else:
+                # Default persistent name
+                self.shard_names[shard_id] = MARVEL_NAMES[shard_id % len(MARVEL_NAMES)]
 
     def uptime(self):
         seconds = int(time.time() - self.start_time)
@@ -34,6 +37,8 @@ class Clusters(commands.Cog):
     @commands.command()
     async def clusters(self, ctx):
         """Shows the status of all clusters using an embed."""
+        await self.initialize_shard_names()
+
         embed = discord.Embed(
             title="Cluster Status",
             description=f"Bot started: {self.uptime()}",
@@ -62,3 +67,21 @@ class Clusters(commands.Cog):
             embed.add_field(name=f"Cluster #{name}", value=value, inline=False)
 
         await ctx.send(embed=embed)
+
+    @commands.is_owner()
+    @commands.command()
+    async def renamecluster(self, ctx, shard_id: int, *, new_name: str):
+        """Rename a cluster persistently. Owner only."""
+        if shard_id not in self.bot.shards:
+            await ctx.send(f"Shard ID {shard_id} does not exist.")
+            return
+
+        # Update config
+        custom_names = await self.config.custom_names()
+        custom_names[str(shard_id)] = new_name
+        await self.config.custom_names.set(custom_names)
+
+        # Update in-memory name
+        self.shard_names[shard_id] = new_name
+
+        await ctx.send(f"Cluster {shard_id} has been renamed to **{new_name}**.")
