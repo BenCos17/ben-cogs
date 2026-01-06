@@ -9,6 +9,9 @@
 
 1\. \*\*Load the cog\*\* in your Red-DiscordBot instance
 
+[p]repo add ben-cogs https://github.com/bencos17/ben-cogs
+[p]cog install ben-cogs clusters
+
 ### Basic Commands
 
 - `[p]clusters` - main cluster info command
