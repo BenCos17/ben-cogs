@@ -1,6 +1,6 @@
 import discord
 from redbot.core import commands, Config
-import psutil, time
+import psutil, datetime
 
 MARVEL_NAMES = [
     "IronMan", "Thor", "Hulk", "BlackWidow", "CaptainAmerica", "Loki",
@@ -8,11 +8,10 @@ MARVEL_NAMES = [
 ]
 
 class Clusters(commands.Cog):
-    """Shows dynamic Marvel-themed cluster status with customizable names."""
+    """Shows dynamic Marvel-themed cluster status with customizable names and uptime."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.start_time = time.time()
         self.config = Config.get_conf(self, identifier=1234567890)
         self.config.register_global(custom_names={})
         self.shard_names = {}
@@ -24,24 +23,39 @@ class Clusters(commands.Cog):
             if str(shard_id) in custom_names:
                 self.shard_names[shard_id] = custom_names[str(shard_id)]
             else:
-                # Default persistent name
                 self.shard_names[shard_id] = MARVEL_NAMES[shard_id % len(MARVEL_NAMES)]
 
-    def uptime(self):
-        seconds = int(time.time() - self.start_time)
-        weeks, seconds = divmod(seconds, 604800)
-        days, seconds = divmod(seconds, 86400)
-        hours, _ = divmod(seconds, 3600)
+    def format_timedelta(self, td: datetime.timedelta):
+        """Format a timedelta into weeks, days, hours."""
+        total_seconds = int(td.total_seconds())
+        weeks, remainder = divmod(total_seconds, 604800)
+        days, remainder = divmod(remainder, 86400)
+        hours, _ = divmod(remainder, 3600)
         return f"{weeks} weeks and {days} days and {hours} hours ago"
+
+    def get_server_uptime(self):
+        """Return server uptime as timedelta."""
+        boot_timestamp = psutil.boot_time()
+        return datetime.datetime.utcnow() - datetime.datetime.utcfromtimestamp(boot_timestamp)
 
     @commands.command()
     async def clusters(self, ctx):
         """Shows the status of all clusters using an embed."""
         await self.initialize_shard_names()
 
+        # Bot uptime (Red tracks this as bot.uptime)
+        bot_uptime = getattr(self.bot, "uptime", None)
+        if bot_uptime is None:
+            bot_uptime_str = "Unknown"
+        else:
+            bot_uptime_str = self.format_timedelta(bot_uptime)
+
+        # Server uptime
+        server_uptime = self.format_timedelta(self.get_server_uptime())
+
         embed = discord.Embed(
             title="Cluster Status",
-            description=f"Bot started: {self.uptime()}",
+            description=f"**Bot uptime:** {bot_uptime_str}\n**Server uptime:** {server_uptime}",
             color=discord.Color.blue()
         )
 
@@ -76,12 +90,9 @@ class Clusters(commands.Cog):
             await ctx.send(f"Shard ID {shard_id} does not exist.")
             return
 
-        # Update config
         custom_names = await self.config.custom_names()
         custom_names[str(shard_id)] = new_name
         await self.config.custom_names.set(custom_names)
-
-        # Update in-memory name
         self.shard_names[shard_id] = new_name
 
         await ctx.send(f"Cluster {shard_id} has been renamed to **{new_name}**.")
