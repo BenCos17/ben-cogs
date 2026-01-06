@@ -1,6 +1,7 @@
 import discord
 from redbot.core import commands, Config
-import psutil, datetime
+import psutil, datetime, json, aiohttp
+from aiohttp import web
 
 MARVEL_NAMES = [
     "IronMan", "Thor", "Hulk", "BlackWidow", "CaptainAmerica", "Loki",
@@ -8,13 +9,24 @@ MARVEL_NAMES = [
 ]
 
 class Clusters(commands.Cog):
-    """Shows dynamic Marvel-themed cluster status with customizable names and uptime."""
+    """Shows dynamic Marvel-themed cluster status with customizable names and uptime, plus a web endpoint."""
 
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)
         self.config.register_global(custom_names={})
         self.shard_names = {}
+
+        # Start aiohttp web server
+        self.app = web.Application()
+        self.app.add_routes([web.get('/clusters', self.web_clusters)])
+        self.runner = web.AppRunner(self.app)
+        self.bot.loop.create_task(self.start_webserver())
+
+    async def start_webserver(self):
+        await self.runner.setup()
+        self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)  # Change IP/port if needed
+        await self.site.start()
 
     async def initialize_shard_names(self):
         """Load names from config or assign defaults based on shard ID."""
@@ -48,14 +60,12 @@ class Clusters(commands.Cog):
         if bot_start_time is None:
             bot_uptime_str = "Unknown"
         else:
-            # If it's a datetime, compute timedelta from now
             if isinstance(bot_start_time, datetime.datetime):
                 td = datetime.datetime.utcnow() - bot_start_time
             else:
-                td = bot_start_time  # already a timedelta
+                td = bot_start_time
             bot_uptime_str = self.format_timedelta(td)
 
-        # Server uptime
         server_uptime = self.format_timedelta(self.get_server_uptime())
 
         embed = discord.Embed(
@@ -101,3 +111,47 @@ class Clusters(commands.Cog):
         self.shard_names[shard_id] = new_name
 
         await ctx.send(f"Cluster {shard_id} has been renamed to **{new_name}**.")
+
+    async def web_clusters(self, request):
+        """Return cluster data as JSON for web endpoint."""
+        await self.initialize_shard_names()
+
+        # Bot uptime
+        bot_start_time = getattr(self.bot, "uptime", None)
+        if bot_start_time is None:
+            bot_uptime_str = "Unknown"
+        else:
+            if isinstance(bot_start_time, datetime.datetime):
+                td = datetime.datetime.utcnow() - bot_start_time
+            else:
+                td = bot_start_time
+            bot_uptime_str = self.format_timedelta(td)
+
+        server_uptime_str = self.format_timedelta(self.get_server_uptime())
+
+        data = {
+            "bot_uptime": bot_uptime_str,
+            "server_uptime": server_uptime_str,
+            "clusters": []
+        }
+
+        for shard_id, name in self.shard_names.items():
+            guilds = [g for g in self.bot.guilds if g.shard_id == shard_id]
+            servers = len(guilds)
+            users = sum(g.member_count or 0 for g in guilds)
+            latency = round(self.bot.shards[shard_id].latency * 1000)
+            cpu = psutil.cpu_percent(interval=None)
+            ram = psutil.virtual_memory().used / 1024**3
+
+            cluster_data = {
+                "shard_id": shard_id,
+                "name": name,
+                "servers": servers,
+                "users": users,
+                "latency_ms": latency,
+                "cpu_percent": cpu,
+                "ram_gib": ram
+            }
+            data["clusters"].append(cluster_data)
+
+        return web.Response(text=json.dumps(data, indent=2), content_type="application/json")
