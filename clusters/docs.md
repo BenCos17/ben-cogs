@@ -19,7 +19,7 @@
 
 
 
-\## Usage
+## Usage
 
 \[p]clusters 
 prints out the bots current clusters
@@ -34,7 +34,7 @@ for example this is my current output on my bot
 
 
 
-\[p]renamecluster <shard\_id> <new\_name>
+[p]renamecluster <shard\_id> <new\_name>
 
 
 
