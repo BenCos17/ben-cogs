@@ -20,12 +20,13 @@
 \## Usage
 
 \[p]clusters 
+prints out the bots current clusters
+
 for example this is my current output on my bot
 
 <img width="506" height="516" alt="image" src="https://github.com/user-attachments/assets/f44dd0d7-df98-410b-8b23-8a66f3d9cc7f" />
 
 
-prints out the bots current clusters
 
 
 
