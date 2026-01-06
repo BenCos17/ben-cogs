@@ -44,11 +44,16 @@ class Clusters(commands.Cog):
         await self.initialize_shard_names()
 
         # Bot uptime (Red tracks this as bot.uptime)
-        bot_uptime = getattr(self.bot, "uptime", None)
-        if bot_uptime is None:
+        bot_start_time = getattr(self.bot, "uptime", None)
+        if bot_start_time is None:
             bot_uptime_str = "Unknown"
         else:
-            bot_uptime_str = self.format_timedelta(bot_uptime)
+            # If it's a datetime, compute timedelta from now
+            if isinstance(bot_start_time, datetime.datetime):
+                td = datetime.datetime.utcnow() - bot_start_time
+            else:
+                td = bot_start_time  # already a timedelta
+            bot_uptime_str = self.format_timedelta(td)
 
         # Server uptime
         server_uptime = self.format_timedelta(self.get_server_uptime())
