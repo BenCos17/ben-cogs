@@ -10,11 +10,11 @@
 
 1\. \*\*Load the cog\*\* in your Red-DiscordBot instance
 
-\### Basic Commands
+### Basic Commands
 
-\- `\*clusters` - main cluster info command
+- `\*clusters` - main cluster info command
 
-\- `\*renamecluster ` - allows the bot owner to override the default cluster names
+- `\*renamecluster ` - allows the bot owner to override the default cluster names
 
 
 
