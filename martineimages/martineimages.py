@@ -1,5 +1,6 @@
 from redbot.core import commands
 import discord
+import aiohttp
 from typing import Optional
 
 class MartineImages(commands.Cog):
@@ -8,11 +9,29 @@ class MartineImages(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.base_url = "https://api.martinebot.com/v1"
+        self.session = None
+
+    async def cog_load(self):
+        """Initialize the cog and create aiohttp session"""
+        timeout = aiohttp.ClientTimeout(total=10)
+        self.session = aiohttp.ClientSession(timeout=timeout)
+
+    async def cog_unload(self):
+        """Clean up the cog and close aiohttp session"""
+        if self.session:
+            await self.session.close()
+
+    async def _ensure_session(self):
+        """Ensure aiohttp session exists"""
+        if self.session is None or self.session.closed:
+            timeout = aiohttp.ClientTimeout(total=10)
+            self.session = aiohttp.ClientSession(timeout=timeout)
 
     async def fetch_image(self, endpoint: str, params: Optional[dict] = None) -> Optional[str]:
-        headers = {"User-Agent": "Red-MartineImages/1.1.4"}
+        await self._ensure_session()
+        headers = {"User-Agent": "Red-MartineImages/ben-cogs/v1.1.4"}
         params = params or {}
-        async with self.bot.session.get(
+        async with self.session.get(
             f"{self.base_url}{endpoint}", headers=headers, params=params
         ) as resp:
             if resp.status == 200:
