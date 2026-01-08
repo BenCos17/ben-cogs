@@ -1,11 +1,11 @@
-from discord.ext import commands
+from redbot.core import commands
 import discord
 from typing import Optional
 
 class MartineImages(commands.Cog):
     """Cog for Martine Images API."""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot):
         self.bot = bot
         self.base_url = "https://api.martinebot.com/v1"
 
