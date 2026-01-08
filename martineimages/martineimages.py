@@ -1,7 +1,12 @@
 from redbot.core import commands
+from redbot.core.utils.chat_formatting import pagify
 import discord
 import aiohttp
+import json
+import logging
 from typing import Optional
+
+log = logging.getLogger("red.cogs.martineimages")
 
 class MartineImages(commands.Cog):
     """Cog for Martine Images API."""
@@ -31,15 +36,34 @@ class MartineImages(commands.Cog):
         await self._ensure_session()
         headers = {"User-Agent": "Red-MartineImages/ben-cogs/v1.1.4"}
         params = params or {}
-        async with self.session.get(
-            f"{self.base_url}{endpoint}", headers=headers, params=params
-        ) as resp:
-            if resp.status == 200:
-                json = await resp.json()
-                # If endpoint returns plain string, not JSON
-                if isinstance(json, str):
-                    return json
-                return json.get("url")
+        try:
+            async with self.session.get(
+                f"{self.base_url}{endpoint}", headers=headers, params=params
+            ) as resp:
+                if resp.status == 200:
+                    try:
+                        json_data = await resp.json()
+                        # If endpoint returns plain string, not JSON
+                        if isinstance(json_data, str):
+                            return json_data
+                        # Try different possible response formats
+                        if isinstance(json_data, dict):
+                            return json_data.get("url") or json_data.get("image") or json_data.get("link")
+                        return None
+                    except aiohttp.ContentTypeError:
+                        # If response is not JSON, try reading as text
+                        text = await resp.text()
+                        if text:
+                            return text
+                        return None
+                else:
+                    log.warning(f"Martine API returned status {resp.status} for {endpoint}")
+                    return None
+        except aiohttp.ClientError as e:
+            log.error(f"Error fetching from Martine API: {e}")
+            return None
+        except Exception as e:
+            log.error(f"Unexpected error in fetch_image: {e}", exc_info=True)
             return None
 
     @commands.command(name="martinememe")
@@ -88,6 +112,53 @@ class MartineImages(commands.Cog):
             await ctx.send(url)
         else:
             await ctx.send(f"Couldn't fetch osu! profile for **{username}**.")
+
+    @commands.command(name="martinedebug")
+    @commands.is_owner()
+    async def debug_api(self, ctx: commands.Context, endpoint: str = "/images/memes"):
+        """Debug command to inspect API responses. Owner only."""
+        await self._ensure_session()
+        headers = {"User-Agent": "Red-MartineImages/ben-cogs/v1.1.4"}
+        full_url = f"{self.base_url}{endpoint}"
+        
+        try:
+            async with self.session.get(full_url, headers=headers) as resp:
+                status = resp.status
+                content_type = resp.headers.get("Content-Type", "unknown")
+                
+                # Try to get response as text first
+                try:
+                    text_response = await resp.text()
+                except:
+                    text_response = "Could not read as text"
+                
+                # Try to get as JSON
+                json_response = None
+                try:
+                    await resp.rewind()  # Reset response stream
+                    json_response = await resp.json()
+                except:
+                    pass
+                
+                # Build debug message
+                debug_msg = f"**API Debug Info**\n"
+                debug_msg += f"URL: `{full_url}`\n"
+                debug_msg += f"Status: `{status}`\n"
+                debug_msg += f"Content-Type: `{content_type}`\n\n"
+                
+                if json_response:
+                    debug_msg += f"**JSON Response:**\n```json\n{json.dumps(json_response, indent=2)[:1500]}\n```\n"
+                
+                if text_response and not json_response:
+                    debug_msg += f"**Text Response (first 500 chars):**\n```\n{text_response[:500]}\n```\n"
+                
+                # Split into multiple messages if too long
+                for page in pagify(debug_msg):
+                    await ctx.send(page)
+                    
+        except Exception as e:
+            await ctx.send(f"**Error:** {type(e).__name__}: {str(e)}")
+            log.error(f"Debug command error: {e}", exc_info=True)
 
 
 
