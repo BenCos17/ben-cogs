@@ -48,7 +48,11 @@ class MartineImages(commands.Cog):
                             return json_data
                         # Try different possible response formats
                         if isinstance(json_data, dict):
-                            return json_data.get("url") or json_data.get("image") or json_data.get("link")
+                            # Martine API returns data in data.image_url
+                            if "data" in json_data and isinstance(json_data["data"], dict):
+                                return json_data["data"].get("image_url")
+                            # Fallback to other possible formats
+                            return json_data.get("url") or json_data.get("image") or json_data.get("image_url") or json_data.get("link")
                         return None
                     except aiohttp.ContentTypeError:
                         # If response is not JSON, try reading as text
