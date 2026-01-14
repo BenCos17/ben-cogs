@@ -163,6 +163,37 @@ class EmojiLink(commands.Cog):
                 all_emojis.append((emoji, None))
         return all_emojis
 
+    async def resolve_emoji(self, ctx: commands.Context, emoji_input: typing.Union[discord.PartialEmoji, str, int]):
+        """Resolve an emoji from PartialEmoji, emoji ID (int/str), or emoji string."""
+        if isinstance(emoji_input, discord.PartialEmoji):
+            return emoji_input
+        
+        # Try to parse as emoji ID
+        emoji_id = None
+        if isinstance(emoji_input, int):
+            emoji_id = emoji_input
+        elif isinstance(emoji_input, str):
+            # Try to parse as integer ID first
+            try:
+                emoji_id = int(emoji_input)
+            except ValueError:
+                # Not a numeric ID, try to parse as emoji string using discord.py converter
+                try:
+                    return await commands.PartialEmojiConverter().convert(ctx, emoji_input)
+                except commands.BadArgument:
+                    raise commands.BadArgument(f"Couldn't convert \"{emoji_input}\" to PartialEmoji or emoji ID.")
+        
+        if emoji_id is not None:
+            # Look up emoji by ID in the guild
+            if ctx.guild:
+                guild_emoji = discord.utils.get(ctx.guild.emojis, id=emoji_id)
+                if guild_emoji:
+                    return guild_emoji
+            # If not found in guild, raise an error
+            raise commands.BadArgument(f"Emoji with ID {emoji_id} not found in this server.")
+        
+        raise commands.BadArgument(f"Couldn't convert \"{emoji_input}\" to PartialEmoji or emoji ID.")
+
     # -----------------------------
     # Add / Copy / Delete / Rename
     # -----------------------------
@@ -222,7 +253,7 @@ class EmojiLink(commands.Cog):
 
     @emojilink.command(name="copy")
     @commands.has_permissions(manage_emojis=True)
-    async def copy_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji):
+    async def copy_emoji(self, ctx: commands.Context, emoji_input: typing.Union[discord.PartialEmoji, str, int]):
         """Copy a custom emoji with automatic background removal."""
         if not ctx.author.guild_permissions.manage_emojis:
             return await ctx.send("You do not have permission to manage emojis.")
@@ -230,6 +261,7 @@ class EmojiLink(commands.Cog):
             return await ctx.send("I do not have permissions to manage emojis in this server.")
 
         try:
+            emoji = await self.resolve_emoji(ctx, emoji_input)
             async with ctx.typing():
                 emoji_url = f"https://cdn.discordapp.com/emojis/{emoji.id}.{ 'gif' if emoji.animated else 'png'}"
                 async with aiohttp.ClientSession() as session:
@@ -265,9 +297,10 @@ class EmojiLink(commands.Cog):
 
     @emojilink.command(name="delete")
     @commands.has_permissions(manage_emojis=True)
-    async def delete_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji):
+    async def delete_emoji(self, ctx: commands.Context, emoji_input: typing.Union[discord.PartialEmoji, str, int]):
         """Delete a custom emoji from the server."""
         try:
+            emoji = await self.resolve_emoji(ctx, emoji_input)
             guild_emoji = discord.utils.get(ctx.guild.emojis, id=emoji.id)
             if guild_emoji is None:
                 return await ctx.send("This emoji doesn't exist in this server.")
@@ -302,13 +335,14 @@ class EmojiLink(commands.Cog):
 
     @emojilink.command(name="rename", aliases=["edit"])
     @commands.has_permissions(manage_emojis=True)
-    async def rename_emoji(self, ctx: commands.Context, emoji: discord.PartialEmoji, new_name: str):
+    async def rename_emoji(self, ctx: commands.Context, emoji_input: typing.Union[discord.PartialEmoji, str, int], new_name: str):
         """Rename a custom emoji in the server."""
         if not new_name.isalnum() and "_" not in new_name:
             return await ctx.send("Emoji name must contain only letters, numbers, and underscores.")
         if len(new_name) < 2 or len(new_name) > 32:
             return await ctx.send("Emoji name must be between 2 and 32 characters long.")
 
+        emoji = await self.resolve_emoji(ctx, emoji_input)
         guild_emoji = discord.utils.get(ctx.guild.emojis, id=emoji.id)
         if guild_emoji is None:
             return await ctx.send("This emoji doesn't exist in this server.")
