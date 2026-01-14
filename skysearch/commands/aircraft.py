@@ -827,6 +827,7 @@ class AircraftCommands:
             )
             from ..utils.helpers import JSONInputButton
             view = JSONInputButton(self.cog)
+            await ctx.send(embed=embed, view=view)
     
     async def watchlist_add(self, ctx, icao: str):
         """Add an aircraft to the user's watchlist."""
