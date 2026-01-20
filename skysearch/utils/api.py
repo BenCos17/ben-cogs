@@ -109,6 +109,10 @@ class APIManager:
     async def get_headers(self, url=None, api_mode=None):
         """Return headers with API key for requests, if available. Only send API key for primary API."""
         headers = {}
+        # Optional custom User-Agent for all outbound HTTP requests (useful for APIs that require it)
+        user_agent = await self.cog.config.user_agent()
+        if user_agent:
+            headers["User-Agent"] = user_agent
         api_key = await self.cog.config.airplanesliveapi()
         if api_mode == "primary" and api_key:
             headers['auth'] = api_key
@@ -408,7 +412,7 @@ class APIManager:
         if not self._http_client:
             self._http_client = aiohttp.ClientSession()
         try:
-            async with self._http_client.get(url) as response:
+            async with self._http_client.get(url, headers=await self.get_headers(url, api_mode="primary")) as response:
                 if response.status == 200:
                     return await response.json()
                 else:
@@ -426,7 +430,7 @@ class APIManager:
         if not self._http_client:
             self._http_client = aiohttp.ClientSession()
         try:
-            async with self._http_client.get(url) as resp:
+            async with self._http_client.get(url, headers=await self.get_headers(url, api_mode="primary")) as resp:
                 if resp.status == 200:
                     return await resp.json()
                 else:

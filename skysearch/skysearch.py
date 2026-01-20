@@ -48,6 +48,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
+        self.config.register_global(user_agent=None)  # Optional custom User-Agent header for all outbound HTTP requests
         self.config.register_global(api_stats=None)  # API request statistics for persistence
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={})
         self.config.register_user(watchlist=[], watchlist_notifications={}, watchlist_cooldown=10, watchlist_aircraft_state={})  # User watchlist: list of ICAO codes, dict of last notification times, cooldown in minutes (default: 10), and dict of last known aircraft state (flying/landed)
@@ -540,6 +541,24 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def aircraft_clearapikey(self, ctx):
         """Clear the airplanes.live API key."""
         await self.admin_commands.clear_api_key(ctx)
+
+    @commands.is_owner()
+    @aircraft_group.command(name="setuseragent")
+    async def aircraft_setuseragent(self, ctx, *, user_agent: str):
+        """Set the User-Agent header SkySearch uses for outbound HTTP requests."""
+        await self.admin_commands.set_user_agent(ctx, user_agent)
+
+    @commands.is_owner()
+    @aircraft_group.command(name="useragent")
+    async def aircraft_useragent(self, ctx):
+        """Show the configured User-Agent header (if any)."""
+        await self.admin_commands.check_user_agent(ctx)
+
+    @commands.is_owner()
+    @aircraft_group.command(name="clearuseragent")
+    async def aircraft_clearuseragent(self, ctx):
+        """Clear the configured User-Agent header."""
+        await self.admin_commands.clear_user_agent(ctx)
 
     # Airport commands
     @commands.guild_only()

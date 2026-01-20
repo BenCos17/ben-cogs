@@ -226,6 +226,56 @@ class AdminCommands:
         embed.add_field(name="Note", value="Some features may be limited without an API key", inline=True)
         await ctx.send(embed=embed)
 
+    async def set_user_agent(self, ctx, user_agent: str):
+        """Set the User-Agent header used for outbound HTTP requests."""
+        user_agent = (user_agent or "").strip()
+        if not user_agent:
+            embed = discord.Embed(
+                title="User-Agent Error",
+                description="User-Agent cannot be empty. Use `clearuseragent` to clear it.",
+                color=0xff4545,
+            )
+            await ctx.send(embed=embed)
+            return
+
+        await self.cog.config.user_agent.set(user_agent)
+        embed = discord.Embed(
+            title="User-Agent Updated",
+            description="SkySearch will include this User-Agent on outbound HTTP requests.",
+            color=0x2BBD8E,
+        )
+        embed.add_field(name="User-Agent", value=f"`{user_agent}`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def check_user_agent(self, ctx):
+        """Show the currently configured User-Agent header."""
+        user_agent = await self.cog.config.user_agent()
+        if user_agent:
+            embed = discord.Embed(
+                title="User-Agent Status",
+                description="✅ A custom User-Agent is configured.",
+                color=0x2BBD8E,
+            )
+            embed.add_field(name="User-Agent", value=f"`{user_agent}`", inline=False)
+        else:
+            embed = discord.Embed(
+                title="User-Agent Status",
+                description="ℹ️ No custom User-Agent is configured (aiohttp default will be used).",
+                color=0xfffffe,
+            )
+            embed.add_field(name="Set", value="Use `*aircraft setuseragent <value>`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def clear_user_agent(self, ctx):
+        """Clear the configured User-Agent header."""
+        await self.cog.config.user_agent.clear()
+        embed = discord.Embed(
+            title="User-Agent Cleared",
+            description="Custom User-Agent cleared. aiohttp default will be used.",
+            color=0xff4545,
+        )
+        await ctx.send(embed=embed)
+
     async def debug_api(self, ctx):
         """Debug API key and connection issues - sends detailed info via DM."""
         try:

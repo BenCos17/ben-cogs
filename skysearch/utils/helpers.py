@@ -18,6 +18,18 @@ class HelperUtils:
         """Ensure HTTP client is initialized."""
         if not hasattr(self.cog, '_http_client'):
             self.cog._http_client = aiohttp.ClientSession()
+
+    async def _get_http_headers(self) -> dict:
+        """Get outbound HTTP headers (includes configured User-Agent if set)."""
+        headers = {}
+        try:
+            user_agent = await self.cog.config.user_agent()
+            if user_agent:
+                headers["User-Agent"] = user_agent
+        except Exception:
+            # In case config isn't available for some reason, fall back to aiohttp defaults.
+            pass
+        return headers
     
     async def get_photo_by_hex(self, hex_id, registration=None):
         """
@@ -35,7 +47,10 @@ class HelperUtils:
         # First try to get photo by hex ICAO directly
         if hex_id:
             try:
-                async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/hex/{hex_id}') as response:
+                async with self.cog._http_client.get(
+                    f'https://api.planespotters.net/pub/photos/hex/{hex_id}',
+                    headers=await self._get_http_headers(),
+                ) as response:
                     if response.status == 200:
                         json_out = await response.json()
                         if 'photos' in json_out and json_out['photos']:
@@ -50,7 +65,10 @@ class HelperUtils:
         # If no photo found by hex, try by registration if provided
         if registration:
             try:
-                async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/reg/{registration}') as response:
+                async with self.cog._http_client.get(
+                    f'https://api.planespotters.net/pub/photos/reg/{registration}',
+                    headers=await self._get_http_headers(),
+                ) as response:
                     if response.status == 200:
                         json_out = await response.json()
                         if 'photos' in json_out and json_out['photos']:
@@ -77,7 +95,10 @@ class HelperUtils:
                     if reg and reg != registration:  # Only try if we haven't already tried this registration
                         # try to get photo using the registration
                         try:
-                            async with self.cog._http_client.get(f'https://api.planespotters.net/pub/photos/reg/{reg}') as response:
+                            async with self.cog._http_client.get(
+                                f'https://api.planespotters.net/pub/photos/reg/{reg}',
+                                headers=await self._get_http_headers(),
+                            ) as response:
                                 if response.status == 200:
                                     json_out = await response.json()
                                     if 'photos' in json_out and json_out['photos']:
@@ -320,7 +341,7 @@ class HelperUtils:
         try:
             # Try airport-data.com API
             url = f"https://airport-data.com/api/ap_info.json?icao={airport_code}"
-            async with self.cog._http_client.get(url) as response:
+            async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
                 if response.status == 200:
                     data = await response.json()
                     if data and not isinstance(data, list):  # Valid airport data
@@ -360,7 +381,7 @@ class HelperUtils:
         try:
             # Try airportdb.io API
             url = f"https://airportdb.io/api/v1/airports/{airport_code}"
-            async with self.cog._http_client.get(url) as response:
+            async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
                 if response.status == 200:
                     data = await response.json()
                     if data and 'runways' in data:
@@ -379,7 +400,7 @@ class HelperUtils:
         try:
             # Try airportdb.io API for navaids
             url = f"https://airportdb.io/api/v1/airports/{airport_code}/navaids"
-            async with self.cog._http_client.get(url) as response:
+            async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
                 if response.status == 200:
                     data = await response.json()
                     if data and 'navaids' in data:
@@ -412,7 +433,7 @@ class HelperUtils:
             # Fetch the JSON data from the URL
             self._ensure_http_client()
             
-            async with self.cog._http_client.get(json_input) as response:
+            async with self.cog._http_client.get(json_input, headers=await self._get_http_headers()) as response:
                 if response.status != 200:
                     raise ValueError(f"Failed to fetch JSON data. Status: {response.status}")
                 

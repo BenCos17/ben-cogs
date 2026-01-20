@@ -11,6 +11,7 @@ To use the SkySearch cog, follow these steps:
 
 2. **Configure API Keys** :
    - Set up airplanes.live API key: `[p]setapikey <your-api-key>`
+   - Optional: Set a custom User-Agent for outbound HTTP (useful for APIs that require it): `[p]setuseragent <user-agent>`
    - Optional: Configure Google Maps API for airport imagery
    - Optional: Configure OpenAI API for airport summaries
    - Optional: Configure airportdb.io API for runway data
@@ -85,6 +86,9 @@ Notes:
 - `[p]apikey` - Check API key status
 - `[p]clearapikey` - Clear API key
 - `[p]debugapi` - Debug API issues
+- `[p]setuseragent <value>` - Set a custom User-Agent header for outbound HTTP requests
+- `[p]useragent` - Show current User-Agent setting
+- `[p]clearuseragent` - Clear User-Agent setting (use aiohttp default)
 
 ### API Monitoring Commands
 - `[p]skysearch apistats` - View comprehensive API request statistics and performance metrics

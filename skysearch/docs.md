@@ -9,6 +9,10 @@
      ```
      *aircraft setapikey YOUR_API_KEY_HERE
      ```
+   - (Optional) Set a custom User-Agent (recommended for some APIs like `api.weather.gov`):
+     ```
+     *aircraft setuseragent SkySearch/1.0 (+https://github.com/bencos17/ben-cogs)
+     ```
    - For OpenWeatherMap (for weather/forecast):
      ```
      *airport setowmkey YOUR_OWM_API_KEY_HERE
@@ -195,6 +199,17 @@ Visit `/dashboard/apistats` in your web browser to view API statistics in a web 
 - `*skysearch apistats_config` - View auto-save configuration
 - `*skysearch apistats_reset` - Reset all statistics
 - `*skysearch apistats_save` - Manually save statistics
+
+## User-Agent (Owner)
+
+Some upstream APIs may require a valid **User-Agent** header. SkySearch can be configured to send one for all outbound HTTP requests.
+
+Commands:
+```
+*aircraft setuseragent <value>
+*aircraft useragent
+*aircraft clearuseragent
+```
 
 ## Aircraft Watchlist
 
