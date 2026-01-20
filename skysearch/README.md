@@ -86,9 +86,9 @@ Notes:
 - `[p]apikey` - Check API key status
 - `[p]clearapikey` - Clear API key
 - `[p]debugapi` - Debug API issues
-- `[p]setuseragent <value>` - Set a custom User-Agent header for outbound HTTP requests
-- `[p]useragent` - Show current User-Agent setting
-- `[p]clearuseragent` - Clear User-Agent setting (use aiohttp default)
+- `[p]aircraft setuseragent <value>` - Set a custom User-Agent header for outbound HTTP requests
+- `[p]aircraft useragent` - Show current User-Agent setting
+- `[p]aircraft clearuseragent` - Clear User-Agent setting (use aiohttp default)
 
 ### API Monitoring Commands
 - `[p]skysearch apistats` - View comprehensive API request statistics and performance metrics
