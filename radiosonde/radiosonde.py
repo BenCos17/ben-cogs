@@ -27,14 +27,24 @@ class Radiosonde(commands.Cog):
         asyncio.create_task(self.session.close())
 
     async def fetch_sondes(self):
-        url = "https://api.v2.sondehub.org/sondes/latest.json"
+        """Fetch latest sonde data. Returns (data_dict, error_message). 
+        data_dict is a dictionary keyed by serial number. error_message is None on success."""
+        url = "https://api.v2.sondehub.org/sondes"
         try:
             async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
                 if resp.status != 200:
-                    return []
-                return await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
-            return []
+                    return {}, f"API returned HTTP {resp.status}"
+                data = await resp.json()
+                # API returns dict keyed by serial number
+                return data if isinstance(data, dict) else {}, None
+        except asyncio.TimeoutError:
+            return {}, "Request timed out after 15 seconds"
+        except aiohttp.ClientConnectorError as e:
+            return {}, f"Connection failed: {e.os_error.strerror if e.os_error else str(e)}"
+        except aiohttp.ClientError as e:
+            return {}, f"Request error: {type(e).__name__}: {e}"
+        except OSError as e:
+            return {}, f"Network/OS error: {type(e).__name__}: {e}"
 
     async def update_sondes(self):
         await self.bot.wait_until_ready()
@@ -46,21 +56,31 @@ class Radiosonde(commands.Cog):
                 interval = guild_config.get("update_interval", 300)
 
                 if tracked and channel_id:
-                    sondes_data = await self.fetch_sondes()
+                    sondes_data, _ = await self.fetch_sondes()
                     channel = self.bot.get_channel(channel_id)
                     if not channel:
                         continue
                     for sonde_id in tracked:
-                        for sonde in sondes_data:
-                            if str(sonde.get("id")) == str(sonde_id):
-                                msg = (
-                                    f"**Sonde {sonde_id} Update**\n"
-                                    f"Lat: {sonde.get('lat')}\n"
-                                    f"Lon: {sonde.get('lon')}\n"
-                                    f"Alt: {sonde.get('alt'):.1f} m\n"
-                                    f"Speed: {sonde.get('vel'):.1f} m/s\n"
-                                )
-                                await channel.send(msg)
+                        sonde = sondes_data.get(sonde_id)
+                        if sonde:
+                            vel_h = sonde.get("vel_h")
+                            vel_v = sonde.get("vel_v")
+                            # Calculate speed from horizontal and vertical velocity
+                            if vel_h is not None and vel_v is not None:
+                                speed = (vel_h**2 + vel_v**2)**0.5
+                            elif vel_h is not None:
+                                speed = vel_h
+                            else:
+                                speed = None
+                            speed_str = f"{speed:.1f} m/s" if speed is not None else "—"
+                            msg = (
+                                f"**Sonde {sonde_id} Update**\n"
+                                f"Lat: {sonde.get('lat')}\n"
+                                f"Lon: {sonde.get('lon')}\n"
+                                f"Alt: {sonde.get('alt'):.1f} m\n"
+                                f"Speed: {speed_str}\n"
+                            )
+                            await channel.send(msg)
                 await asyncio.sleep(1)  # small delay between guilds
             await asyncio.sleep(60)  # wait 1 minute before next batch
 
@@ -108,25 +128,33 @@ class Radiosonde(commands.Cog):
             await ctx.send("No sondes are being tracked in this server.")
             return
         async with ctx.typing():
-            sondes_data = await self.fetch_sondes()
-        if not sondes_data:
+            sondes_data, error = await self.fetch_sondes()
+        if error or not sondes_data:
+            detail = f" {error}" if error else ""
             await ctx.send(
-                "Could not fetch sonde data from the API (unreachable or error). Try again later."
+                f"Could not fetch sonde data from the API.{detail} Try again later."
             )
             return
-        by_id = {str(s.get("id")): s for s in sondes_data}
         lines = []
         for sonde_id in tracked:
-            s = by_id.get(sonde_id)
+            s = sondes_data.get(sonde_id)
             if s is None:
                 lines.append(f"**{sonde_id}** — No current data (not in latest API)")
                 continue
             lat = s.get("lat", "—")
             lon = s.get("lon", "—")
             alt = s.get("alt")
-            vel = s.get("vel")
+            vel_h = s.get("vel_h")
+            vel_v = s.get("vel_v")
+            # Calculate speed from horizontal and vertical velocity
+            if vel_h is not None and vel_v is not None:
+                speed = (vel_h**2 + vel_v**2)**0.5
+            elif vel_h is not None:
+                speed = vel_h
+            else:
+                speed = None
             alt_str = f"{alt:.1f} m" if alt is not None else "—"
-            vel_str = f"{vel:.1f} m/s" if vel is not None else "—"
+            vel_str = f"{speed:.1f} m/s" if speed is not None else "—"
             lines.append(
                 f"**{sonde_id}** — Lat: {lat} | Lon: {lon} | Alt: {alt_str} | Speed: {vel_str}"
             )
