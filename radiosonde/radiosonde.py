@@ -264,30 +264,65 @@ class Radiosonde(commands.Cog):
                 f"Could not fetch sonde data from the API.{detail} Try again later."
             )
             return
-        lines = []
+        embeds = []
         for sonde_id in tracked:
             s = sondes_data.get(sonde_id)
             if s is None:
-                lines.append(f"**{sonde_id}** — No current data (not in latest API)")
+                e = discord.Embed(title=f"{sonde_id}", description="No current data (not in latest API)", colour=0xDD5555)
+                embeds.append(e)
                 continue
-            lat = s.get("lat", "—")
-            lon = s.get("lon", "—")
-            alt = s.get("alt")
-            vel_h = s.get("vel_h")
-            vel_v = s.get("vel_v")
-            # Calculate speed from horizontal and vertical velocity
-            if vel_h is not None and vel_v is not None:
-                speed = (vel_h**2 + vel_v**2)**0.5
-            elif vel_h is not None:
-                speed = vel_h
-            else:
-                speed = None
-            alt_str = f"{alt:.1f} m" if alt is not None else "—"
-            vel_str = f"{speed:.1f} m/s" if speed is not None else "—"
-            lines.append(
-                f"**{sonde_id}** — Lat: {lat} | Lon: {lon} | Alt: {alt_str} | Speed: {vel_str}"
-            )
-        await ctx.send("**Tracked sondes status**\n" + "\n".join(lines))
+            embeds.append(self._sonde_to_embed(sonde_id, s))
+
+        # Send embeds in small groups to avoid hitting limits
+        batch = []
+        for e in embeds:
+            batch.append(e)
+            if len(batch) >= 5:
+                # Discord API supports multiple embeds; send this batch
+                await ctx.send(embeds=batch)
+                batch = []
+        if batch:
+            await ctx.send(embeds=batch)
+
+    def _sonde_to_embed(self, sonde_id: str, sonde: dict) -> discord.Embed:
+        """Build a Discord embed summarizing a sonde's current data."""
+        def fmt_num(v, prec=5):
+            return f"{v:.{prec}f}" if isinstance(v, (int, float)) else (str(v) if v is not None else "—")
+
+        lat = fmt_num(sonde.get("lat"), 5)
+        lon = fmt_num(sonde.get("lon"), 5)
+        alt = sonde.get("alt")
+        alt_str = f"{alt:.1f} m" if isinstance(alt, (int, float)) else (str(alt) if alt is not None else "—")
+
+        vel_h = sonde.get("vel_h")
+        vel_v = sonde.get("vel_v")
+        if isinstance(vel_h, (int, float)) and isinstance(vel_v, (int, float)):
+            speed = (vel_h ** 2 + vel_v ** 2) ** 0.5
+        elif isinstance(vel_h, (int, float)):
+            speed = vel_h
+        else:
+            speed = None
+        speed_str = f"{speed:.1f} m/s" if speed is not None else "—"
+
+        heading = sonde.get("heading")
+        sats = sonde.get("sats")
+        temp = sonde.get("temp")
+        batt = sonde.get("batt")
+        uploader = sonde.get("uploader_callsign") or sonde.get("uploader")
+
+        title = f"Sonde {sonde_id}"
+        desc = f"Lat: {lat} | Lon: {lon}\nAlt: {alt_str} | Speed: {speed_str}"
+        e = discord.Embed(title=title, description=desc, colour=0x55AAFF)
+        e.add_field(name="Heading", value=str(heading) if heading is not None else "—", inline=True)
+        e.add_field(name="Sats", value=str(sats) if sats is not None else "—", inline=True)
+        e.add_field(name="Temp (°C)", value=str(temp) if temp is not None else "—", inline=True)
+        e.add_field(name="Battery (V)", value=str(batt) if batt is not None else "—", inline=True)
+        if uploader:
+            e.set_footer(text=f"Uploader: {uploader}")
+        last = sonde.get("last_seen") or sonde.get("datetime") or sonde.get("time")
+        if last:
+            e.add_field(name="Last seen", value=str(last), inline=False)
+        return e
 
     @sonde.command()
     async def setchannel(self, ctx, channel: discord.TextChannel):
