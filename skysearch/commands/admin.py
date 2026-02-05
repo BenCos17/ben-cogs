@@ -119,10 +119,13 @@ class AdminCommands:
             await ctx.send(embed=embed)
         else:
             await self.cog.config.guild(ctx.guild).auto_icao.set(state)
+            # Update cache when auto_icao is toggled
             if state:
+                self.cog._auto_icao_enabled_guilds.add(ctx.guild.id)
                 embed = discord.Embed(title="ICAO Lookup Status", description="Automatic ICAO lookup has been enabled.", color=0x2BBD8E)
                 await ctx.send(embed=embed)
             else:
+                self.cog._auto_icao_enabled_guilds.discard(ctx.guild.id)
                 embed = discord.Embed(title="ICAO Lookup Status", description="Automatic ICAO lookup has been disabled.", color=0xff4545)
                 await ctx.send(embed=embed)
 
@@ -221,6 +224,56 @@ class AdminCommands:
         embed = discord.Embed(title="API Key Cleared", description="The airplanes.live API key has been cleared.", color=0xff4545)
         embed.add_field(name="Status", value="❌ API key removed", inline=True)
         embed.add_field(name="Note", value="Some features may be limited without an API key", inline=True)
+        await ctx.send(embed=embed)
+
+    async def set_user_agent(self, ctx, user_agent: str):
+        """Set the User-Agent header used for outbound HTTP requests."""
+        user_agent = (user_agent or "").strip()
+        if not user_agent:
+            embed = discord.Embed(
+                title="User-Agent Error",
+                description="User-Agent cannot be empty. Use `clearuseragent` to clear it.",
+                color=0xff4545,
+            )
+            await ctx.send(embed=embed)
+            return
+
+        await self.cog.config.user_agent.set(user_agent)
+        embed = discord.Embed(
+            title="User-Agent Updated",
+            description="SkySearch will include this User-Agent on outbound HTTP requests.",
+            color=0x2BBD8E,
+        )
+        embed.add_field(name="User-Agent", value=f"`{user_agent}`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def check_user_agent(self, ctx):
+        """Show the currently configured User-Agent header."""
+        user_agent = await self.cog.config.user_agent()
+        if user_agent:
+            embed = discord.Embed(
+                title="User-Agent Status",
+                description="✅ A custom User-Agent is configured.",
+                color=0x2BBD8E,
+            )
+            embed.add_field(name="User-Agent", value=f"`{user_agent}`", inline=False)
+        else:
+            embed = discord.Embed(
+                title="User-Agent Status",
+                description="ℹ️ No custom User-Agent is configured (aiohttp default will be used).",
+                color=0xfffffe,
+            )
+            embed.add_field(name="Set", value="Use `*aircraft setuseragent <value>`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def clear_user_agent(self, ctx):
+        """Clear the configured User-Agent header."""
+        await self.cog.config.user_agent.clear()
+        embed = discord.Embed(
+            title="User-Agent Cleared",
+            description="Custom User-Agent cleared. aiohttp default will be used.",
+            color=0xff4545,
+        )
         await ctx.send(embed=embed)
 
     async def debug_api(self, ctx):

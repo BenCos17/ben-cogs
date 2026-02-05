@@ -106,6 +106,14 @@ msgstr ""
 msgid "Additional data used in this cog is shown below"
 msgstr ""
 
+#: skysearch\skysearch.py:202
+msgid "ADSB-B Data"
+msgstr ""
+
+#: skysearch\skysearch.py:202
+msgid "ADSB tracking data is powered by [airplanes.live](https://airplanes.live)"
+msgstr ""
+
 #: skysearch\skysearch.py:173
 msgid "Photography"
 msgstr ""

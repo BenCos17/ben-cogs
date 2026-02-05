@@ -1,0 +1,6 @@
+{
+  "name": "Counter",
+  "author": ["bencos17"],
+  "short": "Flexible per-guild/user/global counters",
+  "description": "Counters that users can create and modify, with server and unique scopes."
+}

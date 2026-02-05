@@ -110,6 +110,14 @@ msgstr "Seirbhísí eile"
 msgid "Additional data used in this cog is shown below"
 msgstr "Sonraí breise a úsáidtear sa chrog seo thíos"
 
+#: skysearch.py:202
+msgid "ADSB-B Data"
+msgstr "Sonraí ADSB-B"
+
+#: skysearch.py:202
+msgid "ADSB tracking data is powered by [airplanes.live](https://airplanes.live)"
+msgstr "Cumhachtaítear sonraí rianú ADSB ag [airplanes.live](https://airplanes.live)"
+
 #: skysearch.py:173
 msgid "Photography"
 msgstr "Grianghrafadóireacht"

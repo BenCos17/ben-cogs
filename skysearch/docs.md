@@ -9,6 +9,10 @@
      ```
      *aircraft setapikey YOUR_API_KEY_HERE
      ```
+   - (Optional) Set a custom User-Agent (recommended for some APIs like `api.weather.gov`):
+     ```
+     *aircraft setuseragent SkySearch/1.0 (+https://github.com/bencos17/ben-cogs)
+     ```
    - For OpenWeatherMap (for weather/forecast):
      ```
      *airport setowmkey YOUR_OWM_API_KEY_HERE
@@ -195,6 +199,88 @@ Visit `/dashboard/apistats` in your web browser to view API statistics in a web 
 - `*skysearch apistats_config` - View auto-save configuration
 - `*skysearch apistats_reset` - Reset all statistics
 - `*skysearch apistats_save` - Manually save statistics
+
+## User-Agent (Owner)
+
+Some upstream APIs may require a valid **User-Agent** header. SkySearch can be configured to send one for all outbound HTTP requests.
+
+Commands:
+```
+*aircraft setuseragent <value>
+*aircraft useragent
+*aircraft clearuseragent
+```
+
+## Aircraft Watchlist
+
+### Personal Watchlist
+Create your own personal watchlist of aircraft to monitor. You'll receive notifications when watched aircraft come online.
+
+### Adding Aircraft to Watchlist
+```
+*aircraft watchlist add A03B67
+```
+Adds the aircraft with ICAO code `A03B67` to your watchlist.
+
+**Note:** If the aircraft is already online when you add it, you'll immediately see its current status (callsign, altitude, speed, position) instead of waiting for the next notification.
+
+### Viewing Your Watchlist
+```
+*aircraft watchlist list
+```
+Shows all aircraft in your watchlist with their current online/offline status.
+
+### Detailed Status
+```
+*aircraft watchlist status
+```
+Shows detailed information about all watched aircraft including:
+- Callsign
+- Altitude
+- Speed
+- Position
+- Online/offline status
+
+### Removing Aircraft
+```
+*aircraft watchlist remove A03B67
+```
+Removes the aircraft from your watchlist.
+
+### Clearing Watchlist
+```
+*aircraft watchlist clear
+```
+Removes all aircraft from your watchlist.
+
+### Configuring Notification Cooldown
+```
+*aircraft watchlist cooldown          # Check current cooldown
+*aircraft watchlist cooldown 5        # Set to 5 minutes
+*aircraft watchlist cooldown 30       # Set to 30 minutes
+*aircraft watchlist cooldown 1440     # Set to 24 hours (maximum)
+```
+
+**Cooldown Settings:**
+- **Default:** 10 minutes
+- **Range:** 1-1440 minutes (1 minute to 24 hours)
+- **Per-user:** Each user can set their own cooldown preference
+- **Purpose:** Prevents spam notifications for the same aircraft
+
+After receiving a notification for a watched aircraft, you won't receive another notification for the same aircraft until your configured cooldown period expires.
+
+### Watchlist Notifications
+- **Automatic notifications** when watched aircraft come online
+- Notifications sent via **DM** (if enabled) or in a **shared guild channel**
+- **Configurable cooldown** per user (default: 10 minutes) to prevent spam
+- Background task checks every **3 minutes**
+- If aircraft is **already online** when added, you'll see its status immediately
+
+### How It Works
+1. Add aircraft to your watchlist using their ICAO hex code
+2. The bot automatically checks your watchlist every 3 minutes
+3. When a watched aircraft comes online, you receive a notification
+4. Notifications include aircraft details and a link to track on airplanes.live
 
 ## Convenience Features
 

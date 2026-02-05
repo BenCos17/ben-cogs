@@ -195,8 +195,17 @@ class AirportCommands:
             return
 
         try:
+            # Include optional custom User-Agent (some APIs like api.weather.gov may require it)
+            headers = {}
+            user_agent = await self.cog.config.user_agent()
+            if user_agent:
+                headers["User-Agent"] = user_agent
+
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"https://airport-data.com/api/ap_info.json?{code_type}={code}") as response1:
+                async with session.get(
+                    f"https://airport-data.com/api/ap_info.json?{code_type}={code}",
+                    headers=headers if headers else None,
+                ) as response1:
                     data1 = await response1.json()
                     latitude, longitude = data1.get('latitude'), data1.get('longitude')
                     country_code = data1.get('country_code')
@@ -207,14 +216,17 @@ class AirportCommands:
 
                 if country_code == 'US':
                     # US logic (NOAA/NWS)
-                    async with session.get(f"https://api.weather.gov/points/{latitude},{longitude}") as response2:
+                    async with session.get(
+                        f"https://api.weather.gov/points/{latitude},{longitude}",
+                        headers=headers if headers else None,
+                    ) as response2:
                         data2 = await response2.json()
                         forecast_url = data2.get('properties', {}).get('forecast')
                         if not forecast_url:
                             await ctx.send(embed=discord.Embed(title="Error", description="Could not fetch forecast URL.", color=0xff4545))
                             return
 
-                    async with session.get(forecast_url) as response3:
+                    async with session.get(forecast_url, headers=headers if headers else None) as response3:
                         data3 = await response3.json()
                         periods = data3.get('properties', {}).get('periods')
                         if not periods:

@@ -6,11 +6,12 @@ A powerful, modular Discord bot cog for tracking aircraft and airport informatio
 
 To use the SkySearch cog, follow these steps:
 
-1. ** Dependencies**:
+1. **Dependencies**:
  red discord bot: https://docs.discord.red/en/stable/
 
-2. **Configure API Keys**:
+2. **Configure API Keys** :
    - Set up airplanes.live API key: `[p]setapikey <your-api-key>`
+   - Optional: Set a custom User-Agent for outbound HTTP (useful for APIs that require it): `[p]setuseragent <user-agent>`
    - Optional: Configure Google Maps API for airport imagery
    - Optional: Configure OpenAI API for airport summaries
    - Optional: Configure airportdb.io API for runway data
@@ -37,6 +38,22 @@ To use the SkySearch cog, follow these steps:
 - `[p]aircraft closest <lat> <lon> [radius]` - Find closest aircraft
 - `[p]aircraft export <type> <value> <format>` - Export data
 - `[p]aircraft scroll` - Scroll through aircraft
+
+### Watchlist Commands
+- `[p]aircraft watchlist` - View your watchlist
+- `[p]aircraft watchlist add <icao>` - Add aircraft to your personal watchlist
+- `[p]aircraft watchlist remove <icao>` - Remove aircraft from watchlist
+- `[p]aircraft watchlist list` - List all watched aircraft with online/offline status
+- `[p]aircraft watchlist status` - Get detailed status of all watched aircraft
+- `[p]aircraft watchlist clear` - Clear your entire watchlist
+- `[p]aircraft watchlist cooldown [minutes]` - Set or view notification cooldown (default: 10 minutes)
+
+**Features:**
+- Personal watchlist per user
+- Automatic notifications when watched aircraft come online (via DM or guild channel)
+- If aircraft is already online when added, you'll see its current status immediately
+- Configurable cooldown per user (1-1440 minutes, default: 10 minutes) to prevent spam
+- Background task checks every 3 minutes
 
 ### Airport Commands
 - `[p]airport info <code>` - Get airport information
@@ -69,6 +86,9 @@ Notes:
 - `[p]apikey` - Check API key status
 - `[p]clearapikey` - Clear API key
 - `[p]debugapi` - Debug API issues
+- `[p]aircraft setuseragent <value>` - Set a custom User-Agent header for outbound HTTP requests
+- `[p]aircraft useragent` - Show current User-Agent setting
+- `[p]aircraft clearuseragent` - Clear User-Agent setting (use aiohttp default)
 
 ### API Monitoring Commands
 - `[p]skysearch apistats` - View comprehensive API request statistics and performance metrics
