@@ -21,6 +21,8 @@ class Radiosonde(commands.Cog):
 
         self.session = aiohttp.ClientSession()
         self.bg_task = self.bot.loop.create_task(self.update_sondes())
+        # track last update times per guild to respect configured intervals
+        self._last_updates = {}
 
     def cog_unload(self):
         self.bg_task.cancel()
@@ -138,40 +140,78 @@ class Radiosonde(commands.Cog):
     async def update_sondes(self):
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
+            now = self.bot.loop.time()
             for guild in self.bot.guilds:
                 guild_config = await self.config.guild(guild).all()
                 tracked = guild_config.get("tracked_sondes", [])
                 channel_id = guild_config.get("update_channel")
                 interval = guild_config.get("update_interval", 300)
 
-                if tracked and channel_id:
-                    sondes_data, _ = await self.fetch_sondes()
-                    channel = self.bot.get_channel(channel_id)
-                    if not channel:
+                if not tracked or not channel_id:
+                    continue
+
+                last = self._last_updates.get(guild.id, 0)
+                if now - last < interval:
+                    continue
+
+                sondes_data, error = await self.fetch_sondes()
+                channel = self.bot.get_channel(channel_id)
+                if error:
+                    # Inform channel of failures optionally (only once)
+                    try:
+                        if channel:
+                            await channel.send(f"Could not fetch sondes for updates: {error}")
+                    except Exception:
+                        pass
+                    continue
+                if not channel:
+                    continue
+
+                for sonde_id in tracked:
+                    sonde = sondes_data.get(sonde_id)
+                    if not sonde:
+                        await channel.send(f"**{sonde_id}** — No current data (not in latest API)")
                         continue
-                    for sonde_id in tracked:
-                        sonde = sondes_data.get(sonde_id)
-                        if sonde:
-                            vel_h = sonde.get("vel_h")
-                            vel_v = sonde.get("vel_v")
-                            # Calculate speed from horizontal and vertical velocity
-                            if vel_h is not None and vel_v is not None:
-                                speed = (vel_h**2 + vel_v**2)**0.5
-                            elif vel_h is not None:
-                                speed = vel_h
-                            else:
-                                speed = None
-                            speed_str = f"{speed:.1f} m/s" if speed is not None else "—"
-                            msg = (
-                                f"**Sonde {sonde_id} Update**\n"
-                                f"Lat: {sonde.get('lat')}\n"
-                                f"Lon: {sonde.get('lon')}\n"
-                                f"Alt: {sonde.get('alt'):.1f} m\n"
-                                f"Speed: {speed_str}\n"
-                            )
-                            await channel.send(msg)
+                    msg = self._format_sonde_message(sonde_id, sonde)
+                    await channel.send(msg)
+
+                self._last_updates[guild.id] = now
                 await asyncio.sleep(1)  # small delay between guilds
-            await asyncio.sleep(60)  # wait 1 minute before next batch
+            await asyncio.sleep(5)  # short polling delay
+
+    def _format_sonde_message(self, sonde_id: str, sonde: dict) -> str:
+        """Create a safe, readable message for a single sonde dict."""
+        def fmt_num(v, prec=5):
+            return f"{v:.{prec}f}" if isinstance(v, (int, float)) else (str(v) if v is not None else "—")
+
+        lat = fmt_num(sonde.get("lat"), 5)
+        lon = fmt_num(sonde.get("lon"), 5)
+        alt = sonde.get("alt")
+        alt_str = f"{alt:.1f} m" if isinstance(alt, (int, float)) else (str(alt) if alt is not None else "—")
+
+        vel_h = sonde.get("vel_h")
+        vel_v = sonde.get("vel_v")
+        if isinstance(vel_h, (int, float)) and isinstance(vel_v, (int, float)):
+            speed = (vel_h ** 2 + vel_v ** 2) ** 0.5
+        elif isinstance(vel_h, (int, float)):
+            speed = vel_h
+        else:
+            speed = None
+        speed_str = f"{speed:.1f} m/s" if speed is not None else "—"
+
+        heading = sonde.get("heading")
+        sats = sonde.get("sats")
+        temp = sonde.get("temp")
+        batt = sonde.get("batt")
+
+        lines = [f"**Sonde {sonde_id} Update**"]
+        lines.append(f"Lat: {lat} | Lon: {lon} | Alt: {alt_str}")
+        lines.append(f"Speed: {speed_str} | Heading: {heading if heading is not None else '—'}")
+        lines.append(f"Sats: {sats if sats is not None else '—'} | Temp: {temp if temp is not None else '—'}°C | Batt: {batt if batt is not None else '—'} V")
+        uploader = sonde.get("uploader_callsign") or sonde.get("uploader")
+        if uploader:
+            lines.append(f"Uploader: {uploader}")
+        return "\n".join(lines)
 
     @commands.group()
     async def sonde(self, ctx):
