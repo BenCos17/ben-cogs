@@ -170,10 +170,11 @@ class Radiosonde(commands.Cog):
                 for sonde_id in tracked:
                     sonde = sondes_data.get(sonde_id)
                     if not sonde:
-                        await channel.send(f"**{sonde_id}** — No current data (not in latest API)")
+                        e = discord.Embed(title=f"{sonde_id}", description="No current data (not in latest API)", colour=0xDD5555)
+                        await channel.send(embed=e)
                         continue
-                    msg = self._format_sonde_message(sonde_id, sonde)
-                    await channel.send(msg)
+                    embed = self._sonde_to_embed(sonde_id, sonde)
+                    await channel.send(embed=embed)
 
                 self._last_updates[guild.id] = now
                 await asyncio.sleep(1)  # small delay between guilds
@@ -384,7 +385,7 @@ class Radiosonde(commands.Cog):
         # Try exact match by station ID first
         site = sites_data.get(query)
         if site is not None:
-            await ctx.send(self._format_site_message(query, site))
+            await ctx.send(embed=self._site_to_embed(query, site))
             return
         # Search by station name (case-insensitive, substring)
         query_lower = query.lower()
@@ -398,16 +399,17 @@ class Radiosonde(commands.Cog):
             return
         if len(matches) == 1:
             sid, s = matches[0]
-            await ctx.send(self._format_site_message(sid, s))
+            await ctx.send(embed=self._site_to_embed(sid, s))
             return
         # Multiple matches: list them (up to 15)
-        lines = [f"**Multiple sites matching \"{query}\"** — use station ID for one:\n"]
+        desc_lines = [f"Multiple sites matching \"{query}\" — use station ID for one:"]
         for sid, s in sorted(matches, key=lambda x: (x[1].get("station_name") or ""))[:15]:
             name = s.get("station_name", "—")
-            lines.append(f"• `{sid}` — {name}")
+            desc_lines.append(f"`{sid}` — {name}")
         if len(matches) > 15:
-            lines.append(f"*… and {len(matches) - 15} more. Narrow your search.*")
-        await ctx.send("\n".join(lines))
+            desc_lines.append(f"… and {len(matches) - 15} more. Narrow your search.")
+        e = discord.Embed(title=f"Sites matching '{query}'", description="\n".join(desc_lines), colour=0x55AAFF)
+        await ctx.send(embed=e)
 
     @sonde.command()
     async def history(self, ctx, serial: str, limit: int = 25):
@@ -433,15 +435,19 @@ class Radiosonde(commands.Cog):
             return
         # Take last `limit` points
         points = telemetry[-limit:]
-        lines = [f"**Telemetry for {serial} (last {len(points)})**"]
+        desc_lines = []
         for p in reversed(points):
             t = p.get("time") or p.get("timestamp") or p.get("ts") or "—"
             lat = p.get("lat") if p.get("lat") is not None else "—"
             lon = p.get("lon") if p.get("lon") is not None else "—"
             alt = p.get("alt")
             alt_str = f"{alt:.1f} m" if isinstance(alt, (int, float)) else (str(alt) if alt is not None else "—")
-            lines.append(f"{t} — Lat: {lat} | Lon: {lon} | Alt: {alt_str}")
-        await ctx.send("\n".join(lines))
+            desc_lines.append(f"{t} — Lat: {lat} | Lon: {lon} | Alt: {alt_str}")
+        desc = "\n".join(desc_lines)
+        if len(desc) > 3500:
+            desc = desc[:3490] + "\n…output truncated…"
+        e = discord.Embed(title=f"Telemetry for {serial} (last {len(points)})", description=desc, colour=0x55AAFF)
+        await ctx.send(embed=e)
 
     @sonde.command()
     async def nearby(self, ctx, lat: float, lon: float, distance: float = 100.0):
@@ -455,16 +461,17 @@ class Radiosonde(commands.Cog):
         if not isinstance(data, dict) or not data:
             await ctx.send("No sondes found near that location.")
             return
-        lines = [f"**Sondes within {distance} of {lat},{lon}**"]
+        desc_lines = [f"Sondes within {distance} of {lat},{lon}"]
         for sid, s in sorted(data.items(), key=lambda x: x[0])[:25]:
             la = s.get("lat", "—")
             lo = s.get("lon", "—")
             alt = s.get("alt")
             alt_str = f"{alt:.1f} m" if isinstance(alt, (int, float)) else (str(alt) if alt is not None else "—")
-            lines.append(f"`{sid}` — Lat: {la} | Lon: {lo} | Alt: {alt_str}")
+            desc_lines.append(f"`{sid}` — Lat: {la} | Lon: {lo} | Alt: {alt_str}")
         if len(data) > 25:
-            lines.append(f"… and {len(data) - 25} more.")
-        await ctx.send("\n".join(lines))
+            desc_lines.append(f"… and {len(data) - 25} more.")
+        e = discord.Embed(title="Nearby sondes", description="\n".join(desc_lines), colour=0x55AAFF)
+        await ctx.send(embed=e)
 
     @sonde.command()
     async def realtime(self, ctx):
@@ -482,9 +489,10 @@ class Radiosonde(commands.Cog):
         if isinstance(data, dict):
             url = data.get("url") or data.get("endpoint") or data.get("ws")
         if not url:
-            await ctx.send(f"Realtime endpoint: {data}")
+            await ctx.send(embed=discord.Embed(title="Realtime endpoint", description=str(data), colour=0xDD5555))
             return
-        await ctx.send(f"Realtime MQTT-over-WebSocket endpoint: {url}")
+        e = discord.Embed(title="Realtime MQTT-over-WebSocket endpoint", description=url, colour=0x55AAFF)
+        await ctx.send(embed=e)
 
     @sonde.command()
     async def listeners(self, ctx):
@@ -498,22 +506,48 @@ class Radiosonde(commands.Cog):
             await ctx.send("No listener statistics available at the moment.")
             return
         # Present a brief summary of top-level keys
-        lines = ["**Listener statistics (summary)**"]
-        # If known fields exist, show them
+        e = discord.Embed(title="Listener statistics (summary)", colour=0x55AAFF)
         if isinstance(data, dict):
-            # common fields: uploaders, stations, listeners
             if "uploaders" in data:
-                lines.append(f"Uploaders: {len(data.get('uploaders') or [])}")
+                e.add_field(name="Uploaders", value=str(len(data.get("uploaders") or [])), inline=True)
             if "stations" in data:
-                lines.append(f"Stations: {len(data.get('stations') or [])}")
+                e.add_field(name="Stations", value=str(len(data.get("stations") or [])), inline=True)
             if "listeners" in data:
-                lines.append(f"Listeners: {len(data.get('listeners') or [])}")
-            # Fallback: show some top-level numeric values
-            for k, v in list(data.items())[:10]:
+                e.add_field(name="Listeners", value=str(len(data.get("listeners") or [])), inline=True)
+            # show some other top-level values
+            for k, v in list(data.items())[:8]:
                 if k in ("uploaders", "stations", "listeners"):
                     continue
                 if isinstance(v, (int, float, str)):
-                    lines.append(f"{k}: {v}")
+                    e.add_field(name=k, value=str(v), inline=True)
         else:
-            lines.append(str(data))
-        await ctx.send("\n".join(lines))
+            e.description = str(data)
+        await ctx.send(embed=e)
+
+    def _site_to_embed(self, site_id: str, site: dict) -> discord.Embed:
+        name = site.get("station_name", "—")
+        pos = site.get("position")
+        if isinstance(pos, (list, tuple)) and len(pos) >= 2:
+            lon, lat = pos[0], pos[1]
+            pos_str = f"Lat: {lat}, Lon: {lon}"
+        else:
+            pos_str = "—"
+        alt = site.get("alt")
+        alt_str = f"{alt} m" if alt is not None else "—"
+        rs = site.get("rs_types", [])
+        rs_str = ", ".join(str(r) for r in rs[:10]) if rs else "—"
+        if rs and len(rs) > 10:
+            rs_str += f" (+{len(rs) - 10} more)"
+        times = site.get("times", [])
+        times_str = ", ".join(str(t) for t in times[:6]) if times else "—"
+        if times and len(times) > 6:
+            times_str += f" (+{len(times) - 6} more)"
+        notes = site.get("notes", "").strip()
+        e = discord.Embed(title=f"{name} ({site_id})", colour=0x55AAFF)
+        e.add_field(name="Position", value=pos_str, inline=False)
+        e.add_field(name="Altitude", value=alt_str, inline=True)
+        e.add_field(name="Radiosonde types", value=rs_str, inline=True)
+        e.add_field(name="Launch times (UTC)", value=times_str, inline=False)
+        if notes:
+            e.add_field(name="Notes", value=notes[:300] + ("…" if len(notes) > 300 else ""), inline=False)
+        return e
