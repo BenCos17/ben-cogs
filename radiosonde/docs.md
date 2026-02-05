@@ -52,9 +52,23 @@ The `Radiosonde` cog allows you to track radiosondes (weather balloons) using th
   - Default is 300 seconds (5 minutes).
   - Example: `[p]sonde interval 60` (check every minute)
 
-- **`[p]sonde site <station_id>`**
-  - Look up a radiosonde launch site by station ID (from the [SondeHub sites](https://api.v2.sondehub.org/sites) list). Shows name, position, altitude, sonde types, and launch times.
-  - Example: `[p]sonde site 03953` or `[p]sonde site 94767`
+- **`[p]sonde site <query>`**
+  - Look up a radiosonde launch site by **station ID** or by **name** (substring, case-insensitive). Shows name, position, altitude, sonde types, and launch times. If multiple names match, lists them with their IDs so you can pick one.
+  - Examples: `[p]sonde site 10238` | `[p]sonde site Bergen-Hohne` | `[p]sonde site Germany`
+
+- **`[p]sonde history <serial> [limit]`**
+  - Show recent telemetry history for a radiosonde serial. `limit` defaults to 25.
+  - Example: `[p]sonde history U1234567 10`
+
+- **`[p]sonde nearby <lat> <lon> [distance]`**
+  - List sondes near a latitude/longitude within `distance` (units passed directly to the SondeHub API; default `100`).
+  - Example: `[p]sonde nearby 53.3 -6.2 500`
+
+- **`[p]sonde realtime`**
+  - Fetch and display the MQTT-over-WebSocket endpoint returned by `/sondes/websocket` so admins can configure realtime listeners.
+
+- **`[p]sonde listeners`**
+  - Show aggregated listener/uploader statistics from `/listeners/stats`.
 
 ---
 

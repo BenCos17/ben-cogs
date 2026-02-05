@@ -65,6 +65,73 @@ class Radiosonde(commands.Cog):
         except OSError as e:
             return {}, f"Network/OS error: {type(e).__name__}: {e}"
 
+    async def fetch_telemetry(self, serial: str):
+        """Fetch telemetry history for a given sonde serial. Returns (data, error)."""
+        url = f"https://api.v2.sondehub.org/sondes/{serial}"
+        try:
+            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status != 200:
+                    return {}, f"API returned HTTP {resp.status}"
+                data = await resp.json()
+                return data, None
+        except asyncio.TimeoutError:
+            return {}, "Request timed out after 15 seconds"
+        except aiohttp.ClientConnectorError as e:
+            return {}, f"Connection failed: {e.os_error.strerror if e.os_error else str(e)}"
+        except aiohttp.ClientError as e:
+            return {}, f"Request error: {type(e).__name__}: {e}"
+        except OSError as e:
+            return {}, f"Network/OS error: {type(e).__name__}: {e}"
+
+    async def fetch_sondes_near(self, lat: float, lon: float, distance: float = 100.0):
+        """Query sondes by location. `distance` is passed directly to API (units used by API).
+        Returns (data_dict, error)."""
+        url = f"https://api.v2.sondehub.org/sondes?lat={lat}&lon={lon}&distance={distance}"
+        try:
+            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status != 200:
+                    return {}, f"API returned HTTP {resp.status}"
+                data = await resp.json()
+                return data if isinstance(data, dict) else {}, None
+        except asyncio.TimeoutError:
+            return {}, "Request timed out after 15 seconds"
+        except aiohttp.ClientConnectorError as e:
+            return {}, f"Connection failed: {e.os_error.strerror if e.os_error else str(e)}"
+        except aiohttp.ClientError as e:
+            return {}, f"Request error: {type(e).__name__}: {e}"
+        except OSError as e:
+            return {}, f"Network/OS error: {type(e).__name__}: {e}"
+
+    async def fetch_realtime_endpoint(self):
+        """Return the MQTT-over-WebSocket endpoint from /sondes/websocket."""
+        url = "https://api.v2.sondehub.org/sondes/websocket"
+        try:
+            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status != 200:
+                    return None, f"API returned HTTP {resp.status}"
+                data = await resp.json()
+                return data, None
+        except Exception as e:
+            return None, str(e)
+
+    async def fetch_listeners_stats(self):
+        """Fetch aggregated listener/uploader statistics from /listeners/stats."""
+        url = "https://api.v2.sondehub.org/listeners/stats"
+        try:
+            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status != 200:
+                    return {}, f"API returned HTTP {resp.status}"
+                data = await resp.json()
+                return data if isinstance(data, dict) else {}, None
+        except asyncio.TimeoutError:
+            return {}, "Request timed out after 15 seconds"
+        except aiohttp.ClientConnectorError as e:
+            return {}, f"Connection failed: {e.os_error.strerror if e.os_error else str(e)}"
+        except aiohttp.ClientError as e:
+            return {}, f"Request error: {type(e).__name__}: {e}"
+        except OSError as e:
+            return {}, f"Network/OS error: {type(e).__name__}: {e}"
+
     async def update_sondes(self):
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
@@ -262,4 +329,106 @@ class Radiosonde(commands.Cog):
             lines.append(f"• `{sid}` — {name}")
         if len(matches) > 15:
             lines.append(f"*… and {len(matches) - 15} more. Narrow your search.*")
+        await ctx.send("\n".join(lines))
+
+    @sonde.command()
+    async def history(self, ctx, serial: str, limit: int = 25):
+        """Show recent telemetry history for a radiosonde serial."""
+        async with ctx.typing():
+            data, error = await self.fetch_telemetry(serial)
+        if error or not data:
+            detail = f" {error}" if error else ""
+            await ctx.send(f"Could not fetch telemetry for `{serial}`.{detail}")
+            return
+        # Try to find telemetry list in response
+        telemetry = None
+        if isinstance(data, dict):
+            telemetry = data.get("telemetry") or data.get("history") or data.get("data")
+        if telemetry is None and isinstance(data, list):
+            telemetry = data
+        if not telemetry:
+            await ctx.send(f"No telemetry history found for `{serial}`.")
+            return
+        # Take last `limit` points
+        points = telemetry[-limit:]
+        lines = [f"**Telemetry for {serial} (last {len(points)})**"]
+        for p in reversed(points):
+            t = p.get("time") or p.get("timestamp") or p.get("ts") or "—"
+            lat = p.get("lat") if p.get("lat") is not None else "—"
+            lon = p.get("lon") if p.get("lon") is not None else "—"
+            alt = p.get("alt")
+            alt_str = f"{alt:.1f} m" if isinstance(alt, (int, float)) else (str(alt) if alt is not None else "—")
+            lines.append(f"{t} — Lat: {lat} | Lon: {lon} | Alt: {alt_str}")
+        await ctx.send("\n".join(lines))
+
+    @sonde.command()
+    async def nearby(self, ctx, lat: float, lon: float, distance: float = 100.0):
+        """List sondes near a given lat/lon within `distance` (API units)."""
+        async with ctx.typing():
+            data, error = await self.fetch_sondes_near(lat, lon, distance)
+        if error or not data:
+            detail = f" {error}" if error else ""
+            await ctx.send(f"Could not query sondes near location.{detail}")
+            return
+        # data expected as dict keyed by serial
+        if not isinstance(data, dict) or not data:
+            await ctx.send("No sondes found near that location.")
+            return
+        lines = [f"**Sondes within {distance} of {lat},{lon}**"]
+        for sid, s in sorted(data.items(), key=lambda x: x[0])[:25]:
+            la = s.get("lat", "—")
+            lo = s.get("lon", "—")
+            alt = s.get("alt")
+            alt_str = f"{alt:.1f} m" if isinstance(alt, (int, float)) else (str(alt) if alt is not None else "—")
+            lines.append(f"`{sid}` — Lat: {la} | Lon: {lo} | Alt: {alt_str}")
+        if len(data) > 25:
+            lines.append(f"… and {len(data) - 25} more.")
+        await ctx.send("\n".join(lines))
+
+    @sonde.command()
+    async def realtime(self, ctx):
+        """Show the MQTT-over-WebSocket endpoint used for realtime sonde streaming."""
+        async with ctx.typing():
+            data, error = await self.fetch_realtime_endpoint()
+        if error or not data:
+            detail = f" {error}" if error else ""
+            await ctx.send(f"Could not fetch realtime endpoint from API.{detail}")
+            return
+        # Present the returned JSON or common `url` key
+        url = None
+        if isinstance(data, dict):
+            url = data.get("url") or data.get("endpoint") or data.get("ws")
+        if not url:
+            await ctx.send(f"Realtime endpoint: {data}")
+            return
+        await ctx.send(f"Realtime MQTT-over-WebSocket endpoint: {url}")
+
+    @sonde.command()
+    async def listeners(self, ctx):
+        """Show aggregated listener/uploader statistics from SondeHub."""
+        async with ctx.typing():
+            data, error = await self.fetch_listeners_stats()
+        if error or not data:
+            detail = f" {error}" if error else ""
+            await ctx.send(f"Could not fetch listener stats.{detail}")
+            return
+        # Present a brief summary of top-level keys
+        lines = ["**Listener statistics (summary)**"]
+        # If known fields exist, show them
+        if isinstance(data, dict):
+            # common fields: uploaders, stations, listeners
+            if "uploaders" in data:
+                lines.append(f"Uploaders: {len(data.get('uploaders') or [])}")
+            if "stations" in data:
+                lines.append(f"Stations: {len(data.get('stations') or [])}")
+            if "listeners" in data:
+                lines.append(f"Listeners: {len(data.get('listeners') or [])}")
+            # Fallback: show some top-level numeric values
+            for k, v in list(data.items())[:10]:
+                if k in ("uploaders", "stations", "listeners"):
+                    continue
+                if isinstance(v, (int, float, str)):
+                    lines.append(f"{k}: {v}")
+        else:
+            lines.append(str(data))
         await ctx.send("\n".join(lines))
