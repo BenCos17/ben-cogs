@@ -27,11 +27,14 @@ class Radiosonde(commands.Cog):
         asyncio.create_task(self.session.close())
 
     async def fetch_sondes(self):
-        url = "https://api.sondehub.org/sondes/latest.json"
-        async with self.session.get(url) as resp:
-            if resp.status != 200:
-                return []
-            return await resp.json()
+        url = "https://api.v2.sondehub.org/sondes/latest.json"
+        try:
+            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status != 200:
+                    return []
+                return await resp.json()
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
+            return []
 
     async def update_sondes(self):
         await self.bot.wait_until_ready()
@@ -107,7 +110,9 @@ class Radiosonde(commands.Cog):
         async with ctx.typing():
             sondes_data = await self.fetch_sondes()
         if not sondes_data:
-            await ctx.send("Could not fetch sonde data from the API. Try again later.")
+            await ctx.send(
+                "Could not fetch sonde data from the API (unreachable or error). Try again later."
+            )
             return
         by_id = {str(s.get("id")): s for s in sondes_data}
         lines = []

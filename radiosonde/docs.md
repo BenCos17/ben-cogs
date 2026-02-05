@@ -118,7 +118,7 @@ Speed: 5.2 m/s
 
 - **Per-server configuration**: Each server can track different sondes and have different update channels.
 - **Automatic updates**: The bot continuously monitors tracked sondes and sends updates automatically.
-- **API Source**: Uses the [SondeHub API](https://api.sondehub.org/sondes/latest.json) for real-time sonde data.
+- **API Source**: Uses the [SondeHub API](https://api.v2.sondehub.org/sondes/latest.json) for real-time sonde data.
 - **Update frequency**: The bot checks for updates every minute, but only sends messages based on your configured interval.
 - **Minimum interval**: Update intervals must be at least 30 seconds to prevent API abuse.
 
