@@ -46,6 +46,25 @@ class Radiosonde(commands.Cog):
         except OSError as e:
             return {}, f"Network/OS error: {type(e).__name__}: {e}"
 
+    async def fetch_sites(self):
+        """Fetch launch sites data. Returns (data_dict, error_message).
+        data_dict is keyed by station ID. error_message is None on success."""
+        url = "https://api.v2.sondehub.org/sites"
+        try:
+            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status != 200:
+                    return {}, f"API returned HTTP {resp.status}"
+                data = await resp.json()
+                return data if isinstance(data, dict) else {}, None
+        except asyncio.TimeoutError:
+            return {}, "Request timed out after 15 seconds"
+        except aiohttp.ClientConnectorError as e:
+            return {}, f"Connection failed: {e.os_error.strerror if e.os_error else str(e)}"
+        except aiohttp.ClientError as e:
+            return {}, f"Request error: {type(e).__name__}: {e}"
+        except OSError as e:
+            return {}, f"Network/OS error: {type(e).__name__}: {e}"
+
     async def update_sondes(self):
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
@@ -174,3 +193,47 @@ class Radiosonde(commands.Cog):
             return
         await self.config.guild(ctx.guild).update_interval.set(seconds)
         await ctx.send(f"Update interval set to {seconds} seconds.")
+
+    @sonde.command()
+    async def site(self, ctx, station_id: str):
+        """Look up a radiosonde launch site by station ID (e.g. 03953, 94767)."""
+        async with ctx.typing():
+            sites_data, error = await self.fetch_sites()
+        if error or not sites_data:
+            detail = f" {error}" if error else ""
+            await ctx.send(
+                f"Could not fetch sites from the API.{detail} Try again later."
+            )
+            return
+        site = sites_data.get(station_id)
+        if site is None:
+            await ctx.send(f"No site found with station ID `{station_id}`.")
+            return
+        name = site.get("station_name", "—")
+        pos = site.get("position")
+        if isinstance(pos, (list, tuple)) and len(pos) >= 2:
+            lon, lat = pos[0], pos[1]
+            pos_str = f"Lat: {lat}, Lon: {lon}"
+        else:
+            pos_str = "—"
+        alt = site.get("alt")
+        alt_str = f"{alt} m" if alt is not None else "—"
+        rs = site.get("rs_types", [])
+        rs_str = ", ".join(str(r) for r in rs[:10]) if rs else "—"
+        if rs and len(rs) > 10:
+            rs_str += f" (+{len(rs) - 10} more)"
+        times = site.get("times", [])
+        times_str = ", ".join(str(t) for t in times[:6]) if times else "—"
+        if times and len(times) > 6:
+            times_str += f" (+{len(times) - 6} more)"
+        notes = site.get("notes", "").strip()
+        msg = (
+            f"**{name}** (station `{station_id}`)\n"
+            f"Position: {pos_str}\n"
+            f"Altitude: {alt_str}\n"
+            f"Radiosonde types: {rs_str}\n"
+            f"Launch times (UTC): {times_str}"
+        )
+        if notes:
+            msg += f"\n*{notes[:200]}{'…' if len(notes) > 200 else ''}*"
+        await ctx.send(msg)
