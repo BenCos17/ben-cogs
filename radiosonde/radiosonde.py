@@ -4,7 +4,7 @@ from redbot.core import commands, Config, checks
 import aiohttp
 import asyncio
 
-class SondeTracker(commands.Cog):
+class Radiosonde(commands.Cog):
     """Track radiosondes using the SondeHub API."""
 
     def __init__(self, bot):
