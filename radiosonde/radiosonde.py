@@ -7,7 +7,7 @@ from .dashboard import DashboardIntegration
 
 __version__ = "1.0.1"
 
-class Radiosonde(commands.Cog, DashboardIntegration):
+class Radiosonde(DashboardIntegration, commands.Cog):
     """Track radiosondes using the SondeHub API."""
 
     def __init__(self, bot):
