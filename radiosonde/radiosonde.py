@@ -3,14 +3,16 @@ import discord
 from redbot.core import commands, Config, checks
 import aiohttp
 import asyncio
+from .dashboard import DashboardIntegration
 
 __version__ = "1.0.0"
 
-class Radiosonde(commands.Cog):
+class Radiosonde(commands.Cog, DashboardIntegration):
     """Track radiosondes using the SondeHub API."""
 
     def __init__(self, bot):
         self.bot = bot
+        self._radiosonde_cog = self  # For dashboard integration
         self.config = Config.get_conf(
             self, identifier=492089091320446976, force_registration=True
         )
