@@ -194,21 +194,8 @@ class Radiosonde(commands.Cog):
         await self.config.guild(ctx.guild).update_interval.set(seconds)
         await ctx.send(f"Update interval set to {seconds} seconds.")
 
-    @sonde.command()
-    async def site(self, ctx, station_id: str):
-        """Look up a radiosonde launch site by station ID (e.g. 03953, 94767)."""
-        async with ctx.typing():
-            sites_data, error = await self.fetch_sites()
-        if error or not sites_data:
-            detail = f" {error}" if error else ""
-            await ctx.send(
-                f"Could not fetch sites from the API.{detail} Try again later."
-            )
-            return
-        site = sites_data.get(station_id)
-        if site is None:
-            await ctx.send(f"No site found with station ID `{station_id}`.")
-            return
+    def _format_site_message(self, site_id: str, site: dict) -> str:
+        """Build the display message for a single site."""
         name = site.get("station_name", "—")
         pos = site.get("position")
         if isinstance(pos, (list, tuple)) and len(pos) >= 2:
@@ -228,7 +215,7 @@ class Radiosonde(commands.Cog):
             times_str += f" (+{len(times) - 6} more)"
         notes = site.get("notes", "").strip()
         msg = (
-            f"**{name}** (station `{station_id}`)\n"
+            f"**{name}** (station `{site_id}`)\n"
             f"Position: {pos_str}\n"
             f"Altitude: {alt_str}\n"
             f"Radiosonde types: {rs_str}\n"
@@ -236,4 +223,43 @@ class Radiosonde(commands.Cog):
         )
         if notes:
             msg += f"\n*{notes[:200]}{'…' if len(notes) > 200 else ''}*"
-        await ctx.send(msg)
+        return msg
+
+    @sonde.command()
+    async def site(self, ctx, query: str):
+        """Look up a radiosonde launch site by station ID or by name (e.g. 10238, Bergen-Hohne)."""
+        async with ctx.typing():
+            sites_data, error = await self.fetch_sites()
+        if error or not sites_data:
+            detail = f" {error}" if error else ""
+            await ctx.send(
+                f"Could not fetch sites from the API.{detail} Try again later."
+            )
+            return
+        # Try exact match by station ID first
+        site = sites_data.get(query)
+        if site is not None:
+            await ctx.send(self._format_site_message(query, site))
+            return
+        # Search by station name (case-insensitive, substring)
+        query_lower = query.lower()
+        matches = [
+            (sid, s)
+            for sid, s in sites_data.items()
+            if query_lower in (s.get("station_name") or "").lower()
+        ]
+        if not matches:
+            await ctx.send(f"No site found for `{query}` (try station ID or part of the site name).")
+            return
+        if len(matches) == 1:
+            sid, s = matches[0]
+            await ctx.send(self._format_site_message(sid, s))
+            return
+        # Multiple matches: list them (up to 15)
+        lines = [f"**Multiple sites matching \"{query}\"** — use station ID for one:\n"]
+        for sid, s in sorted(matches, key=lambda x: (x[1].get("station_name") or ""))[:15]:
+            name = s.get("station_name", "—")
+            lines.append(f"• `{sid}` — {name}")
+        if len(matches) > 15:
+            lines.append(f"*… and {len(matches) - 15} more. Narrow your search.*")
+        await ctx.send("\n".join(lines))

@@ -52,6 +52,10 @@ The `Radiosonde` cog allows you to track radiosondes (weather balloons) using th
   - Default is 300 seconds (5 minutes).
   - Example: `[p]sonde interval 60` (check every minute)
 
+- **`[p]sonde site <station_id>`**
+  - Look up a radiosonde launch site by station ID (from the [SondeHub sites](https://api.v2.sondehub.org/sites) list). Shows name, position, altitude, sonde types, and launch times.
+  - Example: `[p]sonde site 03953` or `[p]sonde site 94767`
+
 ---
 
 ## Setup Guide
@@ -118,7 +122,9 @@ Speed: 5.2 m/s
 
 - **Per-server configuration**: Each server can track different sondes and have different update channels.
 - **Automatic updates**: The bot continuously monitors tracked sondes and sends updates automatically.
-- **API Source**: Uses the [SondeHub v2 API](https://api.v2.sondehub.org/sondes) for real-time sonde data. See the [API documentation](https://github.com/projecthorus/sondehub-infra/blob/main/swagger.yaml) for details.
+- **API sources**: Uses the [SondeHub v2 API](https://github.com/projecthorus/sondehub-infra/blob/main/swagger.yaml):
+  - [Sondes](https://api.v2.sondehub.org/sondes) — latest sonde telemetry (keyed by serial number).
+  - [Sites](https://api.v2.sondehub.org/sites) — launch sites (keyed by station ID), used by `[p]sonde site`.
 - **Update frequency**: The bot checks for updates every minute, but only sends messages based on your configured interval.
 - **Minimum interval**: Update intervals must be at least 30 seconds to prevent API abuse.
 
