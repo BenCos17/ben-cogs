@@ -5,7 +5,7 @@ import aiohttp
 import asyncio
 from .dashboard import DashboardIntegration
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 class Radiosonde(DashboardIntegration, commands.Cog):
     """Track radiosondes using the SondeHub API."""
@@ -253,6 +253,34 @@ class Radiosonde(DashboardIntegration, commands.Cog):
             await ctx.send("No sondes are being tracked in this server.")
             return
         await ctx.send("Tracked sondes: " + ", ".join(tracked))
+
+    @sonde.command()
+    async def settings(self, ctx):
+        """Show current guild settings."""
+        update_channel_id = await self.config.guild(ctx.guild).update_channel()
+        update_interval = await self.config.guild(ctx.guild).update_interval()
+
+        channel_name = "Not set"
+        if update_channel_id:
+            channel = ctx.guild.get_channel(update_channel_id)
+            channel_name = channel.mention if channel else f"Unknown (ID: {update_channel_id})"
+
+        # Convert seconds to human-readable format
+        def format_interval(seconds):
+            if seconds < 60:
+                return f"{seconds}s"
+            elif seconds < 3600:
+                return f"{seconds // 60}m"
+            elif seconds < 86400:
+                return f"{seconds // 3600}h"
+            else:
+                return f"{seconds // 86400}d"
+
+        e = discord.Embed(title="Radiosonde Guild Settings", colour=0x55AAFF)
+        e.add_field(name="Update Channel", value=channel_name, inline=False)
+        e.add_field(name="Update Interval", value=format_interval(update_interval), inline=True)
+        e.add_field(name="Interval (seconds)", value=str(update_interval), inline=True)
+        await ctx.send(embed=e)
 
     @sonde.command()
     async def status(self, ctx):
