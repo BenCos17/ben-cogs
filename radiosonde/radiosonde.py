@@ -98,6 +98,36 @@ class Radiosonde(commands.Cog):
         await ctx.send("Tracked sondes: " + ", ".join(tracked))
 
     @sonde.command()
+    async def status(self, ctx):
+        """List current status of all tracked sondes (lat, lon, alt, speed)."""
+        tracked = await self.config.guild(ctx.guild).tracked_sondes()
+        if not tracked:
+            await ctx.send("No sondes are being tracked in this server.")
+            return
+        async with ctx.typing():
+            sondes_data = await self.fetch_sondes()
+        if not sondes_data:
+            await ctx.send("Could not fetch sonde data from the API. Try again later.")
+            return
+        by_id = {str(s.get("id")): s for s in sondes_data}
+        lines = []
+        for sonde_id in tracked:
+            s = by_id.get(sonde_id)
+            if s is None:
+                lines.append(f"**{sonde_id}** — No current data (not in latest API)")
+                continue
+            lat = s.get("lat", "—")
+            lon = s.get("lon", "—")
+            alt = s.get("alt")
+            vel = s.get("vel")
+            alt_str = f"{alt:.1f} m" if alt is not None else "—"
+            vel_str = f"{vel:.1f} m/s" if vel is not None else "—"
+            lines.append(
+                f"**{sonde_id}** — Lat: {lat} | Lon: {lon} | Alt: {alt_str} | Speed: {vel_str}"
+            )
+        await ctx.send("**Tracked sondes status**\n" + "\n".join(lines))
+
+    @sonde.command()
     async def setchannel(self, ctx, channel: discord.TextChannel):
         """Set the channel for sonde updates."""
         await self.config.guild(ctx.guild).update_channel.set(channel.id)
