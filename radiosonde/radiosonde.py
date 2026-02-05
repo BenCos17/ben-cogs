@@ -67,21 +67,24 @@ class Radiosonde(commands.Cog):
 
     async def fetch_telemetry(self, serial: str):
         """Fetch telemetry history for a given sonde serial. Returns (data, error)."""
-        url = f"https://api.v2.sondehub.org/sondes/{serial}"
+        # Individual sonde telemetry is served at /sonde/{serial} (singular)
+        url = f"https://api.v2.sondehub.org/sonde/{serial}"
         try:
             async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
                 if resp.status != 200:
-                    return {}, f"API returned HTTP {resp.status}"
+                    if resp.status == 404:
+                        return None, f"Not found (HTTP 404): no telemetry for {serial}"
+                    return None, f"API returned HTTP {resp.status}"
                 data = await resp.json()
                 return data, None
         except asyncio.TimeoutError:
-            return {}, "Request timed out after 15 seconds"
+            return None, "Request timed out after 15 seconds"
         except aiohttp.ClientConnectorError as e:
-            return {}, f"Connection failed: {e.os_error.strerror if e.os_error else str(e)}"
+            return None, f"Connection failed: {e.os_error.strerror if e.os_error else str(e)}"
         except aiohttp.ClientError as e:
-            return {}, f"Request error: {type(e).__name__}: {e}"
+            return None, f"Request error: {type(e).__name__}: {e}"
         except OSError as e:
-            return {}, f"Network/OS error: {type(e).__name__}: {e}"
+            return None, f"Network/OS error: {type(e).__name__}: {e}"
 
     async def fetch_sondes_near(self, lat: float, lon: float, distance: float = 100.0):
         """Query sondes by location. `distance` is passed directly to API (units used by API).
@@ -336,9 +339,13 @@ class Radiosonde(commands.Cog):
         """Show recent telemetry history for a radiosonde serial."""
         async with ctx.typing():
             data, error = await self.fetch_telemetry(serial)
-        if error or not data:
-            detail = f" {error}" if error else ""
-            await ctx.send(f"Could not fetch telemetry for `{serial}`.{detail}")
+        if error:
+            await ctx.send(
+                f"Could not fetch telemetry for `{serial}`: {error}. Check the serial number or try again later."
+            )
+            return
+        if not data:
+            await ctx.send(f"No telemetry found for `{serial}`. It may be expired or never uploaded.")
             return
         # Try to find telemetry list in response
         telemetry = None
@@ -366,9 +373,8 @@ class Radiosonde(commands.Cog):
         """List sondes near a given lat/lon within `distance` (API units)."""
         async with ctx.typing():
             data, error = await self.fetch_sondes_near(lat, lon, distance)
-        if error or not data:
-            detail = f" {error}" if error else ""
-            await ctx.send(f"Could not query sondes near location.{detail}")
+        if error:
+            await ctx.send(f"Could not query sondes near location: {error}. Check parameters or try again later.")
             return
         # data expected as dict keyed by serial
         if not isinstance(data, dict) or not data:
@@ -390,9 +396,11 @@ class Radiosonde(commands.Cog):
         """Show the MQTT-over-WebSocket endpoint used for realtime sonde streaming."""
         async with ctx.typing():
             data, error = await self.fetch_realtime_endpoint()
-        if error or not data:
-            detail = f" {error}" if error else ""
-            await ctx.send(f"Could not fetch realtime endpoint from API.{detail}")
+        if error:
+            await ctx.send(f"Could not fetch realtime endpoint: {error}. Try again later or check API status.")
+            return
+        if not data:
+            await ctx.send("Realtime endpoint returned unexpected data; try again later.")
             return
         # Present the returned JSON or common `url` key
         url = None
@@ -408,9 +416,11 @@ class Radiosonde(commands.Cog):
         """Show aggregated listener/uploader statistics from SondeHub."""
         async with ctx.typing():
             data, error = await self.fetch_listeners_stats()
-        if error or not data:
-            detail = f" {error}" if error else ""
-            await ctx.send(f"Could not fetch listener stats.{detail}")
+        if error:
+            await ctx.send(f"Could not fetch listener stats: {error}. Try again later.")
+            return
+        if not data:
+            await ctx.send("No listener statistics available at the moment.")
             return
         # Present a brief summary of top-level keys
         lines = ["**Listener statistics (summary)**"]
