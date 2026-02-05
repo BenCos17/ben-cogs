@@ -211,7 +211,7 @@ class DashboardIntegration:
             )
             update_interval = wtforms.IntegerField(
                 "Update Interval (seconds)",
-                render_kw={"class": "form-field", "min": "30", "max": "3600"}
+                render_kw={"class": "form-field", "min": "30", "max": "86400"}
             )
             submit = wtforms.SubmitField("Save Settings", render_kw={"class": "form-submit"})
 
@@ -224,10 +224,10 @@ class DashboardIntegration:
                 channel_val = int(settings_form.update_channel.data) if settings_form.update_channel.data else None
                 interval_val = settings_form.update_interval.data or 300
 
-                if interval_val < 30 or interval_val > 3600:
+                if interval_val < 30 or interval_val > 86400:
                     result_html = '''
                     <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
-                        <strong>Error:</strong> Interval must be between 30 and 3600 seconds.
+                        <strong>Error:</strong> Interval must be between 30 seconds and 24 hours (86400 seconds).
                     </div>
                     '''
                 elif channel_val and not guild.get_channel(channel_val):

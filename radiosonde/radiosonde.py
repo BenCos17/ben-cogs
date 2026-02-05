@@ -5,7 +5,7 @@ import aiohttp
 import asyncio
 from .dashboard import DashboardIntegration
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 class Radiosonde(DashboardIntegration, commands.Cog):
     """Track radiosondes using the SondeHub API."""
