@@ -1,0 +1,21 @@
+{
+    "author": [
+        "bencos167"
+    ],
+    "name": "Radiosonde",
+    "short": "Track radiosondes using the SondeHub API",
+    "description": "A Red Discord bot cog that tracks radiosondes using the SondeHub V2 API. Features include tracking specific sondes, querying by location, viewing telemetry history, and listening to live updates.",
+    "install_msg": "Thanks for installing Radiosonde! Use `[p]help sonde` to get started.",
+    "end_user_data_statement": "This cog does not store any end user data.",
+    "requirements": [
+        "aiohttp"
+    ],
+    "tags": [
+        "radiosonde",
+        "tracking",
+        "api",
+        "sondehub"
+    ],
+    "hidden": false,
+    "disabled": false
+}

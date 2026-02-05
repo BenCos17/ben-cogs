@@ -4,6 +4,8 @@ from redbot.core import commands, Config, checks
 import aiohttp
 import asyncio
 
+__version__ = "1.0.0"
+
 class Radiosonde(commands.Cog):
     """Track radiosondes using the SondeHub API."""
 
@@ -551,3 +553,9 @@ class Radiosonde(commands.Cog):
         if notes:
             e.add_field(name="Notes", value=notes[:300] + ("…" if len(notes) > 300 else ""), inline=False)
         return e
+    @sonde.command()
+    async def version(self, ctx):
+        """Show the cog version."""
+        e = discord.Embed(title="Radiosonde Cog", description=f"Version {__version__}", colour=0x55AAFF)
+        e.add_field(name="API", value="SondeHub V2", inline=False)
+        await ctx.send(embed=e)
