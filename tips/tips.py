@@ -263,7 +263,7 @@ class Tips(commands.Cog):
         await ctx.send(embed=embed, view=view)
 
     async def cog_load(self) -> None:
-        """Load values from config into runtime attributes."""
+        """Load values from config into runtime attributes and merge defaults."""
         try:
             # Refresh runtime values from config
             self.tip_title = await self.config.tip_title()
@@ -271,8 +271,26 @@ class Tips(commands.Cog):
             color_map = {"blue": discord.Color.blue(), "red": discord.Color.red(), "green": discord.Color.green()}
             self.tip_color = color_map.get(color_name, discord.Color.blue())
             self.tips = await self.config.tips()
+
+            # Merge new defaults safely
+            await self._force_merge_defaults()
         except Exception:
             pass
+
+    async def _force_merge_defaults(self):
+        """Add any missing default tips to the config without overwriting existing ones."""
+        tips = await self.config.tips()
+        changed = False
+
+        for tip in self.tips:
+            if tip not in tips:
+                tips.append(tip)
+                changed = True
+
+        if changed:
+            await self.config.tips.set(tips)
+
+        self.tips = tips
 
     async def _get_effective_cooldown(self, user: discord.User, guild: Optional[discord.Guild]) -> int:
         """Resolve cooldown with priority: user -> guild -> global."""
@@ -296,6 +314,7 @@ class Tips(commands.Cog):
             return int(global_cd)
         except Exception:
             return 0
+
 
     @commands.command()
     async def setmycooldown(self, ctx, seconds: int):
@@ -343,18 +362,3 @@ class Tips(commands.Cog):
 
         out = "\n".join(f"{i}: {t}" for i, t in enumerate(tips))
         await ctx.send(f"```{out}```")
-
-
-async def _force_merge_defaults(self):
-    tips = await self.config.tips()
-    changed = False
-
-    for tip in DEFAULT_TIPS:
-        if tip not in tips:
-            tips.append(tip)
-            changed = True
-
-    if changed:
-        await self.config.tips.set(tips)
-
-    self.tips = tips
