@@ -111,8 +111,9 @@ class Tips(commands.Cog):
             "tip_color": "blue",
             "tip_title": "💡 Random Tip",
             "tips": self.tips,
+            "post_on_command": True,
         }
-        default_guild = {"cooldown": None}
+        default_guild = {"cooldown": None, "post_on_command": None}
         default_user = {"cooldown": None}
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
@@ -156,6 +157,55 @@ class Tips(commands.Cog):
             color=self.tip_color,
         )
         await ctx.send(embed=embed)
+
+    async def on_command(self, ctx):
+        """Listener: when any command is run, optionally post a tip to the same channel.
+
+        Respects guild/global `post_on_command` setting and the same cooldown resolution.
+        """
+        # Ignore commands from bots or from this cog to avoid recursion
+        if ctx.author.bot:
+            return
+        if ctx.cog and getattr(ctx.cog, "__class__", None) is not None and ctx.cog.qualified_name == getattr(self, "qualified_name", "Tips"):
+            return
+
+        # Decide whether we should post for this context
+        should = await self._should_post_on_command(ctx.guild)
+        if not should:
+            return
+
+        # Use the same cooldown rules and attempt to post
+        effective_cd = await self._get_effective_cooldown(ctx.author, ctx.guild)
+        user_id = ctx.author.id
+        current_time = asyncio.get_event_loop().time()
+        key = (user_id, ctx.guild.id if ctx.guild else None)
+        last = self.last_tip_time.get(key, 0)
+        if current_time - last < (effective_cd or 0):
+            return
+
+        # Send a tip
+        random_tip = random.choice(self.tips) if self.tips else None
+        if not random_tip:
+            return
+        embed = discord.Embed(title=self.tip_title, description=random_tip, color=self.tip_color)
+        await ctx.channel.send(embed=embed)
+        self.last_tip_time[key] = current_time
+
+    async def _should_post_on_command(self, guild: Optional[discord.Guild]) -> bool:
+        """Resolve whether to post a tip when a command runs (guild override -> global)."""
+        try:
+            if guild is not None:
+                guild_val = await self.config.guild(guild).post_on_command()
+            else:
+                guild_val = None
+        except Exception:
+            guild_val = None
+        if guild_val is not None:
+            return bool(guild_val)
+        try:
+            return bool(await self.config.post_on_command())
+        except Exception:
+            return False
 
     @checks.is_owner()
     @commands.command()
