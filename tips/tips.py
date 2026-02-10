@@ -332,14 +332,14 @@ class Tips(commands.Cog):
         await ctx.send("✅ Server tip cooldown override cleared.")
 
 
-@checks.is_owner()
-@commands.command()
-async def listtips(self, ctx):
-    """List all current tips stored in config."""
-    tips = await self.config.tips()
-    if not tips:
-        await ctx.send("No tips stored.")
-        return
+    @checks.is_owner()
+    @commands.command()
+    async def listtips(self, ctx):
+        """List all current tips stored in config."""
+        tips = await self.config.tips()
+        if not tips:
+            await ctx.send("No tips stored.")
+            return
 
-    out = "\n".join(f"{i}: {t}" for i, t in enumerate(tips))
-    await ctx.send(f"```{out}```")
+        out = "\n".join(f"{i}: {t}" for i, t in enumerate(tips))
+        await ctx.send(f"```{out}```")
