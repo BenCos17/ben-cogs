@@ -1,0 +1,17 @@
+{
+    "author": [
+        "bencos18"
+    ],
+    "install_msg": "Thank you for installing the tips cog. Use `[p]help Tips` to see available commands. For support, message me on Discord (bencos18) or open a GitHub issue.",
+    "short": "Tips cog for redbot to show random tips when a command is ran.",
+    "description": "Tips cog for redbot to show random tips when a command is ran..",
+    "requirements": [],
+    "tags": [
+        "server",
+        "tools",
+        "tips"
+    ],
+    "min_bot_version": "3.4.0",
+    "end_user_data_statement": "",
+    "type": "COG"
+}
