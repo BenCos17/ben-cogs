@@ -100,8 +100,8 @@ class Tips(commands.Cog):
         self.tips = [
             "Tip 1: Use `help` command to see all available commands!",
             "Tip 2: Use reactions or buttons to interact with bot messages.",
-            "Tip 3: Commands are case-insensitive.",
-            "Tip 4: You can use prefixes to customize your experience.",
+            "Tip 3: Commands are case sensitive.",
+            "Tip 4: You can use prefixes to customize your experience ",
         ]
         self.last_tip_time = {}
         # Config setup
@@ -278,19 +278,26 @@ class Tips(commands.Cog):
             pass
 
     async def _force_merge_defaults(self):
-        """Add any missing default tips to the config without overwriting existing ones."""
-        tips = await self.config.tips()
+        """Ensure default tips are present and remove old ones."""
+        current_tips = await self.config.tips()
         changed = False
 
+        # Add missing defaults
         for tip in self.tips:
-            if tip not in tips:
-                tips.append(tip)
+            if tip not in current_tips:
+                current_tips.append(tip)
+                changed = True
+
+        # Remove tips that are no longer in DEFAULT_TIPS
+        for tip in list(current_tips):
+            if tip not in self.tips:
+                current_tips.remove(tip)
                 changed = True
 
         if changed:
-            await self.config.tips.set(tips)
+            await self.config.tips.set(current_tips)
 
-        self.tips = tips
+        self.tips = current_tips
 
     async def _get_effective_cooldown(self, user: discord.User, guild: Optional[discord.Guild]) -> int:
         """Resolve cooldown with priority: user -> guild -> global."""
