@@ -195,7 +195,6 @@ class Tips(commands.Cog):
         embed = discord.Embed(description=random_tip, color=self.tip_color)
         await ctx.channel.send(embed=embed)
         self.last_tip_time[key] = current_time
-        self.last_tip_time[key] = current_time
 
     async def _should_post_on_command(self, guild: Optional[discord.Guild]) -> bool:
         """Resolve whether to post a tip when a command runs (guild override -> global)."""
@@ -333,3 +332,14 @@ class Tips(commands.Cog):
         await ctx.send("✅ Server tip cooldown override cleared.")
 
 
+@checks.is_owner()
+@commands.command()
+async def listtips(self, ctx):
+    """List all current tips stored in config."""
+    tips = await self.config.tips()
+    if not tips:
+        await ctx.send("No tips stored.")
+        return
+
+    out = "\n".join(f"{i}: {t}" for i, t in enumerate(tips))
+    await ctx.send(f"```{out}```")
