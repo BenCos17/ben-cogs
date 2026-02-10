@@ -2,6 +2,7 @@ import discord
 from redbot.core import commands, checks, Config
 import asyncio
 import random
+from typing import Optional
 
 
 class TipSettingsView(discord.ui.View):
@@ -111,7 +112,11 @@ class Tips(commands.Cog):
             "tip_title": "💡 Random Tip",
             "tips": self.tips,
         }
+        default_guild = {"cooldown": None}
+        default_user = {"cooldown": None}
         self.config.register_global(**default_global)
+        self.config.register_guild(**default_guild)
+        self.config.register_user(**default_user)
 
         # Runtime values (will be loaded from config in cog_load)
         self.cooldown = 60
@@ -123,24 +128,26 @@ class Tips(commands.Cog):
         """Get a random tip."""
         # Refresh runtime values from config
         try:
-            self.cooldown = await self.config.cooldown()
+            # Refresh runtime values from config (global values and tips list)
+            self.tip_title = await self.config.tip_title()
             color_name = await self.config.tip_color()
             color_map = {"blue": discord.Color.blue(), "red": discord.Color.red(), "green": discord.Color.green()}
             self.tip_color = color_map.get(color_name, discord.Color.blue())
-            self.tip_title = await self.config.tip_title()
             self.tips = await self.config.tips()
         except Exception:
             pass
         user_id = ctx.author.id
         current_time = asyncio.get_event_loop().time()
+        # Determine effective cooldown (user -> guild -> global)
+        effective_cd = await self._get_effective_cooldown(ctx.author, ctx.guild)
+        key = (user_id, ctx.guild.id if ctx.guild else None)
 
-        # Check if user has requested a tip recently (cooldown: 60 seconds)
-        if user_id in self.last_tip_time:
-            if current_time - self.last_tip_time[user_id] < self.cooldown:
-                await ctx.send("You can only get a tip once per minute!")
-                return
+        last = self.last_tip_time.get(key, 0)
+        if current_time - last < (effective_cd or 0):
+            await ctx.send(f"You can only get a tip once every {effective_cd} seconds.")
+            return
 
-        self.last_tip_time[user_id] = current_time
+        self.last_tip_time[key] = current_time
         random_tip = random.choice(self.tips) if self.tips else "No tips available."
 
         embed = discord.Embed(
@@ -187,14 +194,71 @@ class Tips(commands.Cog):
     async def cog_load(self) -> None:
         """Load values from config into runtime attributes."""
         try:
-            self.cooldown = await self.config.cooldown()
+            # Refresh runtime values from config
+            self.tip_title = await self.config.tip_title()
             color_name = await self.config.tip_color()
             color_map = {"blue": discord.Color.blue(), "red": discord.Color.red(), "green": discord.Color.green()}
             self.tip_color = color_map.get(color_name, discord.Color.blue())
-            self.tip_title = await self.config.tip_title()
             self.tips = await self.config.tips()
         except Exception:
             pass
+
+    async def _get_effective_cooldown(self, user: discord.User, guild: Optional[discord.Guild]) -> int:
+        """Resolve cooldown with priority: user -> guild -> global."""
+        try:
+            user_cd = await self.config.user(user).cooldown()
+        except Exception:
+            user_cd = None
+        if user_cd is not None:
+            return int(user_cd)
+        try:
+            if guild:
+                guild_cd = await self.config.guild(guild).cooldown()
+            else:
+                guild_cd = None
+        except Exception:
+            guild_cd = None
+        if guild_cd is not None:
+            return int(guild_cd)
+        try:
+            global_cd = await self.config.cooldown()
+            return int(global_cd)
+        except Exception:
+            return 0
+
+    @commands.command()
+    async def setmycooldown(self, ctx, seconds: int):
+        """Set a personal cooldown (affects only you across servers)."""
+        if seconds < 0:
+            await ctx.send("Cooldown cannot be negative.")
+            return
+        await self.config.user(ctx.author).cooldown.set(seconds)
+        await ctx.send(f"✅ Your personal tip cooldown is now {seconds} seconds.")
+
+    @commands.command()
+    async def clearmycooldown(self, ctx):
+        """Clear your personal cooldown override."""
+        await self.config.user(ctx.author).cooldown.set(None)
+        await ctx.send("✅ Your personal tip cooldown override has been cleared.")
+
+    @commands.admin_or_permissions(manage_guild=True)
+    @commands.guild_only()
+    @commands.command()
+    async def setguildcooldown(self, ctx, seconds: int):
+        """Set a guild-wide cooldown (affects all users in this server)."""
+        if seconds < 0:
+            await ctx.send("Cooldown cannot be negative.")
+            return
+        await self.config.guild(ctx.guild).cooldown.set(seconds)
+        await ctx.send(f"✅ Server tip cooldown set to {seconds} seconds.")
+
+    @commands.admin_or_permissions(manage_guild=True)
+    @commands.guild_only()
+    @commands.command()
+    async def clearguildcooldown(self, ctx):
+        """Clear the guild-wide cooldown override."""
+        await self.config.guild(ctx.guild).cooldown.set(None)
+        await ctx.send("✅ Server tip cooldown override cleared.")
 
 
 async def setup(bot):
