@@ -22,10 +22,9 @@ A small Red cog that posts random tips and provides an interactive button-based 
   - Usage: `[prefix]removetip 2`
   - Removes the tip at the given zero-based index from the saved list.
 
-- `tipconfig` (owner-only)
-  - Usage: `[prefix]tipconfig`
+ `tipset` (owner-only)
+  - Usage: `[prefix]tipset`
   - Opens an interactive embed with buttons for configuring cooldown, color, title, and closing the menu.
-
 **Button UI behaviour**
 
 - Only the user who invoked `tipconfig` may interact with the buttons.

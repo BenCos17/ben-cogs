@@ -158,6 +158,7 @@ class Tips(commands.Cog):
         )
         await ctx.send(embed=embed)
 
+    @commands.Cog.listener()
     async def on_command(self, ctx):
         """Listener: when any command is run, optionally post a tip to the same channel.
 
@@ -244,7 +245,9 @@ class Tips(commands.Cog):
 
     @checks.is_owner()
     @commands.command()
-    async def tipconfig(self, ctx):
+    @checks.is_owner()
+    @commands.command(name="tipset")
+    async def tipset(self, ctx):
         """Open a button-style settings menu for tips."""
         view = TipSettingsView(self, ctx.author.id)
         embed = discord.Embed(
