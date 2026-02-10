@@ -244,8 +244,6 @@ class Tips(commands.Cog):
             await ctx.send("Invalid tip index.")
 
     @checks.is_owner()
-    @commands.command()
-    @checks.is_owner()
     @commands.command(name="tipset")
     async def tipset(self, ctx):
         """Open a button-style settings menu for tips."""
