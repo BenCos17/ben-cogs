@@ -343,3 +343,18 @@ class Tips(commands.Cog):
 
         out = "\n".join(f"{i}: {t}" for i, t in enumerate(tips))
         await ctx.send(f"```{out}```")
+
+
+async def _force_merge_defaults(self):
+    tips = await self.config.tips()
+    changed = False
+
+    for tip in DEFAULT_TIPS:
+        if tip not in tips:
+            tips.append(tip)
+            changed = True
+
+    if changed:
+        await self.config.tips.set(tips)
+
+    self.tips = tips
