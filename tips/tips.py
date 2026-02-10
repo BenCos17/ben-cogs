@@ -1,5 +1,5 @@
 import discord
-from redbot.core import commands, checks
+from redbot.core import commands, checks, Config
 import asyncio
 import random
 
@@ -35,6 +35,7 @@ class TipSettingsView(discord.ui.View):
             msg = await self.cog.bot.wait_for("message", check=check, timeout=60)
             try:
                 self.cog.cooldown = int(msg.content)
+                await self.cog.config.cooldown.set(self.cog.cooldown)
                 await interaction.followup.send(f"✅ Cooldown set to {msg.content} seconds.", ephemeral=True)
                 if interaction.message is not None:
                     await interaction.message.edit(embed=self.build_embed())
@@ -58,6 +59,7 @@ class TipSettingsView(discord.ui.View):
             val = msg.content.lower()
             if val in color_map:
                 self.cog.tip_color = color_map[val]
+                await self.cog.config.tip_color.set(val)
                 await interaction.followup.send(f"✅ Color set to {val}.", ephemeral=True)
                 if interaction.message is not None:
                     await interaction.message.edit(embed=self.build_embed())
@@ -76,6 +78,7 @@ class TipSettingsView(discord.ui.View):
         try:
             msg = await self.cog.bot.wait_for("message", check=check, timeout=120)
             self.cog.tip_title = msg.content
+            await self.cog.config.tip_title.set(msg.content)
             await interaction.followup.send(f"✅ Title set to {msg.content}.", ephemeral=True)
             if interaction.message is not None:
                 await interaction.message.edit(embed=self.build_embed())
@@ -96,10 +99,21 @@ class Tips(commands.Cog):
         self.tips = [
             "Tip 1: Use `help` command to see all available commands!",
             "Tip 2: Use reactions or buttons to interact with bot messages.",
-            "Tip 3: Commands are case sensitive.",
-            "Tip 4: You can use prefixes to customise your experience.",
+            "Tip 3: Commands are case-insensitive.",
+            "Tip 4: You can use prefixes to customize your experience.",
         ]
         self.last_tip_time = {}
+        # Config setup
+        self.config = Config.get_conf(self, identifier=492089091320446976)
+        default_global = {
+            "cooldown": 60,
+            "tip_color": "blue",
+            "tip_title": "💡 Random Tip",
+            "tips": self.tips,
+        }
+        self.config.register_global(**default_global)
+
+        # Runtime values (will be loaded from config in cog_load)
         self.cooldown = 60
         self.tip_color = discord.Color.blue()
         self.tip_title = "💡 Random Tip"
@@ -107,6 +121,16 @@ class Tips(commands.Cog):
     @commands.command()
     async def tip(self, ctx):
         """Get a random tip."""
+        # Refresh runtime values from config
+        try:
+            self.cooldown = await self.config.cooldown()
+            color_name = await self.config.tip_color()
+            color_map = {"blue": discord.Color.blue(), "red": discord.Color.red(), "green": discord.Color.green()}
+            self.tip_color = color_map.get(color_name, discord.Color.blue())
+            self.tip_title = await self.config.tip_title()
+            self.tips = await self.config.tips()
+        except Exception:
+            pass
         user_id = ctx.author.id
         current_time = asyncio.get_event_loop().time()
 
@@ -117,12 +141,12 @@ class Tips(commands.Cog):
                 return
 
         self.last_tip_time[user_id] = current_time
-        random_tip = random.choice(self.tips)
-        
+        random_tip = random.choice(self.tips) if self.tips else "No tips available."
+
         embed = discord.Embed(
-            title="💡 Random Tip",
+            title=self.tip_title,
             description=random_tip,
-            color=discord.Color.blue()
+            color=self.tip_color,
         )
         await ctx.send(embed=embed)
 
@@ -131,6 +155,7 @@ class Tips(commands.Cog):
     async def addtip(self, ctx, *, tip: str):
         """Add a new tip to the list."""
         self.tips.append(tip)
+        await self.config.tips.set(self.tips)
         await ctx.send(f"✅ Tip added! Total tips: {len(self.tips)}")
 
     @checks.is_owner()
@@ -139,6 +164,7 @@ class Tips(commands.Cog):
         """Remove a tip by index."""
         if 0 <= index < len(self.tips):
             removed = self.tips.pop(index)
+            await self.config.tips.set(self.tips)
             await ctx.send(f"✅ Tip removed: {removed}")
         else:
             await ctx.send("Invalid tip index.")
@@ -157,6 +183,18 @@ class Tips(commands.Cog):
         embed.add_field(name="Color", value=str(self.tip_color), inline=False)
         embed.add_field(name="Total tips", value=str(len(self.tips)), inline=False)
         await ctx.send(embed=embed, view=view)
+
+    async def cog_load(self) -> None:
+        """Load values from config into runtime attributes."""
+        try:
+            self.cooldown = await self.config.cooldown()
+            color_name = await self.config.tip_color()
+            color_map = {"blue": discord.Color.blue(), "red": discord.Color.red(), "green": discord.Color.green()}
+            self.tip_color = color_map.get(color_name, discord.Color.blue())
+            self.tip_title = await self.config.tip_title()
+            self.tips = await self.config.tips()
+        except Exception:
+            pass
 
 
 async def setup(bot):
