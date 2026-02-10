@@ -207,6 +207,22 @@ class Tips(commands.Cog):
         except Exception:
             return False
 
+    @commands.admin_or_permissions(manage_guild=True)
+    @commands.guild_only()
+    @commands.command()
+    async def disablepostoncommand(self, ctx):
+        """Disable posting tips automatically when commands are run in this server."""
+        await self.config.guild(ctx.guild).post_on_command.set(False)
+        await ctx.send("✅ Disabled automatic tip posts on commands for this server.")
+
+    @commands.admin_or_permissions(manage_guild=True)
+    @commands.guild_only()
+    @commands.command()
+    async def enablepostoncommand(self, ctx):
+        """Enable posting tips automatically when commands are run in this server."""
+        await self.config.guild(ctx.guild).post_on_command.set(True)
+        await ctx.send("✅ Enabled automatic tip posts on commands for this server.")
+
     @checks.is_owner()
     @commands.command()
     async def addtip(self, ctx, *, tip: str):
