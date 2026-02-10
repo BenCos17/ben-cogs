@@ -111,7 +111,7 @@ class Tips(commands.Cog):
             "tip_color": "blue",
             "tip_title": "💡 Random Tip",
             "tips": self.tips,
-            "post_on_command": True,
+            "post_on_command": False,
         }
         default_guild = {"cooldown": None, "post_on_command": None}
         default_user = {"cooldown": None}
@@ -151,12 +151,8 @@ class Tips(commands.Cog):
         self.last_tip_time[key] = current_time
         random_tip = random.choice(self.tips) if self.tips else "No tips available."
 
-        embed = discord.Embed(
-            title=self.tip_title,
-            description=random_tip,
-            color=self.tip_color,
-        )
-        await ctx.send(embed=embed)
+        # Always post compact plain-text tips
+        await ctx.send(f"💡 {random_tip}")
 
     @commands.Cog.listener()
     async def on_command(self, ctx):
@@ -188,8 +184,17 @@ class Tips(commands.Cog):
         random_tip = random.choice(self.tips) if self.tips else None
         if not random_tip:
             return
-        embed = discord.Embed(title=self.tip_title, description=random_tip, color=self.tip_color)
+
+        # Tiny tip marker: prefix a tip with '-#' to post a compact plain-text tip.
+        if isinstance(random_tip, str) and random_tip.startswith("-#"):
+            content = random_tip[2:].strip()
+            await ctx.channel.send(f"💡 {content}")
+            self.last_tip_time[key] = current_time
+            return
+
+        embed = discord.Embed(description=random_tip, color=self.tip_color)
         await ctx.channel.send(embed=embed)
+        self.last_tip_time[key] = current_time
         self.last_tip_time[key] = current_time
 
     async def _should_post_on_command(self, guild: Optional[discord.Guild]) -> bool:
@@ -328,5 +333,3 @@ class Tips(commands.Cog):
         await ctx.send("✅ Server tip cooldown override cleared.")
 
 
-async def setup(bot):
-    await bot.add_cog(Tips(bot))
