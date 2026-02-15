@@ -5,7 +5,7 @@ Helper utilities for SkySearch cog
 import json
 import aiohttp
 import discord
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse, parse_qs
 
 
 class HelperUtils:
@@ -414,6 +414,53 @@ class HelperUtils:
 
 
     # for feeder link command stuff
+    def _globe_feed_url(self, ids: list, param: str = "uuid") -> str:
+        """
+        Build a globe.airplanes.live URL for one or more feed UUIDs.
+        Supports both ?uuid= and ?feed= so either param works for feed info.
+        """
+        if not ids:
+            return "https://globe.airplanes.live/"
+        # IDs are 16-char hex (no hyphens)
+        value = ",".join(ids) if len(ids) > 1 else ids[0]
+        return f"https://globe.airplanes.live/?{param}={value}"
+
+    def _normalize_globe_feed_link(self, url: str) -> str:
+        """
+        Normalize a globe.airplanes.live URL so both ?uuid and ?feed work.
+        If the URL has ?feed= or ?uuid=, keep it as-is (both work on the site).
+        """
+        if not url or "globe.airplanes.live" not in url:
+            return url
+        parsed = urlparse(url)
+        qs = parse_qs(parsed.query)
+        # Prefer uuid for multi-feed, otherwise keep existing param
+        feed_val = qs.get("feed", qs.get("uuid"))
+        if feed_val:
+            # Keep first param we found so link format is preserved
+            return url
+        return url
+
+    def get_feed_map_link(self, json_data: dict) -> str | None:
+        """
+        Get map link for feeder info. Uses map_link from JSON if present
+        (supports both ?uuid= and ?feed=). Otherwise builds from beast_clients.
+        """
+        map_link = json_data.get("map_link") if json_data else None
+        if map_link:
+            return self._normalize_globe_feed_link(map_link)
+        beast_clients = json_data.get("beast_clients", []) if json_data else []
+        ids = []
+        for client in beast_clients:
+            uuid_val = client.get("uuid") or ""
+            if uuid_val:
+                feed_id = uuid_val.replace("-", "")[:16]
+                if feed_id and feed_id not in ids:
+                    ids.append(feed_id)
+        if ids:
+            return self._globe_feed_url(ids, param="uuid")
+        return None
+
     async def parse_json_input(self, json_input: str):
         """
         Parse JSON input from either a URL or direct JSON text.
@@ -464,8 +511,8 @@ class HelperUtils:
         host = json_data.get('host', 'Unknown')
         embed.add_field(name="Host", value=host, inline=True)
         
-        # Extract map link if available
-        map_link = json_data.get('map_link')
+        # Extract map link if available (?uuid and ?feed both supported)
+        map_link = self.get_feed_map_link(json_data)
         if map_link:
             embed.add_field(name="Map Link", value=f"[View on Globe]({map_link})", inline=False)
             embed.url = map_link
@@ -521,8 +568,8 @@ class HelperUtils:
         """
         view = discord.ui.View()
         
-        # Add main map link button
-        map_link = json_data.get('map_link') if json_data else None
+        # Add main map link button (?uuid and ?feed both supported)
+        map_link = self.get_feed_map_link(json_data) if json_data else None
         if map_link:
             view.add_item(discord.ui.Button(
                 label="View on Globe", 
@@ -531,16 +578,15 @@ class HelperUtils:
                 style=discord.ButtonStyle.link
             ))
         
-        # Add individual Beast client feed buttons
+        # Add individual Beast client feed buttons (use ?feed= for single; ?uuid= also works)
         if json_data:
             beast_clients = json_data.get('beast_clients', [])
             for i, client in enumerate(beast_clients[:5]):  # Limit to 5 buttons
                 uuid = client.get('uuid', '')
                 if uuid:
-                    # Create individual feed URL - use first 16 characters of UUID without hyphens
-                    # This matches the pattern from the map_link in the JSON
+                    # Create individual feed URL - both ?feed= and ?uuid= work on globe
                     feed_uuid = uuid.replace('-', '')[:16]
-                    feed_url = f"https://globe.airplanes.live/?feed={feed_uuid}"
+                    feed_url = self._globe_feed_url([feed_uuid], param="feed")
                     
                     # Create feed name using first part of UUID
                     # Use first 8 characters of UUID for a clean, short identifier
