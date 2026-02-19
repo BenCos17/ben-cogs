@@ -1276,38 +1276,33 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
         if message.guild is None:
             return
-        
+
+        content = message.content.strip()
+        # Fastest check first: does message look like ICAO? (sync, no I/O)
+        # Most messages fail this - skip all async work for non-matches
+        if not self._icao_pattern.match(content):
+            return
+
         guild_id = message.guild.id
-        
+
         # Fast cache check - avoid expensive config reads if auto_icao is disabled
-        if guild_id in self._auto_icao_enabled_guilds:
-            # Guild is known to have auto_icao enabled - proceed with processing
-            # Double-check config in case cache is stale (should be rare)
-            auto_icao = await self.config.guild(message.guild).auto_icao()
-            if not auto_icao:
-                # Update cache if it was stale
-                self._auto_icao_enabled_guilds.discard(guild_id)
-                return
-        elif guild_id in self._auto_icao_checked_guilds:
+        if guild_id in self._auto_icao_checked_guilds:
             # Guild is known to have auto_icao disabled - fast return
             return
-        else:
+        if guild_id not in self._auto_icao_enabled_guilds:
             # First time seeing this guild - do one-time config check
             auto_icao = await self.config.guild(message.guild).auto_icao()
             self._auto_icao_checked_guilds.add(guild_id)
-            if auto_icao:
-                self._auto_icao_enabled_guilds.add(guild_id)
-            else:
+            if not auto_icao:
                 return
+            self._auto_icao_enabled_guilds.add(guild_id)
+        # else: guild in _auto_icao_enabled_guilds - trust cache (updated on config change)
 
         # Ensure locales for non-command listener (only if auto_icao is enabled)
         await set_contextual_locales_from_guild(self.bot, message.guild)
 
-        content = message.content
-        # Use pre-compiled pattern
-        if self._icao_pattern.match(content):
-            ctx = await self.bot.get_context(message)
-            await self.aircraft_commands.aircraft_by_icao(ctx, content)
+        ctx = await self.bot.get_context(message)
+        await self.aircraft_commands.aircraft_by_icao(ctx, content)
         
     @commands.is_owner()
     @aircraft_group.command(name="simulateemergency")
