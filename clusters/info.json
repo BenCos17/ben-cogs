@@ -1,7 +1,13 @@
 {
   "name": "Clusters",
-  "author": "bencos17",
+  "author": [
+    "bencos17"
+  ],
   "description": "Shows dynamic Marvel-themed cluster statuses for your bot.",
   "requirements": [],
-  "tags": ["clusters", "shards", "status"]
+  "tags": [
+    "clusters",
+    "shards",
+    "status"
+  ]
 }
