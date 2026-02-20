@@ -567,7 +567,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Command center for airport related commands"""
         embed = discord.Embed(title="Airport Commands", description="Available airport-related commands:", color=0xfffffe)
         embed.add_field(name="Information", value="`info` - Get airport information by ICAO/IATA code", inline=False)
-        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast", inline=False)
+        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast\n`faastatus [code]` - Get FAA National Airspace Status (delays/closures)", inline=False)
         embed.add_field(name="Detailed Help", value="Use `*help airport` for detailed command information", inline=False)
         await ctx.send(embed=embed)
 
@@ -591,6 +591,11 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def airport_forecast(self, ctx, code: str):
         """Get the weather for an airport by ICAO or IATA code (US airports only)."""
         await self.airport_commands.forecast(ctx, code)
+
+    @airport_group.command(name='faastatus', aliases=['faa'], help='Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code.')
+    async def airport_faa_status(self, ctx, airport_code: str = None):
+        """Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code (e.g., SAN, LAS)."""
+        await self.airport_commands.faa_status(ctx, airport_code)
 
     @commands.is_owner()
     @airport_group.command(name="setowmkey")

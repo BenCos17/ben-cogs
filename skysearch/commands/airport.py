@@ -5,10 +5,13 @@ Airport commands for SkySearch cog
 import discord
 import aiohttp
 import asyncio
+import re
+from datetime import datetime
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
+from ..utils.xml_parser import XMLParser
 from redbot.core import commands
 from redbot.core.i18n import Translator, cog_i18n
 
@@ -24,6 +27,7 @@ class AirportCommands:
         self.cog = cog
         self.api = APIManager(cog)
         self.helpers = HelperUtils(cog)
+        self.xml_parser = XMLParser()
     
     async def airport_info(self, ctx, airport_code: str):
         """Get airport information by ICAO or IATA code."""
@@ -378,4 +382,89 @@ class AirportCommands:
     async def clearowmkey(self, ctx):
         """Clear the OpenWeatherMap API key."""
         await self.cog.config.openweathermap_api.set(None)
-        await ctx.send("OpenWeatherMap API key cleared.") 
+        await ctx.send("OpenWeatherMap API key cleared.")
+
+    async def faa_status(self, ctx, airport_code: str = None):
+        """Get FAA National Airspace Status for airports with delays or closures.
+        
+        If airport_code is provided, filters to that specific airport (e.g., 'SAN' or 'LAS').
+        If not provided, shows all airports with active delays/closures.
+        """
+        def clean_date(ts):
+            try:
+                # Extract the 'end' portion of the FAA timestamp 2601120800-2603190800
+                dt_str = ts.split("-")[-1][:10]
+                dt = datetime.strptime(dt_str, "%y%m%d%H%M")
+                return dt.strftime("%b %d, %H:%M")
+            except:
+                return "Unknown"
+
+        try:
+            # Include optional custom User-Agent
+            headers = {}
+            user_agent = await self.cog.config.user_agent()
+            if user_agent:
+                headers["User-Agent"] = user_agent
+
+            async with aiohttp.ClientSession() as session:
+                root = await self.xml_parser.fetch_and_parse_xml(
+                    session,
+                    "https://nasstatus.faa.gov/api/airport-status-information",
+                    headers if headers else None
+                )
+                
+                if root is None:
+                    await ctx.send("❌ FAA API Unavailable.")
+                    return
+
+            airports = self.xml_parser.find_elements(root, ".//Airport")
+
+            # Filter by airport_code if provided
+            if airport_code:
+                airports = [a for a in airports if self.xml_parser.get_text(a, "ARPT") == airport_code.upper()]
+
+            if not airports:
+                embed = discord.Embed(
+                    description="✅ No active delays or closures reported.",
+                    color=discord.Color.green()
+                )
+                await ctx.send(embed=embed)
+                return
+
+            embed = discord.Embed(
+                title="✈️ FAA National Airspace Status",
+                color=0x2b2d31
+            )
+            embed.set_footer(text="Times in UTC • Data refreshes every 60s")
+
+            for airport in airports[:8]:  # Discord limit is 25 fields; 8 is safe for mobile
+                code = self.xml_parser.get_text(airport, "ARPT")
+                raw = self.xml_parser.get_text(airport, "Reason")
+
+                # 1. Remove Header: "!SAN 01/048 SAN "
+                clean_msg = re.sub(r'^![A-Z0-9]{3,4}\s\d+/\d+\s[A-Z0-9]{3,4}\s', '', raw)
+                # 2. Remove trailing date block: " 2601120800-2603190800"
+                clean_msg = re.sub(r'\s\d{10}-\d{10}$', '', clean_msg)
+
+                # Humanize Jargon
+                clean_msg = (clean_msg.replace("AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC", "Closed to non-scheduled/private flights except")
+                              .replace("PPR", "Prior Permission Required")
+                              .replace("EXC", "except")
+                              .strip())
+
+                expiration = clean_date(raw.split(" ")[-1])
+
+                embed.add_field(
+                    name=f"📍 {code}",
+                    value=f"{clean_msg}\n**Ends:** `{expiration}`",
+                    inline=False
+                )
+
+            await ctx.send(embed=embed)
+        except Exception as e:
+            embed = discord.Embed(
+                title="Error",
+                description=f"Failed to fetch FAA status: {str(e)}",
+                color=0xff4545
+            )
+            await ctx.send(embed=embed) 

@@ -80,6 +80,23 @@ Shows runway details like length, width, and surface type.
 ```
 Shows current weather and 3-day forecast.
 
+### FAA National Airspace Status
+```
+*airport faastatus
+```
+Shows all airports with active delays or closures reported by the FAA.
+
+```
+*airport faastatus SAN
+```
+Filters to show only San Diego International Airport (or any specific airport code).
+
+**What you'll see:**
+- Airport codes with active delays/closures
+- Human-readable descriptions of the issues
+- Expiration times for each status update
+- Data refreshes every 60 seconds from the FAA
+
 ## Advanced Aircraft Search
 
 ### Find Aircraft Near You
