@@ -3,10 +3,9 @@
   "author": [
     "bencos17"
   ],
-  "description": "Shows dynamic Marvel-themed cluster statuses for your bot.",
+  "description": "Shows dynamic Marvel-themed cluster statuses for your bot, curreently it doesn't support physical clusters though but I do want to add support to my red instance for it so some day it will",
   "requirements": [],
   "tags": [
-    "clusters",
     "shards",
     "status"
   ]
