@@ -19,6 +19,191 @@ from redbot.core.i18n import Translator, cog_i18n
 _ = Translator("Skysearch", __file__)
 
 
+class FAAStatusView(discord.ui.View):
+    """View with dropdown to filter FAA status by delay type."""
+    
+    def __init__(self, ground_delays, arrival_departure_delays, closures, update_time, airport_code=None):
+        super().__init__(timeout=300)  # 5 minute timeout
+        self.ground_delays = ground_delays
+        self.arrival_departure_delays = arrival_departure_delays
+        self.closures = closures
+        self.update_time = update_time
+        self.airport_code = airport_code
+        self.current_filter = "all"
+        
+        # Build dropdown options
+        options = [
+            discord.SelectOption(
+                label="All Issues",
+                value="all",
+                description="Show all delays and closures",
+                emoji="✈️",
+                default=True
+            )
+        ]
+        
+        if ground_delays:
+            options.append(discord.SelectOption(
+                label="Ground Delays",
+                value="ground",
+                description=f"{len(ground_delays)} ground delay program(s)",
+                emoji="🛫"
+            ))
+        
+        if arrival_departure_delays:
+            options.append(discord.SelectOption(
+                label="Arrival/Departure Delays",
+                value="arrdep",
+                description=f"{len(arrival_departure_delays)} delay(s)",
+                emoji="🛬"
+            ))
+        
+        if closures:
+            options.append(discord.SelectOption(
+                label="Closures",
+                value="closures",
+                description=f"{len(closures)} closure(s)",
+                emoji="🚫"
+            ))
+        
+        if len(options) > 1:
+            self.select_menu = discord.ui.Select(
+                placeholder="Filter by delay type...",
+                options=options,
+                min_values=1,
+                max_values=1
+            )
+            self.select_menu.callback = self.on_select
+            self.add_item(self.select_menu)
+    
+    async def on_select(self, interaction: discord.Interaction):
+        """Handle dropdown selection."""
+        selected = interaction.data['values'][0]
+        self.current_filter = selected
+        
+        # Update default option
+        for option in self.select_menu.options:
+            option.default = (option.value == selected)
+        
+        # Build new embed
+        embed = self.build_embed(selected)
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    def build_embed(self, filter_type="all"):
+        """Build embed based on filter type."""
+        embed = discord.Embed(
+            title="✈️ FAA National Airspace Status",
+            color=0x2b2d31
+        )
+        
+        # Add filter indicator to footer
+        filter_text = {
+            "all": "All Issues",
+            "ground": "Ground Delays Only",
+            "arrdep": "Arrival/Departure Delays Only",
+            "closures": "Closures Only"
+        }.get(filter_type, "All Issues")
+        
+        embed.set_footer(text=f"{filter_text} • Updated: {self.update_time} • Times in UTC • Data refreshes every 60s")
+        
+        field_count = 0
+        max_fields = 25
+        
+        # Add Ground Delay Programs
+        if filter_type in ("all", "ground") and self.ground_delays:
+            for delay in self.ground_delays[:8]:
+                if field_count >= max_fields:
+                    break
+                delay_info = f"`{delay['avg']}` avg • `{delay['max']}` max"
+                value = f"{delay_info}\n**Reason:** {delay['reason']}"
+                embed.add_field(
+                    name=f"🛫 `{delay['arpt']}` Ground Delay",
+                    value=value,
+                    inline=False
+                )
+                field_count += 1
+        
+        # Add Arrival/Departure Delays
+        if filter_type in ("all", "arrdep") and self.arrival_departure_delays:
+            for delay in self.arrival_departure_delays[:8]:
+                if field_count >= max_fields:
+                    break
+                emoji = "🛬" if delay['type'].lower() == "arrival" else "🛫"
+                type_name = delay['type']
+                
+                delay_parts = []
+                if delay['min'] and delay['max']:
+                    delay_parts.append(f"`{delay['min']}` - `{delay['max']}`")
+                elif delay['min']:
+                    delay_parts.append(f"`{delay['min']}` min")
+                elif delay['max']:
+                    delay_parts.append(f"`{delay['max']}` max")
+                
+                value = ""
+                if delay_parts:
+                    value = f"{' • '.join(delay_parts)}\n"
+                
+                value += f"**Reason:** {delay['reason']}"
+                
+                if delay['trend']:
+                    trend_emoji = "📈" if delay['trend'].lower() == "increasing" else "📉" if delay['trend'].lower() == "decreasing" else "➡️"
+                    value += f" {trend_emoji}"
+                
+                embed.add_field(
+                    name=f"{emoji} `{delay['arpt']}` {type_name} Delay",
+                    value=value,
+                    inline=False
+                )
+                field_count += 1
+        
+        # Add Airport Closures
+        if filter_type in ("all", "closures") and self.closures:
+            for closure in self.closures[:8]:
+                if field_count >= max_fields:
+                    break
+                reason = closure['reason']
+                phone_match = re.search(r'(\d{3}-\d{3}-\d{4})', reason)
+                phone = phone_match.group(1) if phone_match else None
+                
+                if phone:
+                    reason = reason.replace(phone, "").strip()
+                    reason = re.sub(r'\s+', ' ', reason)
+                
+                value = f"**{reason}**"
+                if phone:
+                    value += f"\n📞 Contact: `{phone}`"
+                
+                timing_parts = []
+                if closure['start']:
+                    timing_parts.append(f"Started: `{closure['start']}`")
+                if closure['reopen']:
+                    timing_parts.append(f"Reopens: `{closure['reopen']}`")
+                
+                if timing_parts:
+                    value += f"\n\n{' • '.join(timing_parts)}"
+                
+                embed.add_field(
+                    name=f"🚫 `{closure['arpt']}` Closure",
+                    value=value,
+                    inline=False
+                )
+                field_count += 1
+        
+        # Add note if no results for filter
+        if field_count == 0:
+            embed.description = f"✅ No {filter_text.lower()} found."
+        
+        # Add note if we hit the limit
+        if field_count >= max_fields:
+            embed.add_field(
+                name="⚠️ Display Limit",
+                value="Showing first 25 items. Use `*airport faastatus <code>` to filter by airport.",
+                inline=False
+            )
+        
+        return embed
+
+
 @cog_i18n(_)
 class AirportCommands:
     """Airport-related commands for SkySearch."""
@@ -483,112 +668,29 @@ class AirportCommands:
                 await ctx.send(embed=embed)
                 return
 
-            # Create embed
-            embed = discord.Embed(
-                title="✈️ FAA National Airspace Status",
-                color=0x2b2d31
+            # Create view with dropdown selector
+            view = FAAStatusView(
+                ground_delays=ground_delays,
+                arrival_departure_delays=arrival_departure_delays,
+                closures=closures,
+                update_time=update_time,
+                airport_code=airport_code
             )
-            embed.set_footer(text=f"Updated: {update_time} • Times in UTC • Data refreshes every 60s")
             
-            field_count = 0
-            max_fields = 25  # Discord limit
+            # Build initial embed (showing all)
+            embed = view.build_embed("all")
             
-            # Add Ground Delay Programs
-            if ground_delays:
-                for delay in ground_delays[:8]:  # Limit per section
-                    if field_count >= max_fields:
-                        break
-                    # Format delays more concisely
-                    delay_info = f"`{delay['avg']}` avg • `{delay['max']}` max"
-                    value = f"{delay_info}\n**Reason:** {delay['reason']}"
-                    embed.add_field(
-                        name=f"🛫 `{delay['arpt']}` Ground Delay",
-                        value=value,
-                        inline=False
-                    )
-                    field_count += 1
-            
-            # Add Arrival/Departure Delays
-            if arrival_departure_delays:
-                for delay in arrival_departure_delays[:8]:  # Limit per section
-                    if field_count >= max_fields:
-                        break
-                    emoji = "🛬" if delay['type'].lower() == "arrival" else "🛫"
-                    type_name = delay['type']
-                    
-                    # Build delay range string
-                    delay_parts = []
-                    if delay['min'] and delay['max']:
-                        delay_parts.append(f"`{delay['min']}` - `{delay['max']}`")
-                    elif delay['min']:
-                        delay_parts.append(f"`{delay['min']}` min")
-                    elif delay['max']:
-                        delay_parts.append(f"`{delay['max']}` max")
-                    
-                    value = ""
-                    if delay_parts:
-                        value = f"{' • '.join(delay_parts)}\n"
-                    
-                    value += f"**Reason:** {delay['reason']}"
-                    
-                    # Add trend with just emoji (no redundant text)
-                    if delay['trend']:
-                        trend_emoji = "📈" if delay['trend'].lower() == "increasing" else "📉" if delay['trend'].lower() == "decreasing" else "➡️"
-                        value += f" {trend_emoji}"
-                    
-                    embed.add_field(
-                        name=f"{emoji} `{delay['arpt']}` {type_name} Delay",
-                        value=value,
-                        inline=False
-                    )
-                    field_count += 1
-            
-            # Add Airport Closures
-            if closures:
-                for closure in closures[:8]:  # Limit per section
-                    if field_count >= max_fields:
-                        break
-                    # Format closure reason better - extract phone numbers if present
-                    reason = closure['reason']
-                    phone_match = re.search(r'(\d{3}-\d{3}-\d{4})', reason)
-                    phone = phone_match.group(1) if phone_match else None
-                    
-                    # Clean up reason text
-                    if phone:
-                        reason = reason.replace(phone, "").strip()
-                        # Remove extra spaces
-                        reason = re.sub(r'\s+', ' ', reason)
-                    
-                    value = f"**{reason}**"
-                    if phone:
-                        value += f"\n📞 Contact: `{phone}`"
-                    
-                    # Add timing info
-                    timing_parts = []
-                    if closure['start']:
-                        timing_parts.append(f"Started: `{closure['start']}`")
-                    if closure['reopen']:
-                        timing_parts.append(f"Reopens: `{closure['reopen']}`")
-                    
-                    if timing_parts:
-                        value += f"\n\n{' • '.join(timing_parts)}"
-                    
-                    embed.add_field(
-                        name=f"🚫 `{closure['arpt']}` Closure",
-                        value=value,
-                        inline=False
-                    )
-                    field_count += 1
-            
-            # Add note if we hit the limit
-            if field_count >= max_fields:
-                embed.add_field(
-                    name="⚠️ Display Limit",
-                    value="Showing first 25 items. Use `*airport faastatus <code>` to filter by airport.",
-                    inline=False
-                )
-
-            await ctx.send(embed=embed)
+            # Only add view if there are multiple types to filter
+            if len(ground_delays) > 0 and len(arrival_departure_delays) > 0 and len(closures) > 0:
+                await ctx.send(embed=embed, view=view)
+            elif (len(ground_delays) > 0 and len(arrival_departure_delays) > 0) or \
+                 (len(ground_delays) > 0 and len(closures) > 0) or \
+                 (len(arrival_departure_delays) > 0 and len(closures) > 0):
+                # Multiple types but not all three - still show dropdown
+                await ctx.send(embed=embed, view=view)
+            else:
+                # Only one type - no need for dropdown
+                await ctx.send(embed=embed)
         except Exception as e:
             embed = discord.Embed(
                 title="Error",
