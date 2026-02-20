@@ -498,11 +498,11 @@ class AirportCommands:
                 for delay in ground_delays[:8]:  # Limit per section
                     if field_count >= max_fields:
                         break
-                    value = f"**Reason:** {delay['reason']}\n"
-                    value += f"**Avg Delay:** {delay['avg']}\n"
-                    value += f"**Max Delay:** {delay['max']}"
+                    # Format delays more concisely
+                    delay_info = f"`{delay['avg']}` avg • `{delay['max']}` max"
+                    value = f"{delay_info}\n**Reason:** {delay['reason']}"
                     embed.add_field(
-                        name=f"🛫 Ground Delay - {delay['arpt']}",
+                        name=f"🛫 `{delay['arpt']}` Ground Delay",
                         value=value,
                         inline=False
                     )
@@ -514,17 +514,30 @@ class AirportCommands:
                     if field_count >= max_fields:
                         break
                     emoji = "🛬" if delay['type'].lower() == "arrival" else "🛫"
-                    value = f"**Type:** {delay['type']}\n"
-                    value += f"**Reason:** {delay['reason']}\n"
-                    if delay['min']:
-                        value += f"**Min Delay:** {delay['min']}\n"
-                    if delay['max']:
-                        value += f"**Max Delay:** {delay['max']}\n"
+                    type_name = delay['type']
+                    
+                    # Build delay range string
+                    delay_parts = []
+                    if delay['min'] and delay['max']:
+                        delay_parts.append(f"`{delay['min']}` - `{delay['max']}`")
+                    elif delay['min']:
+                        delay_parts.append(f"`{delay['min']}` min")
+                    elif delay['max']:
+                        delay_parts.append(f"`{delay['max']}` max")
+                    
+                    value = ""
+                    if delay_parts:
+                        value = f"{' • '.join(delay_parts)}\n"
+                    
+                    value += f"**Reason:** {delay['reason']}"
+                    
+                    # Add trend with just emoji (no redundant text)
                     if delay['trend']:
                         trend_emoji = "📈" if delay['trend'].lower() == "increasing" else "📉" if delay['trend'].lower() == "decreasing" else "➡️"
-                        value += f"**Trend:** {trend_emoji} {delay['trend']}"
+                        value += f" {trend_emoji}"
+                    
                     embed.add_field(
-                        name=f"{emoji} {delay['type']} Delay - {delay['arpt']}",
+                        name=f"{emoji} `{delay['arpt']}` {type_name} Delay",
                         value=value,
                         inline=False
                     )
@@ -535,13 +548,33 @@ class AirportCommands:
                 for closure in closures[:8]:  # Limit per section
                     if field_count >= max_fields:
                         break
-                    value = f"{closure['reason']}\n"
+                    # Format closure reason better - extract phone numbers if present
+                    reason = closure['reason']
+                    phone_match = re.search(r'(\d{3}-\d{3}-\d{4})', reason)
+                    phone = phone_match.group(1) if phone_match else None
+                    
+                    # Clean up reason text
+                    if phone:
+                        reason = reason.replace(phone, "").strip()
+                        # Remove extra spaces
+                        reason = re.sub(r'\s+', ' ', reason)
+                    
+                    value = f"**{reason}**"
+                    if phone:
+                        value += f"\n📞 Contact: `{phone}`"
+                    
+                    # Add timing info
+                    timing_parts = []
                     if closure['start']:
-                        value += f"**Started:** {closure['start']}\n"
+                        timing_parts.append(f"Started: `{closure['start']}`")
                     if closure['reopen']:
-                        value += f"**Reopens:** {closure['reopen']}"
+                        timing_parts.append(f"Reopens: `{closure['reopen']}`")
+                    
+                    if timing_parts:
+                        value += f"\n\n{' • '.join(timing_parts)}"
+                    
                     embed.add_field(
-                        name=f"🚫 Closure - {closure['arpt']}",
+                        name=f"🚫 `{closure['arpt']}` Closure",
                         value=value,
                         inline=False
                     )
@@ -550,8 +583,8 @@ class AirportCommands:
             # Add note if we hit the limit
             if field_count >= max_fields:
                 embed.add_field(
-                    name="⚠️ Note",
-                    value="Display limited to 25 fields. Use a specific airport code to see all details.",
+                    name="⚠️ Display Limit",
+                    value="Showing first 25 items. Use `*airport faastatus <code>` to filter by airport.",
                     inline=False
                 )
 
