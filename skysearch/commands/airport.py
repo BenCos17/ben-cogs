@@ -390,14 +390,18 @@ class AirportCommands:
         If airport_code is provided, filters to that specific airport (e.g., 'SAN' or 'LAS').
         If not provided, shows all airports with active delays/closures.
         """
-        def clean_date(ts):
-            try:
-                # Extract the 'end' portion of the FAA timestamp 2601120800-2603190800
-                dt_str = ts.split("-")[-1][:10]
-                dt = datetime.strptime(dt_str, "%y%m%d%H%M")
-                return dt.strftime("%b %d, %H:%M")
-            except:
-                return "Unknown"
+        def clean_closure_reason(raw):
+            """Clean and humanize closure reason text."""
+            # 1. Remove Header: "!SAN 01/048 SAN "
+            clean_msg = re.sub(r'^![A-Z0-9]{3,4}\s\d+/\d+\s[A-Z0-9]{3,4}\s', '', raw)
+            # 2. Remove trailing date block: " 2601120800-2603190800"
+            clean_msg = re.sub(r'\s\d{10}-\d{10}$', '', clean_msg)
+            # Humanize Jargon
+            clean_msg = (clean_msg.replace("AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC", "Closed to non-scheduled/private flights except")
+                          .replace("PPR", "Prior Permission Required")
+                          .replace("EXC", "except")
+                          .strip())
+            return clean_msg
 
         try:
             # Include optional custom User-Agent
@@ -417,13 +421,61 @@ class AirportCommands:
                     await ctx.send("❌ FAA API Unavailable.")
                     return
 
-            airports = self.xml_parser.find_elements(root, ".//Airport")
-
-            # Filter by airport_code if provided
-            if airport_code:
-                airports = [a for a in airports if self.xml_parser.get_text(a, "ARPT") == airport_code.upper()]
-
-            if not airports:
+            # Get update time
+            update_time = self.xml_parser.get_text(root, "Update_Time", "Unknown")
+            
+            # Collect all delay/closure data
+            ground_delays = []
+            arrival_departure_delays = []
+            closures = []
+            
+            # Parse Ground Delay Programs
+            ground_delay_list = root.find(".//Ground_Delay_List")
+            if ground_delay_list is not None:
+                for delay in ground_delay_list.findall(".//Ground_Delay"):
+                    arpt = self.xml_parser.get_text(delay, "ARPT")
+                    if not airport_code or arpt == airport_code.upper():
+                        ground_delays.append({
+                            'arpt': arpt,
+                            'reason': self.xml_parser.get_text(delay, "Reason"),
+                            'avg': self.xml_parser.get_text(delay, "Avg"),
+                            'max': self.xml_parser.get_text(delay, "Max")
+                        })
+            
+            # Parse General Arrival/Departure Delays
+            arrival_departure_list = root.find(".//Arrival_Departure_Delay_List")
+            if arrival_departure_list is not None:
+                for delay in arrival_departure_list.findall(".//Delay"):
+                    arpt = self.xml_parser.get_text(delay, "ARPT")
+                    if not airport_code or arpt == airport_code.upper():
+                        arr_dep = delay.find("Arrival_Departure")
+                        if arr_dep is not None:
+                            delay_type = arr_dep.get("Type", "Unknown")
+                            arrival_departure_delays.append({
+                                'arpt': arpt,
+                                'reason': self.xml_parser.get_text(delay, "Reason"),
+                                'type': delay_type,
+                                'min': self.xml_parser.get_text(arr_dep, "Min"),
+                                'max': self.xml_parser.get_text(arr_dep, "Max"),
+                                'trend': self.xml_parser.get_text(arr_dep, "Trend")
+                            })
+            
+            # Parse Airport Closures
+            closure_list = root.find(".//Airport_Closure_List")
+            if closure_list is not None:
+                for airport in closure_list.findall(".//Airport"):
+                    arpt = self.xml_parser.get_text(airport, "ARPT")
+                    if not airport_code or arpt == airport_code.upper():
+                        closures.append({
+                            'arpt': arpt,
+                            'reason': clean_closure_reason(self.xml_parser.get_text(airport, "Reason")),
+                            'start': self.xml_parser.get_text(airport, "Start"),
+                            'reopen': self.xml_parser.get_text(airport, "Reopen")
+                        })
+            
+            # Check if we have any data
+            total_items = len(ground_delays) + len(arrival_departure_delays) + len(closures)
+            if total_items == 0:
                 embed = discord.Embed(
                     description="✅ No active delays or closures reported.",
                     color=discord.Color.green()
@@ -431,32 +483,75 @@ class AirportCommands:
                 await ctx.send(embed=embed)
                 return
 
+            # Create embed
             embed = discord.Embed(
                 title="✈️ FAA National Airspace Status",
                 color=0x2b2d31
             )
-            embed.set_footer(text="Times in UTC • Data refreshes every 60s")
-
-            for airport in airports[:8]:  # Discord limit is 25 fields; 8 is safe for mobile
-                code = self.xml_parser.get_text(airport, "ARPT")
-                raw = self.xml_parser.get_text(airport, "Reason")
-
-                # 1. Remove Header: "!SAN 01/048 SAN "
-                clean_msg = re.sub(r'^![A-Z0-9]{3,4}\s\d+/\d+\s[A-Z0-9]{3,4}\s', '', raw)
-                # 2. Remove trailing date block: " 2601120800-2603190800"
-                clean_msg = re.sub(r'\s\d{10}-\d{10}$', '', clean_msg)
-
-                # Humanize Jargon
-                clean_msg = (clean_msg.replace("AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC", "Closed to non-scheduled/private flights except")
-                              .replace("PPR", "Prior Permission Required")
-                              .replace("EXC", "except")
-                              .strip())
-
-                expiration = clean_date(raw.split(" ")[-1])
-
+            embed.set_footer(text=f"Updated: {update_time} • Times in UTC • Data refreshes every 60s")
+            
+            field_count = 0
+            max_fields = 25  # Discord limit
+            
+            # Add Ground Delay Programs
+            if ground_delays:
+                for delay in ground_delays[:8]:  # Limit per section
+                    if field_count >= max_fields:
+                        break
+                    value = f"**Reason:** {delay['reason']}\n"
+                    value += f"**Avg Delay:** {delay['avg']}\n"
+                    value += f"**Max Delay:** {delay['max']}"
+                    embed.add_field(
+                        name=f"🛫 Ground Delay - {delay['arpt']}",
+                        value=value,
+                        inline=False
+                    )
+                    field_count += 1
+            
+            # Add Arrival/Departure Delays
+            if arrival_departure_delays:
+                for delay in arrival_departure_delays[:8]:  # Limit per section
+                    if field_count >= max_fields:
+                        break
+                    emoji = "🛬" if delay['type'].lower() == "arrival" else "🛫"
+                    value = f"**Type:** {delay['type']}\n"
+                    value += f"**Reason:** {delay['reason']}\n"
+                    if delay['min']:
+                        value += f"**Min Delay:** {delay['min']}\n"
+                    if delay['max']:
+                        value += f"**Max Delay:** {delay['max']}\n"
+                    if delay['trend']:
+                        trend_emoji = "📈" if delay['trend'].lower() == "increasing" else "📉" if delay['trend'].lower() == "decreasing" else "➡️"
+                        value += f"**Trend:** {trend_emoji} {delay['trend']}"
+                    embed.add_field(
+                        name=f"{emoji} {delay['type']} Delay - {delay['arpt']}",
+                        value=value,
+                        inline=False
+                    )
+                    field_count += 1
+            
+            # Add Airport Closures
+            if closures:
+                for closure in closures[:8]:  # Limit per section
+                    if field_count >= max_fields:
+                        break
+                    value = f"{closure['reason']}\n"
+                    if closure['start']:
+                        value += f"**Started:** {closure['start']}\n"
+                    if closure['reopen']:
+                        value += f"**Reopens:** {closure['reopen']}"
+                    embed.add_field(
+                        name=f"🚫 Closure - {closure['arpt']}",
+                        value=value,
+                        inline=False
+                    )
+                    field_count += 1
+            
+            # Add note if we hit the limit
+            if field_count >= max_fields:
                 embed.add_field(
-                    name=f"📍 {code}",
-                    value=f"{clean_msg}\n**Ends:** `{expiration}`",
+                    name="⚠️ Note",
+                    value="Display limited to 25 fields. Use a specific airport code to see all details.",
                     inline=False
                 )
 
