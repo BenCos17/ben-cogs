@@ -19,16 +19,42 @@ from redbot.core.i18n import Translator, cog_i18n
 _ = Translator("Skysearch", __file__)
 
 
-class FAAStatusView(discord.ui.View):
-    """View with dropdown to filter FAA status by delay type."""
+class FAAStatusRefreshButton(discord.ui.Button):
+    """Button to refresh FAA status data."""
     
-    def __init__(self, ground_delays, arrival_departure_delays, closures, update_time, airport_code=None):
-        super().__init__(timeout=300)  # 5 minute timeout
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.secondary, label="Refresh", emoji="🔄", custom_id="faa_status_refresh")
+    
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, FAAStatusView) or view.airport_commands is None:
+            await interaction.response.defer()
+            return
+        await interaction.response.defer()
+        result = await view.airport_commands._faa_fetch_data(view.airport_code)
+        if result is None:
+            await interaction.followup.send("Could not refresh; FAA API may be unavailable.", ephemeral=True)
+            return
+        ground_delays, arrival_departure_delays, closures, update_time = result
+        view.ground_delays = ground_delays
+        view.arrival_departure_delays = arrival_departure_delays
+        view.closures = closures
+        view.update_time = update_time
+        embed = view.build_embed(view.current_filter)
+        await interaction.edit_original_response(embed=embed, view=view)
+
+
+class FAAStatusView(discord.ui.View):
+    """View with dropdown to filter FAA status by delay type and optional Refresh button."""
+    
+    def __init__(self, ground_delays, arrival_departure_delays, closures, update_time, airport_code=None, airport_commands=None):
+        super().__init__(timeout=600)  # 10 minute timeout
         self.ground_delays = ground_delays
         self.arrival_departure_delays = arrival_departure_delays
         self.closures = closures
         self.update_time = update_time
         self.airport_code = airport_code
+        self.airport_commands = airport_commands
         self.current_filter = "all"
         
         # Build dropdown options
@@ -75,6 +101,10 @@ class FAAStatusView(discord.ui.View):
             )
             self.select_menu.callback = self.on_select
             self.add_item(self.select_menu)
+        
+        # Refresh button (when airport_commands is provided so we can re-fetch)
+        if airport_commands is not None:
+            self.add_item(FAAStatusRefreshButton())
     
     async def on_select(self, interaction: discord.Interaction):
         """Handle dropdown selection."""
@@ -204,6 +234,17 @@ class FAAStatusView(discord.ui.View):
         return embed
 
 
+def _clean_closure_reason(raw):
+    """Clean and humanize closure reason text from FAA XML."""
+    clean_msg = re.sub(r'^![A-Z0-9]{3,4}\s\d+/\d+\s[A-Z0-9]{3,4}\s', '', raw)
+    clean_msg = re.sub(r'\s\d{10}-\d{10}$', '', clean_msg)
+    clean_msg = (clean_msg.replace("AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC", "Closed to non-scheduled/private flights except")
+                  .replace("PPR", "Prior Permission Required")
+                  .replace("EXC", "except")
+                  .strip())
+    return clean_msg
+
+
 @cog_i18n(_)
 class AirportCommands:
     """Airport-related commands for SkySearch."""
@@ -213,6 +254,67 @@ class AirportCommands:
         self.api = APIManager(cog)
         self.helpers = HelperUtils(cog)
         self.xml_parser = XMLParser()
+    
+    async def _faa_fetch_data(self, airport_code: str = None):
+        """Fetch and parse FAA airport status. Returns (ground_delays, arrival_departure_delays, closures, update_time) or None."""
+        try:
+            headers = {}
+            user_agent = await self.cog.config.user_agent()
+            if user_agent:
+                headers["User-Agent"] = user_agent
+            async with aiohttp.ClientSession() as session:
+                root = await self.xml_parser.fetch_and_parse_xml(
+                    session,
+                    "https://nasstatus.faa.gov/api/airport-status-information",
+                    headers if headers else None
+                )
+            if root is None:
+                return None
+            update_time = self.xml_parser.get_text(root, "Update_Time", "Unknown")
+            ground_delays = []
+            arrival_departure_delays = []
+            closures = []
+            ground_delay_list = root.find(".//Ground_Delay_List")
+            if ground_delay_list is not None:
+                for delay in ground_delay_list.findall(".//Ground_Delay"):
+                    arpt = self.xml_parser.get_text(delay, "ARPT")
+                    if not airport_code or arpt == airport_code.upper():
+                        ground_delays.append({
+                            'arpt': arpt,
+                            'reason': self.xml_parser.get_text(delay, "Reason"),
+                            'avg': self.xml_parser.get_text(delay, "Avg"),
+                            'max': self.xml_parser.get_text(delay, "Max")
+                        })
+            arrival_departure_list = root.find(".//Arrival_Departure_Delay_List")
+            if arrival_departure_list is not None:
+                for delay in arrival_departure_list.findall(".//Delay"):
+                    arpt = self.xml_parser.get_text(delay, "ARPT")
+                    if not airport_code or arpt == airport_code.upper():
+                        arr_dep = delay.find("Arrival_Departure")
+                        if arr_dep is not None:
+                            delay_type = arr_dep.get("Type", "Unknown")
+                            arrival_departure_delays.append({
+                                'arpt': arpt,
+                                'reason': self.xml_parser.get_text(delay, "Reason"),
+                                'type': delay_type,
+                                'min': self.xml_parser.get_text(arr_dep, "Min"),
+                                'max': self.xml_parser.get_text(arr_dep, "Max"),
+                                'trend': self.xml_parser.get_text(arr_dep, "Trend")
+                            })
+            closure_list = root.find(".//Airport_Closure_List")
+            if closure_list is not None:
+                for airport in closure_list.findall(".//Airport"):
+                    arpt = self.xml_parser.get_text(airport, "ARPT")
+                    if not airport_code or arpt == airport_code.upper():
+                        closures.append({
+                            'arpt': arpt,
+                            'reason': _clean_closure_reason(self.xml_parser.get_text(airport, "Reason")),
+                            'start': self.xml_parser.get_text(airport, "Start"),
+                            'reopen': self.xml_parser.get_text(airport, "Reopen")
+                        })
+            return (ground_delays, arrival_departure_delays, closures, update_time)
+        except Exception:
+            return None
     
     async def airport_info(self, ctx, airport_code: str):
         """Get airport information by ICAO or IATA code."""
@@ -575,90 +677,12 @@ class AirportCommands:
         If airport_code is provided, filters to that specific airport (e.g., 'SAN' or 'LAS').
         If not provided, shows all airports with active delays/closures.
         """
-        def clean_closure_reason(raw):
-            """Clean and humanize closure reason text."""
-            # 1. Remove Header: "!SAN 01/048 SAN "
-            clean_msg = re.sub(r'^![A-Z0-9]{3,4}\s\d+/\d+\s[A-Z0-9]{3,4}\s', '', raw)
-            # 2. Remove trailing date block: " 2601120800-2603190800"
-            clean_msg = re.sub(r'\s\d{10}-\d{10}$', '', clean_msg)
-            # Humanize Jargon
-            clean_msg = (clean_msg.replace("AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC", "Closed to non-scheduled/private flights except")
-                          .replace("PPR", "Prior Permission Required")
-                          .replace("EXC", "except")
-                          .strip())
-            return clean_msg
-
         try:
-            # Include optional custom User-Agent
-            headers = {}
-            user_agent = await self.cog.config.user_agent()
-            if user_agent:
-                headers["User-Agent"] = user_agent
-
-            async with aiohttp.ClientSession() as session:
-                root = await self.xml_parser.fetch_and_parse_xml(
-                    session,
-                    "https://nasstatus.faa.gov/api/airport-status-information",
-                    headers if headers else None
-                )
-                
-                if root is None:
-                    await ctx.send("❌ FAA API Unavailable.")
-                    return
-
-            # Get update time
-            update_time = self.xml_parser.get_text(root, "Update_Time", "Unknown")
-            
-            # Collect all delay/closure data
-            ground_delays = []
-            arrival_departure_delays = []
-            closures = []
-            
-            # Parse Ground Delay Programs
-            ground_delay_list = root.find(".//Ground_Delay_List")
-            if ground_delay_list is not None:
-                for delay in ground_delay_list.findall(".//Ground_Delay"):
-                    arpt = self.xml_parser.get_text(delay, "ARPT")
-                    if not airport_code or arpt == airport_code.upper():
-                        ground_delays.append({
-                            'arpt': arpt,
-                            'reason': self.xml_parser.get_text(delay, "Reason"),
-                            'avg': self.xml_parser.get_text(delay, "Avg"),
-                            'max': self.xml_parser.get_text(delay, "Max")
-                        })
-            
-            # Parse General Arrival/Departure Delays
-            arrival_departure_list = root.find(".//Arrival_Departure_Delay_List")
-            if arrival_departure_list is not None:
-                for delay in arrival_departure_list.findall(".//Delay"):
-                    arpt = self.xml_parser.get_text(delay, "ARPT")
-                    if not airport_code or arpt == airport_code.upper():
-                        arr_dep = delay.find("Arrival_Departure")
-                        if arr_dep is not None:
-                            delay_type = arr_dep.get("Type", "Unknown")
-                            arrival_departure_delays.append({
-                                'arpt': arpt,
-                                'reason': self.xml_parser.get_text(delay, "Reason"),
-                                'type': delay_type,
-                                'min': self.xml_parser.get_text(arr_dep, "Min"),
-                                'max': self.xml_parser.get_text(arr_dep, "Max"),
-                                'trend': self.xml_parser.get_text(arr_dep, "Trend")
-                            })
-            
-            # Parse Airport Closures
-            closure_list = root.find(".//Airport_Closure_List")
-            if closure_list is not None:
-                for airport in closure_list.findall(".//Airport"):
-                    arpt = self.xml_parser.get_text(airport, "ARPT")
-                    if not airport_code or arpt == airport_code.upper():
-                        closures.append({
-                            'arpt': arpt,
-                            'reason': clean_closure_reason(self.xml_parser.get_text(airport, "Reason")),
-                            'start': self.xml_parser.get_text(airport, "Start"),
-                            'reopen': self.xml_parser.get_text(airport, "Reopen")
-                        })
-            
-            # Check if we have any data
+            result = await self._faa_fetch_data(airport_code)
+            if result is None:
+                await ctx.send("❌ FAA API Unavailable.")
+                return
+            ground_delays, arrival_departure_delays, closures, update_time = result
             total_items = len(ground_delays) + len(arrival_departure_delays) + len(closures)
             if total_items == 0:
                 embed = discord.Embed(
@@ -667,30 +691,16 @@ class AirportCommands:
                 )
                 await ctx.send(embed=embed)
                 return
-
-            # Create view with dropdown selector
             view = FAAStatusView(
                 ground_delays=ground_delays,
                 arrival_departure_delays=arrival_departure_delays,
                 closures=closures,
                 update_time=update_time,
-                airport_code=airport_code
+                airport_code=airport_code,
+                airport_commands=self
             )
-            
-            # Build initial embed (showing all)
             embed = view.build_embed("all")
-            
-            # Only add view if there are multiple types to filter
-            if len(ground_delays) > 0 and len(arrival_departure_delays) > 0 and len(closures) > 0:
-                await ctx.send(embed=embed, view=view)
-            elif (len(ground_delays) > 0 and len(arrival_departure_delays) > 0) or \
-                 (len(ground_delays) > 0 and len(closures) > 0) or \
-                 (len(arrival_departure_delays) > 0 and len(closures) > 0):
-                # Multiple types but not all three - still show dropdown
-                await ctx.send(embed=embed, view=view)
-            else:
-                # Only one type - no need for dropdown
-                await ctx.send(embed=embed)
+            await ctx.send(embed=embed, view=view)
         except Exception as e:
             embed = discord.Embed(
                 title="Error",

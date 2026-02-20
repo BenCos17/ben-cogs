@@ -60,7 +60,8 @@ To use the SkySearch cog, follow these steps:
 - `[p]airport runway <code>` - Get runway information
 - `[p]airport navaid <code>` - Get navigational aids
 - `[p]airport forecast <code>` - Get weather forecast
-- `[p]airport faastatus [code]` - Get FAA National Airspace Status (delays/closures). Optionally filter by airport code (e.g., SAN, LAS)
+- `[p]airport faastatus [code]` - Get FAA National Airspace Status (delays/closures). Optionally filter by airport code (e.g., SAN, LAS). Use the dropdown to filter by type; use **Refresh** to re-fetch.
+- **FAA status alerts** (like squawk alerts): `[p]airport faaalertchannel [#channel]` `[p]airport faaalertrole [@role]` `[p]airport faaalertcooldown [minutes]` `[p]airport showfaaalerts` — get notified when FAA delays/closures change (task runs every 5 minutes).
 
 ### Admin Commands
 - `[p]aircraft alertchannel [#channel]` - Set alert channel
