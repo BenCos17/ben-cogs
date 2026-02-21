@@ -55,15 +55,11 @@ class Clusters(commands.Cog):
         """Shows the status of all clusters using an embed."""
         await self.initialize_shard_names()
 
-        # Bot uptime (Red tracks this as bot.uptime)
         bot_start_time = getattr(self.bot, "uptime", None)
         if bot_start_time is None:
             bot_uptime_str = "Unknown"
         else:
-            if isinstance(bot_start_time, datetime.datetime):
-                td = datetime.datetime.utcnow() - bot_start_time
-            else:
-                td = bot_start_time
+            td = datetime.datetime.utcnow() - bot_start_time if isinstance(bot_start_time, datetime.datetime) else bot_start_time
             bot_uptime_str = self.format_timedelta(td)
 
         server_uptime = self.format_timedelta(self.get_server_uptime())
@@ -75,24 +71,16 @@ class Clusters(commands.Cog):
         )
 
         for shard_id, name in self.shard_names.items():
-            cpu = psutil.cpu_percent(interval=None)
-            ram = psutil.virtual_memory().used / 1024**3
             latency = round(self.bot.shards[shard_id].latency * 1000)
-
             guilds = [g for g in self.bot.guilds if g.shard_id == shard_id]
-            servers = len(guilds)
-            users = sum(g.member_count or 0 for g in guilds)
-
+            
             value = (
                 f"**Status:** Alive Running\n"
-                f"**CPU:** {cpu:.1f}%\n"
-                f"**RAM:** {ram:.1f} GiB\n"
                 f"**Latency:** {latency} ms\n"
-                f"**Servers:** {servers}\n"
-                f"**Users:** {users}\n"
+                f"**Servers:** {len(guilds)}\n"
+                f"**Users:** {sum(g.member_count or 0 for g in guilds)}\n"
                 f"**Shards:** [{shard_id}]"
             )
-
             embed.add_field(name=f"Cluster #{name}", value=value, inline=False)
 
         await ctx.send(embed=embed)
@@ -109,10 +97,9 @@ class Clusters(commands.Cog):
         custom_names[str(shard_id)] = new_name
         await self.config.custom_names.set(custom_names)
         self.shard_names[shard_id] = new_name
-
         await ctx.send(f"Cluster {shard_id} has been renamed to **{new_name}**.")
 
-async def web_clusters(self, request):
+    async def web_clusters(self, request):
         """Return cluster data as JSON for web endpoint."""
         await self.initialize_shard_names()
         
