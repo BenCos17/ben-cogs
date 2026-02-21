@@ -112,7 +112,7 @@ class Clusters(commands.Cog):
 
         await ctx.send(f"Cluster {shard_id} has been renamed to **{new_name}**.")
 
-        async def web_clusters(self, request):
+async def web_clusters(self, request):
         """Return cluster data as JSON for web endpoint."""
         await self.initialize_shard_names()
         
@@ -151,4 +151,3 @@ class Clusters(commands.Cog):
             })
 
         return web.json_response(data)
-
