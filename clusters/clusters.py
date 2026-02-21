@@ -99,6 +99,7 @@ class Clusters(commands.Cog):
         self.shard_names[shard_id] = new_name
         await ctx.send(f"Cluster {shard_id} has been renamed to **{new_name}**.")
 
+
     async def web_clusters(self, request):
         """Return cluster data as JSON for web endpoint."""
         await self.initialize_shard_names()
@@ -127,14 +128,24 @@ class Clusters(commands.Cog):
             "clusters": []
         }
 
-        for shard_id, name in self.shard_names.items():
+        # Loop through the total shard count to ensure no shard is missing from JSON
+        total_shards = self.bot.shard_count or 1
+        for shard_id in range(total_shards):
+            name = self.shard_names.get(shard_id, MARVEL_NAMES[shard_id % len(MARVEL_NAMES)])
+            
+            # Get shard object safely
+            shard = self.bot.get_shard(shard_id)
+            latency = round(shard.latency * 1000) if (shard and shard.latency is not None) else 0
+            
             guilds = [g for g in self.bot.guilds if g.shard_id == shard_id]
+            
             data["clusters"].append({
                 "shard_id": shard_id,
                 "name": name,
                 "servers": len(guilds),
                 "users": sum(g.member_count or 0 for g in guilds),
-                "latency_ms": round(self.bot.shards[shard_id].latency * 1000)
+                "latency_ms": latency,
+                "status": "Online" if (shard and not shard.is_closed()) else "Offline"
             })
 
         return web.json_response(data)
