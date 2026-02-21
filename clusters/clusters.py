@@ -1,4 +1,4 @@
-import discord
+﻿import discord
 from redbot.core import commands, Config
 import psutil, datetime, json, aiohttp
 from aiohttp import web
@@ -112,46 +112,43 @@ class Clusters(commands.Cog):
 
         await ctx.send(f"Cluster {shard_id} has been renamed to **{new_name}**.")
 
-    async def web_clusters(self, request):
+        async def web_clusters(self, request):
         """Return cluster data as JSON for web endpoint."""
         await self.initialize_shard_names()
+        
+        virt_mem = psutil.virtual_memory()
+        swap_mem = psutil.swap_memory()
+        proc = psutil.Process()
+        bot_ram_gb = proc.memory_info().rss / 1024**3
 
-        # Bot uptime
         bot_start_time = getattr(self.bot, "uptime", None)
-        if bot_start_time is None:
-            bot_uptime_str = "Unknown"
-        else:
-            if isinstance(bot_start_time, datetime.datetime):
-                td = datetime.datetime.utcnow() - bot_start_time
-            else:
-                td = bot_start_time
-            bot_uptime_str = self.format_timedelta(td)
-
+        bot_uptime_str = self.format_timedelta(datetime.datetime.utcnow() - bot_start_time) if bot_start_time else "Unknown"
         server_uptime_str = self.format_timedelta(self.get_server_uptime())
 
         data = {
             "bot_uptime": bot_uptime_str,
             "server_uptime": server_uptime_str,
+            "system_stats": {
+                "cpu_total_percent": psutil.cpu_percent(interval=None),
+                "ram_used_gb": round(virt_mem.used / 1024**3, 2),
+                "ram_total_gb": round(virt_mem.total / 1024**3, 2),
+                "bot_ram_gb": round(bot_ram_gb, 2),
+                "bot_ram_limit_gb": 10.0,
+                "swap_used_gb": round(swap_mem.used / 1024**3, 2),
+                "swap_total_gb": round(swap_mem.total / 1024**3, 2)
+            },
             "clusters": []
         }
 
         for shard_id, name in self.shard_names.items():
             guilds = [g for g in self.bot.guilds if g.shard_id == shard_id]
-            servers = len(guilds)
-            users = sum(g.member_count or 0 for g in guilds)
-            latency = round(self.bot.shards[shard_id].latency * 1000)
-            cpu = psutil.cpu_percent(interval=None)
-            ram = psutil.virtual_memory().used / 1024**3
-
-            cluster_data = {
+            data["clusters"].append({
                 "shard_id": shard_id,
                 "name": name,
-                "servers": servers,
-                "users": users,
-                "latency_ms": latency,
-                "cpu_percent": cpu,
-                "ram_gib": ram
-            }
-            data["clusters"].append(cluster_data)
+                "servers": len(guilds),
+                "users": sum(g.member_count or 0 for g in guilds),
+                "latency_ms": round(self.bot.shards[shard_id].latency * 1000)
+            })
 
-        return web.Response(text=json.dumps(data, indent=2), content_type="application/json")
+        return web.json_response(data)
+
