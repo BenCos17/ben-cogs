@@ -3,18 +3,18 @@ import json
 import logging
 import datetime
 import time
+import asyncio
 from pathlib import Path
 from redbot.core import commands
+from redbot.core.utils.chat_formatting import box, pagify
+from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 from lightstreamer.client import LightstreamerClient, Subscription
 
 log = logging.getLogger("red.iss")
 
-# --- UI Components for Choosing Categories ---
-
 class CategorySelect(discord.ui.Select):
     def __init__(self, cog):
         self.cog = cog
-        # These values must match the keys in your telemetry.json exactly
         options = [
             discord.SelectOption(label="Primary GNC", value="GNC", description="Altitude, Velocity, Attitude", emoji="🚀"),
             discord.SelectOption(label="Air Systems", value="ETHOS_AIR", description="Pressure, Temp, CO2", emoji="🌬️"),
@@ -27,16 +27,14 @@ class CategorySelect(discord.ui.Select):
         super().__init__(placeholder="Select a system to monitor...", options=options)
 
     async def callback(self, interaction: discord.Interaction):
-        # build_embed expects a list of keys
         embed = await self.cog.build_embed([self.values[0]], f"🛰️ {self.values[0]} Telemetry", 0x2b2d31)
+        # Ephemeral=False ensures the response is public
         await interaction.response.send_message(embed=embed, ephemeral=False)
 
 class SelectionView(discord.ui.View):
     def __init__(self, cog):
         super().__init__(timeout=60)
         self.add_item(CategorySelect(cog))
-
-# --- Main Cog ---
 
 class ISS(commands.Cog):
     """J.A.R.V.I.S. ISS Command Center - Interactive Build"""
@@ -46,6 +44,7 @@ class ISS(commands.Cog):
         self.ls_client = None
         self.last_update = None
         self.last_item_update = {}
+        self.discovered_ids = set()
         
         cog_path = Path(__file__).parent
         with open(cog_path / "telemetry.json", "r") as f:
@@ -73,6 +72,9 @@ class ISS(commands.Cog):
                     now = time.time()
                     self.outer.last_update = datetime.datetime.fromtimestamp(now, datetime.timezone.utc)
                     self.outer.last_item_update[item] = now 
+                    
+                    if item not in self.outer.all_ids:
+                        self.outer.discovered_ids.add(item)
                     
                     if val is None: return
                     try:
@@ -103,11 +105,12 @@ class ISS(commands.Cog):
             for id_k, label in sensors.items():
                 val = self.data_cache.get(id_k, "Connecting...")
                 is_active = (now - self.last_item_update.get(id_k, 0)) < 60
+                if is_active: active_in_cat = True
                 prefix = "🔹 " if is_active else ""
                 lines.append(f"{prefix}**{label}:** `{val}`")
-                if is_active: active_in_cat = True
+            
             status_emoji = "🟢" if active_in_cat else "💤"
-            embed.add_field(name=f"{status_emoji} {key.replace('_', ' ')}", value="\n".join(lines), inline=True)
+            embed.add_field(name=f"{status_emoji} {key.replace('_', ' ')}", value="\n".join(lines) or "No Data", inline=True)
         
         if self.last_update:
             ts = self.last_update.strftime("%H:%M:%S UTC")
@@ -117,7 +120,6 @@ class ISS(commands.Cog):
     @commands.group(invoke_without_command=True)
     async def iss(self, ctx):
         """ISS Telemetry Command Hub"""
-        # This now sends the interactive "Choice" menu
         view = SelectionView(self)
         await ctx.send("📡 **Interactive ISS Telemetry Console**\nChoose a category below to view live data:", view=view)
 
@@ -128,8 +130,6 @@ class ISS(commands.Cog):
         e2 = await self.build_embed(["SPARTAN_POWER", "ROBOTICS", "RUSSIAN"], "🛰️ Engineering & Logistics", 0x2b2d31)
         await ctx.send(embed=e1)
         await ctx.send(embed=e2)
-
-    # --- Added Individual Category Commands ---
 
     @iss.command(name="gnc")
     async def iss_gnc(self, ctx):
@@ -166,29 +166,33 @@ class ISS(commands.Cog):
             embed.description = "⚠️ No active data. Station may be in LOS (Loss of Signal)."
         await ctx.send(embed=embed)
 
-
-
     @iss.command(name="reconnect")
     @commands.is_owner()
     async def iss_reconnect(self, ctx):
-        """Restart the NASA Lightstreamer connection (Owner Only)"""
+        """Restart the NASA link (Owner Only)"""
         await ctx.send("🔄 Resetting telemetry link...")
         if self.ls_client: self.ls_client.disconnect()
         self.start_ls_client()
         await ctx.send("✅ Connection re-established.")
 
+    @iss.command(name="scan")
+    @commands.is_owner()
+    async def iss_scan(self, ctx):
+        """Hunt for untracked NASA Opcodes (Owner Only)"""
+        await ctx.send("🛰️ **Scanning NASA broad-range telemetry...** (30s scan)")
+        prefixes = ["USLAB", "NODE1", "NODE2", "NODE3", "AIRLOCK", "SSRMS", "S1", "P1"]
+        test_ids = [f"{p}{str(i).zfill(7)}" for p in prefixes for i in range(1, 20)]
+        scan_sub = Subscription(mode="MERGE", items=test_ids, fields=["Value"])
+        self.ls_client.subscribe(scan_sub)
+        await asyncio.sleep(30)
+        self.ls_client.unsubscribe(scan_sub)
+        await ctx.send(f"✅ Scan complete. Found `{len(self.discovered_ids)}` new Opcodes. Use `*iss discover` to view.")
+
     @iss.command(name="discover")
     @commands.is_owner()
     async def iss_discover(self, ctx):
-        """Paginated list of untracked NASA Opcodes (Owner Only)"""
-        active_raw_ids = list(self.last_item_update.keys())
-        missing = sorted([id for id in active_raw_ids if id not in self.all_ids])
-        
-        if not missing:
-            return await ctx.send("✅ No untracked IDs found.")
-
-        pages = []
-        for page in pagify("\n".join(missing), page_length=1000):
-            pages.append(box(page, lang="text"))
-        
+        """Show untracked IDs caught by the scanner (Owner Only)"""
+        if not self.discovered_ids:
+            return await ctx.send("❌ No untracked IDs detected. Try running `*iss scan` first.")
+        pages = [box(p, lang="text") for p in pagify("\n".join(sorted(list(self.discovered_ids))), page_length=1000)]
         await menu(ctx, pages, DEFAULT_CONTROLS)
