@@ -1,0 +1,36 @@
+{
+    "GNC": {
+        "USLAB000ALT": "Altitude (km)",
+        "USLAB000035": "Velocity (m/s)",
+        "USLAB000PIT": "Pitch",
+        "USLAB000YAW": "Yaw",
+        "USLAB000ROL": "Roll",
+        "USLAB000039": "Station Mass (kg)"
+    },
+    "ETHOS": {
+        "USLAB000058": "Cabin Pressure",
+        "USLAB000059": "Cabin Temp",
+        "NODE3000005": "Urine Tank %",
+        "NODE3000009": "Clean Water %",
+        "USLAB000015": "CO2 Level",
+        "AIRLOCK000049": "Airlock Pressure"
+    },
+    "SPARTAN": {
+        "USLAB000059": "Total Power",
+        "S4000001": "Solar 1A BGA",
+        "S4000002": "Solar 1B BGA",
+        "VVOS0000004": "Port SARJ Angle",
+        "VVOS0000003": "Stbd SARJ Angle"
+    },
+    "ROBOTICS": {
+        "AMT000001": "MT Position",
+        "SSRMS004": "Arm Shoulder Roll",
+        "SSRMS007": "Arm Elbow Pitch",
+        "SSRMS011": "Tip Payload Status"
+    },
+    "RUSSIAN": {
+        "RUSSEG000001": "RS Mode",
+        "RUSSEG000013": "Fwd Docking",
+        "RUSSEG000021": "RS Attitude Mode"
+    }
+}

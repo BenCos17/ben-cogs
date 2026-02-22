@@ -1,104 +1,88 @@
 import discord
+import json
+import logging
+from pathlib import Path
 from redbot.core import commands
 from lightstreamer.client import LightstreamerClient, Subscription
-import logging
 
 log = logging.getLogger("red.iss")
 
 class ISS(commands.Cog):
-    """Full ISS-Mimic Live Systems & Russian Segment Feed"""
+    """The Complete ISS-Mimic Telemetry Suite"""
 
     def __init__(self, bot):
         self.bot = bot
         self.ls_client = None
-        # Complete mapping of data shown on the Mimic Dashboard
-        self.telemetry_map = {
-            # GNC / Navigation
-            "USLAB000032": "Pos X",
-            "USLAB000035": "Velocity",
-            # EPS / Power
-            "USLAB000059": "Total Power",
-            "S4000001": "Solar 1A",
-            "S4000002": "Solar 1B",
-            # ETHOS / Environment
-            "USLAB000012": "Pressure",
-            "USLAB000013": "Internal Temp",
-            "USLAB000058": "O2 Level",
-            "USLAB000014": "Humidity",
-            "USLAB000015": "CO2 Level",
-            # CDH / Comms
-            "USLAB000080": "Video Link",
-            "USLAB000081": "Audio Link",
-            # EVA / Airlock
-            "AIRLOCK000049": "Airlock PSI",
-            # Russian Segment
-            "RUSSEG000001": "RS Pressure",
-            "RUSSEG000012": "RS Temp",
-            # Crew (Corrected ID)
-            "Z1000001": "Crew Count"
-        }
-        self.data_cache = {k: "N/A" for k in self.telemetry_map.keys()}
+        self.data_cache = {}
+        
+        # Load telemetry map from separate JSON file
+        cog_path = Path(__file__).parent
+        with open(cog_path / "telemetry.json", "r") as f:
+            self.telemetry_map = json.load(f)
+
+        # Flatten IDs for the subscription
+        self.all_ids = []
+        for category in self.telemetry_map.values():
+            self.all_ids.extend(category.keys())
+            
+        self.data_cache = {k: "Connecting..." for k in self.all_ids}
         self.start_ls_client()
 
     def start_ls_client(self):
         try:
             self.ls_client = LightstreamerClient("https://push.lightstreamer.com", "ISSLIVE")
-            sub = Subscription(mode="MERGE", items=list(self.telemetry_map.keys()), fields=["Value"])
+            sub = Subscription(mode="MERGE", items=self.all_ids, fields=["Value"])
             
-            class CogLSListener:
-                def __init__(self, cache):
-                    self.cache = cache
+            class LSListener:
+                def __init__(self, cache): self.cache = cache
                 def onItemUpdate(self, update):
-                    item = update.getItemName()
-                    val = update.getValue("Value")
+                    item, val = update.getItemName(), update.getValue("Value")
                     try:
                         num = float(val)
-                        # --- DATA CORRECTION LOGIC ---
-                        if item == "Z1000001": 
-                            self.cache[item] = str(int(num)) if num > 0 else "7" # Fallback to standard crew
-                        elif item == "USLAB000058": # Fix Oxygen scaling
-                            self.cache[item] = f"{(num / 10):,.1f}%" 
-                        elif item in ["USLAB000080", "USLAB000081"]: # Comms status
-                            self.cache[item] = "🟢" if num > 0 else "🔴"
-                        elif "Temp" in item or "RUSSEG000012" == item:
-                            self.cache[item] = f"{num:,.1f}°C"
-                        elif "Pressure" in item or "000012" in item:
-                            self.cache[item] = f"{num:,.1f} psi"
-                        elif item == "USLAB000032":
-                            self.cache[item] = f"{abs(num)/10:,.1f} km"
-                        else:
-                            self.cache[item] = f"{num:,.2f}"
+                        # Advanced Formatting Logic
+                        if "Voltage" in item: self.cache[item] = f"{num:.3f}V"
+                        elif "Angle" in item or item.endswith(("PIT", "YAW", "ROL")): self.cache[item] = f"{num:.2f}°"
+                        elif "Pressure" in item or "torr" in item: self.cache[item] = f"{num:.1f} mmHg"
+                        elif "Temp" in item: self.cache[item] = f"{num:.1f}°C"
+                        elif "Mass" in item: self.cache[item] = f"{num:,.0f} kg"
+                        else: self.cache[item] = f"{num:,.2f}"
                     except:
-                        self.cache[item] = val
+                        self.cache[item] = val # Keep as string (e.g. "ACTIVE", "DOCKING")
 
-            sub.addListener(CogLSListener(self.data_cache))
+            sub.addListener(LSListener(self.data_cache))
             self.ls_client.connect()
             self.ls_client.subscribe(sub)
         except Exception as e:
-            log.error(f"ISS Error: {e}")
+            log.error(f"ISS Mimic Connection Failure: {e}")
 
     def cog_unload(self):
         if self.ls_client:
             self.ls_client.disconnect()
 
-    @commands.command()
+    @commands.group(invoke_without_command=True)
     async def iss(self, ctx):
-        """View the full live telemetry suite from the ISS"""
-        embed = discord.Embed(title="🛰️ ISS Live Systems Command Center", color=0x2b2d31)
+        """ISS Telemetry Hub. Use [p]iss all or specific categories."""
+        await ctx.send_help()
+
+    @iss.command(name="all")
+    async def iss_all(self, ctx):
+        """View a summary of all major ISS-Mimic systems"""
+        embed = discord.Embed(title="🛰️ ISS Systems: Master Feed", color=0x2b2d31)
         
-        # Navigation & Russian Segment
-        nav = f"**Vel:** `{self.data_cache['USLAB000035']} m/s`\n**Alt:** `{self.data_cache['USLAB000032']}`\n**RS Temp:** `{self.data_cache['RUSSEG000012']}`"
-        # Environment
-        env = f"**O2:** `{self.data_cache['USLAB000058']}`\n**CO2:** `{self.data_cache['USLAB000015']} mmHg`\n**Hum:** `{self.data_cache['USLAB000014']}%`"
-        # Comms & EVA
-        status = f"**Video:** {self.data_cache['USLAB000080']}\n**Audio:** {self.data_cache['USLAB000081']}\n**Airlock:** `{self.data_cache['AIRLOCK000049']}`"
-        
-        embed.add_field(name="🚀 Orbital / RS", value=nav, inline=True)
-        embed.add_field(name="🌡️ ETHOS (Life Support)", value=env, inline=True)
-        embed.add_field(name="📡 Comms & EVA", value=status, inline=True)
-        
-        # Power Bar
-        embed.add_field(name="⚡ SPARTAN (Power)", value=f"**Total:** `{self.data_cache['USLAB000059']} kW` | **1A:** `{self.data_cache['S4000001']}°` | **1B:** `{self.data_cache['S4000002']}°`", inline=False)
-        
-        embed.set_footer(text=f"👥 Crew Onboard: {self.data_cache['Z1000001']} | Data: NASA Lightstreamer")
+        for category, sensors in self.telemetry_map.items():
+            lines = []
+            for id_key, label in sensors.items():
+                val = self.data_cache.get(id_key, "N/A")
+                lines.append(f"**{label}:** `{val}`")
+            
+            # Group into embed fields
+            embed.add_field(name=f"__**{category}**__", value="\n".join(lines), inline=True)
+
+        embed.set_footer(text="Data: NASA/JSC via Lightstreamer (Real-time)")
         await ctx.send(embed=embed)
+
+    @iss.command(name="gnc")
+    async def iss_gnc(self, ctx):
+        """Guidance, Navigation, and Control details"""
+        # Logic for a focused view of just one category
+        pass
