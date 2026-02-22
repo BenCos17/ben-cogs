@@ -58,7 +58,7 @@ class ISS(commands.Cog):
         for category in self.telemetry_map.values():
             self.all_ids.extend(category.keys())
             
-        self.data_cache = {k: "Connecting..." for k in self.all_ids}
+        self.data_cache = {k: "No Data 📶" for k in self.all_ids}
         self.start_ls_client()
 
     def start_ls_client(self):
@@ -138,7 +138,7 @@ class ISS(commands.Cog):
         view = SelectionView(self)
         await ctx.send("📡 **Mission Control Console**\nSelect a system to view live station telemetry:", view=view)
 
-        
+
     @iss.command(name="all")
     async def iss_all(self, ctx):
         """Station Overview (Dynamic Full-Suite Feed)"""
