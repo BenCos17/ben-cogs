@@ -128,15 +128,21 @@ class Clusters(commands.Cog):
             "clusters": []
         }
 
-        # Loop through the total shard count to ensure no shard is missing from JSON
+        # Use the bot's reported shard count
         total_shards = self.bot.shard_count or 1
         for shard_id in range(total_shards):
+            # 1. Get name safely
             name = self.shard_names.get(shard_id, MARVEL_NAMES[shard_id % len(MARVEL_NAMES)])
             
-            # Get shard object safely
+            # 2. Get shard object safely
             shard = self.bot.get_shard(shard_id)
-            latency = round(shard.latency * 1000) if (shard and shard.latency is not None) else 0
             
+            # 3. Determine status and latency
+            # We explicitly check shard health to provide the 'status' key
+            is_online = shard is not None and not shard.is_closed()
+            latency = round(shard.latency * 1000) if (is_online and shard.latency is not None) else 0
+            
+            # 4. Count guilds on this shard
             guilds = [g for g in self.bot.guilds if g.shard_id == shard_id]
             
             data["clusters"].append({
@@ -145,7 +151,7 @@ class Clusters(commands.Cog):
                 "servers": len(guilds),
                 "users": sum(g.member_count or 0 for g in guilds),
                 "latency_ms": latency,
-                "status": "Online" if (shard and not shard.is_closed()) else "Offline"
+                "status": "Online" if is_online else "Offline"
             })
 
         return web.json_response(data)
