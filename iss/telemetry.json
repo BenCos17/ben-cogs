@@ -87,5 +87,19 @@
         "RUSSEG000021": "RS Attitude Mode",
         "RUSSEG000025": "RS Dynamic Mode",
         "RUSSEG000011": "SM Kurs-P Standby"
+    },
+    "COMMUNICATIONS": {
+        "USLAB000099": "UHF Radio 1 Power",
+        "USLAB000100": "UHF Radio 2 Power",
+        "USLAB000101": "UHF Frame Sync Lock",
+        "Z1000013": "Ku-Band Transmit",
+        "Z1000014": "Ku-Antenna Elevation",
+        "Z1000015": "Ku-Antenna Cross-El"
+    },
+    "RENDEZVOUS": {
+        "USLAB000101": "Vehicle Handshake",
+        "RUSSEG000013": "Fwd Docking Port",
+        "RUSSEG000014": "Aft Docking Port",
+        "RUSSEG000011": "Propulsion Ready"
     }
 }

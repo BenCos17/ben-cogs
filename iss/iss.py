@@ -155,6 +155,15 @@ class ISS(commands.Cog):
         embed = await self.build_embed(["ETHOS_AIR", "ETHOS_WATER"], "🌡️ Life Support Systems", 0x3498db)
         await ctx.send(embed=embed)
 
+    @iss.command(name="comm")
+    async def iss_comm(self, ctx):
+        await ctx.send(embed=await self.build_embed(["COMMUNICATIONS"], "📡 Station Comms", 0x607d8b))
+
+    @iss.command(name="approach")
+    async def iss_approach(self, ctx):
+        await ctx.send(embed=await self.build_embed(["RENDEZVOUS"], "🛰️ Rendezvous Monitor", 0xe91e63))
+
+    @iss.command(name="status")
     @iss.command(name="robotics")
     async def iss_robotics(self, ctx):
         """Canadarm2 Status"""
