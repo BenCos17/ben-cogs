@@ -163,7 +163,6 @@ class ISS(commands.Cog):
     async def iss_approach(self, ctx):
         await ctx.send(embed=await self.build_embed(["RENDEZVOUS"], "🛰️ Rendezvous Monitor", 0xe91e63))
 
-    @iss.command(name="status")
     @iss.command(name="robotics")
     async def iss_robotics(self, ctx):
         """Canadarm2 Status"""
