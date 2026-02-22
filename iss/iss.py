@@ -3,9 +3,9 @@ from redbot.core import commands
 from lightstreamer.client import LightstreamerClient, Subscription
 import logging
 
-log = logging.getLogger("red.issmimic")
+log = logging.getLogger("red.iss")
 
-class ISSMimic(commands.Cog):
+class ISS(commands.Cog):
     """Live ISS Telemetry Cog"""
 
     def __init__(self, bot):
@@ -73,5 +73,3 @@ class ISSMimic(commands.Cog):
         embed.set_footer(text="Data source: push.lightstreamer.com")
         await ctx.send(embed=embed)
 
-async def setup(bot):
-    await bot.add_cog(ISSMimic(bot))
