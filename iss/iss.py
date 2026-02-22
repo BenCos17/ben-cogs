@@ -1,19 +1,20 @@
-import discord
-import json
-import logging
-import datetime
-import time
-import asyncio
-import math
-from pathlib import Path
-from redbot.core import commands
-from redbot.core.utils.chat_formatting import box, pagify
-from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
-from lightstreamer.client import LightstreamerClient, Subscription
+import discord # discord.py import
+import json # For loading the telemetry mapping from a JSON file
+import logging # For logging connection status and errors with the telemetry feed
+import datetime # For handling timestamps and displaying last update times in the embed footers
+import time # For timestamps and calculating data freshness
+import asyncio # For async sleep in the scan command
+import math # For velocity calculations
+from pathlib import Path # For loading the telemetry mapping from a JSON file
+from redbot.core import commands 
+from redbot.core.utils.chat_formatting import box, pagify 
+from redbot.core.utils.menus import menu, DEFAULT_CONTROLS 
+from lightstreamer.client import LightstreamerClient, Subscription # pip install lightstreamer-client
 
-log = logging.getLogger("red.iss")
+log = logging.getLogger("red.iss") 
 
-class CategorySelect(discord.ui.Select):
+
+class CategorySelect(discord.ui.Select): 
     def __init__(self, cog):
         self.cog = cog
         options = [
@@ -138,23 +139,25 @@ class ISS(commands.Cog):
         view = SelectionView(self)
         await ctx.send("📡 **Mission Control Console**\nSelect a system to view live station telemetry:", view=view)
 
-
+# The main command `!iss all` provides a comprehensive overview of all telemetry categories in a dynamic, full-suite feed. It automatically retrieves all category names from the JSON mapping and splits them into two groups to create multiple embeds to not hit the discord embed limits.
     @iss.command(name="all")
-    async def iss_all(self, ctx):
+    async def iss_all(self, ctx): 
         """Station Overview (Dynamic Full-Suite Feed)"""
-        # Get all category names from your JSON file automatically
+        # Get all category names from JSON file 
         all_categories = list(self.telemetry_map.keys())
         
         # Split them into two groups so the embeds aren't too long for Discord
         halfway = len(all_categories) // 2
         group1 = all_categories[:halfway]
-        group2 = all_categories[halfway:]
+        group2 = all_categories[halfway:] # aAllows new categories added to the JSON file to be automatically included in the "all" command without needing to hardcode them here.
         
-        e1 = await self.build_embed(group1, "🛰️ Station Systems: Alpha", 0x2b2d31)
+        e1 = await self.build_embed(group1, "🛰️ Station Systems: Alpha", 0x2b2d31)  
         e2 = await self.build_embed(group2, "🛰️ Station Systems: Bravo", 0x2b2d31)
         
-        await ctx.send(embed=e1)
-        await ctx.send(embed=e2)
+        await ctx.send(embed=e1) 
+        await ctx.send(embed=e2)  
+
+#  Individual system commands for direct access, these are also accessible via the dropdown menu in the main command. Each one corresponds to a category in the telemetry.json file and will display the relevant sensors with their latest values and status indicators.
     @iss.command(name="gnc")
     async def iss_gnc(self, ctx):
         """Guidance, Navigation, and Control"""
@@ -196,6 +199,12 @@ class ISS(commands.Cog):
         embed.add_field(name="Data Points", value=f"✅ Active: `{len(active)}` | 💤 Standby: `{len(self.all_ids)-len(active)}`", inline=False)
         await ctx.send(embed=embed)
 
+
+
+
+
+
+# owner only commands for maintenance and discovery of new telemetry IDs (untested fully but should work) - these are not meant for regular users or even bot owners and may cause spam if misused, so they are hidden from the help command and restricted to the bot owner.
     @iss.command(name="reconnect")
     @commands.is_owner()
     async def iss_reconnect(self, ctx):
@@ -217,6 +226,7 @@ class ISS(commands.Cog):
         await asyncio.sleep(30)
         self.ls_client.unsubscribe(scan_sub)
         await ctx.send(f"✅ Scan complete. Found `{len(self.discovered_ids)}` new Opcodes.")
+
 
     @iss.command(name="discover")
     @commands.is_owner()
