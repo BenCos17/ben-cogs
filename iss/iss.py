@@ -29,7 +29,7 @@ class CategorySelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         # build_embed expects a list of keys
         embed = await self.cog.build_embed([self.values[0]], f"🛰️ {self.values[0]} Telemetry", 0x2b2d31)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=False)
 
 class SelectionView(discord.ui.View):
     def __init__(self, cog):
