@@ -2,6 +2,7 @@ import discord
 import json
 import logging
 import datetime
+import time
 from pathlib import Path
 from redbot.core import commands
 from lightstreamer.client import LightstreamerClient, Subscription
