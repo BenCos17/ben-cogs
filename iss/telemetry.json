@@ -8,37 +8,39 @@
         "USLAB000039": "Station Mass (kg)",
         "USLAB000005": "CMGs Online",
         "USLAB000010": "CMG Momentum %",
-        "USLAB000011": "CMG 1 Status",
-        "USLAB000012": "CMG 2 Status",
-        "USLAB000013": "CMG 3 Status",
-        "USLAB000014": "CMG 4 Status"
+        "USLAB000001": "CMG 1 Status",
+        "USLAB000002": "CMG 2 Status",
+        "USLAB000003": "CMG 3 Status",
+        "USLAB000004": "CMG 4 Status"
     },
     "ETHOS_AIR": {
         "USLAB000058": "Cabin Pressure",
         "USLAB000059": "Cabin Temp",
-        "USLAB000014": "Humidity %",
-        "USLAB000015": "CO2 Level",
+        "USLAB000054": "Lab ppN2",
+        "USLAB000053": "Lab ppO2",
         "NODE3000001": "Node 3 O2 PP",
         "NODE3000003": "Node 3 CO2 PP",
         "NODE3000010": "O2 Gen State",
-        "USLAB000010": "N2 Supply Press"
+        "AIRLOCK000052": "N2 Supply Valve Position"
     },
     "ETHOS_WATER": {
         "NODE3000005": "Urine Tank %",
         "NODE3000009": "Clean Water %",
-        "NODE3000015": "WRS Pump State",
-        "NODE3000017": "Potable Water Bus"
+        "NODE3000008": "Waste Water Tank %",
+        "NODE3000004": "Urine Processor State",
+        "NODE3000006": "Water Processor State",
+        "NODE3000017": "Coolant Water Node 3"
     },
     "SPARTAN_POWER": {
-        "USLAB000059": "Total Power (kW)",
+        "USLAB000059": "Cabin Temperature (Internal)",
         "S4000007": "Solar 1A Beta",
         "S6000008": "Solar 1B Beta",
         "P4000007": "Solar 2A Beta",
         "P6000008": "Solar 2B Beta",
         "S4000001": "Solar 3A Beta",
         "S6000002": "Solar 3B Beta",
-        "VVOS0000004": "Port SARJ Angle",
-        "VVOS0000003": "Stbd SARJ Angle"
+        "S0000004": "Port SARJ Angle",
+        "S0000003": "Stbd SARJ Angle"
     },
     "ROBOTICS": {
         "AMT000001": "MT Position (cm)",
@@ -60,6 +62,14 @@
         "AIRLOCK000055": "High P O2 Tank",
         "AIRLOCK000056": "Low P O2 Tank"
     },
+    "EVA_POWER": {
+        "AIRLOCK000007": "EMU 1 Power Voltage",
+        "AIRLOCK000008": "EMU 1 Power Current",
+        "AIRLOCK000009": "EMU 2 Power Voltage",
+        "AIRLOCK000010": "EMU 2 Power Current",
+        "AIRLOCK000005": "IRU Voltage",
+        "AIRLOCK000006": "IRU Current"
+    },
     "EVA_CHARGERS": {
         "AIRLOCK000011": "BCA 1 Voltage",
         "AIRLOCK000012": "BCA 1 Current",
@@ -76,6 +86,6 @@
         "RUSSEG000014": "Aft Docking Port",
         "RUSSEG000021": "RS Attitude Mode",
         "RUSSEG000025": "RS Dynamic Mode",
-        "RUSSEG000011": "SM Propulsion"
+        "RUSSEG000011": "SM Kurs-P Standby"
     }
 }
