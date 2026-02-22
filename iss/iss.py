@@ -116,3 +116,39 @@ class ISS(commands.Cog):
         """Russian Segment Propulsion & Docking"""
         embed = await self.build_embed(["RUSSIAN"], "🇷🇺 Russian Segment", 0xe74c3c)
         await ctx.send(embed=embed)
+
+
+    @iss.command(name="status")
+    async def iss_status(self, ctx):
+        """Check which sensors are currently broadcasting live data"""
+        now = time.time()
+        active_sensors = []
+        inactive_count = 0
+        
+        for id_k in self.all_ids:
+            last_seen = self.last_item_update.get(id_k, 0)
+            if (now - last_seen) < 60: # Active in the last 60 seconds
+                label = "Unknown"
+                # Find label in JSON
+                for cat in self.telemetry_map.values():
+                    if id_k in cat:
+                        label = cat[id_k]
+                        break
+                active_sensors.append(f"🟢 **{label}** ({id_k})")
+            else:
+                inactive_count += 1
+
+        embed = discord.Embed(title="📡 Sensor Activity Report", color=0x2ecc71)
+        
+        if active_sensors:
+            # Show top 15 active sensors (to avoid too much text)
+            display_list = active_sensors[:15]
+            embed.description = "**Active Sensors (Last 60s):**\n" + "\n".join(display_list)
+            if len(active_sensors) > 15:
+                embed.description += f"\n*...and {len(active_sensors)-15} more active.*"
+        else:
+            embed.description = "⚠️ **No sensors active in the last 60 seconds.**\nThe ISS may be in a Loss of Signal (LOS) period."
+
+        embed.add_field(name="Summary", value=f"✅ Active: `{len(active_sensors)}` | 💤 Standby: `{inactive_count}`")
+        embed.set_footer(text=f"Check [p]iss all for raw data")
+        await ctx.send(embed=embed)
