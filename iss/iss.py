@@ -25,6 +25,9 @@ class CategorySelect(discord.ui.Select):
             discord.SelectOption(label="EVA Suits", value="EVA_SUITS", description="Suit Voltages & Pressure", emoji="👨‍🚀"),
             discord.SelectOption(label="EVA Power", value="EVA_POWER", description="Airlock & IRU Power", emoji="🔋"),
             discord.SelectOption(label="Russian Segment", value="RUSSIAN", description="Docking & RS Mode", emoji="🇷🇺"),
+=            discord.SelectOption(label="Communications", value="COMMUNICATIONS", description="Radios & Antennas", emoji="📡"),
+            discord.SelectOption(label="Rendezvous", value="RENDEZVOUS", description="Approach Monitor", emoji="🛰️"),
+        
         ]
         super().__init__(placeholder="Select a system to monitor...", options=options)
 
