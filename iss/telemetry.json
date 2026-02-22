@@ -7,24 +7,36 @@
         "USLAB000ROL": "Roll",
         "USLAB000039": "Station Mass (kg)",
         "USLAB000005": "CMGs Online",
-        "USLAB000010": "CMG Momentum %"
+        "USLAB000010": "CMG Momentum %",
+        "USLAB000011": "CMG 1 Status",
+        "USLAB000012": "CMG 2 Status",
+        "USLAB000013": "CMG 3 Status",
+        "USLAB000014": "CMG 4 Status"
     },
-    "ETHOS": {
+    "ETHOS_AIR": {
         "USLAB000058": "Cabin Pressure",
         "USLAB000059": "Cabin Temp",
         "USLAB000014": "Humidity %",
         "USLAB000015": "CO2 Level",
+        "NODE3000001": "Node 3 O2 PP",
+        "NODE3000003": "Node 3 CO2 PP",
+        "NODE3000010": "O2 Gen State",
+        "USLAB000010": "N2 Supply Press"
+    },
+    "ETHOS_WATER": {
         "NODE3000005": "Urine Tank %",
         "NODE3000009": "Clean Water %",
-        "NODE3000010": "O2 Gen State",
-        "AIRLOCK000049": "Airlock Pressure"
+        "NODE3000015": "WRS Pump State",
+        "NODE3000017": "Potable Water Bus"
     },
-    "SPARTAN": {
+    "SPARTAN_POWER": {
         "USLAB000059": "Total Power (kW)",
         "S4000007": "Solar 1A Beta",
         "S6000008": "Solar 1B Beta",
         "P4000007": "Solar 2A Beta",
         "P6000008": "Solar 2B Beta",
+        "S4000001": "Solar 3A Beta",
+        "S6000002": "Solar 3B Beta",
         "VVOS0000004": "Port SARJ Angle",
         "VVOS0000003": "Stbd SARJ Angle"
     },
@@ -34,26 +46,36 @@
         "SSRMS005": "Shoulder Yaw",
         "SSRMS006": "Shoulder Pitch",
         "SSRMS007": "Elbow Pitch",
+        "SSRMS008": "Wrist Pitch",
+        "SSRMS009": "Wrist Yaw",
+        "SSRMS010": "Wrist Roll",
         "SSRMS011": "Tip Payload Status"
     },
-    "COMMS": {
-        "USLAB000088": "Ku-Video Ch1",
-        "USLAB000089": "Ku-Video Ch2",
-        "USLAB000101": "UHF Radio Sync",
-        "USLAB000092": "S-Band Active String",
-        "Z1000013": "Ku-Band Transmit"
+    "EVA_SUITS": {
+        "AIRLOCK000001": "EMU 1 Voltage",
+        "AIRLOCK000002": "EMU 1 Current",
+        "AIRLOCK000003": "EMU 2 Voltage",
+        "AIRLOCK000004": "EMU 2 Current",
+        "AIRLOCK000049": "Crewlock Pressure",
+        "AIRLOCK000055": "High P O2 Tank",
+        "AIRLOCK000056": "Low P O2 Tank"
+    },
+    "EVA_CHARGERS": {
+        "AIRLOCK000011": "BCA 1 Voltage",
+        "AIRLOCK000012": "BCA 1 Current",
+        "AIRLOCK000023": "BCA 1 Ch 1 Status",
+        "AIRLOCK000024": "BCA 1 Ch 2 Status",
+        "AIRLOCK000025": "BCA 1 Ch 3 Status",
+        "AIRLOCK000026": "BCA 1 Ch 4 Status",
+        "AIRLOCK000013": "BCA 2 Voltage",
+        "AIRLOCK000014": "BCA 2 Current"
     },
     "RUSSIAN": {
-        "RUSSEG000001": "RS Station Mode",
+        "RUSSEG000001": "RS Mode",
         "RUSSEG000013": "Fwd Docking Port",
         "RUSSEG000014": "Aft Docking Port",
         "RUSSEG000021": "RS Attitude Mode",
-        "RUSSEG000025": "RS Dynamic Mode"
-    },
-    "EVA": {
-        "AIRLOCK000001": "Suit 1 Voltage",
-        "AIRLOCK000003": "Suit 2 Voltage",
-        "AIRLOCK000011": "Battery Charger 1",
-        "AIRLOCK000055": "O2 Tank Pressure"
+        "RUSSEG000025": "RS Dynamic Mode",
+        "RUSSEG000011": "SM Propulsion"
     }
 }
