@@ -165,3 +165,30 @@ class ISS(commands.Cog):
         else:
             embed.description = "⚠️ No active data. Station may be in LOS (Loss of Signal)."
         await ctx.send(embed=embed)
+
+
+
+    @iss.command(name="reconnect")
+    @commands.is_owner()
+    async def iss_reconnect(self, ctx):
+        """Restart the NASA Lightstreamer connection (Owner Only)"""
+        await ctx.send("🔄 Resetting telemetry link...")
+        if self.ls_client: self.ls_client.disconnect()
+        self.start_ls_client()
+        await ctx.send("✅ Connection re-established.")
+
+    @iss.command(name="discover")
+    @commands.is_owner()
+    async def iss_discover(self, ctx):
+        """Paginated list of untracked NASA Opcodes (Owner Only)"""
+        active_raw_ids = list(self.last_item_update.keys())
+        missing = sorted([id for id in active_raw_ids if id not in self.all_ids])
+        
+        if not missing:
+            return await ctx.send("✅ No untracked IDs found.")
+
+        pages = []
+        for page in pagify("\n".join(missing), page_length=1000):
+            pages.append(box(page, lang="text"))
+        
+        await menu(ctx, pages, DEFAULT_CONTROLS)
