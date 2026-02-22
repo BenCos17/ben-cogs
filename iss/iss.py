@@ -138,14 +138,23 @@ class ISS(commands.Cog):
         view = SelectionView(self)
         await ctx.send("📡 **Mission Control Console**\nSelect a system to view live station telemetry:", view=view)
 
+        
     @iss.command(name="all")
     async def iss_all(self, ctx):
-        """Station Overview (Dual-Module Feed)"""
-        e1 = await self.build_embed(["GNC", "ETHOS_AIR", "ETHOS_WATER"], "🛰️ Primary Systems", 0x2b2d31)
-        e2 = await self.build_embed(["SPARTAN_POWER", "ROBOTICS", "EVA_POWER", "RUSSIAN"], "🛰️ Engineering & Logistics", 0x2b2d31)
+        """Station Overview (Dynamic Full-Suite Feed)"""
+        # Get all category names from your JSON file automatically
+        all_categories = list(self.telemetry_map.keys())
+        
+        # Split them into two groups so the embeds aren't too long for Discord
+        halfway = len(all_categories) // 2
+        group1 = all_categories[:halfway]
+        group2 = all_categories[halfway:]
+        
+        e1 = await self.build_embed(group1, "🛰️ Station Systems: Alpha", 0x2b2d31)
+        e2 = await self.build_embed(group2, "🛰️ Station Systems: Bravo", 0x2b2d31)
+        
         await ctx.send(embed=e1)
         await ctx.send(embed=e2)
-
     @iss.command(name="gnc")
     async def iss_gnc(self, ctx):
         """Guidance, Navigation, and Control"""
