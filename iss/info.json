@@ -1,0 +1,12 @@
+{
+    "name": "ISS",
+    "author": [
+        "bencos17"
+    ],
+    "description": "A cog to track the International Space Station's telemetry data and provide information about its current location, speed, altitude, and other relevant data.",
+    "requirements": [],
+    "tags": [
+        "issdata",
+        "iss"
+    ]
+}
