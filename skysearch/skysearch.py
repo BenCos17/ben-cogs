@@ -24,7 +24,7 @@ from .utils.api import APIManager
 from .utils.helpers import HelperUtils
 from .utils.export import ExportManager
 from .commands.aircraft import AircraftCommands
-from .commands.airport import AirportCommands
+from .commands.airport import AirportCommands, FAAStatusView
 from .commands.admin import AdminCommands
 from .dashboard.dashboard_integration import DashboardIntegration
 from .api.squawk_api import SquawkAlertAPI
@@ -50,7 +50,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
         self.config.register_global(user_agent=None)  # Optional custom User-Agent header for all outbound HTTP requests
         self.config.register_global(api_stats=None)  # API request statistics for persistence
-        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={})
+        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={}, faa_alert_channel=None, faa_alert_role=None, faa_alert_cooldown=5, last_faa_status=None, faa_last_alert_time=None)
         self.config.register_user(watchlist=[], watchlist_notifications={}, watchlist_cooldown=10, watchlist_aircraft_state={})  # User watchlist: list of ICAO codes, dict of last notification times, cooldown in minutes (default: 10), and dict of last known aircraft state (flying/landed)
         
         # Initialize utility managers
@@ -77,6 +77,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Start background tasks
         self.check_emergency_squawks.start()
         self.check_watched_aircraft.start()
+        self.check_faa_status_changes.start()
 
         # Squawk alert API
         self.squawk_api = SquawkAlertAPI()
@@ -155,6 +156,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Clean up when the cog is unloaded."""
         self.check_emergency_squawks.cancel()
         self.check_watched_aircraft.cancel()
+        self.check_faa_status_changes.cancel()
         await self.api.close()
 
     @commands.guild_only()
@@ -567,7 +569,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Command center for airport related commands"""
         embed = discord.Embed(title="Airport Commands", description="Available airport-related commands:", color=0xfffffe)
         embed.add_field(name="Information", value="`info` - Get airport information by ICAO/IATA code", inline=False)
-        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast", inline=False)
+        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast\n`faastatus [code]` - Get FAA National Airspace Status (delays/closures)", inline=False)
+        embed.add_field(name="FAA Alerts", value="`faaalertchannel` `faaalertrole` `faaalertcooldown` `showfaaalerts` - Notify when FAA status changes", inline=False)
         embed.add_field(name="Detailed Help", value="Use `*help airport` for detailed command information", inline=False)
         await ctx.send(embed=embed)
 
@@ -591,6 +594,31 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def airport_forecast(self, ctx, code: str):
         """Get the weather for an airport by ICAO or IATA code (US airports only)."""
         await self.airport_commands.forecast(ctx, code)
+
+    @airport_group.command(name='faastatus', aliases=['faa'], help='Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code.')
+    async def airport_faa_status(self, ctx, airport_code: str = None):
+        """Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code (e.g., SAN, LAS)."""
+        await self.airport_commands.faa_status(ctx, airport_code)
+
+    @airport_group.command(name='faaalertchannel', help='Set or clear the channel for FAA status change notifications.')
+    async def airport_faa_alert_channel(self, ctx, channel: discord.TextChannel = None):
+        """Set or clear the channel for FAA status change notifications."""
+        await self.admin_commands.set_faa_alert_channel(ctx, channel)
+
+    @airport_group.command(name='faaalertrole', help='Set or clear the role to mention when FAA status changes.')
+    async def airport_faa_alert_role(self, ctx, role: discord.Role = None):
+        """Set or clear the role to mention when FAA status changes."""
+        await self.admin_commands.set_faa_alert_role(ctx, role)
+
+    @airport_group.command(name='faaalertcooldown', help='Set or show cooldown for FAA status change notifications (minutes).')
+    async def airport_faa_alert_cooldown(self, ctx, duration: str = None):
+        """Set or show cooldown for FAA status change notifications."""
+        await self.admin_commands.set_faa_alert_cooldown(ctx, duration)
+
+    @airport_group.command(name='showfaaalerts', help='Show current FAA status alert channel and role.')
+    async def airport_show_faa_alerts(self, ctx):
+        """Show current FAA status alert settings."""
+        await self.admin_commands.list_faa_alert_channels(ctx)
 
     @commands.is_owner()
     @airport_group.command(name="setowmkey")
@@ -831,6 +859,84 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @check_emergency_squawks.before_loop
     async def before_check_emergency_squawks(self):
         """Wait for bot to be ready before starting the task."""
+        await self.bot.wait_until_ready()
+
+    def _faa_snapshot_signature(self, ground_delays, arrival_departure_delays, closures, update_time):
+        """Build a comparable signature for FAA status (for change detection)."""
+        g = tuple(sorted((d["arpt"], d["reason"], d["avg"], d["max"]) for d in ground_delays))
+        a = tuple(sorted((d["arpt"], d["reason"], d["type"], d["min"], d["max"], d["trend"]) for d in arrival_departure_delays))
+        c = tuple(sorted((d["arpt"], d["reason"], d["start"], d["reopen"]) for d in closures))
+        return (update_time, g, a, c)
+
+    @tasks.loop(minutes=5)
+    async def check_faa_status_changes(self):
+        """Background task to check for FAA status changes and notify guilds with FAA alerts enabled."""
+        try:
+            result = await self.airport_commands._faa_fetch_data(None)
+            if result is None:
+                return
+            ground_delays, arrival_departure_delays, closures, update_time = result
+            current_sig = self._faa_snapshot_signature(ground_delays, arrival_departure_delays, closures, update_time)
+            now = datetime.datetime.now(datetime.timezone.utc)
+
+            for guild in self.bot.guilds:
+                try:
+                    await set_contextual_locales_from_guild(self.bot, guild)
+                    guild_config = self.config.guild(guild)
+                    channel_id = await guild_config.faa_alert_channel()
+                    if not channel_id:
+                        continue
+                    last = await guild_config.last_faa_status()
+                    last_sig = None
+                    if last and isinstance(last, dict):
+                        last_sig = self._faa_snapshot_signature(
+                            last.get("ground_delays") or [],
+                            last.get("arrival_departure_delays") or [],
+                            last.get("closures") or [],
+                            last.get("update_time") or ""
+                        )
+                    if last_sig is None:
+                        await guild_config.last_faa_status.set({
+                            "update_time": update_time,
+                            "ground_delays": ground_delays,
+                            "arrival_departure_delays": arrival_departure_delays,
+                            "closures": closures,
+                        })
+                        continue
+                    if current_sig == last_sig:
+                        continue
+                    cooldown_min = await guild_config.faa_alert_cooldown()
+                    last_alert = await guild_config.faa_last_alert_time()
+                    if last_alert is not None:
+                        last_alert_dt = datetime.datetime.fromtimestamp(last_alert, tz=datetime.timezone.utc)
+                        if (now - last_alert_dt).total_seconds() < cooldown_min * 60:
+                            continue
+                    channel = self.bot.get_channel(channel_id)
+                    if not channel:
+                        continue
+                    role_id = await guild_config.faa_alert_role()
+                    role_mention = f"<@&{role_id}>" if role_id else ""
+                    view = FAAStatusView(
+                        ground_delays, arrival_departure_delays, closures, update_time,
+                        airport_code=None, airport_commands=None
+                    )
+                    embed = view.build_embed("all")
+                    embed.set_footer(text=f"FAA status changed • Updated: {update_time} • Times in UTC")
+                    await channel.send(content=role_mention or None, embed=embed)
+                    await guild_config.last_faa_status.set({
+                        "update_time": update_time,
+                        "ground_delays": ground_delays,
+                        "arrival_departure_delays": arrival_departure_delays,
+                        "closures": closures,
+                    })
+                    await guild_config.faa_last_alert_time.set(now.timestamp())
+                except Exception as e:
+                    log.debug(f"FAA status check guild {guild.id}: {e}")
+        except Exception as e:
+            log.error(f"Error checking FAA status changes: {e}", exc_info=True)
+
+    @check_faa_status_changes.before_loop
+    async def before_check_faa_status_changes(self):
         await self.bot.wait_until_ready()
     
     @tasks.loop(minutes=3)
@@ -1276,38 +1382,33 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
         if message.guild is None:
             return
-        
+
+        content = message.content.strip()
+        # Fastest check first: does message look like ICAO? (sync, no I/O)
+        # Most messages fail this - skip all async work for non-matches
+        if not self._icao_pattern.match(content):
+            return
+
         guild_id = message.guild.id
-        
+
         # Fast cache check - avoid expensive config reads if auto_icao is disabled
-        if guild_id in self._auto_icao_enabled_guilds:
-            # Guild is known to have auto_icao enabled - proceed with processing
-            # Double-check config in case cache is stale (should be rare)
-            auto_icao = await self.config.guild(message.guild).auto_icao()
-            if not auto_icao:
-                # Update cache if it was stale
-                self._auto_icao_enabled_guilds.discard(guild_id)
-                return
-        elif guild_id in self._auto_icao_checked_guilds:
+        if guild_id in self._auto_icao_checked_guilds:
             # Guild is known to have auto_icao disabled - fast return
             return
-        else:
+        if guild_id not in self._auto_icao_enabled_guilds:
             # First time seeing this guild - do one-time config check
             auto_icao = await self.config.guild(message.guild).auto_icao()
             self._auto_icao_checked_guilds.add(guild_id)
-            if auto_icao:
-                self._auto_icao_enabled_guilds.add(guild_id)
-            else:
+            if not auto_icao:
                 return
+            self._auto_icao_enabled_guilds.add(guild_id)
+        # else: guild in _auto_icao_enabled_guilds - trust cache (updated on config change)
 
         # Ensure locales for non-command listener (only if auto_icao is enabled)
         await set_contextual_locales_from_guild(self.bot, message.guild)
 
-        content = message.content
-        # Use pre-compiled pattern
-        if self._icao_pattern.match(content):
-            ctx = await self.bot.get_context(message)
-            await self.aircraft_commands.aircraft_by_icao(ctx, content)
+        ctx = await self.bot.get_context(message)
+        await self.aircraft_commands.aircraft_by_icao(ctx, content)
         
     @commands.is_owner()
     @aircraft_group.command(name="simulateemergency")

@@ -60,6 +60,8 @@ To use the SkySearch cog, follow these steps:
 - `[p]airport runway <code>` - Get runway information
 - `[p]airport navaid <code>` - Get navigational aids
 - `[p]airport forecast <code>` - Get weather forecast
+- `[p]airport faastatus [code]` - Get FAA National Airspace Status (delays/closures). Optionally filter by airport code (e.g., SAN, LAS). Use the dropdown to filter by type; use **Refresh** to re-fetch.
+- **FAA status alerts** (like squawk alerts): `[p]airport faaalertchannel [#channel]` `[p]airport faaalertrole [@role]` `[p]airport faaalertcooldown [minutes]` `[p]airport showfaaalerts` — get notified when FAA delays/closures change (task runs every 5 minutes).
 
 ### Admin Commands
 - `[p]aircraft alertchannel [#channel]` - Set alert channel
@@ -103,3 +105,40 @@ there is 4 total pages in it
  - `Apistats` - shows apistats for the cog itself
  - `Guild` - allows you to change cog settings in the dashboard (uses ids, to get them enable developer mode on discord)
  - `Lookup` - allows you to lookup data directly in the cog dashboard page
+
+## 🔧 Utilities
+
+SkySearch includes several utility modules for common operations:
+
+### XML Parser (`utils/xml_parser.py`)
+Utility class for parsing XML data from APIs with safe error handling.
+
+**Features:**
+- Parse XML strings safely with error handling
+- Find elements using XPath expressions
+- Extract text content from XML elements
+- Fetch and parse XML from URLs in one call
+
+**Usage:**
+```python
+from ..utils.xml_parser import XMLParser
+
+parser = XMLParser()
+
+# Fetch and parse XML from a URL
+async with aiohttp.ClientSession() as session:
+    root = await parser.fetch_and_parse_xml(session, "https://api.example.com/data.xml")
+    if root:
+        elements = parser.find_elements(root, ".//Airport")
+        for element in elements:
+            code = parser.get_text(element, "ARPT")
+```
+
+**Methods:**
+- `parse_xml_string(xml_string)` - Parse XML string safely
+- `find_elements(root, xpath)` - Find elements using XPath
+- `get_text(element, tag, default="")` - Extract text from child elements
+- `fetch_and_parse_xml(session, url, headers=None)` - Fetch and parse XML from URL
+
+Used by:
+- FAA National Airspace Status command (`airport faastatus`)

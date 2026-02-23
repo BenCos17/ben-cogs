@@ -43,7 +43,7 @@ for example this is my current output on my bot
 
 <shard\_id> is a number between 0 and your mac amount of shards
 
-<new\_name> what you want the cluter to be called from now on
+<new\_name> what you want the cluster to be called from now on
 
 this is how it's used 
 

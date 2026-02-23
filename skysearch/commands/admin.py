@@ -98,6 +98,117 @@ class AdminCommands:
             else:
                 await ctx.send(_("Current emergency alert cooldown is {minutes} minutes.").format(minutes=int(cooldown)))
 
+    async def set_faa_alert_channel(self, ctx, channel: discord.TextChannel = None):
+        """Set or clear the channel for FAA status change notifications. Clear with no channel."""
+        if channel:
+            try:
+                await self.cog.config.guild(ctx.guild).faa_alert_channel.set(channel.id)
+                embed = discord.Embed(
+                    description=_("FAA status alert channel set to {channel}").format(channel=channel.mention),
+                    color=0xfffffe
+                )
+                await ctx.send(embed=embed)
+            except Exception as e:
+                embed = discord.Embed(description=f"Error setting FAA alert channel: {e}", color=0xff4545)
+                await ctx.send(embed=embed)
+        else:
+            try:
+                await self.cog.config.guild(ctx.guild).faa_alert_channel.clear()
+                embed = discord.Embed(
+                    description=_("FAA status alert channel cleared. No more FAA change notifications will be sent."),
+                    color=0xfffffe
+                )
+                await ctx.send(embed=embed)
+            except Exception as e:
+                embed = discord.Embed(description=f"Error clearing FAA alert channel: {e}", color=0xff4545)
+                await ctx.send(embed=embed)
+
+    async def set_faa_alert_role(self, ctx, role: discord.Role = None):
+        """Set or clear the role to mention when FAA status changes. Clear with no role."""
+        if role:
+            try:
+                await self.cog.config.guild(ctx.guild).faa_alert_role.set(role.id)
+                embed = discord.Embed(
+                    description=_("FAA status alert role set to {role}").format(role=role.mention),
+                    color=0xfffffe
+                )
+                await ctx.send(embed=embed)
+            except Exception as e:
+                embed = discord.Embed(description=f"Error setting FAA alert role: {e}", color=0xff4545)
+                await ctx.send(embed=embed)
+        else:
+            try:
+                await self.cog.config.guild(ctx.guild).faa_alert_role.clear()
+                embed = discord.Embed(
+                    description=_("FAA status alert role cleared."),
+                    color=0xfffffe
+                )
+                await ctx.send(embed=embed)
+            except Exception as e:
+                embed = discord.Embed(description=f"Error clearing FAA alert role: {e}", color=0xff4545)
+                await ctx.send(embed=embed)
+
+    async def set_faa_alert_cooldown(self, ctx, duration: str = None):
+        """Set or show cooldown for FAA status change notifications (minutes). Default 5."""
+        if duration is not None:
+            try:
+                if duration.endswith("s"):
+                    seconds = int(duration[:-1])
+                    minutes = seconds / 60
+                elif duration.endswith("m"):
+                    minutes = int(duration[:-1])
+                else:
+                    minutes = int(duration)
+                if minutes < 0:
+                    await ctx.send(_("Cooldown must be a positive number."))
+                    return
+                await self.cog.config.guild(ctx.guild).faa_alert_cooldown.set(minutes)
+                if minutes < 1:
+                    await ctx.send(_("FAA alert cooldown set to {seconds} seconds.").format(seconds=int(minutes * 60)))
+                else:
+                    await ctx.send(_("FAA alert cooldown set to {minutes} minutes.").format(minutes=int(minutes)))
+            except ValueError:
+                await ctx.send(_("Invalid duration. Use a number, '5m', or '30s'."))
+        else:
+            cooldown = await self.cog.config.guild(ctx.guild).faa_alert_cooldown()
+            if cooldown < 1:
+                await ctx.send(_("Current FAA alert cooldown is {seconds} seconds.").format(seconds=int(cooldown * 60)))
+            else:
+                await ctx.send(_("Current FAA alert cooldown is {minutes} minutes.").format(minutes=int(cooldown)))
+
+    async def list_faa_alert_channels(self, ctx):
+        """Show FAA status alert channel and role for this server."""
+        guild = ctx.guild
+        embed = discord.Embed(title=f"FAA status alerts for {guild.name}", color=0xfffffe)
+        channel_id = await self.cog.config.guild(guild).faa_alert_channel()
+        role_id = await self.cog.config.guild(guild).faa_alert_role()
+        cooldown = await self.cog.config.guild(guild).faa_alert_cooldown()
+        if channel_id:
+            ch = self.cog.bot.get_channel(channel_id)
+            embed.add_field(
+                name="Channel",
+                value=ch.mention if ch else f"Unknown ({channel_id})",
+                inline=True
+            )
+        else:
+            embed.add_field(name="Channel", value="Not set", inline=True)
+        if role_id:
+            role = guild.get_role(role_id)
+            embed.add_field(
+                name="Role",
+                value=role.mention if role else f"Unknown ({role_id})",
+                inline=True
+            )
+        else:
+            embed.add_field(name="Role", value="Not set", inline=True)
+        embed.add_field(
+            name="Cooldown",
+            value=f"{int(cooldown)} min" if cooldown >= 1 else f"{int(cooldown * 60)} sec",
+            inline=True
+        )
+        embed.set_footer(text="Use airport faaalertchannel / faaalertrole / faaalertcooldown to change.")
+        await ctx.send(embed=embed)
+
     async def autoicao(self, ctx, state: bool = None):
         """Enable or disable automatic ICAO lookup."""
         if state is None:
