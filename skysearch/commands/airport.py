@@ -403,17 +403,21 @@ class AirportCommands:
         
         # Get navaid data
         navaid_data = await self.helpers.get_navaid_data(airport_code)
-        # Distinguish between a fetch error (None) and a successful fetch with
-        # no navaids (empty list). If helper returned None, treat as an error.
+
+        # If helper returned None, treat as an unexpected error
         if navaid_data is None:
-            embed = discord.Embed(title="Navaid Lookup Failed", description=f"Could not fetch navaid information for {airport_code}.", color=0xff4545)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=discord.Embed(title="Navaid Lookup Failed", description=f"Could not fetch navaid information for {airport_code}.", color=0xff4545))
             return
 
-        navaids = navaid_data.get('navaids', [])
+        # If helper returned an error dict, surface the reason to the user
+        if isinstance(navaid_data, dict) and 'error' in navaid_data:
+            reason = navaid_data.get('error') or 'Unknown error'
+            await ctx.send(embed=discord.Embed(title="Navaid Lookup Failed", description=f"Could not fetch navaid information for {airport_code}.\nReason: {reason}", color=0xff4545))
+            return
+
+        navaids = navaid_data.get('navaids', []) or []
         if not navaids:
-            embed = discord.Embed(title="No Navaid Data", description=f"No navigational aid information found for {airport_code}.", color=0xff4545)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=discord.Embed(title="No Navaid Data", description=f"No navigational aid information found for {airport_code}.", color=0xff4545))
             return
 
         embed = discord.Embed(title=f"Navigational Aids - {airport_code}", color=0xfffffe)
