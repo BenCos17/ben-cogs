@@ -5,7 +5,7 @@ Helper utilities for SkySearch cog
 import json
 import aiohttp
 import discord
-from urllib.parse import quote_plus, urlparse, parse_qs, urlencode
+from urllib.parse import quote_plus, urlparse, parse_qs, urlencode, urlunparse
 import asyncio
 
 
@@ -395,6 +395,13 @@ class HelperUtils:
                             data = await response.json()
                             if data and 'runways' in data:
                                 return {'runways': data['runways']}
+                        else:
+                            try:
+                                body = await response.text()
+                            except Exception:
+                                body = ''
+                            short = (body[:400] + '...') if body and len(body) > 400 else body
+                            return {'error': f'HTTP {response.status}: {short or response.reason}', 'url': self._redact_airportdb_url(url)}
                 except (aiohttp.ClientError, KeyError, ValueError):
                     # Try next path variant
                     continue
@@ -433,12 +440,16 @@ class HelperUtils:
                     except Exception:
                         body = ''
                     short = (body[:400] + '...') if body and len(body) > 400 else body
-                    return {'error': f'HTTP {response.status}: {short or response.reason}'}
+                    return {'error': f'HTTP {response.status}: {short or response.reason}', 'url': self._redact_airportdb_url(url)}
         except Exception:
             # Return error info for callers to display
             import traceback as _tb
             try:
-                return {'error': str(_tb.format_exc().splitlines()[-1])}
+                exc_msg = str(_tb.format_exc().splitlines()[-1])
+                if 'url' in locals():
+                    redacted = self._redact_airportdb_url(url)
+                    return {'error': exc_msg, 'url': redacted}
+                return {'error': exc_msg}
             except Exception:
                 return {'error': 'Unknown exception while fetching navaids'}
 
@@ -467,6 +478,37 @@ class HelperUtils:
             return tokens.get('api_token') or tokens.get('apiToken') or tokens.get('token')
         except Exception:
             return None
+
+    def _redact_airportdb_url(self, url: str) -> str:
+        """Return the URL with the Airportdb API token redacted for safe logging.
+
+        Replaces the value of `apiToken` or `api_token` query parameters with
+        the literal 'REDACTED'. If parsing fails, falls back to a simple regex
+        replacement or a placeholder.
+        """
+        try:
+            parsed = urlparse(url)
+            qs = parse_qs(parsed.query, keep_blank_values=True)
+            changed = False
+            if 'apiToken' in qs:
+                qs['apiToken'] = ['REDACTED']
+                changed = True
+            if 'api_token' in qs:
+                qs['api_token'] = ['REDACTED']
+                changed = True
+            if changed:
+                # parse_qs produces lists; urlencode expects key->value mapping
+                safe_q = {k: v[0] for k, v in qs.items()}
+                new_q = urlencode(safe_q)
+                return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_q, parsed.fragment))
+            return url
+        except Exception:
+            try:
+                import re
+
+                return re.sub(r'(apiToken=)[^&]+', r"\1REDACTED", url)
+            except Exception:
+                return 'REDACTED_URL'
 
 
     # for feeder link command stuff

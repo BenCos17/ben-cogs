@@ -374,6 +374,16 @@ class AirportCommands:
         
         # Get runway data
         runway_data = await self.helpers.get_runway_data(airport_code)
+
+        # Surface HTTP/errors from helper (includes redacted URL when available)
+        if isinstance(runway_data, dict) and 'error' in runway_data:
+            reason = runway_data.get('error') or 'Unknown error'
+            url = runway_data.get('url')
+            desc = f"Could not fetch runway information for {airport_code}.\nReason: {reason}"
+            if url:
+                desc += f"\nURL: {url}"
+            await ctx.send(embed=discord.Embed(title="Runway Lookup Failed", description=desc, color=0xff4545))
+            return
         
         if runway_data and runway_data.get('runways'):
             embed = discord.Embed(title=f"Runway Information - {airport_code}", color=0xfffffe)
@@ -412,7 +422,11 @@ class AirportCommands:
         # If helper returned an error dict, surface the reason to the user
         if isinstance(navaid_data, dict) and 'error' in navaid_data:
             reason = navaid_data.get('error') or 'Unknown error'
-            await ctx.send(embed=discord.Embed(title="Navaid Lookup Failed", description=f"Could not fetch navaid information for {airport_code}.\nReason: {reason}", color=0xff4545))
+            url = navaid_data.get('url')
+            desc = f"Could not fetch navaid information for {airport_code}.\nReason: {reason}"
+            if url:
+                desc += f"\nURL: {url}"
+            await ctx.send(embed=discord.Embed(title="Navaid Lookup Failed", description=desc, color=0xff4545))
             return
 
         navaids = navaid_data.get('navaids', []) or []
