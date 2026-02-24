@@ -382,8 +382,7 @@ class HelperUtils:
             # Try airportdb.io API (support both /airport/ and legacy /airports/ paths)
             token = await self._get_airportdb_token()
             base_paths = [
-                f"https://airportdb.io/api/v1/airport/{airport_code}",
-                f"https://airportdb.io/api/v1/airports/{airport_code}",
+                f"https://airportdb.io/api/v1/airport/{airport_code}?apiToken={token}",
             ]
 
             for base in base_paths:
