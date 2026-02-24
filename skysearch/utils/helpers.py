@@ -382,14 +382,12 @@ class HelperUtils:
             # Try airportdb.io API (support both /airport/ and legacy /airports/ paths)
             token = await self._get_airportdb_token()
             base_paths = [
-                f"https://airportdb.io/api/v1/airport/{airport_code}?apiToken={token}",
+                f"https://airportdb.io/api/v1/airport/{airport_code}",
             ]
 
             for base in base_paths:
-                url = base
-                if token:
-                    # Use the documented endpoint format: ?apiToken=YOUR_TOKEN
-                    url = f"{base}?apiToken={token}"
+                # Build URL using the documented query param format exactly once
+                url = f"{base}?apiToken={token}" if token else base
 
                 try:
                     async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
