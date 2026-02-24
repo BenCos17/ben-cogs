@@ -413,6 +413,7 @@ class HelperUtils:
     async def get_navaid_data(self, airport_code: str):
         """Get navigational aids for an airport."""
         self._ensure_http_client()
+        url = None
         try:
             token = await self._get_airportdb_token()
             base = f"https://airportdb.io/api/v1/airport/{airport_code}"
