@@ -426,10 +426,23 @@ class HelperUtils:
                             return {'navaids': data['data']['navaids']}
                         # Successful fetch but no navaids key -> explicit empty list
                         return {'navaids': []}
+                else:
+                    try:
+                        body = await response.text()
+                    except Exception:
+                        body = ''
+                    short = (body[:400] + '...') if body and len(body) > 400 else body
+                    return {'error': f'HTTP {response.status}: {short or response.reason}'}
         except Exception:
-            pass
+            # Return error info for callers to display
+            import traceback as _tb
+            try:
+                return {'error': str(_tb.format_exc().splitlines()[-1])}
+            except Exception:
+                return {'error': 'Unknown exception while fetching navaids'}
 
-        return None
+        # Fallback error
+        return {'error': 'Unknown failure during navaid lookup'}
 
     async def _get_airportdb_token(self) -> str | None:
         """Retrieve Airportdb API token from Red's shared API tokens.
