@@ -409,32 +409,17 @@ class HelperUtils:
         """Get navigational aids for an airport."""
         self._ensure_http_client()
         try:
-            # Prefer documented single-airport endpoint which accepts `apiToken` as query param
             token = await self._get_airportdb_token()
-            base_paths = [
-                f"https://airportdb.io/api/v1/airport/{airport_code}",
-                f"https://airportdb.io/api/v1/airport/{airport_code}/navaids",
-                f"https://airportdb.io/api/v1/airports/{airport_code}/navaids",
-            ]
+            base = f"https://airportdb.io/api/v1/airport/{airport_code}"
+            url = f"{base}?{urlencode({'apiToken': token})}" if token else base
 
-            for base in base_paths:
-                url = base
-                if token:
-                    url = f"{base}?{urlencode({'apiToken': token})}"
-
-                try:
-                    async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            # If the airport object contains navaids
-                            if data and isinstance(data, dict) and 'navaids' in data:
-                                return {'navaids': data['navaids']}
-                            # Some endpoints may return a wrapper with 'navaids' key at top-level
-                            if data and isinstance(data, dict) and 'data' in data and isinstance(data['data'], dict) and 'navaids' in data['data']:
-                                return {'navaids': data['data']['navaids']}
-                except (aiohttp.ClientError, KeyError, ValueError):
-                    # Try next path variant
-                    continue
+            async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data and isinstance(data, dict) and 'navaids' in data:
+                        return {'navaids': data['navaids']}
+                    if data and isinstance(data, dict) and 'data' in data and isinstance(data['data'], dict) and 'navaids' in data['data']:
+                        return {'navaids': data['data']['navaids']}
         except Exception:
             pass
 
