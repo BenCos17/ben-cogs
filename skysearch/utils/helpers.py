@@ -480,7 +480,7 @@ class HelperUtils:
                 return None
 
             # Common key from install instructions is `api_token`
-            token = tokens.get('api_token') or tokens.get('apiToken') or tokens.get('token')
+            token = tokens.get('api_token') or tokens.get('apiToken') or tokens.get('token') or tokens.get('client_id')
             # Strip any whitespace that might be stored with the token
             return token.strip() if token else None
         except Exception:
