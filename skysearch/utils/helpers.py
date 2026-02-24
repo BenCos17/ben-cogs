@@ -5,7 +5,8 @@ Helper utilities for SkySearch cog
 import json
 import aiohttp
 import discord
-from urllib.parse import quote_plus, urlparse, parse_qs
+from urllib.parse import quote_plus, urlparse, parse_qs, urlencode
+import asyncio
 
 
 class HelperUtils:
@@ -377,40 +378,90 @@ class HelperUtils:
     async def get_runway_data(self, airport_code: str):
         """Get runway information for an airport."""
         self._ensure_http_client()
-        
         try:
-            # Try airportdb.io API
-            url = f"https://airportdb.io/api/v1/airports/{airport_code}"
-            async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    if data and 'runways' in data:
-                        return {
-                            'runways': data['runways']
-                        }
-        except (aiohttp.ClientError, KeyError, ValueError):
+            # Try airportdb.io API (support both /airport/ and legacy /airports/ paths)
+            token = await self._get_airportdb_token()
+            base_paths = [
+                f"https://airportdb.io/api/v1/airport/{airport_code}",
+                f"https://airportdb.io/api/v1/airports/{airport_code}",
+            ]
+
+            for base in base_paths:
+                url = base
+                if token:
+                    url = f"{base}?{urlencode({'apiToken': token})}"
+
+                try:
+                    async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if data and 'runways' in data:
+                                return {'runways': data['runways']}
+                except (aiohttp.ClientError, KeyError, ValueError):
+                    # Try next path variant
+                    continue
+        except Exception:
             pass
-        
+
         return None
 
     async def get_navaid_data(self, airport_code: str):
         """Get navigational aids for an airport."""
         self._ensure_http_client()
-        
         try:
-            # Try airportdb.io API for navaids
-            url = f"https://airportdb.io/api/v1/airports/{airport_code}/navaids"
-            async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    if data and 'navaids' in data:
-                        return {
-                            'navaids': data['navaids']
-                        }
-        except (aiohttp.ClientError, KeyError, ValueError):
+            # Prefer documented single-airport endpoint which accepts `apiToken` as query param
+            token = await self._get_airportdb_token()
+            base_paths = [
+                f"https://airportdb.io/api/v1/airport/{airport_code}",
+                f"https://airportdb.io/api/v1/airport/{airport_code}/navaids",
+                f"https://airportdb.io/api/v1/airports/{airport_code}/navaids",
+            ]
+
+            for base in base_paths:
+                url = base
+                if token:
+                    url = f"{base}?{urlencode({'apiToken': token})}"
+
+                try:
+                    async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            # If the airport object contains navaids
+                            if data and isinstance(data, dict) and 'navaids' in data:
+                                return {'navaids': data['navaids']}
+                            # Some endpoints may return a wrapper with 'navaids' key at top-level
+                            if data and isinstance(data, dict) and 'data' in data and isinstance(data['data'], dict) and 'navaids' in data['data']:
+                                return {'navaids': data['data']['navaids']}
+                except (aiohttp.ClientError, KeyError, ValueError):
+                    # Try next path variant
+                    continue
+        except Exception:
             pass
-        
+
         return None
+
+    async def _get_airportdb_token(self) -> str | None:
+        """Retrieve Airportdb API token from Red's shared API tokens.
+
+        Looks for the `airportdbio` shared token and returns the `api_token` value
+        (supports async or sync `get_shared_api_tokens` implementations).
+        """
+        try:
+            getter = getattr(self.cog.bot, 'get_shared_api_tokens', None)
+            if not getter:
+                return None
+
+            tokens = getter('airportdbio')
+            if asyncio.iscoroutine(tokens):
+                tokens = await tokens
+
+            if not tokens:
+                return None
+
+            # Common key from install instructions is `api_token`
+            return tokens.get('api_token') or tokens.get('apiToken') or tokens.get('token')
+        except Exception:
+            return None
 
 
     # for feeder link command stuff
