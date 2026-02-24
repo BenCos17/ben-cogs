@@ -411,7 +411,7 @@ class HelperUtils:
         self._ensure_http_client()
         try:
             token = await self._get_airportdb_token()
-            base = f"https://airportdb.io/api/v1/airport/{airport_code}/"
+            base = f"https://airportdb.io/api/v1/airport/{airport_code}"
             if not token:
                 return {'error': 'Airportdb API token not configured'}
             # Use the documented endpoint format exactly
