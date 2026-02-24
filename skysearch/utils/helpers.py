@@ -443,7 +443,6 @@ class HelperUtils:
                         body = ''
                     short = (body[:400] + '...') if body and len(body) > 400 else body
                     redacted_url = self._redact_airportdb_url(url) if url else ''
-                    return {'error': f'HTTP {response.status}: {short or response.reason}', 'url': redacted_url
                     return {'error': f'HTTP {response.status}: {short or response.reason}', 'url': redacted_url}
         except Exception:
             # Return error info for callers to display
