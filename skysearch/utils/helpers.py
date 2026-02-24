@@ -386,8 +386,9 @@ class HelperUtils:
             ]
 
             for base in base_paths:
-                # Build URL using the documented query param format exactly once
-                url = f"{base}?apiToken={token}" if token else base
+                # Build URL using the documented query param format exactly once, with URL-encoded token
+                encoded_token = quote_plus(token) if token else None
+                url = f"{base}?apiToken={encoded_token}" if encoded_token else base
 
                 try:
                     async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
@@ -420,8 +421,9 @@ class HelperUtils:
             base = f"https://airportdb.io/api/v1/airport/{airport_code}"
             if not token:
                 return {'error': 'Airportdb API token not configured'}
-            # Use the documented endpoint format exactly
-            url = f"{base}?apiToken={token}"
+            # Use the documented endpoint format exactly, with URL-encoded token
+            encoded_token = quote_plus(token)
+            url = f"{base}?apiToken={encoded_token}"
 
             async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
                 if response.status == 200:
