@@ -389,7 +389,8 @@ class HelperUtils:
             for base in base_paths:
                 url = base
                 if token:
-                    url = f"{base}?{urlencode({'apiToken': token})}"
+                    # Use the documented endpoint format: ?apiToken=YOUR_TOKEN
+                    url = f"{base}?apiToken={token}"
 
                 try:
                     async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
@@ -410,8 +411,11 @@ class HelperUtils:
         self._ensure_http_client()
         try:
             token = await self._get_airportdb_token()
-            base = f"https://airportdb.io/api/v1/airport/{airport_code}"
-            url = f"{base}?{urlencode({'apiToken': token})}" if token else base
+            base = f"https://airportdb.io/api/v1/airport/{airport_code}/"
+            if not token:
+                return {'error': 'Airportdb API token not configured'}
+            # Use the documented endpoint format exactly
+            url = f"{base}?apiToken={token}"
 
             async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
                 if response.status == 200:
