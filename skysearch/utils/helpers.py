@@ -416,10 +416,16 @@ class HelperUtils:
             async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if data and isinstance(data, dict) and 'navaids' in data:
-                        return {'navaids': data['navaids']}
-                    if data and isinstance(data, dict) and 'data' in data and isinstance(data['data'], dict) and 'navaids' in data['data']:
-                        return {'navaids': data['data']['navaids']}
+                    # Return navaids if present. If the endpoint returned a valid
+                    # airport object but no navaids key, return an empty list so
+                    # callers can distinguish between "no data" and an error.
+                    if data and isinstance(data, dict):
+                        if 'navaids' in data:
+                            return {'navaids': data['navaids']}
+                        if 'data' in data and isinstance(data['data'], dict) and 'navaids' in data['data']:
+                            return {'navaids': data['data']['navaids']}
+                        # Successful fetch but no navaids key -> explicit empty list
+                        return {'navaids': []}
         except Exception:
             pass
 

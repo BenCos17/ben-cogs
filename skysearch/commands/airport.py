@@ -403,26 +403,45 @@ class AirportCommands:
         
         # Get navaid data
         navaid_data = await self.helpers.get_navaid_data(airport_code)
-        
-        if navaid_data and navaid_data.get('navaids'):
-            embed = discord.Embed(title=f"Navigational Aids - {airport_code}", color=0xfffffe)
-            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
-            
-            navaids = navaid_data['navaids']
-            for navaid in navaids:
-                navaid_name = navaid.get('name', 'N/A')
-                navaid_type = navaid.get('type', 'N/A')
-                frequency = navaid.get('frequency', 'N/A')
-                
-                navaid_info = f"**Type:** {navaid_type}\n"
-                navaid_info += f"**Frequency:** {frequency}"
-                
-                embed.add_field(name=navaid_name, value=navaid_info, inline=True)
-            
+        # Distinguish between a fetch error (None) and a successful fetch with
+        # no navaids (empty list). If helper returned None, treat as an error.
+        if navaid_data is None:
+            embed = discord.Embed(title="Navaid Lookup Failed", description=f"Could not fetch navaid information for {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed)
-        else:
+            return
+
+        navaids = navaid_data.get('navaids', [])
+        if not navaids:
             embed = discord.Embed(title="No Navaid Data", description=f"No navigational aid information found for {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed)
+            return
+
+        embed = discord.Embed(title=f"Navigational Aids - {airport_code}", color=0xfffffe)
+
+        def _format_frequency(n):
+            # Prefer common keys used by airportdb.io
+            freq = n.get('frequency') or n.get('frequency_khz') or n.get('dme_frequency_khz') or n.get('dme_frequency')
+            if not freq:
+                return 'N/A'
+            try:
+                fstr = str(freq)
+                # If looks like kHz integer (e.g. 115900), convert to MHz
+                if fstr.isdigit() and len(fstr) >= 4:
+                    mhz = float(fstr) / 1000.0
+                    return f"{mhz:.3f} MHz"
+                return fstr
+            except Exception:
+                return str(freq)
+
+        for navaid in navaids:
+            # Use ident if available as the concise label
+            ident = navaid.get('ident') or navaid.get('filename') or navaid.get('name') or 'Unknown'
+            frequency = _format_frequency(navaid)
+
+            # Minimal field: ident -> frequency
+            embed.add_field(name=ident, value=frequency, inline=True)
+
+        await ctx.send(embed=embed)
 
     async def weather_forecast(self, ctx, airport_code: str):
         """Get weather forecast for an airport."""
