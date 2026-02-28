@@ -1392,8 +1392,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         guild_id = message.guild.id
 
         # Fast cache check - avoid expensive config reads if auto_icao is disabled
-        if guild_id in self._auto_icao_checked_guilds:
-            # Guild is known to have auto_icao disabled - fast return
+        if guild_id in self._auto_icao_checked_guilds and guild_id not in self._auto_icao_enabled_guilds:
+            # Guild was checked and auto_icao is disabled - fast return
             return
         if guild_id not in self._auto_icao_enabled_guilds:
             # First time seeing this guild - do one-time config check
