@@ -18,7 +18,7 @@ from ..utils.export import ExportManager
 
 # Internationalization
 _ = Translator("Skysearch", __file__)
-# todo soooon
+
 
 @cog_i18n(_)
 class AircraftCommands:
@@ -33,21 +33,10 @@ class AircraftCommands:
     
     async def send_aircraft_info(self, ctx, response):
         """Send aircraft information as an embed."""
-        # Deduplicate: if we already sent a response for this message, don't send again
-        msg_id = ctx.message.id if ctx.message else None
-        if msg_id:
-            if not hasattr(self, '_sent_message_ids'):
-                self._sent_message_ids = set()
-            if msg_id in self._sent_message_ids:
-                return
-            self._sent_message_ids.add(msg_id)
-            # Keep the set from growing unbounded
-            if len(self._sent_message_ids) > 1000:
-                self._sent_message_ids.clear()
-
         # Support both 'aircraft' and 'ac' keys
         aircraft_list = response.get('aircraft') or response.get('ac')
         if aircraft_list:
+            await ctx.typing()
             aircraft_data = aircraft_list[0]
             # Get photo for the aircraft using full aircraft data
             image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
@@ -128,16 +117,11 @@ class AircraftCommands:
         key = 'aircraft' if api_mode == 'primary' else 'ac'
         aircraft_list = response.get(key) if response else None
         if aircraft_list and len(aircraft_list) > 0:
-            # Deduplicate by hex - API may return same aircraft multiple times
-            seen_hex = set()
-            unique_list = []
-            for ac in aircraft_list:
-                h = (ac.get("hex") or "").upper()
-                if h and h != "00000000" and h not in seen_hex:
-                    seen_hex.add(h)
-                    unique_list.append(ac)
-            if unique_list:
-                await self.send_aircraft_info(ctx, {key: unique_list})
+            if len(aircraft_list) > 1:
+                for aircraft_info in aircraft_list:
+                    await self.send_aircraft_info(ctx, {key: [aircraft_info]})
+            else:
+                await self.send_aircraft_info(ctx, {key: aircraft_list})
         else:
             embed = discord.Embed(title=_("No results found for your query"), color=discord.Colour(0xff4545))
             embed.add_field(name=_("Details"), value=_("No aircraft information found or the response format is incorrect."), inline=False)

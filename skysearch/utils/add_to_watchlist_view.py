@@ -79,6 +79,7 @@ class AddToWatchlistButton(discord.ui.Button):
             label=_("Add to Watchlist"),
             emoji="➕",
             style=discord.ButtonStyle.secondary,
+            custom_id=None,  # Ephemeral views don't need custom_id
         )
         self.cog = cog
         self.icao = icao
