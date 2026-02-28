@@ -1534,6 +1534,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
         await set_contextual_locales_from_guild(self.bot, message.guild)
 
         ctx = await self.bot.get_context(message)
+        # If the message was recognized as a valid bot command, the command system
+        # will handle it — don't also run the auto-ICAO lookup or the embed sends twice.
+        if ctx.valid:
+            return
         await self.aircraft_commands.aircraft_by_icao(ctx, content)
         
     @commands.is_owner()
