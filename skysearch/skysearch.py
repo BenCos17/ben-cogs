@@ -50,7 +50,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
         self.config.register_global(user_agent=None)  # Optional custom User-Agent header for all outbound HTTP requests
         self.config.register_global(api_stats=None)  # API request statistics for persistence
-        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={}, faa_alert_channel=None, faa_alert_role=None, faa_alert_cooldown=5, last_faa_status=None, faa_last_alert_time=None, geofence_alerts={})
+        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={}, faa_alert_channel=None, faa_alert_role=None, faa_alert_cooldown=5, last_faa_status=None, faa_last_alert_time=None)
         self.config.register_user(watchlist=[], watchlist_notifications={}, watchlist_cooldown=10, watchlist_aircraft_state={})  # User watchlist: list of ICAO codes, dict of last notification times, cooldown in minutes (default: 10), and dict of last known aircraft state (flying/landed)
         
         # Initialize utility managers
@@ -78,7 +78,6 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.check_emergency_squawks.start()
         self.check_watched_aircraft.start()
         self.check_faa_status_changes.start()
-        self.check_geofence_alerts.start()
 
         # Squawk alert API
         self.squawk_api = SquawkAlertAPI()
@@ -158,7 +157,6 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.check_emergency_squawks.cancel()
         self.check_watched_aircraft.cancel()
         self.check_faa_status_changes.cancel()
-        self.check_geofence_alerts.cancel()
         await self.api.close()
 
     @commands.guild_only()
@@ -261,7 +259,6 @@ class Skysearch(commands.Cog, DashboardIntegration):
         if await ctx.bot.is_owner(ctx.author):
             embed.add_field(name=_("Custom Alert Admin"), value="`forcealert` (owner) `clearalertcooldown`", inline=False)
         embed.add_field(name=_("Watchlist"), value="`watchlist` - Manage your personal aircraft watchlist\n`watchlist add <icao>` - Add aircraft to watchlist\n`watchlist remove <icao>` - Remove from watchlist\n`watchlist list` - List watched aircraft\n`watchlist status` - Get detailed status\n`watchlist cooldown [minutes]` - Set notification cooldown", inline=False)
-        embed.add_field(name=_("Geo-fence"), value="`geofence add` - Alert when aircraft enter/leave an area\n`geofence remove` - Remove a geo-fence\n`geofence list` - List all geo-fences", inline=False)
         embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes\n`feeder` - Parse feeder JSON data (secure modal)"), inline=False)
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
@@ -388,38 +385,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Set or view the watchlist notification cooldown. Accepts formats like '20m', '30s', '1h', or '15.5m'. Use without a value to check current setting."""
         await self.aircraft_commands.watchlist_cooldown(ctx, duration)
 
-    # Geo-fence commands
-    @commands.guild_only()
-    @aircraft_group.group(name='geofence', invoke_without_command=True)
-    async def aircraft_geofence(self, ctx):
-        """Geo-fence alerts: get notified when aircraft enter or leave an area."""
-        embed = discord.Embed(
-            title=_("Geo-fence Commands"),
-            description=_("Alert when aircraft enter or leave a geographic area."),
-            color=0xfffffe,
-        )
-        embed.add_field(name="add", value=_("`geofence add <name> <lat> <lon> <radius_nm> [alert_on] [cooldown] [channel] [role]`"), inline=False)
-        embed.add_field(name="remove", value=_("`geofence remove <fence_id>`"), inline=False)
-        embed.add_field(name="list", value=_("`geofence list` - List all geo-fences"), inline=False)
-        await ctx.send(embed=embed)
 
-    @commands.guild_only()
-    @aircraft_geofence.command(name='add')
-    async def aircraft_geofence_add(self, ctx, name: str, lat: float, lon: float, radius_nm: float, alert_on: str = "both", cooldown: int = 5, channel: discord.TextChannel = None, role: discord.Role = None):
-        """Add a geo-fence. Alerts when aircraft enter/leave the area. radius_nm in nautical miles. alert_on: entry, exit, or both."""
-        await self.aircraft_commands.geofence_add(ctx, name, lat, lon, radius_nm, alert_on, cooldown, channel, role)
-
-    @commands.guild_only()
-    @aircraft_geofence.command(name='remove')
-    async def aircraft_geofence_remove(self, ctx, fence_id: str):
-        """Remove a geo-fence by ID (from geofence list)."""
-        await self.aircraft_commands.geofence_remove(ctx, fence_id)
-
-    @commands.guild_only()
-    @aircraft_geofence.command(name='list')
-    async def aircraft_geofence_list(self, ctx):
-        """List all geo-fence alerts for this server."""
-        await self.aircraft_commands.geofence_list(ctx)
 
 
 
@@ -972,98 +938,6 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @check_faa_status_changes.before_loop
     async def before_check_faa_status_changes(self):
         await self.bot.wait_until_ready()
-
-    @tasks.loop(minutes=3)
-    async def check_geofence_alerts(self):
-        """Background task to check geo-fence alerts (aircraft entering/leaving areas)."""
-        try:
-            api_mode = await self.config.api_mode()
-            key = "aircraft" if api_mode == "primary" else "ac"
-            for guild in self.bot.guilds:
-                await set_contextual_locales_from_guild(self.bot, guild)
-                guild_config = self.config.guild(guild)
-                geofence_alerts = await guild_config.geofence_alerts()
-                if not geofence_alerts:
-                    continue
-                now = datetime.datetime.now(datetime.timezone.utc)
-                for fence_id, fence in geofence_alerts.items():
-                    try:
-                        lat = fence.get("lat")
-                        lon = fence.get("lon")
-                        radius_nm = fence.get("radius_nm", 50)
-                        channel_id = fence.get("channel_id")
-                        alert_on = fence.get("alert_on", "both")  # entry, exit, both
-                        cooldown_min = fence.get("cooldown", 5)
-                        if not channel_id or lat is None or lon is None:
-                            continue
-                        channel = self.bot.get_channel(channel_id)
-                        if not channel:
-                            continue
-                        # Check cooldown
-                        last_alert = fence.get("last_alert_time")
-                        if last_alert:
-                            last_dt = datetime.datetime.fromtimestamp(last_alert, tz=datetime.timezone.utc)
-                            if (now - last_dt).total_seconds() < cooldown_min * 60:
-                                continue
-                        url = f"{await self.api.get_api_url()}/?circle={lat},{lon},{radius_nm}"
-                        response = await self.api.make_request(url)
-                        aircraft_list = response.get(key, []) if response else []
-                        current_inside = {a.get("hex", "").upper(): a for a in aircraft_list if a.get("hex") and a.get("hex") != "00000000"}
-                        prev_inside = fence.get("aircraft_inside") or {}
-                        if not isinstance(prev_inside, dict):
-                            prev_inside = {k: 1 for k in prev_inside} if isinstance(prev_inside, list) else {}
-                        # Entry: aircraft in current, not in prev
-                        # Exit: aircraft in prev, not in current
-                        entries = [current_inside[icao] for icao in current_inside if icao not in prev_inside]
-                        exits = [icao for icao in prev_inside if icao not in current_inside]
-                        role_id = fence.get("role_id")
-                        role_mention = f"<@&{role_id}>" if role_id else ""
-                        sent_alert = False
-                        if entries and alert_on in ("entry", "both"):
-                            for aircraft_info in entries:
-                                await self._send_geofence_alert(channel, fence, aircraft_info, "entry", role_mention)
-                                sent_alert = True
-                                break  # One alert per cycle per fence
-                        if exits and alert_on in ("exit", "both") and not sent_alert:
-                            # For exit we don't have full aircraft info; fetch first exited
-                            icao_exit = exits[0]
-                            url_hex = f"{await self.api.get_api_url()}/?find_hex={icao_exit}"
-                            r = await self.api.make_request(url_hex)
-                            ac_list = r.get(key, []) if r else []
-                            aircraft_info = ac_list[0] if ac_list else {"hex": icao_exit, "flight": "N/A", "lat": lat, "lon": lon}
-                            await self._send_geofence_alert(channel, fence, aircraft_info, "exit", role_mention)
-                            sent_alert = True
-                        fence["aircraft_inside"] = {icao: 1 for icao in current_inside}
-                        if sent_alert:
-                            fence["last_alert_time"] = now.timestamp()
-                        await guild_config.geofence_alerts.set(geofence_alerts)
-                        await asyncio.sleep(1)
-                    except Exception as e:
-                        log.debug(f"Geofence {fence_id} error: {e}")
-        except Exception as e:
-            log.error(f"Error checking geofence alerts: {e}", exc_info=True)
-
-    @check_geofence_alerts.before_loop
-    async def before_check_geofence_alerts(self):
-        await self.bot.wait_until_ready()
-
-    async def _send_geofence_alert(self, channel, fence, aircraft_info, event_type, role_mention):
-        """Send a geo-fence alert (entry or exit)."""
-        fence_name = fence.get("name", "Unnamed")
-        image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_info)
-        embed = self.helpers.create_aircraft_embed(aircraft_info, image_url, photographer)
-        if event_type == "entry":
-            embed.title = f"🟢 Geo-fence: {aircraft_info.get('desc', 'Aircraft')} entered **{fence_name}**"
-            embed.color = 0x00ff00
-        else:
-            embed.title = f"🔴 Geo-fence: {aircraft_info.get('desc', 'Aircraft')} left **{fence_name}**"
-            embed.color = 0xff4545
-        icao = (aircraft_info.get("hex") or "").upper()
-        view = discord.ui.View()
-        link = f"https://globe.airplanes.live/?icao={icao}"
-        view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
-        allowed_mentions = discord.AllowedMentions(roles=True) if role_mention else None
-        await channel.send(content=role_mention or None, embed=embed, view=view, allowed_mentions=allowed_mentions)
     
     @tasks.loop(minutes=3)
     async def check_watched_aircraft(self):

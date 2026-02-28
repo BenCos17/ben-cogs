@@ -874,20 +874,6 @@ class HelperUtils:
             style=discord.ButtonStyle.link
         ))
         return view
-
-    def create_aircraft_view_with_watchlist(self, aircraft_data, include_watchlist_button=True):
-        """
-        Create a view with aircraft buttons (globe link, social sharing) plus Add to Watchlist.
-        
-        Args:
-            aircraft_data: Aircraft data dict (for building social links)
-            include_watchlist_button: If True, add interactive Add to Watchlist button
-            
-        Returns:
-            discord.ui.View: View with all buttons
-        """
-        from .add_to_watchlist_view import AddToWatchlistView
-        return AddToWatchlistView(self.cog, aircraft_data, include_watchlist=include_watchlist_button)
     
     def extract_aircraft_status(self, aircraft_data):
         """
