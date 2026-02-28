@@ -19,7 +19,7 @@ from ..utils.export import ExportManager
 
 # Internationalization
 _ = Translator("Skysearch", __file__)
-
+# todo soooon
 
 @cog_i18n(_)
 class AircraftCommands:
