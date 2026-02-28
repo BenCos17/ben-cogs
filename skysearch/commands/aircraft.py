@@ -4,10 +4,9 @@ Aircraft commands for SkySearch cog
 
 
 import asyncio
+import datetime
 import json
 import os
-from urllib.parse import quote_plus
-
 import discord
 from discord.ext import commands, tasks
 from redbot.core import commands as red_commands
@@ -43,49 +42,8 @@ class AircraftCommands:
             image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
             # Create embed
             embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
-            # Create view with buttons
-            view = discord.ui.View()
-            icao = aircraft_data.get('hex', '')
-            if icao:
-                icao = icao.upper()
-            link = f"https://globe.airplanes.live/?icao={icao}"
-            view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
-
-            # Social media sharing logic 
-            ground_speed_knots = aircraft_data.get('gs', 'N/A')
-            ground_speed_mph = 'unknown'
-            if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
-                try:
-                    ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
-                except Exception:
-                    ground_speed_mph = 'unknown'
-            squawk_code = aircraft_data.get('squawk', 'N/A')
-            emergency_squawk_codes = ['7500', '7600', '7700']
-            lat = aircraft_data.get('lat', 'N/A')
-            lon = aircraft_data.get('lon', 'N/A')
-            if lat != 'N/A' and lat is not None:
-                try:
-                    lat = round(float(lat), 2)
-                    lat_dir = "N" if lat >= 0 else "S"
-                    lat = f"{abs(lat)}{lat_dir}"
-                except Exception:
-                    pass
-            if lon != 'N/A' and lon is not None:
-                try:
-                    lon = round(float(lon), 2)
-                    lon_dir = "E" if lon >= 0 else "W"
-                    lon = f"{abs(lon)}{lon_dir}"
-                except Exception:
-                    pass
-            if squawk_code in emergency_squawk_codes:
-                tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-            else:
-                tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-            tweet_url = f"https://x.com/intent/tweet?text={quote_plus(tweet_text)}"
-            view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
-            whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
-            whatsapp_url = f"https://api.whatsapp.com/send?text={quote_plus(whatsapp_text)}"
-            view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+            # Create view with buttons including Add to Watchlist
+            view = self.helpers.create_aircraft_view_with_watchlist(aircraft_data)
 
             await ctx.send(embed=embed, view=view)
         else:
@@ -632,13 +590,8 @@ class AircraftCommands:
                 embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
                 embed.set_footer(text="No photo available")
             
-            # Create view with buttons
-            view = discord.ui.View()
-            link = f"https://globe.airplanes.live/?icao={icao}"
-            view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
-            
-            # Add tracking button
-            view.add_item(discord.ui.Button(label="Track Live", emoji="✈️", url=link, style=discord.ButtonStyle.link))
+            # Create view with buttons including Add to Watchlist
+            view = self.helpers.create_aircraft_view_with_watchlist(aircraft_data)
             
             await ctx.send(embed=embed, view=view)
             
@@ -728,48 +681,9 @@ class AircraftCommands:
                 aircraft_list = response.get('aircraft') or response.get('ac')
                 if aircraft_list:
                     aircraft_data = aircraft_list[0]
-                    icao = aircraft_data.get('hex', None)
-                    if icao:
-                        icao = icao.upper()
                     image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
                     embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
-                    view = discord.ui.View()
-                    link = f"https://globe.airplanes.live/?icao={icao}"
-                    view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=f"{link}", style=discord.ButtonStyle.link))
-                    ground_speed_knots = aircraft_data.get('gs', 'N/A')
-                    ground_speed_mph = 'unknown'
-                    if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
-                        try:
-                            ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
-                        except Exception:
-                            ground_speed_mph = 'unknown'
-                    squawk_code = aircraft_data.get('squawk', 'N/A')
-                    emergency_squawk_codes = ['7500', '7600', '7700']
-                    lat = aircraft_data.get('lat', 'N/A')
-                    lon = aircraft_data.get('lon', 'N/A')
-                    if lat != 'N/A' and lat is not None:
-                        try:
-                            lat = round(float(lat), 2)
-                            lat_dir = "N" if lat >= 0 else "S"
-                            lat = f"{abs(lat)}{lat_dir}"
-                        except Exception:
-                            pass
-                    if lon != 'N/A' and lon is not None:
-                        try:
-                            lon = round(float(lon), 2)
-                            lon_dir = "E" if lon >= 0 else "W"
-                            lon = f"{abs(lon)}{lon_dir}"
-                        except Exception:
-                            pass
-                    if squawk_code in emergency_squawk_codes:
-                        tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-                    else:
-                        tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - https://discord.gg/X8huyaeXrA"
-                    tweet_url = f"https://twitter.com/intent/tweet?text={quote_plus(tweet_text)}"
-                    view.add_item(discord.ui.Button(label=f"Post on 𝕏", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
-                    whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
-                    whatsapp_url = f"https://api.whatsapp.com/send?text={quote_plus(whatsapp_text)}"
-                    view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+                    view = self.helpers.create_aircraft_view_with_watchlist(aircraft_data)
                     return embed, view
                 else:
                     embed = discord.Embed(title='No results found for your query', color=discord.Colour(0xff4545))
@@ -1219,4 +1133,78 @@ class AircraftCommands:
                 description=_("Invalid duration format. Use a number (e.g. '20'), minutes ('20m'), seconds ('30s'), or hours ('1h').\n\nExamples:\n• `20m` - 20 minutes\n• `30s` - 30 seconds\n• `1h` - 1 hour\n• `15.5m` - 15.5 minutes"),
                 color=0xff4545
             )
-            await ctx.send(embed=embed) 
+            await ctx.send(embed=embed)
+
+    # Geo-fence commands
+    async def geofence_add(self, ctx, name: str, lat: float, lon: float, radius_nm: float, alert_on: str = "both", cooldown: int = 5, channel: discord.TextChannel = None, role: discord.Role = None):
+        """Add a geo-fence alert. Notify when aircraft enter and/or leave the area."""
+        if alert_on.lower() not in ("entry", "exit", "both"):
+            embed = discord.Embed(title="❌ Invalid alert_on", description="Use: entry, exit, or both", color=0xff0000)
+            await ctx.send(embed=embed)
+            return
+        if radius_nm <= 0 or radius_nm > 500:
+            embed = discord.Embed(title="❌ Invalid radius", description="Radius must be 0-500 nautical miles.", color=0xff0000)
+            await ctx.send(embed=embed)
+            return
+        if cooldown < 1 or cooldown > 1440:
+            embed = discord.Embed(title="❌ Invalid cooldown", description="Cooldown must be 1-1440 minutes.", color=0xff0000)
+            await ctx.send(embed=embed)
+            return
+        channel = channel or self.cog.bot.get_channel(await self.cog.config.guild(ctx.guild).alert_channel())
+        if not channel:
+            embed = discord.Embed(title="❌ No channel", description="Set alert channel or pass a channel.", color=0xff0000)
+            await ctx.send(embed=embed)
+            return
+        fence_id = f"geofence_{name.lower().replace(' ', '_')}_{int(datetime.datetime.utcnow().timestamp())}"
+        geofence_alerts = await self.cog.config.guild(ctx.guild).geofence_alerts()
+        geofence_alerts[fence_id] = {
+            "name": name,
+            "lat": lat,
+            "lon": lon,
+            "radius_nm": radius_nm,
+            "alert_on": alert_on.lower(),
+            "cooldown": cooldown,
+            "channel_id": channel.id,
+            "role_id": role.id if role else None,
+            "aircraft_inside": {},
+            "last_alert_time": None,
+        }
+        await self.cog.config.guild(ctx.guild).geofence_alerts.set(geofence_alerts)
+        embed = discord.Embed(
+            title="✅ Geo-fence added",
+            description=f"**{name}** at ({lat}, {lon}), radius {radius_nm} nm\nAlerts: {alert_on} | Cooldown: {cooldown}m | Channel: {channel.mention}",
+            color=0x00ff00,
+        )
+        embed.add_field(name="ID", value=f"`{fence_id}`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def geofence_remove(self, ctx, fence_id: str):
+        """Remove a geo-fence alert by ID."""
+        geofence_alerts = await self.cog.config.guild(ctx.guild).geofence_alerts()
+        if fence_id not in geofence_alerts:
+            await ctx.send(f"❌ Geo-fence `{fence_id}` not found.")
+            return
+        name = geofence_alerts[fence_id].get("name", fence_id)
+        del geofence_alerts[fence_id]
+        await self.cog.config.guild(ctx.guild).geofence_alerts.set(geofence_alerts)
+        await ctx.send(f"✅ Removed geo-fence **{name}** (`{fence_id}`).")
+
+    async def geofence_list(self, ctx):
+        """List all geo-fence alerts for this server."""
+        geofence_alerts = await self.cog.config.guild(ctx.guild).geofence_alerts()
+        if not geofence_alerts:
+            embed = discord.Embed(title="Geo-fence alerts", description="No geo-fences configured.", color=0x00aaff)
+            await ctx.send(embed=embed)
+            return
+        embed = discord.Embed(title="Geo-fence alerts", description=f"**{len(geofence_alerts)}** geo-fence(s)", color=0x00aaff)
+        for fence_id, fence in geofence_alerts.items():
+            ch = self.cog.bot.get_channel(fence.get("channel_id"))
+            ch_mention = ch.mention if ch else str(fence.get("channel_id"))
+            role_id = fence.get("role_id")
+            role_mention = f"<@&{role_id}>" if role_id else "—"
+            embed.add_field(
+                name=fence.get("name", fence_id),
+                value=f"**ID:** `{fence_id}`\n**Coords:** ({fence.get('lat')}, {fence.get('lon')}) {fence.get('radius_nm')} nm\n**Alert on:** {fence.get('alert_on', 'both')} | **Cooldown:** {fence.get('cooldown', 5)}m\n**Channel:** {ch_mention} | **Role:** {role_mention}",
+                inline=False,
+            )
+        await ctx.send(embed=embed)
