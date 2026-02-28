@@ -117,16 +117,11 @@ class AircraftCommands:
         key = 'aircraft' if api_mode == 'primary' else 'ac'
         aircraft_list = response.get(key) if response else None
         if aircraft_list and len(aircraft_list) > 0:
-            # Deduplicate by hex - API may return same aircraft multiple times
-            seen_hex = set()
-            unique_list = []
-            for ac in aircraft_list:
-                h = (ac.get("hex") or "").upper()
-                if h and h != "00000000" and h not in seen_hex:
-                    seen_hex.add(h)
-                    unique_list.append(ac)
-            if unique_list:
-                await self.send_aircraft_info(ctx, {key: unique_list})
+            if len(aircraft_list) > 1:
+                for aircraft_info in aircraft_list:
+                    await self.send_aircraft_info(ctx, {key: [aircraft_info]})
+            else:
+                await self.send_aircraft_info(ctx, {key: aircraft_list})
         else:
             embed = discord.Embed(title=_("No results found for your query"), color=discord.Colour(0xff4545))
             embed.add_field(name=_("Details"), value=_("No aircraft information found or the response format is incorrect."), inline=False)
