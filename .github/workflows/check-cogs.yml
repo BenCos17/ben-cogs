@@ -9,6 +9,9 @@ name: "Check Cogs"
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   BUILD_ARTIFACT_NAME: "my-build-artifact"
   COG_PATHS: "ampremover,bell,bible,currency,dank,earthquake,emojilink,enumbers,example,facebookdownloader,imgen,invoice,loan,scp,seasons,servertools,skysearch,spamatron,talknotifier,xkcd"  # comma-separated list of cog folder names
