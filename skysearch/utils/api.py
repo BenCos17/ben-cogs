@@ -470,7 +470,7 @@ class APIManager:
 
         report_type = report_type.lower().strip()
         station = station.upper().strip()
-        url = f"{self.avwx_api_url}/{report_type}/{station}?options=info,summary,translate,onfail=cache"
+        url = f"{self.avwx_api_url}/{report_type}/{station}?options=info,summary,translate&onfail=cache"
 
         try:
             async with self._http_client.get(url, headers=await self.get_avwx_headers()) as resp:
@@ -501,7 +501,7 @@ class APIManager:
             self._http_client = aiohttp.ClientSession()
 
         station = station.upper().strip()
-        url = f"{self.avwx_api_url}/summary/{station}?options=info,onfail=cache"
+        url = f"{self.avwx_api_url}/summary/{station}?options=info&onfail=cache"
 
         try:
             async with self._http_client.get(url, headers=await self.get_avwx_headers()) as resp:
