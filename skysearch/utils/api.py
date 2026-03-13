@@ -18,6 +18,7 @@ class APIManager:
         self.cog = cog
         self.primary_api_url = "https://rest.api.airplanes.live"
         self.fallback_api_url = "https://api.airplanes.live"
+        self.avwx_api_url = "https://avwx.rest/api"
         self._http_client = None
         
         # Request tracking statistics - will be loaded from config
@@ -106,6 +107,10 @@ class APIManager:
         """Get the fallback API URL."""
         return self.fallback_api_url
 
+    def get_avwx_api_url(self):
+        """Get the AVWX API URL."""
+        return self.avwx_api_url
+
     async def get_headers(self, url=None, api_mode=None):
         """Return headers with API key for requests, if available. Only send API key for primary API."""
         headers = {}
@@ -116,6 +121,18 @@ class APIManager:
         api_key = await self.cog.config.airplanesliveapi()
         if api_mode == "primary" and api_key:
             headers['auth'] = api_key
+        return headers
+
+    async def get_avwx_headers(self):
+        """Return headers for AVWX requests."""
+        headers = {}
+        user_agent = await self.cog.config.user_agent()
+        if user_agent:
+            headers["User-Agent"] = user_agent
+
+        token = await self.cog.config.avwx_token()
+        if token:
+            headers["Authorization"] = f"Token {token}"
         return headers
 
     def _update_request_stats(self, api_mode: str, endpoint: str, success: bool, 
@@ -438,3 +455,66 @@ class APIManager:
         except aiohttp.ClientError as e:
             print(f"Error fetching OpenWeatherMap forecast: {e}")
             return None 
+
+    async def get_avwx_report(self, report_type: str, station: str):
+        """Fetch an AVWX report for a station.
+
+        Returns a tuple of (data, error_message).
+        """
+        token = await self.cog.config.avwx_token()
+        if not token:
+            return None, "AVWX token not configured."
+
+        if not self._http_client:
+            self._http_client = aiohttp.ClientSession()
+
+        report_type = report_type.lower().strip()
+        station = station.upper().strip()
+        url = f"{self.avwx_api_url}/{report_type}/{station}?options=info,summary,translate,onfail=cache"
+
+        try:
+            async with self._http_client.get(url, headers=await self.get_avwx_headers()) as resp:
+                if resp.status == 200:
+                    return await resp.json(), None
+                if resp.status == 401:
+                    return None, "AVWX authentication failed. Check the configured token."
+                if resp.status == 403:
+                    return None, "AVWX token does not have access to this endpoint."
+                if resp.status == 404:
+                    return None, f"No {report_type.upper()} report found for {station}."
+                if resp.status == 429:
+                    return None, "AVWX rate limit exceeded. Try again shortly."
+                return None, f"AVWX returned HTTP {resp.status}."
+        except aiohttp.ClientError as e:
+            return None, f"AVWX request failed: {e}"
+
+    async def get_avwx_summary(self, station: str):
+        """Fetch AVWX summary data for a station.
+
+        Returns a tuple of (data, error_message).
+        """
+        token = await self.cog.config.avwx_token()
+        if not token:
+            return None, "AVWX token not configured."
+
+        if not self._http_client:
+            self._http_client = aiohttp.ClientSession()
+
+        station = station.upper().strip()
+        url = f"{self.avwx_api_url}/summary/{station}?options=info,onfail=cache"
+
+        try:
+            async with self._http_client.get(url, headers=await self.get_avwx_headers()) as resp:
+                if resp.status == 200:
+                    return await resp.json(), None
+                if resp.status == 401:
+                    return None, "AVWX authentication failed. Check the configured token."
+                if resp.status == 403:
+                    return None, "AVWX token does not have access to this endpoint."
+                if resp.status == 404:
+                    return None, f"No AVWX summary found for {station}."
+                if resp.status == 429:
+                    return None, "AVWX rate limit exceeded. Try again shortly."
+                return None, f"AVWX returned HTTP {resp.status}."
+        except aiohttp.ClientError as e:
+            return None, f"AVWX request failed: {e}"

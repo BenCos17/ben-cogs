@@ -47,6 +47,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config = Config.get_conf(self, identifier=492089091320446976)
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
+        self.config.register_global(avwx_token=None)  # AVWX API token
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
         self.config.register_global(user_agent=None)  # Optional custom User-Agent header for all outbound HTTP requests
         self.config.register_global(api_stats=None)  # API request statistics for persistence
@@ -603,7 +604,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Command center for airport related commands"""
         embed = discord.Embed(title="Airport Commands", description="Available airport-related commands:", color=0xfffffe)
         embed.add_field(name="Information", value="`info` - Get airport information by ICAO/IATA code", inline=False)
-        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast\n`faastatus [code]` - Get FAA National Airspace Status (delays/closures)", inline=False)
+        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast\n`faastatus [code]` - Get FAA National Airspace Status (delays/closures)\n`avwx <code>` - Get aviation weather overview\n`metar <code>` - Get current METAR\n`taf <code>` - Get current TAF", inline=False)
         embed.add_field(name="FAA Alerts", value="`faaalertchannel` `faaalertrole` `faaalertcooldown` `showfaaalerts` - Notify when FAA status changes", inline=False)
         embed.add_field(name="Detailed Help", value="Use `*help airport` for detailed command information", inline=False)
         await ctx.send(embed=embed)
@@ -628,6 +629,21 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def airport_forecast(self, ctx, code: str):
         """Get the weather for an airport by ICAO or IATA code (US airports only)."""
         await self.airport_commands.forecast(ctx, code)
+
+    @airport_group.command(name='avwx', aliases=['wx'], help='Get aviation weather conditions from AVWX for an airport code.')
+    async def airport_avwx(self, ctx, code: str):
+        """Get aviation weather conditions from AVWX for an airport code."""
+        await self.airport_commands.avwx_conditions(ctx, code)
+
+    @airport_group.command(name='metar', help='Get current METAR from AVWX for an airport code.')
+    async def airport_metar(self, ctx, code: str):
+        """Get current METAR from AVWX for an airport code."""
+        await self.airport_commands.avwx_metar(ctx, code)
+
+    @airport_group.command(name='taf', help='Get current TAF from AVWX for an airport code.')
+    async def airport_taf(self, ctx, code: str):
+        """Get current TAF from AVWX for an airport code."""
+        await self.airport_commands.avwx_taf(ctx, code)
 
     @airport_group.command(name='faastatus', aliases=['faa'], help='Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code.')
     async def airport_faa_status(self, ctx, airport_code: str = None):
@@ -671,6 +687,24 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def airport_clearowmkey(self, ctx):
         """Clear the OpenWeatherMap API key."""
         await self.admin_commands.clear_owm_key(ctx)
+
+    @commands.is_owner()
+    @airport_group.command(name="setavwxtoken")
+    async def airport_setavwxtoken(self, ctx, token: str):
+        """Set the AVWX API token."""
+        await self.admin_commands.set_avwx_token(ctx, token)
+
+    @commands.is_owner()
+    @airport_group.command(name="avwxtoken")
+    async def airport_avwxtoken(self, ctx):
+        """Show the configured AVWX API token status."""
+        await self.admin_commands.check_avwx_token(ctx)
+
+    @commands.is_owner()
+    @airport_group.command(name="clearavwxtoken")
+    async def airport_clearavwxtoken(self, ctx):
+        """Clear the AVWX API token."""
+        await self.admin_commands.clear_avwx_token(ctx)
 
     @tasks.loop(minutes=2)
     async def check_emergency_squawks(self):
