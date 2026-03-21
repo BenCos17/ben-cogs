@@ -103,6 +103,17 @@ class Skysearch(commands.Cog, DashboardIntegration):
             if await self.config.guild(guild).auto_icao():
                 self._auto_icao_enabled_guilds.add(guild.id)
             self._auto_icao_checked_guilds.add(guild.id)
+
+    async def _set_guild_locales_safe(self, guild) -> bool:
+        """Set i18n context for a guild without letting failures break background tasks."""
+        try:
+            await asyncio.wait_for(set_contextual_locales_from_guild(self.bot, guild), timeout=2.0)
+            return True
+        except asyncio.TimeoutError:
+            log.warning(f"Timed out setting contextual locales for guild {guild.id}")
+        except Exception as e:
+            log.warning(f"Failed to set contextual locales for guild {guild.id}: {e}")
+        return False
     
     async def cog_load(self):
         """Called when the cog is loaded - refresh cache."""
@@ -726,7 +737,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         guilds = self.bot.guilds
                         for guild in guilds:
                             # In non-command contexts set locales explicitly
-                            await set_contextual_locales_from_guild(self.bot, guild)
+                            if not await self._set_guild_locales_safe(guild):
+                                continue
                             guild_config = self.config.guild(guild)
                             alert_channel_id = await guild_config.alert_channel()
                             if alert_channel_id:
@@ -889,7 +901,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                         guilds = self.bot.guilds
                         for guild in guilds:
                             # Set locales once per guild per cycle
-                            await set_contextual_locales_from_guild(self.bot, guild)
+                            if not await self._set_guild_locales_safe(guild):
+                                continue
                             guild_config = self.config.guild(guild)
                             alert_channel_id = await guild_config.alert_channel()
                             custom_alerts = await guild_config.custom_alerts()
@@ -949,7 +962,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
             for guild in self.bot.guilds:
                 try:
-                    await set_contextual_locales_from_guild(self.bot, guild)
+                    if not await self._set_guild_locales_safe(guild):
+                        continue
                     guild_config = self.config.guild(guild)
                     channel_id = await guild_config.faa_alert_channel()
                     if not channel_id:
@@ -1014,7 +1028,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
             api_mode = await self.config.api_mode()
             key = "aircraft" if api_mode == "primary" else "ac"
             for guild in self.bot.guilds:
-                await set_contextual_locales_from_guild(self.bot, guild)
+                if not await self._set_guild_locales_safe(guild):
+                    continue
                 guild_config = self.config.guild(guild)
                 geofence_alerts = await guild_config.geofence_alerts()
                 if not geofence_alerts:
@@ -1350,7 +1365,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         try:
             guilds = self.bot.guilds
             for guild in guilds:
-                await set_contextual_locales_from_guild(self.bot, guild)
+                if not await self._set_guild_locales_safe(guild):
+                    continue
                 guild_config = self.config.guild(guild)
                 alert_channel_id = await guild_config.alert_channel()
                 # Default alert channel may be unset; some alerts might target a custom channel.
