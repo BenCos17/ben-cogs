@@ -19,6 +19,7 @@ class APIManager:
         self.primary_api_url = "https://rest.api.airplanes.live"
         self.fallback_api_url = "https://api.airplanes.live"
         self.avwx_api_url = "https://avwx.rest/api"
+        self._http_timeout = aiohttp.ClientTimeout(total=20, connect=5, sock_read=15)
         self._http_client = None
         
         # Request tracking statistics - will be loaded from config
@@ -251,7 +252,7 @@ class APIManager:
     async def make_request(self, url, ctx=None):
         """Make an HTTP request to the selected API (primary or fallback)."""
         if not self._http_client:
-            self._http_client = aiohttp.ClientSession()
+            self._http_client = aiohttp.ClientSession(timeout=self._http_timeout)
 
         # Determine which API to use
         api_mode = await self.cog.config.api_mode()
@@ -345,6 +346,14 @@ class APIManager:
                 self._update_request_stats(api_mode, endpoint, True, status_code, time.time() - start_time)
                 return data
                 
+        except asyncio.TimeoutError:
+            error_msg = "Error making request: request timed out"
+            if ctx:
+                await ctx.send(f"❌ **Error:** {error_msg}")
+            else:
+                print(error_msg)
+            self._update_request_stats(api_mode, endpoint, False, status_code, time.time() - start_time)
+            return None
         except aiohttp.ClientError as e:
             error_msg = f"Error making request: {e}"
             if ctx:
@@ -427,7 +436,7 @@ class APIManager:
         """Fetch stats from the airplanes.live API and return the JSON response or None on error."""
         url = "https://api.airplanes.live/stats"
         if not self._http_client:
-            self._http_client = aiohttp.ClientSession()
+            self._http_client = aiohttp.ClientSession(timeout=self._http_timeout)
         try:
             async with self._http_client.get(url, headers=await self.get_headers(url, api_mode="primary")) as response:
                 if response.status == 200:
@@ -445,7 +454,7 @@ class APIManager:
             return None
         url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric"
         if not self._http_client:
-            self._http_client = aiohttp.ClientSession()
+            self._http_client = aiohttp.ClientSession(timeout=self._http_timeout)
         try:
             async with self._http_client.get(url, headers=await self.get_headers(url, api_mode="primary")) as resp:
                 if resp.status == 200:
@@ -466,7 +475,7 @@ class APIManager:
             return None, "AVWX token not configured."
 
         if not self._http_client:
-            self._http_client = aiohttp.ClientSession()
+            self._http_client = aiohttp.ClientSession(timeout=self._http_timeout)
 
         report_type = report_type.lower().strip()
         station = station.upper().strip()
@@ -498,7 +507,7 @@ class APIManager:
             return None, "AVWX token not configured."
 
         if not self._http_client:
-            self._http_client = aiohttp.ClientSession()
+            self._http_client = aiohttp.ClientSession(timeout=self._http_timeout)
 
         station = station.upper().strip()
         url = f"{self.avwx_api_url}/summary/{station}?options=info&onfail=cache"
