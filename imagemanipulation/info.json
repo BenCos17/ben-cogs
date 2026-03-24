@@ -2,7 +2,7 @@
     "author": [
         "bencos17"
     ],
-    "name": "Image",
+    "name": "ImageManipulation",
     "short": "Add simple captions to images.",
     "description": "Adds a caption bar to an attached or replied image using the caption command.",
     "install_msg": "Use `[p]caption <text>` with an attachment or by replying to an image.",
