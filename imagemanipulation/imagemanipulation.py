@@ -84,7 +84,7 @@ def _build_caption_image(raw_data: bytes, caption: str) -> io.BytesIO:
 	return output
 
 
-class ImageTools(commands.Cog):
+class ImageManipulation(commands.Cog):
 	"""Simple image utilities."""
 
 	def __init__(self, bot):
