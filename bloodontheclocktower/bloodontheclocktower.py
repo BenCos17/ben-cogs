@@ -44,6 +44,21 @@ ROLE_INFO: Dict[str, str] = {
     "Fang Gu": "Each night, choose a player; they die. The first Outsider this kills becomes an evil Fang Gu and you die instead. [+1 Outsider]",
 }
 
+MEZEPHELES_WORDS = [
+    "clock",
+    "tower",
+    "lantern",
+    "midnight",
+    "whisper",
+    "raven",
+    "grimoire",
+    "token",
+    "fortune",
+    "candle",
+    "puzzle",
+    "echo",
+]
+
 TOWNSFOLK = [
     "Chef",
     "Investigator",
@@ -101,6 +116,10 @@ class GameState:
     ai_chat_enabled: bool = True
     suspicion: Dict[int, float] = field(default_factory=dict)
     last_ai_chat_ts: float = 0.0
+    turned_evil: Set[int] = field(default_factory=set)
+    mezepheles_word: Optional[str] = None
+    mezepheles_triggered: bool = False
+    mezepheles_pending_convert: Optional[int] = None
     phase: str = "lobby"
     day_number: int = 0
 
@@ -159,6 +178,11 @@ class BloodOnTheClocktower(commands.Cog):
     def _is_evil(self, role_name: str) -> bool:
         return role_name in MINIONS or role_name in DEMONS
 
+    def _is_evil_player(self, game: GameState, uid: int) -> bool:
+        if uid in game.turned_evil:
+            return True
+        return self._is_evil(game.roles.get(uid, ""))
+
     def _reset_vote(self, game: GameState):
         game.vote_open = False
         game.vote_target = None
@@ -171,17 +195,15 @@ class BloodOnTheClocktower(commands.Cog):
         if not alive_demons:
             return "Good wins: all Demons are dead."
 
-        evil_alive = sum(1 for r in alive_roles if self._is_evil(r))
-        good_alive = len(alive_roles) - evil_alive
+        evil_alive = sum(1 for uid in game.alive if self._is_evil_player(game, uid))
+        good_alive = len(game.alive) - evil_alive
         if evil_alive > good_alive:
             return "Evil wins: evil players outnumber good players."
         return None
 
     def _bot_vote_yes(self, game: GameState, voter_id: int, target_id: int) -> bool:
-        voter_role = game.roles.get(voter_id, "")
-        target_role = game.roles.get(target_id, "")
-        target_is_evil = self._is_evil(target_role)
-        voter_is_evil = self._is_evil(voter_role)
+        target_is_evil = self._is_evil_player(game, target_id)
+        voter_is_evil = self._is_evil_player(game, voter_id)
         suspicion = game.suspicion.get(target_id, 0.0)
 
         if voter_is_evil:
@@ -202,8 +224,7 @@ class BloodOnTheClocktower(commands.Cog):
         # Slightly bias nominations toward evil, with enough noise to stay imperfect.
         weights: List[float] = []
         for uid in candidates:
-            role = game.roles.get(uid, "")
-            base = 1.6 if self._is_evil(role) else 1.0
+            base = 1.6 if self._is_evil_player(game, uid) else 1.0
             suspicion_boost = max(0.0, game.suspicion.get(uid, 0.0))
             weights.append(base + suspicion_boost)
         return random.choices(candidates, weights=weights, k=1)[0]
@@ -215,8 +236,7 @@ class BloodOnTheClocktower(commands.Cog):
 
         weights: List[float] = []
         for uid in candidates:
-            role = game.roles.get(uid, "")
-            target_is_evil = self._is_evil(role)
+            target_is_evil = self._is_evil_player(game, uid)
             # Demons prefer good targets and often remove trusted voices.
             base = 0.35 if target_is_evil else 1.5
             suspicion = game.suspicion.get(uid, 0.0)
@@ -282,6 +302,16 @@ class BloodOnTheClocktower(commands.Cog):
         if any(w in text for w in self_claim_words):
             # Self-claims slightly increase suspicion to avoid free trust.
             self._adjust_suspicion(game, message.author.id, 0.15)
+
+        if (
+            game.mezepheles_word
+            and not game.mezepheles_triggered
+            and game.mezepheles_pending_convert is None
+            and game.mezepheles_word.lower() in text
+            and message.author.id in game.alive
+            and not self._is_evil_player(game, message.author.id)
+        ):
+            game.mezepheles_pending_convert = message.author.id
 
     def _build_ai_chat_line(self, guild: discord.Guild, game: GameState) -> Optional[str]:
         alive_bots = [uid for uid in game.alive if uid in game.bot_players]
@@ -384,6 +414,15 @@ class BloodOnTheClocktower(commands.Cog):
             return
 
         self._apply_message_inference(message.guild, game, message)
+
+        if game.mezepheles_pending_convert == message.author.id:
+            game.mezepheles_triggered = True
+            player_name = self._player_name(message.guild, game, message.author.id)
+            await self._dm_storyteller(
+                message.guild,
+                game.storyteller_id,
+                f"Mezepheles trigger: {player_name} said the secret word and will become evil tonight.",
+            )
 
         if game.phase != "day":
             return
@@ -565,6 +604,10 @@ class BloodOnTheClocktower(commands.Cog):
         game.first_night_no_kill_used = False
         game.suspicion = {uid: 0.0 for uid in game.players}
         game.last_ai_chat_ts = 0.0
+        game.turned_evil.clear()
+        game.mezepheles_word = None
+        game.mezepheles_triggered = False
+        game.mezepheles_pending_convert = None
 
         dm_failed: List[str] = []
         for uid in game.players:
@@ -574,6 +617,20 @@ class BloodOnTheClocktower(commands.Cog):
             ok = await self._dm_role(member, game.roles[uid])
             if not ok:
                 dm_failed.append(member.display_name)
+
+        mez_players = [uid for uid in game.players if game.roles.get(uid) == "Mezepheles"]
+        if mez_players:
+            game.mezepheles_word = random.choice(MEZEPHELES_WORDS)
+            for mez_uid in mez_players:
+                mez_member = ctx.guild.get_member(mez_uid)
+                if mez_member:
+                    try:
+                        await mez_member.send(
+                            f"Your Mezepheles secret word is **{game.mezepheles_word}**. "
+                            "The first good player to say it becomes evil tonight."
+                        )
+                    except discord.Forbidden:
+                        pass
 
         msg = "Game started. Night 1 begins now. Roles have been sent by DM."
         if dm_failed:
@@ -610,6 +667,25 @@ class BloodOnTheClocktower(commands.Cog):
         game.phase = "night"
         game.day_number += 1
         self._reset_vote(game)
+
+        if game.mezepheles_pending_convert is not None:
+            convert_uid = game.mezepheles_pending_convert
+            game.mezepheles_pending_convert = None
+            if convert_uid in game.alive and not self._is_evil_player(game, convert_uid):
+                game.turned_evil.add(convert_uid)
+                converted_name = self._player_name(ctx.guild, game, convert_uid)
+                await self._dm_storyteller(
+                    ctx.guild,
+                    game.storyteller_id,
+                    f"Mezepheles effect: {converted_name} has turned evil tonight.",
+                )
+                convert_member = ctx.guild.get_member(convert_uid)
+                if convert_member:
+                    try:
+                        await convert_member.send("A dark influence takes hold. You are now evil.")
+                    except discord.Forbidden:
+                        pass
+
         await ctx.send(f"It is now **Night {game.day_number}**.")
 
     @botc.command(name="aichat")

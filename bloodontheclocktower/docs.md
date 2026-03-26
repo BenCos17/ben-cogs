@@ -58,3 +58,4 @@ The storyteller can still be a player, but using debug role peeks while playing 
 Bot role assignments are not automatically sent at game start; use reveal/debug commands when needed.
 Balance tweaks: evil wins only when evil outnumbers good (not on tie), and AI skips the first-night kill.
 AI now tracks suspicion from player chat, uses it for votes and targets, and can post in-channel bot reactions during day phase.
+Mezepheles now gets a generated secret word by DM at game start; the first good player to say it is turned evil on the next night phase.
