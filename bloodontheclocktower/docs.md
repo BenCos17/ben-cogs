@@ -38,14 +38,19 @@ Use the command group: `[p]botc`
 - `[p]botc clearbots` - remove all AI bot players before start (storyteller only).
 - `[p]botc start` - assign roles and start night 1.
 - `[p]botc day` / `[p]botc night` - switch phase.
-- `[p]botc execute <target>` - mark a player dead by execution (mention, ID, or exact name like `Bot 1`).
+- `[p]botc execute <target>` - open an execution vote for a target (day only, storyteller only).
+- `[p]botc vote <yes|no>` - cast your vote on the active execution vote (alive players).
+- `[p]botc tally` - close the vote and resolve execution result (storyteller only).
 - `[p]botc kill <target>` - mark a player dead at night (mention, ID, or exact name like `Bot 1`).
 - `[p]botc aisteps [count]` - run AI actions for current phase (storyteller only).
 - `[p]botc info <role name>` - show role text.
 - `[p]botc reveal` - storyteller-only assignment dump to DM.
+- `[p]botc debugrole <target>` - storyteller debug role peek to DM. If storyteller is also a player, posts a public cheat notice in the game channel.
 - `[p]botc end` - end and clear the game.
 
 ## Notes
 
 This is a moderator/storyteller-assist implementation, not a full automation of every character interaction.
 AI actions are intentionally simple and random to support low-player or bot-heavy games.
+Day AI actions now simulate votes before execution instead of always executing.
+The storyteller can still be a player, but using debug role peeks while playing is publicly announced.

@@ -92,6 +92,10 @@ class GameState:
     roles: Dict[int, str] = field(default_factory=dict)
     bot_players: Dict[int, str] = field(default_factory=dict)
     next_bot_id: int = 1
+    vote_open: bool = False
+    vote_target: Optional[int] = None
+    votes_yes: Set[int] = field(default_factory=set)
+    votes_no: Set[int] = field(default_factory=set)
     phase: str = "lobby"
     day_number: int = 0
 
@@ -150,6 +154,12 @@ class BloodOnTheClocktower(commands.Cog):
     def _is_evil(self, role_name: str) -> bool:
         return role_name in MINIONS or role_name in DEMONS
 
+    def _reset_vote(self, game: GameState):
+        game.vote_open = False
+        game.vote_target = None
+        game.votes_yes.clear()
+        game.votes_no.clear()
+
     def _check_win_state(self, game: GameState) -> Optional[str]:
         alive_roles = [game.roles[uid] for uid in game.alive if uid in game.roles]
         alive_demons = [r for r in alive_roles if r in DEMONS]
@@ -189,6 +199,15 @@ class BloodOnTheClocktower(commands.Cog):
             return True
         except discord.Forbidden:
             return False
+
+    async def _announce_cheat(self, guild: discord.Guild, game: GameState, detail: str):
+        channel = guild.get_channel(game.channel_id)
+        storyteller_name = self._player_name(guild, game, game.storyteller_id)
+        if isinstance(channel, (discord.TextChannel, discord.Thread)):
+            await channel.send(
+                "Debug cheat notice: "
+                f"{storyteller_name} used debug role access while being a player. {detail}"
+            )
 
     @commands.group(name="botc")
     @commands.guild_only()
@@ -399,6 +418,7 @@ class BloodOnTheClocktower(commands.Cog):
             return
 
         game.phase = "day"
+        self._reset_vote(game)
         await ctx.send(f"It is now **Day {game.day_number}**.")
 
     @botc.command(name="night")
@@ -414,17 +434,21 @@ class BloodOnTheClocktower(commands.Cog):
 
         game.phase = "night"
         game.day_number += 1
+        self._reset_vote(game)
         await ctx.send(f"It is now **Night {game.day_number}**.")
 
     @botc.command(name="execute")
     async def botc_execute(self, ctx: commands.Context, *, target: str):
-        """Mark a player dead by execution."""
+        """Open an execution vote for a nominated player."""
         game = self._get_game(ctx.guild.id)
         if not game or not game.started:
             await ctx.send("No active started game.")
             return
         if not self._is_storyteller(game, ctx.author.id):
-            await ctx.send("Only the storyteller can execute players.")
+            await ctx.send("Only the storyteller can open execution votes.")
+            return
+        if game.phase != "day":
+            await ctx.send("Execution votes can only be started during day phase.")
             return
         target_id = self._resolve_target(ctx.guild, game, target)
         if target_id is None:
@@ -434,19 +458,101 @@ class BloodOnTheClocktower(commands.Cog):
             await ctx.send("That player is already dead.")
             return
 
-        game.alive.remove(target_id)
-        role = game.roles.get(target_id, "Unknown")
         target_name = self._player_name(ctx.guild, game, target_id)
-        await ctx.send(f"{target_name} was executed and died.")
-        await self._dm_storyteller(
-            ctx.guild,
-            game.storyteller_id,
-            f"Execution result: {target_name} was **{role}**.",
-        )
+        self._reset_vote(game)
+        game.vote_open = True
+        game.vote_target = target_id
 
-        winner = self._check_win_state(game)
-        if winner:
-            await ctx.send(winner)
+        # Auto-cast votes for alive bot players to support bot-heavy lobbies.
+        auto_yes = 0
+        auto_no = 0
+        for uid in list(game.alive):
+            if uid == target_id or uid not in game.bot_players:
+                continue
+            if random.random() < 0.5:
+                game.votes_yes.add(uid)
+                auto_yes += 1
+            else:
+                game.votes_no.add(uid)
+                auto_no += 1
+
+        await ctx.send(
+            f"Execution vote opened for **{target_name}**. "
+            "Alive players use `[p]botc vote yes` or `[p]botc vote no` then storyteller runs `[p]botc tally`."
+        )
+        if auto_yes or auto_no:
+            await ctx.send(f"Auto bot votes applied: {auto_yes} yes, {auto_no} no.")
+
+    @botc.command(name="vote")
+    async def botc_vote(self, ctx: commands.Context, choice: str):
+        """Cast your vote on the active execution vote."""
+        game = self._get_game(ctx.guild.id)
+        if not game or not game.started:
+            await ctx.send("No active started game.")
+            return
+        if game.phase != "day":
+            await ctx.send("Voting is only available during day phase.")
+            return
+        if not game.vote_open or game.vote_target is None:
+            await ctx.send("No active execution vote. Storyteller can start one with `[p]botc execute <target>`." )
+            return
+        if ctx.author.id not in game.alive:
+            await ctx.send("Only alive players can vote.")
+            return
+        if ctx.author.id == game.vote_target:
+            await ctx.send("Nominated player cannot vote on their own execution.")
+            return
+
+        normalized = choice.strip().lower()
+        if normalized not in {"yes", "no", "y", "n"}:
+            await ctx.send("Vote must be `yes` or `no`.")
+            return
+
+        game.votes_yes.discard(ctx.author.id)
+        game.votes_no.discard(ctx.author.id)
+        if normalized in {"yes", "y"}:
+            game.votes_yes.add(ctx.author.id)
+            await ctx.send(f"{ctx.author.mention} voted **YES**.")
+        else:
+            game.votes_no.add(ctx.author.id)
+            await ctx.send(f"{ctx.author.mention} voted **NO**.")
+
+    @botc.command(name="tally")
+    async def botc_tally(self, ctx: commands.Context):
+        """Close and resolve the current execution vote."""
+        game = self._get_game(ctx.guild.id)
+        if not game or not game.started:
+            await ctx.send("No active started game.")
+            return
+        if not self._is_storyteller(game, ctx.author.id):
+            await ctx.send("Only the storyteller can tally votes.")
+            return
+        if not game.vote_open or game.vote_target is None:
+            await ctx.send("No active execution vote.")
+            return
+
+        target_id = game.vote_target
+        target_name = self._player_name(ctx.guild, game, target_id)
+        yes_count = len(game.votes_yes)
+        no_count = len(game.votes_no)
+        self._reset_vote(game)
+
+        if yes_count > no_count and target_id in game.alive:
+            game.alive.remove(target_id)
+            role = game.roles.get(target_id, "Unknown")
+            await ctx.send(f"Vote passed ({yes_count}-{no_count}). {target_name} is executed.")
+            await self._dm_storyteller(
+                ctx.guild,
+                game.storyteller_id,
+                f"Execution result: {target_name} was **{role}**.",
+            )
+
+            winner = self._check_win_state(game)
+            if winner:
+                await ctx.send(winner)
+            return
+
+        await ctx.send(f"Vote failed ({yes_count}-{no_count}). No execution.")
 
     @botc.command(name="kill")
     async def botc_kill(self, ctx: commands.Context, *, target: str):
@@ -498,14 +604,25 @@ class BloodOnTheClocktower(commands.Cog):
                     logs.append("No valid day execution targets.")
                     break
                 target_id = random.choice(candidates)
-                game.alive.remove(target_id)
                 target_name = self._player_name(ctx.guild, game, target_id)
-                logs.append(f"Day AI executes {target_name}.")
-                await self._dm_storyteller(
-                    ctx.guild,
-                    game.storyteller_id,
-                    f"AI execution role: {target_name} was **{game.roles.get(target_id, 'Unknown')}**.",
-                )
+                voters = [uid for uid in game.alive if uid != target_id]
+                yes_votes = 0
+                no_votes = 0
+                for _uid in voters:
+                    if random.random() < 0.5:
+                        yes_votes += 1
+                    else:
+                        no_votes += 1
+                if yes_votes > no_votes:
+                    game.alive.remove(target_id)
+                    logs.append(f"Day AI vote passes ({yes_votes}-{no_votes}); executes {target_name}.")
+                    await self._dm_storyteller(
+                        ctx.guild,
+                        game.storyteller_id,
+                        f"AI execution role: {target_name} was **{game.roles.get(target_id, 'Unknown')}**.",
+                    )
+                else:
+                    logs.append(f"Day AI vote fails ({yes_votes}-{no_votes}); no execution.")
             else:
                 demon_ids = [
                     uid for uid in game.alive if game.roles.get(uid) in DEMONS
@@ -571,6 +688,43 @@ class BloodOnTheClocktower(commands.Cog):
             await ctx.send("Sent assignments to storyteller DM.")
         else:
             await ctx.send("Could not DM storyteller. Check DM settings.")
+
+    @botc.command(name="debugrole")
+    async def botc_debugrole(self, ctx: commands.Context, *, target: str):
+        """Debug: storyteller can peek a player's role by target name/id/mention."""
+        game = self._get_game(ctx.guild.id)
+        if not game or not game.started:
+            await ctx.send("No active started game.")
+            return
+        if not self._is_storyteller(game, ctx.author.id):
+            await ctx.send("Only the storyteller can use debug role peek.")
+            return
+
+        target_id = self._resolve_target(ctx.guild, game, target)
+        if target_id is None:
+            await ctx.send("Could not find that player. Use mention, ID, or exact name (e.g. Bot 1).")
+            return
+
+        role = game.roles.get(target_id, "Unknown")
+        target_name = self._player_name(ctx.guild, game, target_id)
+        ok = await self._dm_storyteller(
+            ctx.guild,
+            game.storyteller_id,
+            f"Debug role peek: {target_name} is **{role}**.",
+        )
+        if not ok:
+            await ctx.send("Could not DM storyteller. Check DM settings.")
+            return
+
+        await ctx.send("Debug role sent to storyteller DM.")
+
+        # If storyteller is also in the player list, this is a deliberate cheat disclosure.
+        if game.storyteller_id in game.players:
+            await self._announce_cheat(
+                ctx.guild,
+                game,
+                f"Peeked role for {target_name}.",
+            )
 
     @botc.command(name="end")
     async def botc_end(self, ctx: commands.Context):
