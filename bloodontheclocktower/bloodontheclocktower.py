@@ -6,96 +6,15 @@ from typing import Dict, List, Optional, Set, Tuple
 import discord
 from redbot.core import commands
 
-
-ROLE_INFO: Dict[str, str] = {
-    "Chef": "You start knowing how many pairs of evil players there are.",
-    "Investigator": "You start knowing that 1 of 2 players is a particular Minion.",
-    "Washerwoman": "You start knowing that 1 of 2 players is a particular Townsfolk.",
-    "Librarian": "You start knowing that 1 of 2 players is a particular Outsider (or that zero are in play).",
-    "Empath": "Each night, learn how many of your 2 alive neighbors are evil.",
-    "Fortune Teller": "Each night, choose 2 players; you learn if either is a Demon.",
-    "Undertaker": "Each night, learn which character died by execution today.",
-    "Monk": "Each night, choose a player (not yourself); they are safe from the Demon tonight.",
-    "Gossip": "Each day, you may make a public statement. Tonight, if true, a player dies.",
-    "Slayer": "Once per game, during the day, publicly choose a player; if they are the Demon, they die.",
-    "Soldier": "You are safe from the Demon.",
-    "Cannibal": "You have the ability of the recently killed executee. If they are evil, you are poisoned until a good player dies by execution.",
-    "Ravenkeeper": "If you die at night, choose a player; you learn their character.",
-    "Mayor": "If only 3 players live and no execution occurs, your team wins. If you die at night, another player might die instead.",
-    "Fool": "The first time you die, you do not.",
-    "Virgin": "The first time you are nominated, if the nominator is a Townsfolk, they are executed immediately.",
-    "Butler": "Each night, choose a player (not yourself); tomorrow, you may only vote if they are voting too.",
-    "Lunatic": "You think you are a Demon, but you are not. The Demon knows who you are.",
-    "Drunk": "You do not know you are the Drunk. You think you are a Townsfolk character, but you are not.",
-    "Recluse": "You might register as evil and as a Minion or Demon, even if dead.",
-    "Klutz": "When you learn that you died, publicly choose 1 alive player; if they are evil, your team loses.",
-    "Saint": "If you die by execution, your team loses.",
-    "Mutant": "If you are mad about being an Outsider, you might be executed.",
-    "Mezepheles": "You start knowing a secret word. The first good player to say this word becomes evil that night.",
-    "Poisoner": "Each night, choose a player; they are poisoned tonight and tomorrow day.",
-    "Spy": "Each night, you see the Grimoire. You might register as good and as a Townsfolk or Outsider, even if dead.",
-    "Marionette": "You think you are a good character, but you are not. The Demon knows who you are. You neighbor the Demon.",
-    "Wraith": "You may choose to open your eyes at night. You wake when other evil players do.",
-    "Scarlet Woman": "If there are 5 or more players alive and the Demon dies, you become the Demon.",
-    "Baron": "There are extra Outsiders in play. [+2 Outsiders]",
-    "Yaggababble": "You start knowing a secret phrase. For each time you said it publicly today, a player might die.",
-    "Imp": "Each night, choose a player; they die. If you kill yourself this way, a Minion becomes the Imp.",
-    "Vortox": "Each night, choose a player; they die. Townsfolk abilities yield false info. Each day, if no one is executed, evil wins.",
-    "Fang Gu": "Each night, choose a player; they die. The first Outsider this kills becomes an evil Fang Gu and you die instead. [+1 Outsider]",
-}
-
-MEZEPHELES_WORDS = [
-    "clock",
-    "tower",
-    "lantern",
-    "midnight",
-    "whisper",
-    "raven",
-    "grimoire",
-    "token",
-    "fortune",
-    "candle",
-    "puzzle",
-    "echo",
-]
-
-TOWNSFOLK = [
-    "Chef",
-    "Investigator",
-    "Washerwoman",
-    "Librarian",
-    "Empath",
-    "Fortune Teller",
-    "Undertaker",
-    "Monk",
-    "Gossip",
-    "Slayer",
-    "Soldier",
-    "Cannibal",
-    "Ravenkeeper",
-    "Mayor",
-    "Fool",
-    "Virgin",
-]
-
-OUTSIDERS = ["Butler", "Lunatic", "Drunk", "Recluse", "Klutz", "Saint", "Mutant"]
-MINIONS = ["Mezepheles", "Poisoner", "Spy", "Marionette", "Wraith", "Scarlet Woman", "Baron"]
-DEMONS = ["Yaggababble", "Imp", "Vortox", "Fang Gu"]
-
-# Player count -> (townsfolk, outsiders, minions, demons)
-ROLE_DISTRIBUTION: Dict[int, Tuple[int, int, int, int]] = {
-    5: (3, 0, 1, 1),
-    6: (3, 1, 1, 1),
-    7: (5, 0, 1, 1),
-    8: (5, 1, 1, 1),
-    9: (5, 2, 1, 1),
-    10: (7, 0, 2, 1),
-    11: (7, 1, 2, 1),
-    12: (7, 2, 2, 1),
-    13: (9, 0, 3, 1),
-    14: (9, 1, 3, 1),
-    15: (9, 2, 3, 1),
-}
+from .data import (
+    DEMONS,
+    MEZEPHELES_WORDS,
+    MINIONS,
+    OUTSIDERS,
+    ROLE_DISTRIBUTION,
+    ROLE_INFO,
+    TOWNSFOLK,
+)
 
 
 @dataclass
@@ -120,6 +39,7 @@ class GameState:
     mezepheles_word: Optional[str] = None
     mezepheles_triggered: bool = False
     mezepheles_pending_convert: Optional[int] = None
+    night_deaths: List[int] = field(default_factory=list)
     phase: str = "lobby"
     day_number: int = 0
 
@@ -385,7 +305,13 @@ class BloodOnTheClocktower(commands.Cog):
                 f"{storyteller_name} used debug role access while being a player. {detail}"
             )
 
-    @commands.group(name="botc")
+    async def _send_ctx(self, ctx: commands.Context, message: str, *, ephemeral: bool = False):
+        if ephemeral and getattr(ctx, "interaction", None) is not None:
+            await ctx.send(message, ephemeral=True)
+            return
+        await ctx.send(message)
+
+    @commands.hybrid_group(name="botc")
     @commands.guild_only()
     async def botc(self, ctx: commands.Context):
         """Blood on the Clocktower commands."""
@@ -608,6 +534,7 @@ class BloodOnTheClocktower(commands.Cog):
         game.mezepheles_word = None
         game.mezepheles_triggered = False
         game.mezepheles_pending_convert = None
+        game.night_deaths.clear()
 
         dm_failed: List[str] = []
         for uid in game.players:
@@ -652,6 +579,16 @@ class BloodOnTheClocktower(commands.Cog):
         game.phase = "day"
         self._reset_vote(game)
         await ctx.send(f"It is now **Day {game.day_number}**.")
+
+        if game.night_deaths:
+            names = [self._player_name(ctx.guild, game, uid) for uid in game.night_deaths]
+            if len(names) == 1:
+                await ctx.send(f"At dawn, **{names[0]}** died in the night.")
+            else:
+                await ctx.send("At dawn, the following players died in the night: " + ", ".join(names))
+            game.night_deaths.clear()
+        else:
+            await ctx.send("At dawn, nobody died in the night.")
 
     @botc.command(name="night")
     async def botc_night(self, ctx: commands.Context):
@@ -823,7 +760,15 @@ class BloodOnTheClocktower(commands.Cog):
 
     @botc.command(name="kill")
     async def botc_kill(self, ctx: commands.Context, *, target: str):
-        """Mark a player dead at night."""
+        """Mark a player dead at night silently (storyteller/private log)."""
+        await self._kill_player(ctx, target=target, announce=False)
+
+    @botc.command(name="killpublic")
+    async def botc_killpublic(self, ctx: commands.Context, *, target: str):
+        """Mark a player dead at night and announce it publicly."""
+        await self._kill_player(ctx, target=target, announce=True)
+
+    async def _kill_player(self, ctx: commands.Context, *, target: str, announce: bool):
         game = self._get_game(ctx.guild.id)
         if not game or not game.started:
             await ctx.send("No active started game.")
@@ -842,7 +787,20 @@ class BloodOnTheClocktower(commands.Cog):
         game.alive.remove(target_id)
         game.suspicion.pop(target_id, None)
         target_name = self._player_name(ctx.guild, game, target_id)
-        await ctx.send(f"{target_name} died in the night.")
+
+        role = game.roles.get(target_id, "Unknown")
+        await self._dm_storyteller(
+            ctx.guild,
+            game.storyteller_id,
+            f"Night kill recorded: {target_name} ({role}).",
+        )
+
+        if announce:
+            await ctx.send(f"{target_name} died in the night.")
+        else:
+            if target_id not in game.night_deaths:
+                game.night_deaths.append(target_id)
+            await self._send_ctx(ctx, "Night kill recorded.", ephemeral=True)
 
         winner = self._check_win_state(game)
         if winner:
@@ -910,7 +868,14 @@ class BloodOnTheClocktower(commands.Cog):
                 game.alive.remove(target_id)
                 game.suspicion.pop(target_id, None)
                 target_name = self._player_name(ctx.guild, game, target_id)
-                logs.append(f"Night AI kills {target_name}.")
+                if target_id not in game.night_deaths:
+                    game.night_deaths.append(target_id)
+                logs.append("Night AI kill recorded.")
+                await self._dm_storyteller(
+                    ctx.guild,
+                    game.storyteller_id,
+                    f"AI night kill target: {target_name}.",
+                )
 
             winner = self._check_win_state(game)
             if winner:
@@ -958,9 +923,9 @@ class BloodOnTheClocktower(commands.Cog):
             "Assignments:\n" + "\n".join(lines),
         )
         if ok:
-            await ctx.send("Sent assignments to storyteller DM.")
+            await self._send_ctx(ctx, "Sent assignments to storyteller DM.", ephemeral=True)
         else:
-            await ctx.send("Could not DM storyteller. Check DM settings.")
+            await self._send_ctx(ctx, "Could not DM storyteller. Check DM settings.", ephemeral=True)
 
     @botc.command(name="debugrole")
     async def botc_debugrole(self, ctx: commands.Context, *, target: str):
@@ -986,10 +951,10 @@ class BloodOnTheClocktower(commands.Cog):
             f"Debug role peek: {target_name} is **{role}**.",
         )
         if not ok:
-            await ctx.send("Could not DM storyteller. Check DM settings.")
+            await self._send_ctx(ctx, "Could not DM storyteller. Check DM settings.", ephemeral=True)
             return
 
-        await ctx.send("Debug role sent to storyteller DM.")
+        await self._send_ctx(ctx, "Debug role sent to storyteller DM.", ephemeral=True)
 
         # If storyteller is also in the player list, this is a deliberate cheat disclosure.
         if game.storyteller_id in game.players:

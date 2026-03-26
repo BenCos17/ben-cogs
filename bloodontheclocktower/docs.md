@@ -30,6 +30,8 @@ From your Red bot:
 
 Use the command group: `[p]botc`
 
+All commands are also available as slash commands under `/botc`.
+
 - `[p]botc create` - create a new lobby in the current channel.
 - `[p]botc join` - join the current lobby.
 - `[p]botc leave` - leave before the game starts.
@@ -41,7 +43,8 @@ Use the command group: `[p]botc`
 - `[p]botc execute <target>` - open an execution vote for a target (day only, storyteller only).
 - `[p]botc vote <yes|no>` - cast your vote on the active execution vote (alive players).
 - `[p]botc tally` - close the vote and resolve execution result (storyteller only).
-- `[p]botc kill <target>` - mark a player dead at night (mention, ID, or exact name like `Bot 1`).
+- `[p]botc kill <target>` - mark a player dead at night silently (private/storyteller logging). Death is announced by name at next day start.
+- `[p]botc killpublic <target>` - mark a player dead at night and announce publicly immediately.
 - `[p]botc aisteps [count]` - run AI actions for current phase (storyteller only).
 - `[p]botc aichat <true|false>` - enable or disable AI chat reactions in the game channel (storyteller only).
 - `[p]botc info <role name>` - show role text.
@@ -59,3 +62,13 @@ Bot role assignments are not automatically sent at game start; use reveal/debug 
 Balance tweaks: evil wins only when evil outnumbers good (not on tie), and AI skips the first-night kill.
 AI now tracks suspicion from player chat, uses it for votes and targets, and can post in-channel bot reactions during day phase.
 Mezepheles now gets a generated secret word by DM at game start; the first good player to say it is turned evil on the next night phase.
+Night deaths are buffered and revealed at dawn with player names when day starts.
+
+## Data Layout
+
+Static script data is now split into separate files under `data/`:
+
+- `data/role_info.py` - role descriptions.
+- `data/role_groups.py` - Townsfolk/Outsider/Minion/Demon pools.
+- `data/role_distribution.py` - player-count distribution table.
+- `data/mezepheles_words.py` - Mezepheles secret word list.
