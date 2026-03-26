@@ -1,0 +1,16 @@
+{
+    "author": [
+        "benco"
+    ],
+    "name": "bloodontheclocktower",
+    "short": "Run a Blood on the Clocktower style game",
+    "description": "A Red-DiscordBot cog for running a lightweight Blood on the Clocktower game using a custom script.",
+    "min_bot_version": "3.5.0",
+    "requirements": [],
+    "tags": [
+        "game",
+        "social deduction",
+        "blood on the clocktower"
+    ],
+    "type": "COG"
+}
