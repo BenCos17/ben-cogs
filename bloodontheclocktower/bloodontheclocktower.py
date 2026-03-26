@@ -1,4 +1,5 @@
 import random
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -96,6 +97,10 @@ class GameState:
     vote_target: Optional[int] = None
     votes_yes: Set[int] = field(default_factory=set)
     votes_no: Set[int] = field(default_factory=set)
+    first_night_no_kill_used: bool = False
+    ai_chat_enabled: bool = True
+    suspicion: Dict[int, float] = field(default_factory=dict)
+    last_ai_chat_ts: float = 0.0
     phase: str = "lobby"
     day_number: int = 0
 
@@ -168,9 +173,150 @@ class BloodOnTheClocktower(commands.Cog):
 
         evil_alive = sum(1 for r in alive_roles if self._is_evil(r))
         good_alive = len(alive_roles) - evil_alive
-        if evil_alive >= good_alive:
-            return "Evil wins: evil players equal or outnumber good players."
+        if evil_alive > good_alive:
+            return "Evil wins: evil players outnumber good players."
         return None
+
+    def _bot_vote_yes(self, game: GameState, voter_id: int, target_id: int) -> bool:
+        voter_role = game.roles.get(voter_id, "")
+        target_role = game.roles.get(target_id, "")
+        target_is_evil = self._is_evil(target_role)
+        voter_is_evil = self._is_evil(voter_role)
+        suspicion = game.suspicion.get(target_id, 0.0)
+
+        if voter_is_evil:
+            yes_prob = 0.75 if not target_is_evil else 0.25
+        else:
+            yes_prob = 0.70 if target_is_evil else 0.30
+
+        # Public suspicion influences votes, but alignment still dominates behavior.
+        yes_prob += max(-0.2, min(0.2, suspicion * 0.08))
+        yes_prob = max(0.05, min(0.95, yes_prob))
+        return random.random() < yes_prob
+
+    def _pick_ai_day_target(self, game: GameState) -> Optional[int]:
+        candidates = [uid for uid in game.alive if uid != game.storyteller_id]
+        if not candidates:
+            return None
+
+        # Slightly bias nominations toward evil, with enough noise to stay imperfect.
+        weights: List[float] = []
+        for uid in candidates:
+            role = game.roles.get(uid, "")
+            base = 1.6 if self._is_evil(role) else 1.0
+            suspicion_boost = max(0.0, game.suspicion.get(uid, 0.0))
+            weights.append(base + suspicion_boost)
+        return random.choices(candidates, weights=weights, k=1)[0]
+
+    def _pick_ai_night_target(self, game: GameState, demon_ids: List[int]) -> Optional[int]:
+        candidates = [uid for uid in game.alive if uid not in demon_ids]
+        if not candidates:
+            return None
+
+        weights: List[float] = []
+        for uid in candidates:
+            role = game.roles.get(uid, "")
+            target_is_evil = self._is_evil(role)
+            # Demons prefer good targets and often remove trusted voices.
+            base = 0.35 if target_is_evil else 1.5
+            suspicion = game.suspicion.get(uid, 0.0)
+            trust_bonus = 0.8 if suspicion < 0 else 0.0
+            weights.append(max(0.05, base + trust_bonus - (0.2 * max(0.0, suspicion))))
+
+        return random.choices(candidates, weights=weights, k=1)[0]
+
+    def _adjust_suspicion(self, game: GameState, uid: int, delta: float):
+        current = game.suspicion.get(uid, 0.0)
+        game.suspicion[uid] = max(-2.0, min(4.0, current + delta))
+
+    def _extract_message_targets(
+        self,
+        guild: discord.Guild,
+        game: GameState,
+        content: str,
+        mention_ids: Set[int],
+    ) -> Set[int]:
+        targets: Set[int] = set(mention_ids)
+        lowered = content.lower()
+        for uid in game.alive:
+            if uid in game.bot_players:
+                name = game.bot_players[uid].lower()
+            else:
+                member = guild.get_member(uid)
+                if member is None:
+                    continue
+                name = member.display_name.lower()
+            if name and name in lowered:
+                targets.add(uid)
+        return targets
+
+    def _apply_message_inference(self, guild: discord.Guild, game: GameState, message: discord.Message):
+        if message.author.id not in game.players:
+            return
+
+        text = message.content.lower()
+        if not text.strip():
+            return
+
+        accuse_words = {"evil", "sus", "suspicious", "demon", "minion", "lying", "liar", "execute", "vote"}
+        defend_words = {"good", "trust", "innocent", "clear", "safe", "town"}
+        self_claim_words = {"i am", "i'm", "im", "my role", "trust me"}
+
+        mention_ids = {member.id for member in message.mentions if member.id in game.players}
+        targets = self._extract_message_targets(guild, game, message.content, mention_ids)
+        targets.discard(message.author.id)
+
+        has_accuse = any(w in text for w in accuse_words)
+        has_defend = any(w in text for w in defend_words)
+
+        if targets:
+            delta = 0.0
+            if has_accuse:
+                delta += 0.55
+            if has_defend:
+                delta -= 0.45
+            if delta != 0.0:
+                for uid in targets:
+                    self._adjust_suspicion(game, uid, delta)
+
+        if any(w in text for w in self_claim_words):
+            # Self-claims slightly increase suspicion to avoid free trust.
+            self._adjust_suspicion(game, message.author.id, 0.15)
+
+    def _build_ai_chat_line(self, guild: discord.Guild, game: GameState) -> Optional[str]:
+        alive_bots = [uid for uid in game.alive if uid in game.bot_players]
+        if not alive_bots:
+            return None
+
+        speaker_id = random.choice(alive_bots)
+        speaker_name = self._player_name(guild, game, speaker_id)
+        candidates = [uid for uid in game.alive if uid != speaker_id]
+        if not candidates:
+            return None
+
+        top_target = max(candidates, key=lambda uid: game.suspicion.get(uid, 0.0))
+        target_name = self._player_name(guild, game, top_target)
+        suspicion = game.suspicion.get(top_target, 0.0)
+
+        if suspicion >= 1.0:
+            templates = [
+                f"{speaker_name}: I don't trust {target_name} right now.",
+                f"{speaker_name}: {target_name} feels like the best execution today.",
+                f"{speaker_name}: My read is that {target_name} is likely evil.",
+            ]
+        elif suspicion <= -0.5:
+            templates = [
+                f"{speaker_name}: I think {target_name} is probably good.",
+                f"{speaker_name}: I'd rather not execute {target_name} today.",
+                f"{speaker_name}: {target_name} sounds more trustworthy to me.",
+            ]
+        else:
+            templates = [
+                f"{speaker_name}: I'm still unsure. Need more info before voting.",
+                f"{speaker_name}: Not convinced yet, can we hear more claims?",
+                f"{speaker_name}: I want to compare stories before we execute.",
+            ]
+        return random.choice(templates)
 
     def _assign_roles(self, count: int) -> List[str]:
         tf, outs, mins, dems = ROLE_DISTRIBUTION[count]
@@ -215,6 +361,41 @@ class BloodOnTheClocktower(commands.Cog):
         """Blood on the Clocktower commands."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help()
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.bot or message.guild is None:
+            return
+
+        game = self._get_game(message.guild.id)
+        if not game or not game.started:
+            return
+        if not game.ai_chat_enabled or message.channel.id != game.channel_id:
+            return
+        if message.author.id not in game.players:
+            return
+
+        content = message.content.strip()
+        if not content:
+            return
+
+        valid_prefixes = await self.bot.get_valid_prefixes(message.guild)
+        if any(content.startswith(prefix) for prefix in valid_prefixes):
+            return
+
+        self._apply_message_inference(message.guild, game, message)
+
+        if game.phase != "day":
+            return
+        if time.time() - game.last_ai_chat_ts < 10:
+            return
+        if random.random() >= 0.35:
+            return
+
+        line = self._build_ai_chat_line(message.guild, game)
+        if line:
+            game.last_ai_chat_ts = time.time()
+            await message.channel.send(line)
 
     @botc.command(name="create")
     async def botc_create(self, ctx: commands.Context):
@@ -381,6 +562,9 @@ class BloodOnTheClocktower(commands.Cog):
         game.started = True
         game.phase = "night"
         game.day_number = 1
+        game.first_night_no_kill_used = False
+        game.suspicion = {uid: 0.0 for uid in game.players}
+        game.last_ai_chat_ts = 0.0
 
         dm_failed: List[str] = []
         for uid in game.players:
@@ -428,6 +612,21 @@ class BloodOnTheClocktower(commands.Cog):
         self._reset_vote(game)
         await ctx.send(f"It is now **Night {game.day_number}**.")
 
+    @botc.command(name="aichat")
+    async def botc_aichat(self, ctx: commands.Context, enabled: bool):
+        """Enable or disable AI chat reactions to player messages."""
+        game = self._get_game(ctx.guild.id)
+        if not game:
+            await ctx.send("No active game.")
+            return
+        if not self._is_storyteller(game, ctx.author.id):
+            await ctx.send("Only the storyteller can change AI chat settings.")
+            return
+
+        game.ai_chat_enabled = enabled
+        state = "enabled" if enabled else "disabled"
+        await ctx.send(f"AI chat reactions are now {state}.")
+
     @botc.command(name="execute")
     async def botc_execute(self, ctx: commands.Context, *, target: str):
         """Open an execution vote for a nominated player."""
@@ -460,7 +659,7 @@ class BloodOnTheClocktower(commands.Cog):
         for uid in list(game.alive):
             if uid == target_id or uid not in game.bot_players:
                 continue
-            if random.random() < 0.5:
+            if self._bot_vote_yes(game, uid, target_id):
                 game.votes_yes.add(uid)
                 auto_yes += 1
             else:
@@ -530,6 +729,7 @@ class BloodOnTheClocktower(commands.Cog):
 
         if yes_count > no_count and target_id in game.alive:
             game.alive.remove(target_id)
+            game.suspicion.pop(target_id, None)
             role = game.roles.get(target_id, "Unknown")
             await ctx.send(f"Vote passed ({yes_count}-{no_count}). {target_name} is executed.")
             await self._dm_storyteller(
@@ -564,6 +764,7 @@ class BloodOnTheClocktower(commands.Cog):
             return
 
         game.alive.remove(target_id)
+        game.suspicion.pop(target_id, None)
         target_name = self._player_name(ctx.guild, game, target_id)
         await ctx.send(f"{target_name} died in the night.")
 
@@ -590,22 +791,22 @@ class BloodOnTheClocktower(commands.Cog):
 
         for _ in range(max_steps):
             if game.phase == "day":
-                candidates = [uid for uid in game.alive if uid != game.storyteller_id]
-                if not candidates:
+                target_id = self._pick_ai_day_target(game)
+                if target_id is None:
                     logs.append("No valid day execution targets.")
                     break
-                target_id = random.choice(candidates)
                 target_name = self._player_name(ctx.guild, game, target_id)
                 voters = [uid for uid in game.alive if uid != target_id]
                 yes_votes = 0
                 no_votes = 0
-                for _uid in voters:
-                    if random.random() < 0.5:
+                for voter_id in voters:
+                    if self._bot_vote_yes(game, voter_id, target_id):
                         yes_votes += 1
                     else:
                         no_votes += 1
                 if yes_votes > no_votes:
                     game.alive.remove(target_id)
+                    game.suspicion.pop(target_id, None)
                     logs.append(f"Day AI vote passes ({yes_votes}-{no_votes}); executes {target_name}.")
                     await self._dm_storyteller(
                         ctx.guild,
@@ -615,18 +816,23 @@ class BloodOnTheClocktower(commands.Cog):
                 else:
                     logs.append(f"Day AI vote fails ({yes_votes}-{no_votes}); no execution.")
             else:
+                if game.day_number == 1 and not game.first_night_no_kill_used:
+                    game.first_night_no_kill_used = True
+                    logs.append("Night 1 protection: no AI night kill this night.")
+                    continue
+
                 demon_ids = [
                     uid for uid in game.alive if game.roles.get(uid) in DEMONS
                 ]
                 if not demon_ids:
                     logs.append("No alive Demon to act at night.")
                     break
-                candidates = [uid for uid in game.alive if uid not in demon_ids]
-                if not candidates:
+                target_id = self._pick_ai_night_target(game, demon_ids)
+                if target_id is None:
                     logs.append("No valid night kill targets.")
                     break
-                target_id = random.choice(candidates)
                 game.alive.remove(target_id)
+                game.suspicion.pop(target_id, None)
                 target_name = self._player_name(ctx.guild, game, target_id)
                 logs.append(f"Night AI kills {target_name}.")
 

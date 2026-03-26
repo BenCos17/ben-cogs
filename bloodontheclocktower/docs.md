@@ -43,6 +43,7 @@ Use the command group: `[p]botc`
 - `[p]botc tally` - close the vote and resolve execution result (storyteller only).
 - `[p]botc kill <target>` - mark a player dead at night (mention, ID, or exact name like `Bot 1`).
 - `[p]botc aisteps [count]` - run AI actions for current phase (storyteller only).
+- `[p]botc aichat <true|false>` - enable or disable AI chat reactions in the game channel (storyteller only).
 - `[p]botc info <role name>` - show role text.
 - `[p]botc reveal` - storyteller-only assignment dump to DM.
 - `[p]botc debugrole <target>` - storyteller debug role peek to DM. If storyteller is also a player, posts a public cheat notice in the game channel.
@@ -54,4 +55,6 @@ This is a moderator/storyteller-assist implementation, not a full automation of 
 AI actions are intentionally simple and random to support low-player or bot-heavy games.
 Day AI actions now simulate votes before execution instead of always executing.
 The storyteller can still be a player, but using debug role peeks while playing is publicly announced.
-Bot role assignments are not automatically sent at game start; use reveal/debug commands when needed. (also shows player roles)
+Bot role assignments are not automatically sent at game start; use reveal/debug commands when needed.
+Balance tweaks: evil wins only when evil outnumbers good (not on tie), and AI skips the first-night kill.
+AI now tracks suspicion from player chat, uses it for votes and targets, and can post in-channel bot reactions during day phase.
