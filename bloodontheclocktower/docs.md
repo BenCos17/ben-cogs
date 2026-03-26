@@ -18,7 +18,7 @@ A Red-DiscordBot cog for running a lightweight Blood on the Clocktower-style gam
 From your Red bot:
 
 ```text
-[p]repo add ben-cogs <your-repo-url>
+[p]repo add ben-cogs https://github.com/BenCos17/ben-cogs
 [p]cog install ben-cogs bloodontheclocktower
 [p]load bloodontheclocktower
 ```
@@ -39,6 +39,4 @@ Use the command group: `[p]botc`
 - `[p]botc reveal` - storyteller-only assignment dump.
 - `[p]botc end` - end and clear the game.
 
-## Notes
 
-This is a moderator/storyteller-assist implementation, not a full automation of every character interaction.
