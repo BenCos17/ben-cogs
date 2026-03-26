@@ -90,6 +90,8 @@ class GameState:
     started: bool = False
     alive: Set[int] = field(default_factory=set)
     roles: Dict[int, str] = field(default_factory=dict)
+    bot_players: Dict[int, str] = field(default_factory=dict)
+    next_bot_id: int = 1
     phase: str = "lobby"
     day_number: int = 0
 
@@ -106,6 +108,59 @@ class BloodOnTheClocktower(commands.Cog):
 
     def _is_storyteller(self, game: GameState, user_id: int) -> bool:
         return game.storyteller_id == user_id
+
+    def _player_name(self, guild: discord.Guild, game: GameState, uid: int) -> str:
+        if uid in game.bot_players:
+            return game.bot_players[uid]
+        member = guild.get_member(uid)
+        return member.display_name if member else f"Unknown ({uid})"
+
+    def _new_bot_player(self, game: GameState) -> Tuple[int, str]:
+        bot_id = -game.next_bot_id
+        game.next_bot_id += 1
+        return bot_id, f"Bot {game.next_bot_id - 1}"
+
+    def _resolve_target(self, guild: discord.Guild, game: GameState, target: str) -> Optional[int]:
+        cleaned = target.strip()
+        if cleaned.startswith("<@") and cleaned.endswith(">"):
+            cleaned = cleaned.replace("<@", "").replace("!", "").replace(">", "")
+
+        if cleaned.lstrip("-").isdigit():
+            uid = int(cleaned)
+            if uid in game.players:
+                return uid
+
+        lowered = cleaned.lower()
+        matches: List[int] = []
+        for uid in game.players:
+            if uid in game.bot_players:
+                name = game.bot_players[uid]
+            else:
+                member = guild.get_member(uid)
+                if member is None:
+                    continue
+                name = member.display_name
+            if name.lower() == lowered:
+                matches.append(uid)
+
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
+    def _is_evil(self, role_name: str) -> bool:
+        return role_name in MINIONS or role_name in DEMONS
+
+    def _check_win_state(self, game: GameState) -> Optional[str]:
+        alive_roles = [game.roles[uid] for uid in game.alive if uid in game.roles]
+        alive_demons = [r for r in alive_roles if r in DEMONS]
+        if not alive_demons:
+            return "Good wins: all Demons are dead."
+
+        evil_alive = sum(1 for r in alive_roles if self._is_evil(r))
+        good_alive = len(alive_roles) - evil_alive
+        if evil_alive >= good_alive:
+            return "Evil wins: evil players equal or outnumber good players."
+        return None
 
     def _assign_roles(self, count: int) -> List[str]:
         tf, outs, mins, dems = ROLE_DISTRIBUTION[count]
@@ -217,13 +272,70 @@ class BloodOnTheClocktower(commands.Cog):
 
         lines: List[str] = []
         for uid in game.players:
-            member = ctx.guild.get_member(uid)
-            name = member.display_name if member else f"Unknown ({uid})"
+            name = self._player_name(ctx.guild, game, uid)
             state = "alive" if (not game.started or uid in game.alive) else "dead"
             tag = " (Storyteller)" if uid == game.storyteller_id else ""
             lines.append(f"- {name}: {state}{tag}")
 
         await ctx.send("Players:\n" + "\n".join(lines))
+
+    @botc.command(name="addbots")
+    async def botc_addbots(self, ctx: commands.Context, count: int):
+        """Add AI bot players to the lobby."""
+        game = self._get_game(ctx.guild.id)
+        if not game:
+            await ctx.send("No active game.")
+            return
+        if game.started:
+            await ctx.send("Add bots before starting the game.")
+            return
+        if not self._is_storyteller(game, ctx.author.id):
+            await ctx.send("Only the storyteller can add bots.")
+            return
+        if count <= 0:
+            await ctx.send("Count must be greater than 0.")
+            return
+
+        space_left = 15 - len(game.players)
+        to_add = min(count, space_left)
+        if to_add <= 0:
+            await ctx.send("Lobby is already at the 15-player maximum.")
+            return
+
+        added_names: List[str] = []
+        for _ in range(to_add):
+            uid, name = self._new_bot_player(game)
+            game.bot_players[uid] = name
+            game.players.append(uid)
+            added_names.append(name)
+
+        await ctx.send(
+            f"Added {to_add} bot player(s): {', '.join(added_names)}. "
+            f"Total players: {len(game.players)}"
+        )
+
+    @botc.command(name="clearbots")
+    async def botc_clearbots(self, ctx: commands.Context):
+        """Remove all AI bot players from the lobby."""
+        game = self._get_game(ctx.guild.id)
+        if not game:
+            await ctx.send("No active game.")
+            return
+        if game.started:
+            await ctx.send("Cannot clear bots after game start.")
+            return
+        if not self._is_storyteller(game, ctx.author.id):
+            await ctx.send("Only the storyteller can clear bots.")
+            return
+
+        bot_ids = set(game.bot_players.keys())
+        if not bot_ids:
+            await ctx.send("No bot players in the lobby.")
+            return
+
+        game.players = [uid for uid in game.players if uid not in bot_ids]
+        game.bot_players.clear()
+        await ctx.send(f"Removed all bot players. Total players: {len(game.players)}")
 
     @botc.command(name="start")
     async def botc_start(self, ctx: commands.Context):
@@ -252,9 +364,11 @@ class BloodOnTheClocktower(commands.Cog):
         game.day_number = 1
 
         dm_failed: List[str] = []
+        bot_assignments: List[str] = []
         for uid in game.players:
             member = ctx.guild.get_member(uid)
             if not member:
+                bot_assignments.append(f"- {self._player_name(ctx.guild, game, uid)}: {game.roles[uid]}")
                 continue
             ok = await self._dm_role(member, game.roles[uid])
             if not ok:
@@ -265,6 +379,13 @@ class BloodOnTheClocktower(commands.Cog):
             msg += "\nCould not DM: " + ", ".join(dm_failed)
         msg += "\n`[p]botc reveal` sends assignment summary to storyteller DM only."
         await ctx.send(msg)
+
+        if bot_assignments:
+            await self._dm_storyteller(
+                ctx.guild,
+                game.storyteller_id,
+                "Bot role assignments:\n" + "\n".join(bot_assignments),
+            )
 
     @botc.command(name="day")
     async def botc_day(self, ctx: commands.Context):
@@ -296,7 +417,7 @@ class BloodOnTheClocktower(commands.Cog):
         await ctx.send(f"It is now **Night {game.day_number}**.")
 
     @botc.command(name="execute")
-    async def botc_execute(self, ctx: commands.Context, member: discord.Member):
+    async def botc_execute(self, ctx: commands.Context, *, target: str):
         """Mark a player dead by execution."""
         game = self._get_game(ctx.guild.id)
         if not game or not game.started:
@@ -305,24 +426,30 @@ class BloodOnTheClocktower(commands.Cog):
         if not self._is_storyteller(game, ctx.author.id):
             await ctx.send("Only the storyteller can execute players.")
             return
-        if member.id not in game.players:
-            await ctx.send("That member is not in this game.")
+        target_id = self._resolve_target(ctx.guild, game, target)
+        if target_id is None:
+            await ctx.send("Could not find that player. Use mention, ID, or exact name (e.g. Bot 1).")
             return
-        if member.id not in game.alive:
+        if target_id not in game.alive:
             await ctx.send("That player is already dead.")
             return
 
-        game.alive.remove(member.id)
-        role = game.roles.get(member.id, "Unknown")
-        await ctx.send(f"{member.mention} was executed and died.")
+        game.alive.remove(target_id)
+        role = game.roles.get(target_id, "Unknown")
+        target_name = self._player_name(ctx.guild, game, target_id)
+        await ctx.send(f"{target_name} was executed and died.")
         await self._dm_storyteller(
             ctx.guild,
             game.storyteller_id,
-            f"Execution result: {member.display_name} was **{role}**.",
+            f"Execution result: {target_name} was **{role}**.",
         )
 
+        winner = self._check_win_state(game)
+        if winner:
+            await ctx.send(winner)
+
     @botc.command(name="kill")
-    async def botc_kill(self, ctx: commands.Context, member: discord.Member):
+    async def botc_kill(self, ctx: commands.Context, *, target: str):
         """Mark a player dead at night."""
         game = self._get_game(ctx.guild.id)
         if not game or not game.started:
@@ -331,15 +458,76 @@ class BloodOnTheClocktower(commands.Cog):
         if not self._is_storyteller(game, ctx.author.id):
             await ctx.send("Only the storyteller can kill players.")
             return
-        if member.id not in game.players:
-            await ctx.send("That member is not in this game.")
+        target_id = self._resolve_target(ctx.guild, game, target)
+        if target_id is None:
+            await ctx.send("Could not find that player. Use mention, ID, or exact name (e.g. Bot 1).")
             return
-        if member.id not in game.alive:
+        if target_id not in game.alive:
             await ctx.send("That player is already dead.")
             return
 
-        game.alive.remove(member.id)
-        await ctx.send(f"{member.mention} died in the night.")
+        game.alive.remove(target_id)
+        target_name = self._player_name(ctx.guild, game, target_id)
+        await ctx.send(f"{target_name} died in the night.")
+
+        winner = self._check_win_state(game)
+        if winner:
+            await ctx.send(winner)
+
+    @botc.command(name="aisteps")
+    async def botc_aisteps(self, ctx: commands.Context, steps: int = 1):
+        """Run AI actions for the current phase."""
+        game = self._get_game(ctx.guild.id)
+        if not game or not game.started:
+            await ctx.send("No active started game.")
+            return
+        if not self._is_storyteller(game, ctx.author.id):
+            await ctx.send("Only the storyteller can run AI actions.")
+            return
+        if steps <= 0:
+            await ctx.send("Steps must be greater than 0.")
+            return
+
+        max_steps = min(steps, 20)
+        logs: List[str] = []
+
+        for _ in range(max_steps):
+            if game.phase == "day":
+                candidates = [uid for uid in game.alive if uid != game.storyteller_id]
+                if not candidates:
+                    logs.append("No valid day execution targets.")
+                    break
+                target_id = random.choice(candidates)
+                game.alive.remove(target_id)
+                target_name = self._player_name(ctx.guild, game, target_id)
+                logs.append(f"Day AI executes {target_name}.")
+                await self._dm_storyteller(
+                    ctx.guild,
+                    game.storyteller_id,
+                    f"AI execution role: {target_name} was **{game.roles.get(target_id, 'Unknown')}**.",
+                )
+            else:
+                demon_ids = [
+                    uid for uid in game.alive if game.roles.get(uid) in DEMONS
+                ]
+                if not demon_ids:
+                    logs.append("No alive Demon to act at night.")
+                    break
+                candidates = [uid for uid in game.alive if uid not in demon_ids]
+                if not candidates:
+                    logs.append("No valid night kill targets.")
+                    break
+                target_id = random.choice(candidates)
+                game.alive.remove(target_id)
+                target_name = self._player_name(ctx.guild, game, target_id)
+                logs.append(f"Night AI kills {target_name}.")
+
+            winner = self._check_win_state(game)
+            if winner:
+                logs.append(winner)
+                break
+
+        await ctx.send("\n".join(logs))
 
     @botc.command(name="info")
     async def botc_info(self, ctx: commands.Context, *, role_name: str):
@@ -370,8 +558,7 @@ class BloodOnTheClocktower(commands.Cog):
 
         lines: List[str] = []
         for uid in game.players:
-            member = ctx.guild.get_member(uid)
-            name = member.display_name if member else f"Unknown ({uid})"
+            name = self._player_name(ctx.guild, game, uid)
             role = game.roles.get(uid, "Unknown")
             lines.append(f"- {name}: {role}")
 
