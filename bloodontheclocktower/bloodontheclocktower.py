@@ -383,11 +383,9 @@ class BloodOnTheClocktower(commands.Cog):
         game.day_number = 1
 
         dm_failed: List[str] = []
-        bot_assignments: List[str] = []
         for uid in game.players:
             member = ctx.guild.get_member(uid)
             if not member:
-                bot_assignments.append(f"- {self._player_name(ctx.guild, game, uid)}: {game.roles[uid]}")
                 continue
             ok = await self._dm_role(member, game.roles[uid])
             if not ok:
@@ -398,13 +396,6 @@ class BloodOnTheClocktower(commands.Cog):
             msg += "\nCould not DM: " + ", ".join(dm_failed)
         msg += "\n`[p]botc reveal` sends assignment summary to storyteller DM only."
         await ctx.send(msg)
-
-        if bot_assignments:
-            await self._dm_storyteller(
-                ctx.guild,
-                game.storyteller_id,
-                "Bot role assignments:\n" + "\n".join(bot_assignments),
-            )
 
     @botc.command(name="day")
     async def botc_day(self, ctx: commands.Context):

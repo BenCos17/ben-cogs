@@ -54,3 +54,4 @@ This is a moderator/storyteller-assist implementation, not a full automation of 
 AI actions are intentionally simple and random to support low-player or bot-heavy games.
 Day AI actions now simulate votes before execution instead of always executing.
 The storyteller can still be a player, but using debug role peeks while playing is publicly announced.
+Bot role assignments are not automatically sent at game start; use reveal/debug commands when needed. (also shows player roles)
