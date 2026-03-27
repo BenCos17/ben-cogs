@@ -1,9 +1,9 @@
 import io
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import aiohttp
 import discord
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageSequence
 from redbot.core import commands
 
 
@@ -44,10 +44,8 @@ def _wrap_caption(draw: ImageDraw.ImageDraw, text: str, font: Any, max_width: in
 	return lines
 
 
-def _build_caption_image(raw_data: bytes, caption: str) -> io.BytesIO:
-	with Image.open(io.BytesIO(raw_data)) as source:
-		image = source.convert("RGB")
-
+def _add_caption_banner(image: Image.Image, caption: str) -> Image.Image:
+	image = image.convert("RGB")
 	width, height = image.size
 	side_padding = max(12, width // 32)
 	top_padding = max(10, width // 50)
@@ -78,10 +76,41 @@ def _build_caption_image(raw_data: bytes, caption: str) -> io.BytesIO:
 		final_draw.text((x, y), line, fill=(0, 0, 0), font=font)
 		y += line_height + line_spacing
 
+	return final
+
+
+def _build_caption_image(raw_data: bytes, caption: str) -> Tuple[io.BytesIO, str]:
+	with Image.open(io.BytesIO(raw_data)) as source:
+		is_gif = source.format == "GIF"
+
+		if is_gif:
+			frames: List[Image.Image] = []
+			durations: List[int] = []
+			for frame in ImageSequence.Iterator(source):
+				captioned = _add_caption_banner(frame, caption)
+				frames.append(captioned.quantize(colors=256, method=Image.Quantize.FASTOCTREE))
+				durations.append(frame.info.get("duration", source.info.get("duration", 40)))
+
+			if frames:
+				output = io.BytesIO()
+				frames[0].save(
+					output,
+					format="GIF",
+					save_all=True,
+					append_images=frames[1:],
+					duration=durations,
+					loop=source.info.get("loop", 0),
+					disposal=2,
+				)
+				output.seek(0)
+				return output, "caption.gif"
+
+		final = _add_caption_banner(source, caption)
+
 	output = io.BytesIO()
 	final.save(output, format="PNG")
 	output.seek(0)
-	return output
+	return output, "caption.png"
 
 
 class ImageManipulation(commands.Cog):
@@ -150,9 +179,9 @@ class ImageManipulation(commands.Cog):
 			async with ctx.typing():
 				raw = await self._download_image(image_url)
 				loop = self.bot.loop
-				output = await loop.run_in_executor(None, _build_caption_image, raw, caption_text)
+				output, filename = await loop.run_in_executor(None, _build_caption_image, raw, caption_text)
 
-			file = discord.File(output, filename="caption.png")
+			file = discord.File(output, filename=filename)
 			await ctx.send(file=file)
 		except Exception as exc:
 			await ctx.send(f"Could not caption that image: {exc}")
