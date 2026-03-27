@@ -1,4 +1,5 @@
 import io
+import re
 from typing import Any, List, Optional, Tuple
 
 import aiohttp
@@ -10,6 +11,13 @@ from redbot.core import commands
 def _is_image_filename(filename: str) -> bool:
 	lowered = filename.lower()
 	return lowered.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"))
+
+
+def _looks_like_image_url(url: str) -> bool:
+	base = url.split("?", 1)[0].split("#", 1)[0]
+	if _is_image_filename(base):
+		return True
+	return "media.tenor.com" in url.lower()
 
 
 def _pick_font(image_width: int) -> Any:
@@ -124,17 +132,49 @@ class ImageManipulation(commands.Cog):
 		self.bot.loop.create_task(self.session.close())
 
 	async def _get_image_url(self, ctx: commands.Context) -> Optional[str]:
-		if ctx.message.attachments:
-			for attachment in ctx.message.attachments:
+		def _find_attachment_image(message: discord.Message) -> Optional[str]:
+			for attachment in message.attachments:
 				if (attachment.content_type and attachment.content_type.startswith("image/")) or _is_image_filename(attachment.filename):
 					return attachment.url
 
+			for embed in message.embeds:
+				candidates = [
+					getattr(embed.image, "url", None),
+					getattr(embed.thumbnail, "url", None),
+					getattr(embed.video, "url", None),
+					embed.url,
+				]
+				for candidate in candidates:
+					if candidate and _looks_like_image_url(candidate):
+						return candidate
+
+			for link in re.findall(r"https?://\S+", message.content):
+				if _looks_like_image_url(link):
+					return link
+
+			return None
+
+		from_current = _find_attachment_image(ctx.message)
+		if from_current:
+			return from_current
+
 		reference = ctx.message.reference
-		if reference and reference.resolved and isinstance(reference.resolved, discord.Message):
+		if not reference:
+			return None
+
+		replied_message: Optional[discord.Message] = None
+		if reference.resolved and isinstance(reference.resolved, discord.Message):
 			replied_message = reference.resolved
-			for attachment in replied_message.attachments:
-				if (attachment.content_type and attachment.content_type.startswith("image/")) or _is_image_filename(attachment.filename):
-					return attachment.url
+		elif reference.message_id:
+			try:
+				replied_message = await ctx.channel.fetch_message(reference.message_id)
+			except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+				replied_message = None
+
+		if replied_message:
+			from_reply = _find_attachment_image(replied_message)
+			if from_reply:
+				return from_reply
 
 		return None
 
