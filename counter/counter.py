@@ -136,79 +136,6 @@ class Counter(commands.Cog):
         return str(rid)
 
 
-class OwnerApprovalView(discord.ui.View):
-    def __init__(self, cog: "Counter", guild_id: int, req_id: str, request_data: dict, *, timeout: Optional[float] = 86400):
-        super().__init__(timeout=timeout)
-        self.cog = cog
-        self.guild_id = guild_id
-        self.req_id = req_id
-        self.request_data = request_data
-
-    async def _finalize(self, interaction: discord.Interaction, accepted: bool, message_text: str):
-        # Attempt to remove pending request and notify requester
-        guild = self.cog.bot.get_guild(self.guild_id)
-        store = self.cog.config.guild(guild)
-        async with store.pending_owner_requests() as reqs:
-            if self.req_id in reqs:
-                del reqs[self.req_id]
-        # Disable buttons
-        for item in self.children:
-            try:
-                item.disabled = True
-            except Exception:
-                pass
-        try:
-            await interaction.response.edit_message(content=message_text, view=self)
-        except Exception:
-            try:
-                await interaction.response.send_message(message_text, ephemeral=True)
-            except Exception:
-                pass
-        # Notify requester in the original channel if possible
-        channel_id = self.request_data.get("channel_id")
-        try:
-            if channel_id is not None:
-                channel = self.cog.bot.get_channel(int(channel_id))
-                if channel is not None:
-                    try:
-                        await channel.send(f"<@{self.request_data.get('requester')}> Your owner request `{self.req_id}` for counter **{self.request_data.get('name')}** was {'accepted' if accepted else 'declined'}.")
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-        # Also DM the requester if possible
-        requester_id = self.request_data.get("requester")
-        try:
-            requester = self.cog.bot.get_user(int(requester_id)) if requester_id is not None else None
-        except Exception:
-            requester = None
-        if requester:
-            try:
-                await requester.send(f"Your owner request `{self.req_id}` for counter **{self.request_data.get('name')}** was {'accepted' if accepted else 'declined'}.")
-            except Exception:
-                pass
-
-    @discord.ui.button(label="Accept", style=discord.ButtonStyle.green)
-    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != int(self.request_data.get("owner")):
-            return await interaction.response.send_message("You are not the requested owner for this request.", ephemeral=True)
-        # Create the counter
-        guild = self.cog.bot.get_guild(self.guild_id)
-        store = self.cog.config.guild(guild)
-        name = str(self.request_data.get("name") or "")
-        initial = int(self.request_data.get("initial") or 0)
-        owner_id = int(self.request_data.get("owner"))
-        requester_id = int(self.request_data.get("requester") or 0)
-        nid, data = await self.cog._create_guild_counter(store, name, initial, owner_id, requester_id)
-        await self._finalize(interaction, True, f"You accepted request `{self.req_id}` — created counter **{data['name']}** with id `{nid}` assigned to you.")
-
-    @discord.ui.button(label="Decline", style=discord.ButtonStyle.red)
-    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != int(self.request_data.get("owner")):
-            return await interaction.response.send_message("You are not the requested owner for this request.", ephemeral=True)
-        await self._finalize(interaction, False, f"You declined owner request `{self.req_id}` for counter **{self.request_data.get('name')}**.")
-
-
     @commands.group(name="counter", invoke_without_command=True)
     async def counter(self, ctx: commands.Context) -> None:
         """Counter commands. Use subcommands like `create`, `inc`, `dec`, `set`, `delete`, `show`, `list`."""
@@ -515,3 +442,76 @@ class OwnerApprovalView(discord.ui.View):
                 return await ctx.send("You are not the requested owner for that request.")
             del reqs[request_id]
         await ctx.send(f"Declined owner request `{request_id}`.")
+
+
+class OwnerApprovalView(discord.ui.View):
+    def __init__(self, cog: "Counter", guild_id: int, req_id: str, request_data: dict, *, timeout: Optional[float] = 86400):
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.guild_id = guild_id
+        self.req_id = req_id
+        self.request_data = request_data
+
+    async def _finalize(self, interaction: discord.Interaction, accepted: bool, message_text: str):
+        # Attempt to remove pending request and notify requester
+        guild = self.cog.bot.get_guild(self.guild_id)
+        store = self.cog.config.guild(guild)
+        async with store.pending_owner_requests() as reqs:
+            if self.req_id in reqs:
+                del reqs[self.req_id]
+        # Disable buttons
+        for item in self.children:
+            try:
+                item.disabled = True
+            except Exception:
+                pass
+        try:
+            await interaction.response.edit_message(content=message_text, view=self)
+        except Exception:
+            try:
+                await interaction.response.send_message(message_text, ephemeral=True)
+            except Exception:
+                pass
+        # Notify requester in the original channel if possible
+        channel_id = self.request_data.get("channel_id")
+        try:
+            if channel_id is not None:
+                channel = self.cog.bot.get_channel(int(channel_id))
+                if channel is not None:
+                    try:
+                        await channel.send(f"<@{self.request_data.get('requester')}> Your owner request `{self.req_id}` for counter **{self.request_data.get('name')}** was {'accepted' if accepted else 'declined'}.")
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        # Also DM the requester if possible
+        requester_id = self.request_data.get("requester")
+        try:
+            requester = self.cog.bot.get_user(int(requester_id)) if requester_id is not None else None
+        except Exception:
+            requester = None
+        if requester:
+            try:
+                await requester.send(f"Your owner request `{self.req_id}` for counter **{self.request_data.get('name')}** was {'accepted' if accepted else 'declined'}.")
+            except Exception:
+                pass
+
+    @discord.ui.button(label="Accept", style=discord.ButtonStyle.green)
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != int(self.request_data.get("owner")):
+            return await interaction.response.send_message("You are not the requested owner for this request.", ephemeral=True)
+        # Create the counter
+        guild = self.cog.bot.get_guild(self.guild_id)
+        store = self.cog.config.guild(guild)
+        name = str(self.request_data.get("name") or "")
+        initial = int(self.request_data.get("initial") or 0)
+        owner_id = int(self.request_data.get("owner"))
+        requester_id = int(self.request_data.get("requester") or 0)
+        nid, data = await self.cog._create_guild_counter(store, name, initial, owner_id, requester_id)
+        await self._finalize(interaction, True, f"You accepted request `{self.req_id}` - created counter **{data['name']}** with id `{nid}` assigned to you.")
+
+    @discord.ui.button(label="Decline", style=discord.ButtonStyle.red)
+    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != int(self.request_data.get("owner")):
+            return await interaction.response.send_message("You are not the requested owner for this request.", ephemeral=True)
+        await self._finalize(interaction, False, f"You declined owner request `{self.req_id}` for counter **{self.request_data.get('name')}**.")
