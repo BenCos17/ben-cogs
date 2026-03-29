@@ -53,32 +53,67 @@ class Counter(commands.Cog):
         return self.config, "global"
 
     async def _ensure_guild_schema(self, store) -> None:
-        """Ensure guild store uses the id-based schema; migrate from name->int if needed."""
+        """Ensure guild store uses numeric id keys and dict counter entries."""
         data = await store.all()
-        counters = data.get("counters", {})
+        counters = data.get("counters", {}) or {}
         next_id = data.get("next_id")
-        # If next_id missing, either new guild or legacy format; migrate if needed
-        if next_id is None:
-            # Legacy format: counters are name->int
-            if counters and all(not isinstance(v, dict) for v in counters.values()):
-                new = {}
-                nid = 1
-                for name, val in counters.items():
-                    new[str(nid)] = {
-                        "name": name,
-                        "value": int(val),
-                        "owner": None,
-                        "creator": None,
-                        "created_at": None,
-                    }
-                    nid += 1
-                async with store.counters() as s:
-                    s.clear()
-                    s.update(new)
-                await store.next_id.set(nid)
+
+        # Fresh guild with no counters yet.
+        if not counters and next_id is None:
+            await store.next_id.set(1)
+            return
+
+        normalized = {}
+        needs_new_id = []
+        max_id = 0
+
+        def normalize_entry(raw_key, raw_val):
+            if isinstance(raw_val, dict):
+                name = self._clean_name(str(raw_val.get("name") or raw_key))
+                value = int(raw_val.get("value") or 0)
+                return {
+                    "name": name,
+                    "value": value,
+                    "owner": raw_val.get("owner"),
+                    "creator": raw_val.get("creator"),
+                    "created_at": raw_val.get("created_at"),
+                }
+            return {
+                "name": self._clean_name(str(raw_key)),
+                "value": int(raw_val),
+                "owner": None,
+                "creator": None,
+                "created_at": None,
+            }
+
+        for raw_key, raw_val in counters.items():
+            entry = normalize_entry(raw_key, raw_val)
+            key = str(raw_key)
+            if key.isdigit():
+                cid = str(int(key))
+                if cid in normalized:
+                    needs_new_id.append(entry)
+                    continue
+                normalized[cid] = entry
+                max_id = max(max_id, int(cid))
             else:
-                # Fresh schema
-                await store.next_id.set(1)
+                needs_new_id.append(entry)
+
+        # Respect existing next_id if it is valid.
+        if isinstance(next_id, int):
+            max_id = max(max_id, next_id - 1)
+
+        next_numeric_id = max(max_id + 1, 1)
+        for entry in needs_new_id:
+            normalized[str(next_numeric_id)] = entry
+            next_numeric_id += 1
+
+        # If anything is not already normalized, write the normalized schema back.
+        if normalized != counters or next_id != next_numeric_id:
+            async with store.counters() as s:
+                s.clear()
+                s.update(normalized)
+            await store.next_id.set(next_numeric_id)
 
     async def _resolve_guild_counter(self, store, identifier: str):
         """Resolve an identifier (id or name) to a single (id, counter) tuple.
@@ -335,7 +370,11 @@ class Counter(commands.Cog):
             if not counters:
                 return await ctx.send(f"No counters in {human_scope} scope.")
             lines = []
-            for cid, c in sorted(counters.items(), key=lambda x: int(x[0])):
+            def sort_key(item):
+                key = str(item[0])
+                return (0, int(key)) if key.isdigit() else (1, key)
+
+            for cid, c in sorted(counters.items(), key=sort_key):
                 owner = f"<@{c['owner']}" + ">" if c.get('owner') else "none"
                 creator = f"<@{c['creator']}" + ">" if c.get('creator') else "unknown"
                 created = c.get('created_at') or 'unknown'
