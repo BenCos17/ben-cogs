@@ -3,16 +3,56 @@ import discord
 from redbot.core import commands, Config
 import asyncio
 import aiohttp
+import re
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
 class Servertools(commands.Cog):
     """Cog providing various server management utilities, such as mod DMs, voice moves, and auto-reactions."""
+
+    SPOTIFY_URL_RE = re.compile(r'https?://open\.spotify\.com/[^\s<>"]+', re.IGNORECASE)
+
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)  # Initialize config with a unique identifier
-        self.config.register_guild(auto_reactions=[])  # Initialize auto_reactions as an empty list
+        self.config.register_guild(
+            auto_reactions={},
+            spotify_autoclean=False,
+        )
         self.config.register_user(online_notifications=[])  # Add this line to register online notifications
+
+    @staticmethod
+    def _clean_spotify_url(url: str):
+        """Remove Spotify's `si` query parameter and return a clean URL when possible."""
+        try:
+            parts = urlsplit(url)
+        except Exception:
+            return None
+
+        if parts.netloc.lower() != "open.spotify.com":
+            return None
+
+        if not parts.path:
+            return None
+
+        params = parse_qsl(parts.query, keep_blank_values=True)
+        filtered = [(k, v) for k, v in params if k.lower() != "si"]
+        new_query = urlencode(filtered, doseq=True)
+        cleaned = urlunsplit((parts.scheme, parts.netloc, parts.path, new_query, parts.fragment))
+
+        if cleaned == url:
+            return None
+        return cleaned
+
+    def _extract_clean_spotify_urls(self, content: str):
+        """Find Spotify URLs in message content and return unique cleaned links."""
+        cleaned_links = []
+        for match in self.SPOTIFY_URL_RE.findall(content):
+            cleaned = self._clean_spotify_url(match)
+            if cleaned and cleaned not in cleaned_links:
+                cleaned_links.append(cleaned)
+        return cleaned_links
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
@@ -239,6 +279,36 @@ class Servertools(commands.Cog):
         msg = "\n".join([f"<#{key.split('-')[0]}> - <@{key.split('-')[1]}>: {emoji}" for key, emoji in reactions.items()])
         await ctx.send(f"Auto-reactions:\n{msg}")
 
+    @commands.group(name="spotifyclean")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def spotifyclean_group(self, ctx):
+        """Manage automatic Spotify link cleaning for this server."""
+        if ctx.invoked_subcommand is None:
+            enabled = await self.config.guild(ctx.guild).spotify_autoclean()
+            state = "enabled" if enabled else "disabled"
+            await ctx.send(
+                f"Spotify auto-clean is currently **{state}**. Use `{ctx.clean_prefix}spotifyclean on` or `{ctx.clean_prefix}spotifyclean off`."
+            )
+
+    @spotifyclean_group.command(name="on")
+    async def spotifyclean_on(self, ctx):
+        """Enable Spotify link auto-cleaning in this server."""
+        await self.config.guild(ctx.guild).spotify_autoclean.set(True)
+        await ctx.send("Spotify auto-clean enabled. I will post clean Spotify links without the `si` tracker.")
+
+    @spotifyclean_group.command(name="off")
+    async def spotifyclean_off(self, ctx):
+        """Disable Spotify link auto-cleaning in this server."""
+        await self.config.guild(ctx.guild).spotify_autoclean.set(False)
+        await ctx.send("Spotify auto-clean disabled.")
+
+    @spotifyclean_group.command(name="status")
+    async def spotifyclean_status(self, ctx):
+        """Show whether Spotify link auto-cleaning is enabled."""
+        enabled = await self.config.guild(ctx.guild).spotify_autoclean()
+        await ctx.send(f"Spotify auto-clean is {'enabled' if enabled else 'disabled'}.")
+
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
@@ -254,6 +324,12 @@ class Servertools(commands.Cog):
         key = f"{message.channel.id}-{message.author.id}"
         if key in reactions:
             await message.add_reaction(reactions[key])
+
+        # If enabled, post cleaned Spotify links so users can copy a non-tracking URL.
+        if await self.config.guild(guild).spotify_autoclean():
+            cleaned_links = self._extract_clean_spotify_urls(message.content)
+            if cleaned_links:
+                await message.channel.send("\n".join(cleaned_links))
 
     @commands.group()
     async def notify(self, ctx):
