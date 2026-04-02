@@ -20,7 +20,10 @@ class Servertools(commands.Cog):
             auto_reactions=[],
             spotify_autoclean=False,
         )
-        self.config.register_user(online_notifications=[])  # Add this line to register online notifications
+        self.config.register_user(
+            online_notifications=[],
+            spotify_dm_autoclean=False,
+        )
 
     async def _get_autoreactions_dict(self, guild: discord.Guild):
         """Return auto-reactions as a dict and migrate legacy non-dict values."""
@@ -321,6 +324,34 @@ class Servertools(commands.Cog):
         enabled = await self.config.guild(ctx.guild).spotify_autoclean()
         await ctx.send(f"Spotify auto-clean is {'enabled' if enabled else 'disabled'}.")
 
+    @commands.group(name="spotifycleandm")
+    async def spotifyclean_dm_group(self, ctx):
+        """Manage Spotify link cleaning for your direct messages with the bot."""
+        if ctx.invoked_subcommand is None:
+            enabled = await self.config.user(ctx.author).spotify_dm_autoclean()
+            state = "enabled" if enabled else "disabled"
+            await ctx.send(
+                f"DM Spotify auto-clean is currently **{state}**. Use `{ctx.clean_prefix}spotifycleandm on` or `{ctx.clean_prefix}spotifycleandm off`."
+            )
+
+    @spotifyclean_dm_group.command(name="on")
+    async def spotifyclean_dm_on(self, ctx):
+        """Enable Spotify link auto-cleaning in your DMs with the bot."""
+        await self.config.user(ctx.author).spotify_dm_autoclean.set(True)
+        await ctx.send("DM Spotify auto-clean enabled for your account.")
+
+    @spotifyclean_dm_group.command(name="off")
+    async def spotifyclean_dm_off(self, ctx):
+        """Disable Spotify link auto-cleaning in your DMs with the bot."""
+        await self.config.user(ctx.author).spotify_dm_autoclean.set(False)
+        await ctx.send("DM Spotify auto-clean disabled for your account.")
+
+    @spotifyclean_dm_group.command(name="status")
+    async def spotifyclean_dm_status(self, ctx):
+        """Show whether DM Spotify link auto-cleaning is enabled for you."""
+        enabled = await self.config.user(ctx.author).spotify_dm_autoclean()
+        await ctx.send(f"DM Spotify auto-clean is {'enabled' if enabled else 'disabled'}.")
+
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
@@ -328,6 +359,10 @@ class Servertools(commands.Cog):
 
         guild = message.guild
         if not guild:
+            if await self.config.user(message.author).spotify_dm_autoclean():
+                cleaned_links = self._extract_clean_spotify_urls(message.content)
+                if cleaned_links:
+                    await message.channel.send("\n".join(cleaned_links))
             return
 
         reactions = await self._get_autoreactions_dict(guild)

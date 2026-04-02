@@ -30,6 +30,7 @@ Guild scope:
 
 User scope:
 - online_notifications: list of tracked user IDs
+- spotify_dm_autoclean: boolean, default false
 
 ## Commands
 Prefix examples use [p] as your bot prefix.
@@ -154,13 +155,34 @@ Runtime behavior:
 - If a cleaned URL differs from original, it posts the cleaned link to the channel.
 - Original messages are not edited or deleted.
 
+### 11) spotifycleandm command group
+- Name: spotifycleandm
+- Scope: DM or server command context (user-level setting)
+- Usage root: [p]spotifycleandm
+- What it does:
+  - Controls Spotify link cleaning for your direct messages with the bot
+
+Subcommands:
+- [p]spotifycleandm on
+  - Enables DM auto-cleaning for your account
+- [p]spotifycleandm off
+  - Disables DM auto-cleaning for your account
+- [p]spotifycleandm status
+  - Shows current enabled or disabled state for your account
+
+Runtime behavior:
+- When enabled, if you send a Spotify link in a DM with the bot, the bot replies with the cleaned link.
+- It removes only the si query parameter.
+- Original messages are not edited or deleted.
+
 ## Event Listeners
 This cog includes these listeners:
 
 1. on_message
-- Ignores bot messages and DMs
+- Ignores bot messages
 - Handles auto-reactions
 - Handles Spotify URL auto-clean posting when enabled
+- Handles DM Spotify URL auto-clean posting when user opt-in is enabled
 
 2. on_member_update
 - Checks status transitions
@@ -172,7 +194,7 @@ This cog includes these listeners:
 - Manage Channels: ld
 - Manage Messages: purge
 - View Audit Log: auditlog
-- No explicit command permission decorators: fakeping, autoreact group, notify group
+- No explicit command permission decorators: fakeping, autoreact group, notify group, spotifycleandm group
 
 ## Operational Notes
 - If the bot lacks Discord permissions for an action, commands return an error message.
@@ -182,8 +204,9 @@ This cog includes these listeners:
 ## Quick Start
 1. Load the cog.
 2. Optional: enable Spotify cleaner in a server with [p]spotifyclean on.
-3. Add auto-reactions with [p]autoreact add.
-4. Add online tracking with [p]notify add.
+3. Optional: enable DM Spotify cleaner for yourself with [p]spotifycleandm on.
+4. Add auto-reactions with [p]autoreact add.
+5. Add online tracking with [p]notify add.
 
 ## End User Data Statement
 The cog stores guild and user data for utility features through Red Config and does not share that data with third parties.
