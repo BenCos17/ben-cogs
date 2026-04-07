@@ -47,10 +47,11 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config = Config.get_conf(self, identifier=492089091320446976)
         self.config.register_global(airplanesliveapi=None)  # API key for airplanes.live
         self.config.register_global(openweathermap_api=None)  # OWM API key
+        self.config.register_global(avwx_token=None)  # AVWX API token
         self.config.register_global(api_mode="primary")  # API mode: 'primary' or 'fallback (going to remove this when airplanes.live removes the public api because of companies abusing it...when that happens you'll need an api key for it)'
         self.config.register_global(user_agent=None)  # Optional custom User-Agent header for all outbound HTTP requests
         self.config.register_global(api_stats=None)  # API request statistics for persistence
-        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={}, faa_alert_channel=None, faa_alert_role=None, faa_alert_cooldown=5, last_faa_status=None, faa_last_alert_time=None)
+        self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={}, faa_alert_channel=None, faa_alert_role=None, faa_alert_cooldown=5, last_faa_status=None, faa_last_alert_time=None, geofence_alerts={})
         self.config.register_user(watchlist=[], watchlist_notifications={}, watchlist_cooldown=10, watchlist_aircraft_state={})  # User watchlist: list of ICAO codes, dict of last notification times, cooldown in minutes (default: 10), and dict of last known aircraft state (flying/landed)
         
         # Initialize utility managers
@@ -78,6 +79,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.check_emergency_squawks.start()
         self.check_watched_aircraft.start()
         self.check_faa_status_changes.start()
+        self.check_geofence_alerts.start()
 
         # Squawk alert API
         self.squawk_api = SquawkAlertAPI()
@@ -92,6 +94,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
         
         # Pre-compile regex pattern for ICAO matching
         self._icao_pattern = re.compile(r'^[a-fA-F0-9]{6}$')
+        # Limit concurrent background network-heavy operations across tasks.
+        self._background_io_semaphore = asyncio.Semaphore(4)
+        self._squawk_hook_timeout = 5.0
 
     async def _refresh_auto_icao_cache(self):
         """Refresh the cache of guilds with auto_icao enabled."""
@@ -101,6 +106,22 @@ class Skysearch(commands.Cog, DashboardIntegration):
             if await self.config.guild(guild).auto_icao():
                 self._auto_icao_enabled_guilds.add(guild.id)
             self._auto_icao_checked_guilds.add(guild.id)
+
+    async def _set_guild_locales_safe(self, guild) -> bool:
+        """Set i18n context for a guild without letting failures break background tasks."""
+        try:
+            await asyncio.wait_for(set_contextual_locales_from_guild(self.bot, guild), timeout=2.0)
+            return True
+        except asyncio.TimeoutError:
+            log.warning(f"Timed out setting contextual locales for guild {guild.id}")
+        except Exception as e:
+            log.warning(f"Failed to set contextual locales for guild {guild.id}: {e}")
+        return False
+
+    async def _run_background_io(self, awaitable):
+        """Bound concurrent background I/O to keep event loop responsive under load."""
+        async with self._background_io_semaphore:
+            return await awaitable
     
     async def cog_load(self):
         """Called when the cog is loaded - refresh cache."""
@@ -157,6 +178,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.check_emergency_squawks.cancel()
         self.check_watched_aircraft.cancel()
         self.check_faa_status_changes.cancel()
+        self.check_geofence_alerts.cancel()
         await self.api.close()
 
     @commands.guild_only()
@@ -259,6 +281,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         if await ctx.bot.is_owner(ctx.author):
             embed.add_field(name=_("Custom Alert Admin"), value="`forcealert` (owner) `clearalertcooldown`", inline=False)
         embed.add_field(name=_("Watchlist"), value="`watchlist` - Manage your personal aircraft watchlist\n`watchlist add <icao>` - Add aircraft to watchlist\n`watchlist remove <icao>` - Remove from watchlist\n`watchlist list` - List watched aircraft\n`watchlist status` - Get detailed status\n`watchlist cooldown [minutes]` - Set notification cooldown", inline=False)
+        embed.add_field(name=_("Geo-fence"), value="`geofence add` - Alert when aircraft enter/leave an area\n`geofence remove` - Remove a geo-fence\n`geofence list` - List all geo-fences", inline=False)
         embed.add_field(name=_("Other"), value=_("`scroll` - Scroll through available planes\n`feeder` - Parse feeder JSON data (secure modal)"), inline=False)
         # Only show debug command to bot owners
         if await ctx.bot.is_owner(ctx.author):
@@ -385,7 +408,38 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Set or view the watchlist notification cooldown. Accepts formats like '20m', '30s', '1h', or '15.5m'. Use without a value to check current setting."""
         await self.aircraft_commands.watchlist_cooldown(ctx, duration)
 
+    # Geo-fence commands
+    @commands.guild_only()
+    @aircraft_group.group(name='geofence', invoke_without_command=True)
+    async def aircraft_geofence(self, ctx):
+        """Geo-fence alerts: get notified when aircraft enter or leave an area."""
+        embed = discord.Embed(
+            title=_("Geo-fence Commands"),
+            description=_("Alert when aircraft enter or leave a geographic area."),
+            color=0xfffffe,
+        )
+        embed.add_field(name="add", value=_("`geofence add <name> <lat> <lon> <radius_nm> [alert_on] [cooldown] [channel] [role]`"), inline=False)
+        embed.add_field(name="remove", value=_("`geofence remove <fence_id>`"), inline=False)
+        embed.add_field(name="list", value=_("`geofence list` - List all geo-fences"), inline=False)
+        await ctx.send(embed=embed)
 
+    @commands.guild_only()
+    @aircraft_geofence.command(name='add')
+    async def aircraft_geofence_add(self, ctx, name: str, lat: float, lon: float, radius_nm: float, alert_on: str = "both", cooldown: int = 5, channel: discord.TextChannel = None, role: discord.Role = None):
+        """Add a geo-fence. Alerts when aircraft enter/leave the area. radius_nm in nautical miles. alert_on: entry, exit, or both."""
+        await self.aircraft_commands.geofence_add(ctx, name, lat, lon, radius_nm, alert_on, cooldown, channel, role)
+
+    @commands.guild_only()
+    @aircraft_geofence.command(name='remove')
+    async def aircraft_geofence_remove(self, ctx, fence_id: str):
+        """Remove a geo-fence by ID (from geofence list)."""
+        await self.aircraft_commands.geofence_remove(ctx, fence_id)
+
+    @commands.guild_only()
+    @aircraft_geofence.command(name='list')
+    async def aircraft_geofence_list(self, ctx):
+        """List all geo-fence alerts for this server."""
+        await self.aircraft_commands.geofence_list(ctx)
 
 
 
@@ -569,7 +623,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Command center for airport related commands"""
         embed = discord.Embed(title="Airport Commands", description="Available airport-related commands:", color=0xfffffe)
         embed.add_field(name="Information", value="`info` - Get airport information by ICAO/IATA code", inline=False)
-        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast\n`faastatus [code]` - Get FAA National Airspace Status (delays/closures)", inline=False)
+        embed.add_field(name="Details", value="`runway` - Get runway information\n`navaid` - Get navigational aids\n`forecast` - Get weather forecast\n`faastatus [code]` - Get FAA National Airspace Status (delays/closures)\n`avwx <code>` - Get aviation weather overview\n`metar <code>` - Get current METAR\n`taf <code>` - Get current TAF", inline=False)
         embed.add_field(name="FAA Alerts", value="`faaalertchannel` `faaalertrole` `faaalertcooldown` `showfaaalerts` - Notify when FAA status changes", inline=False)
         embed.add_field(name="Detailed Help", value="Use `*help airport` for detailed command information", inline=False)
         await ctx.send(embed=embed)
@@ -594,6 +648,21 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def airport_forecast(self, ctx, code: str):
         """Get the weather for an airport by ICAO or IATA code (US airports only)."""
         await self.airport_commands.forecast(ctx, code)
+
+    @airport_group.command(name='avwx', aliases=['wx'], help='Get aviation weather conditions from AVWX for an airport code.')
+    async def airport_avwx(self, ctx, code: str):
+        """Get aviation weather conditions from AVWX for an airport code."""
+        await self.airport_commands.avwx_conditions(ctx, code)
+
+    @airport_group.command(name='metar', help='Get current METAR from AVWX for an airport code.')
+    async def airport_metar(self, ctx, code: str):
+        """Get current METAR from AVWX for an airport code."""
+        await self.airport_commands.avwx_metar(ctx, code)
+
+    @airport_group.command(name='taf', help='Get current TAF from AVWX for an airport code.')
+    async def airport_taf(self, ctx, code: str):
+        """Get current TAF from AVWX for an airport code."""
+        await self.airport_commands.avwx_taf(ctx, code)
 
     @airport_group.command(name='faastatus', aliases=['faa'], help='Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code.')
     async def airport_faa_status(self, ctx, airport_code: str = None):
@@ -638,6 +707,24 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Clear the OpenWeatherMap API key."""
         await self.admin_commands.clear_owm_key(ctx)
 
+    @commands.is_owner()
+    @airport_group.command(name="setavwxtoken")
+    async def airport_setavwxtoken(self, ctx, token: str):
+        """Set the AVWX API token."""
+        await self.admin_commands.set_avwx_token(ctx, token)
+
+    @commands.is_owner()
+    @airport_group.command(name="avwxtoken")
+    async def airport_avwxtoken(self, ctx):
+        """Show the configured AVWX API token status."""
+        await self.admin_commands.check_avwx_token(ctx)
+
+    @commands.is_owner()
+    @airport_group.command(name="clearavwxtoken")
+    async def airport_clearavwxtoken(self, ctx):
+        """Clear the AVWX API token."""
+        await self.admin_commands.clear_avwx_token(ctx)
+
     @tasks.loop(minutes=2)
     async def check_emergency_squawks(self):
         """Background task to check for emergency squawks."""
@@ -650,209 +737,261 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 response = await self.api.make_request(url)  # No ctx for background task
                 aircraft_count = len(response.get('aircraft', [])) if response else 0
                 log.debug(f"Checked {squawk_code}: Found {aircraft_count} aircraft")
-                if response and 'aircraft' in response:
-                    for aircraft_info in response['aircraft']:
+                aircraft_list = response.get('aircraft', []) if response and 'aircraft' in response else []
+                if aircraft_list:
+                    guild_runtime = []
+                    for guild in self.bot.guilds:
+                        if not await self._set_guild_locales_safe(guild):
+                            continue
+                        guild_config = self.config.guild(guild)
+                        alert_channel_id = await guild_config.alert_channel()
+                        if not alert_channel_id:
+                            continue
+                        alert_channel = self.bot.get_channel(alert_channel_id)
+                        if not alert_channel:
+                            continue
+                        guild_runtime.append({
+                            "guild": guild,
+                            "guild_config": guild_config,
+                            "alert_channel": alert_channel,
+                            "cooldown_minutes": await guild_config.emergency_cooldown(),
+                            "alert_role_id": await guild_config.alert_role(),
+                            "last_alerts": await guild_config.last_alerts(),
+                            "dirty": False,
+                        })
+
+                    for aircraft_info in aircraft_list:
                         # Ignore aircraft with the hex 00000000
                         if aircraft_info.get('hex') == '00000000':
                             continue
-                        guilds = self.bot.guilds
-                        for guild in guilds:
-                            # In non-command contexts set locales explicitly
-                            await set_contextual_locales_from_guild(self.bot, guild)
-                            guild_config = self.config.guild(guild)
-                            alert_channel_id = await guild_config.alert_channel()
-                            if alert_channel_id:
-                                icao_hex = aircraft_info.get('hex')
-                                if not icao_hex:
+                        icao_hex = aircraft_info.get('hex')
+                        if not icao_hex:
+                            continue
+                        now = datetime.datetime.now(datetime.timezone.utc)
+                        for runtime in guild_runtime:
+                            cooldown_minutes = runtime["cooldown_minutes"]
+                            alert_key = f"{icao_hex}-{squawk_code}"
+                            last_alerts = runtime["last_alerts"]
+                            last_alert_timestamp = last_alerts.get(alert_key)
+
+                            if last_alert_timestamp:
+                                last_alert_time = datetime.datetime.fromtimestamp(last_alert_timestamp, tz=datetime.timezone.utc)
+                                time_since_last = (now - last_alert_time).total_seconds()
+                                if time_since_last < cooldown_minutes * 60:
+                                    log.debug(
+                                        f"Cooldown active for {icao_hex} ({squawk_code}) - {time_since_last:.1f}s "
+                                        f"since last alert (cooldown: {cooldown_minutes}m)"
+                                    )
                                     continue
-                                
-                                cooldown_minutes = await guild_config.emergency_cooldown()
-                                alert_key = f"{icao_hex}-{squawk_code}"
-                                now = datetime.datetime.now(datetime.timezone.utc)
-                                
-                                last_alerts = await guild_config.last_alerts()
-                                last_alert_timestamp = last_alerts.get(alert_key)
-                                
-                                if last_alert_timestamp:
-                                    last_alert_time = datetime.datetime.fromtimestamp(last_alert_timestamp, tz=datetime.timezone.utc)
-                                    time_since_last = (now - last_alert_time).total_seconds()
-                                    if time_since_last < cooldown_minutes * 60:
-                                        log.debug(f"Cooldown active for {icao_hex} ({squawk_code}) - {time_since_last:.1f}s since last alert (cooldown: {cooldown_minutes}m)")
-                                        continue  # Cooldown active, skip.
-                                
-                                alert_channel = self.bot.get_channel(alert_channel_id)
-                                if alert_channel:
-                                    # Update timestamp before sending, to be safe
-                                    last_alerts = await guild_config.last_alerts()
-                                    last_alerts[alert_key] = now.timestamp()
-                                    # Clean up old entries
-                                    keys_to_delete = [
-                                        k for k, ts in last_alerts.items()
-                                        if (now.timestamp() - ts) > (cooldown_minutes * 60)
-                                    ]
-                                    for k in keys_to_delete:
-                                        if k != alert_key:
-                                            del last_alerts[k]
-                                    await guild_config.last_alerts.set(last_alerts)
 
-                                    # Get the alert role
-                                    alert_role_id = await guild_config.alert_role()
-                                    alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
-                                    
-                                    # Debug logging for emergency alerts
-                                    log.info(f"EMERGENCY ALERT {icao_hex}: alert_role_id={alert_role_id}, mention='{alert_role_mention}'")
-                                    
-                                    # Prepare message data for pre-send hooks
-                                    message_data = {
-                                        'content': alert_role_mention if alert_role_mention else None,
-                                        'embed': None,
-                                        'view': None,
-                                    }
-                                    # Compose the embed and view as before
-                                    aircraft_data = aircraft_info
-                                    image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
-                                    embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
-                                    
-                                    # Create buttons for emergency alerts
-                                    view = discord.ui.View()
-                                    icao = aircraft_data.get('hex', '').upper()
-                                    link = f"https://globe.airplanes.live/?icao={icao}"
-                                    view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
+                            last_alerts[alert_key] = now.timestamp()
+                            cutoff = now.timestamp() - (cooldown_minutes * 60)
+                            runtime["last_alerts"] = {
+                                k: ts for k, ts in last_alerts.items() if ts >= cutoff or k == alert_key
+                            }
+                            runtime["dirty"] = True
 
-                                    # Social media sharing buttons
-                                    import urllib.parse
-                                    ground_speed_knots = aircraft_data.get('gs', aircraft_data.get('ground_speed', 'N/A'))
+                            guild = runtime["guild"]
+                            alert_channel = runtime["alert_channel"]
+                            alert_role_id = runtime["alert_role_id"]
+                            alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
+
+                            # Debug logging for emergency alerts
+                            log.info(f"EMERGENCY ALERT {icao_hex}: alert_role_id={alert_role_id}, mention='{alert_role_mention}'")
+
+                            # Prepare message data for pre-send hooks
+                            message_data = {
+                                'content': alert_role_mention if alert_role_mention else None,
+                                'embed': None,
+                                'view': None,
+                            }
+                            # Compose the embed and view as before
+                            aircraft_data = aircraft_info
+                            image_url, photographer = await self._run_background_io(
+                                self.helpers.get_photo_by_aircraft_data(aircraft_data)
+                            )
+                            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+
+                            # Create buttons for emergency alerts
+                            view = discord.ui.View()
+                            icao = aircraft_data.get('hex', '').upper()
+                            link = f"https://globe.airplanes.live/?icao={icao}"
+                            view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
+
+                            # Social media sharing buttons
+                            import urllib.parse
+                            ground_speed_knots = aircraft_data.get('gs', aircraft_data.get('ground_speed', 'N/A'))
+                            ground_speed_mph = 'unknown'
+                            if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
+                                try:
+                                    ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
+                                except Exception:
                                     ground_speed_mph = 'unknown'
-                                    if ground_speed_knots != 'N/A' and ground_speed_knots is not None:
-                                        try:
-                                            ground_speed_mph = round(float(ground_speed_knots) * 1.15078)
-                                        except Exception:
-                                            ground_speed_mph = 'unknown'
-                                    
-                                    lat = aircraft_data.get('lat', 'N/A')
-                                    lon = aircraft_data.get('lon', 'N/A')
-                                    if lat != 'N/A' and lat is not None:
-                                        try:
-                                            lat_formatted = round(float(lat), 2)
-                                            lat_dir = "N" if lat_formatted >= 0 else "S"
-                                            lat = f"{abs(lat_formatted)}{lat_dir}"
-                                        except Exception:
-                                            pass
-                                    if lon != 'N/A' and lon is not None:
-                                        try:
-                                            lon_formatted = round(float(lon), 2)
-                                            lon_dir = "E" if lon_formatted >= 0 else "W"
-                                            lon = f"{abs(lon_formatted)}{lon_dir}"
-                                        except Exception:
-                                            pass
-                                    
-                                    if squawk_code in ['7500', '7600', '7700']:
-                                        tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
-                                    else:
-                                        tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
-                                    
-                                    tweet_url = f"https://x.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
-                                    view.add_item(discord.ui.Button(label="Post on X", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
-                                    
-                                    whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
-                                    whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
-                                    view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
-                                    
-                                    message_data['embed'] = embed
-                                    message_data['view'] = view
 
-                                    # Let other cogs know about the alert first
-                                    log.error(f"DEBUG: Calling callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
-                                    await self.squawk_api.call_callbacks(guild, aircraft_info, squawk_code)
-                                    log.error(f"DEBUG: Finished callbacks for {icao_hex}")
+                            lat = aircraft_data.get('lat', 'N/A')
+                            lon = aircraft_data.get('lon', 'N/A')
+                            if lat != 'N/A' and lat is not None:
+                                try:
+                                    lat_formatted = round(float(lat), 2)
+                                    lat_dir = "N" if lat_formatted >= 0 else "S"
+                                    lat = f"{abs(lat_formatted)}{lat_dir}"
+                                except Exception:
+                                    pass
+                            if lon != 'N/A' and lon is not None:
+                                try:
+                                    lon_formatted = round(float(lon), 2)
+                                    lon_dir = "E" if lon_formatted >= 0 else "W"
+                                    lon = f"{abs(lon_formatted)}{lon_dir}"
+                                except Exception:
+                                    pass
 
-                                    # Let other cogs modify the message before sending
-                                    original_view = message_data.get('view')
-                                    original_content = message_data.get('content')
-                                    message_data = await self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data)
-                                    
-                                    # Ensure buttons are preserved if no other cog modified the view
-                                    if message_data.get('view') is None and original_view is not None:
-                                        log.warning(f"Pre-send callback removed view for {icao_hex}, restoring buttons")
-                                        message_data['view'] = original_view
-                                    # Ensure role mention content is preserved if removed by callbacks
-                                    if message_data.get('content') is None and original_content is not None:
-                                        log.warning(f"Pre-send callback removed content for {icao_hex}, restoring mention content")
-                                        message_data['content'] = original_content
-                                    
-                                    # Debug final content before sending
-                                    log.info(f"EMERGENCY ALERT {icao_hex}: Final content before send: '{message_data.get('content')}'")
+                            if squawk_code in ['7500', '7600', '7700']:
+                                tweet_text = f"Spotted an aircraft declaring an emergency! #Squawk #{squawk_code}, flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. #SkySearch #Emergency\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
+                            else:
+                                tweet_text = f"Tracking flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph using #SkySearch\n\nJoin via Discord to search and discuss planes with your friends for free - discord.gg/WW4eNQj9qr"
 
-                                    # Send the message using the possibly modified data (allow role mentions)
-                                    allowed_mentions = None
-                                    if alert_role_id:
-                                        role_obj = guild.get_role(alert_role_id)
-                                        if role_obj:
-                                            allowed_mentions = discord.AllowedMentions(roles=[role_obj])
-                                        else:
-                                            allowed_mentions = discord.AllowedMentions(roles=True)
-                                    sent_message = await alert_channel.send(
+                            tweet_url = f"https://x.com/intent/tweet?text={urllib.parse.quote_plus(tweet_text)}"
+                            view.add_item(discord.ui.Button(label="Post on X", emoji="📣", url=tweet_url, style=discord.ButtonStyle.link))
+
+                            whatsapp_text = f"Check out this aircraft! Flight {aircraft_data.get('flight', '')} at position {lat}, {lon} with speed {ground_speed_mph} mph. Track live @ https://globe.airplanes.live/?icao={icao} #SkySearch"
+                            whatsapp_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote_plus(whatsapp_text)}"
+                            view.add_item(discord.ui.Button(label="Send on WhatsApp", emoji="📱", url=whatsapp_url, style=discord.ButtonStyle.link))
+
+                            message_data['embed'] = embed
+                            message_data['view'] = view
+
+                            # Let other cogs know about the alert first
+                            log.error(f"DEBUG: Calling callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
+                            try:
+                                await asyncio.wait_for(
+                                    self.squawk_api.call_callbacks(guild, aircraft_info, squawk_code),
+                                    timeout=self._squawk_hook_timeout,
+                                )
+                            except asyncio.TimeoutError:
+                                log.warning(f"Squawk callback timeout for {icao_hex} ({squawk_code}) in {guild.name}")
+                            log.error(f"DEBUG: Finished callbacks for {icao_hex}")
+
+                            # Let other cogs modify the message before sending
+                            original_view = message_data.get('view')
+                            original_content = message_data.get('content')
+                            try:
+                                message_data = await asyncio.wait_for(
+                                    self.squawk_api.run_pre_send(guild, aircraft_info, squawk_code, message_data),
+                                    timeout=self._squawk_hook_timeout,
+                                )
+                            except asyncio.TimeoutError:
+                                log.warning(f"Squawk pre-send timeout for {icao_hex} ({squawk_code}) in {guild.name}")
+
+                            # Ensure buttons are preserved if no other cog modified the view
+                            if message_data.get('view') is None and original_view is not None:
+                                log.warning(f"Pre-send callback removed view for {icao_hex}, restoring buttons")
+                                message_data['view'] = original_view
+                            # Ensure role mention content is preserved if removed by callbacks
+                            if message_data.get('content') is None and original_content is not None:
+                                log.warning(f"Pre-send callback removed content for {icao_hex}, restoring mention content")
+                                message_data['content'] = original_content
+
+                            # Debug final content before sending
+                            log.info(f"EMERGENCY ALERT {icao_hex}: Final content before send: '{message_data.get('content')}'")
+
+                            # Send the message using the possibly modified data (allow role mentions)
+                            allowed_mentions = None
+                            if alert_role_id:
+                                role_obj = guild.get_role(alert_role_id)
+                                if role_obj:
+                                    allowed_mentions = discord.AllowedMentions(roles=[role_obj])
+                                else:
+                                    allowed_mentions = discord.AllowedMentions(roles=True)
+                            sent_message = await asyncio.wait_for(
+                                self._run_background_io(
+                                    alert_channel.send(
                                         content=message_data.get('content'),
                                         embed=message_data.get('embed'),
                                         view=message_data.get('view'),
-                                        allowed_mentions=allowed_mentions
+                                        allowed_mentions=allowed_mentions,
                                     )
+                                ),
+                                timeout=10.0,
+                            )
 
-                                    # Let other cogs react after the message is sent
-                                    await self.squawk_api.run_post_send(guild, aircraft_info, squawk_code, sent_message)
-                                    
-                                    # Check if aircraft has landed
-                                    if aircraft_info.get('altitude') is not None and aircraft_info.get('altitude') < 25:
-                                        embed = discord.Embed(title=_("Aircraft landed"), description=_("Aircraft {hex} has landed while squawking {squawk}.").format(hex=aircraft_info.get('hex'), squawk=squawk_code), color=0x00ff00)
-                                        await alert_channel.send(embed=embed)
+                            # Let other cogs react after the message is sent
+                            try:
+                                await asyncio.wait_for(
+                                    self.squawk_api.run_post_send(guild, aircraft_info, squawk_code, sent_message),
+                                    timeout=self._squawk_hook_timeout,
+                                )
+                            except asyncio.TimeoutError:
+                                log.warning(f"Squawk post-send timeout for {icao_hex} ({squawk_code}) in {guild.name}")
+
+                            # Check if aircraft has landed
+                            if aircraft_info.get('altitude') is not None and aircraft_info.get('altitude') < 25:
+                                landed_embed = discord.Embed(
+                                    title=_("Aircraft landed"),
+                                    description=_("Aircraft {hex} has landed while squawking {squawk}.").format(
+                                        hex=aircraft_info.get('hex'), squawk=squawk_code
+                                    ),
+                                    color=0x00ff00,
+                                )
+                                await asyncio.wait_for(
+                                    self._run_background_io(alert_channel.send(embed=landed_embed)),
+                                    timeout=10.0,
+                                )
+
+                    for runtime in guild_runtime:
+                        if runtime["dirty"]:
+                            await runtime["guild_config"].last_alerts.set(runtime["last_alerts"])
                 
-                # Check custom alerts against the full aircraft feed (not just emergency squawks)
-                try:
-                    all_url = f"{await self.api.get_api_url()}/?all_with_pos"
-                    all_response = await self.api.make_request(all_url)
-                    # Support both primary ('aircraft') and fallback ('ac') response formats
-                    aircraft_list = []
-                    if all_response:
-                        if 'aircraft' in all_response:
-                            aircraft_list = all_response['aircraft']
-                        elif 'ac' in all_response and isinstance(all_response['ac'], list):
-                            aircraft_list = all_response['ac']
-                    if aircraft_list:
-                        guilds = self.bot.guilds
-                        for guild in guilds:
-                            # Set locales once per guild per cycle
-                            await set_contextual_locales_from_guild(self.bot, guild)
-                            guild_config = self.config.guild(guild)
-                            alert_channel_id = await guild_config.alert_channel()
-                            custom_alerts = await guild_config.custom_alerts()
-                            if not custom_alerts:
-                                continue
-                            default_channel = self.bot.get_channel(alert_channel_id) if alert_channel_id else None
-                            for aircraft_info in aircraft_list:
-                                if aircraft_info.get('hex') == '00000000':
-                                    continue
-                                for alert_id, alert_data in custom_alerts.items():
-                                    if await self._check_aircraft_matches_alert(aircraft_info, alert_data):
-                                        if await self._is_alert_cooldown_active(guild_config, alert_id, alert_data):
-                                            continue
-                                        # resolve destination channel
-                                        destination_channel = default_channel
-                                        custom_channel_id = alert_data.get('custom_channel')
-                                        if custom_channel_id:
-                                            custom_channel = self.bot.get_channel(custom_channel_id)
-                                            if custom_channel:
-                                                destination_channel = custom_channel
-                                        if destination_channel is None:
-                                            continue
-                                        await self._send_custom_alert(destination_channel, guild_config, aircraft_info, alert_data, alert_id)
-                                        # update last triggered (timezone-aware UTC)
-                                        custom_alerts[alert_id]['last_triggered'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                                        await guild_config.custom_alerts.set(custom_alerts)
-                except Exception as e:
-                    log.error(f"Error checking custom alerts feed: {e}", exc_info=True)
-
                 # Removed the "No alert channel set" message - this is normal behavior
-                await asyncio.sleep(2)
+                await asyncio.sleep(0.5)
+
+            # Check custom alerts against the full aircraft feed once per loop cycle
+            try:
+                all_url = f"{await self.api.get_api_url()}/?all_with_pos"
+                all_response = await self.api.make_request(all_url)
+                # Support both primary ('aircraft') and fallback ('ac') response formats
+                aircraft_list = []
+                if all_response:
+                    if 'aircraft' in all_response:
+                        aircraft_list = all_response['aircraft']
+                    elif 'ac' in all_response and isinstance(all_response['ac'], list):
+                        aircraft_list = all_response['ac']
+                if aircraft_list:
+                    guilds = self.bot.guilds
+                    for guild in guilds:
+                        # Set locales once per guild per cycle
+                        if not await self._set_guild_locales_safe(guild):
+                            continue
+                        guild_config = self.config.guild(guild)
+                        alert_channel_id = await guild_config.alert_channel()
+                        custom_alerts = await guild_config.custom_alerts()
+                        if not custom_alerts:
+                            continue
+                        custom_alerts_dirty = False
+                        default_channel = self.bot.get_channel(alert_channel_id) if alert_channel_id else None
+                        for aircraft_info in aircraft_list:
+                            if aircraft_info.get('hex') == '00000000':
+                                continue
+                            for alert_id, alert_data in custom_alerts.items():
+                                if await self._check_aircraft_matches_alert(aircraft_info, alert_data):
+                                    if await self._is_alert_cooldown_active(guild_config, alert_id, alert_data):
+                                        continue
+                                    # resolve destination channel
+                                    destination_channel = default_channel
+                                    custom_channel_id = alert_data.get('custom_channel')
+                                    if custom_channel_id:
+                                        custom_channel = self.bot.get_channel(custom_channel_id)
+                                        if custom_channel:
+                                            destination_channel = custom_channel
+                                    if destination_channel is None:
+                                        continue
+                                    await self._send_custom_alert(destination_channel, guild_config, aircraft_info, alert_data, alert_id)
+                                    # update last triggered (timezone-aware UTC)
+                                    custom_alerts[alert_id]['last_triggered'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                                    custom_alerts_dirty = True
+                        if custom_alerts_dirty:
+                            await guild_config.custom_alerts.set(custom_alerts)
+            except Exception as e:
+                log.error(f"Error checking custom alerts feed: {e}", exc_info=True)
         except Exception as e:
             log.error(f"Error checking emergency squawks: {e}", exc_info=True)
 
@@ -881,7 +1020,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
             for guild in self.bot.guilds:
                 try:
-                    await set_contextual_locales_from_guild(self.bot, guild)
+                    if not await self._set_guild_locales_safe(guild):
+                        continue
                     guild_config = self.config.guild(guild)
                     channel_id = await guild_config.faa_alert_channel()
                     if not channel_id:
@@ -938,6 +1078,104 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @check_faa_status_changes.before_loop
     async def before_check_faa_status_changes(self):
         await self.bot.wait_until_ready()
+
+    @tasks.loop(minutes=3)
+    async def check_geofence_alerts(self):
+        """Background task to check geo-fence alerts (aircraft entering/leaving areas)."""
+        try:
+            api_mode = await self.config.api_mode()
+            key = "aircraft" if api_mode == "primary" else "ac"
+            for guild in self.bot.guilds:
+                if not await self._set_guild_locales_safe(guild):
+                    continue
+                guild_config = self.config.guild(guild)
+                geofence_alerts = await guild_config.geofence_alerts()
+                if not geofence_alerts:
+                    continue
+                now = datetime.datetime.now(datetime.timezone.utc)
+                for fence_id, fence in geofence_alerts.items():
+                    try:
+                        lat = fence.get("lat")
+                        lon = fence.get("lon")
+                        radius_nm = fence.get("radius_nm", 50)
+                        channel_id = fence.get("channel_id")
+                        alert_on = fence.get("alert_on", "both")  # entry, exit, both
+                        cooldown_min = fence.get("cooldown", 5)
+                        if not channel_id or lat is None or lon is None:
+                            continue
+                        channel = self.bot.get_channel(channel_id)
+                        if not channel:
+                            continue
+                        # Check cooldown
+                        last_alert = fence.get("last_alert_time")
+                        if last_alert:
+                            last_dt = datetime.datetime.fromtimestamp(last_alert, tz=datetime.timezone.utc)
+                            if (now - last_dt).total_seconds() < cooldown_min * 60:
+                                continue
+                        url = f"{await self.api.get_api_url()}/?circle={lat},{lon},{radius_nm}"
+                        response = await self.api.make_request(url)
+                        aircraft_list = response.get(key, []) if response else []
+                        current_inside = {a.get("hex", "").upper(): a for a in aircraft_list if a.get("hex") and a.get("hex") != "00000000"}
+                        prev_inside = fence.get("aircraft_inside") or {}
+                        if not isinstance(prev_inside, dict):
+                            prev_inside = {k: 1 for k in prev_inside} if isinstance(prev_inside, list) else {}
+                        # Entry: aircraft in current, not in prev
+                        # Exit: aircraft in prev, not in current
+                        entries = [current_inside[icao] for icao in current_inside if icao not in prev_inside]
+                        exits = [icao for icao in prev_inside if icao not in current_inside]
+                        role_id = fence.get("role_id")
+                        role_mention = f"<@&{role_id}>" if role_id else ""
+                        sent_alert = False
+                        if entries and alert_on in ("entry", "both"):
+                            for aircraft_info in entries:
+                                await self._send_geofence_alert(channel, fence, aircraft_info, "entry", role_mention)
+                                sent_alert = True
+                                break  # One alert per cycle per fence
+                        if exits and alert_on in ("exit", "both") and not sent_alert:
+                            # For exit we don't have full aircraft info; fetch first exited
+                            icao_exit = exits[0]
+                            url_hex = f"{await self.api.get_api_url()}/?find_hex={icao_exit}"
+                            r = await self.api.make_request(url_hex)
+                            ac_list = r.get(key, []) if r else []
+                            aircraft_info = ac_list[0] if ac_list else {"hex": icao_exit, "flight": "N/A", "lat": lat, "lon": lon}
+                            await self._send_geofence_alert(channel, fence, aircraft_info, "exit", role_mention)
+                            sent_alert = True
+                        fence["aircraft_inside"] = {icao: 1 for icao in current_inside}
+                        if sent_alert:
+                            fence["last_alert_time"] = now.timestamp()
+                        await guild_config.geofence_alerts.set(geofence_alerts)
+                        await asyncio.sleep(1)
+                    except Exception as e:
+                        log.debug(f"Geofence {fence_id} error: {e}")
+        except Exception as e:
+            log.error(f"Error checking geofence alerts: {e}", exc_info=True)
+
+    @check_geofence_alerts.before_loop
+    async def before_check_geofence_alerts(self):
+        await self.bot.wait_until_ready()
+
+    async def _send_geofence_alert(self, channel, fence, aircraft_info, event_type, role_mention):
+        """Send a geo-fence alert (entry or exit)."""
+        fence_name = fence.get("name", "Unnamed")
+        image_url, photographer = await self._run_background_io(self.helpers.get_photo_by_aircraft_data(aircraft_info))
+        embed = self.helpers.create_aircraft_embed(aircraft_info, image_url, photographer)
+        if event_type == "entry":
+            embed.title = f"🟢 Geo-fence: {aircraft_info.get('desc', 'Aircraft')} entered **{fence_name}**"
+            embed.color = 0x00ff00
+        else:
+            embed.title = f"🔴 Geo-fence: {aircraft_info.get('desc', 'Aircraft')} left **{fence_name}**"
+            embed.color = 0xff4545
+        icao = (aircraft_info.get("hex") or "").upper()
+        view = discord.ui.View()
+        link = f"https://globe.airplanes.live/?icao={icao}"
+        view.add_item(discord.ui.Button(label="View on airplanes.live", emoji="🗺️", url=link, style=discord.ButtonStyle.link))
+        allowed_mentions = discord.AllowedMentions(roles=True) if role_mention else None
+        await asyncio.wait_for(
+            self._run_background_io(
+                channel.send(content=role_mention or None, embed=embed, view=view, allowed_mentions=allowed_mentions)
+            ),
+            timeout=10.0,
+        )
     
     @tasks.loop(minutes=3)
     async def check_watched_aircraft(self):
@@ -1190,7 +1428,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         try:
             guilds = self.bot.guilds
             for guild in guilds:
-                await set_contextual_locales_from_guild(self.bot, guild)
+                if not await self._set_guild_locales_safe(guild):
+                    continue
                 guild_config = self.config.guild(guild)
                 alert_channel_id = await guild_config.alert_channel()
                 # Default alert channel may be unset; some alerts might target a custom channel.
@@ -1289,7 +1528,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
             # Create embed
             aircraft_data = aircraft_info
-            image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
+            image_url, photographer = await self._run_background_io(self.helpers.get_photo_by_aircraft_data(aircraft_data))
             embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
             # Add custom alert header
             embed.title = f"🔔 Custom Alert: {alert_data['type'].upper()} '{alert_data['value']}'"
@@ -1343,7 +1582,13 @@ class Skysearch(commands.Cog, DashboardIntegration):
             # Allow other cogs to modify the message before sending (mirror emergency flow)
             original_view = message_data.get('view')
             squawk_code = aircraft_data.get('squawk', 'CUSTOM')
-            message_data = await self.squawk_api.run_pre_send(alert_channel.guild, aircraft_data, squawk_code, message_data)
+            try:
+                message_data = await asyncio.wait_for(
+                    self.squawk_api.run_pre_send(alert_channel.guild, aircraft_data, squawk_code, message_data),
+                    timeout=self._squawk_hook_timeout,
+                )
+            except asyncio.TimeoutError:
+                log.warning(f"Custom alert pre-send timeout for {alert_id} in {alert_channel.guild.name}")
 
             # Ensure buttons are preserved if no other cog modified the view
             if message_data.get('view') is None and original_view is not None:
@@ -1358,15 +1603,26 @@ class Skysearch(commands.Cog, DashboardIntegration):
                     allowed_mentions = discord.AllowedMentions(roles=[role_obj])
                 else:
                     allowed_mentions = discord.AllowedMentions(roles=True)
-            sent_message = await alert_channel.send(
-                content=message_data.get('content'),
-                embed=message_data.get('embed'),
-                view=message_data.get('view'),
-                allowed_mentions=allowed_mentions
+            sent_message = await asyncio.wait_for(
+                self._run_background_io(
+                    alert_channel.send(
+                        content=message_data.get('content'),
+                        embed=message_data.get('embed'),
+                        view=message_data.get('view'),
+                        allowed_mentions=allowed_mentions
+                    )
+                ),
+                timeout=10.0,
             )
 
             # Let other cogs react after the message is sent
-            await self.squawk_api.run_post_send(alert_channel.guild, aircraft_data, squawk_code, sent_message)
+            try:
+                await asyncio.wait_for(
+                    self.squawk_api.run_post_send(alert_channel.guild, aircraft_data, squawk_code, sent_message),
+                    timeout=self._squawk_hook_timeout,
+                )
+            except asyncio.TimeoutError:
+                log.warning(f"Custom alert post-send timeout for {alert_id} in {alert_channel.guild.name}")
 
             log.info(f"Sent custom alert for {alert_id} in {alert_channel.guild.name}")
             
@@ -1392,8 +1648,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         guild_id = message.guild.id
 
         # Fast cache check - avoid expensive config reads if auto_icao is disabled
-        if guild_id in self._auto_icao_checked_guilds:
-            # Guild is known to have auto_icao disabled - fast return
+        if guild_id in self._auto_icao_checked_guilds and guild_id not in self._auto_icao_enabled_guilds:
+            # Guild was checked and auto_icao is disabled - fast return
             return
         if guild_id not in self._auto_icao_enabled_guilds:
             # First time seeing this guild - do one-time config check

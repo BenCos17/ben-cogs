@@ -5,7 +5,8 @@ Helper utilities for SkySearch cog
 import json
 import aiohttp
 import discord
-from urllib.parse import quote_plus, urlparse, parse_qs
+from urllib.parse import quote_plus, urlparse, parse_qs, urlencode, urlunparse
+import asyncio
 
 
 class HelperUtils:
@@ -377,40 +378,144 @@ class HelperUtils:
     async def get_runway_data(self, airport_code: str):
         """Get runway information for an airport."""
         self._ensure_http_client()
-        
         try:
-            # Try airportdb.io API
-            url = f"https://airportdb.io/api/v1/airports/{airport_code}"
-            async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    if data and 'runways' in data:
-                        return {
-                            'runways': data['runways']
-                        }
-        except (aiohttp.ClientError, KeyError, ValueError):
+            # Try airportdb.io API (support both /airport/ and legacy /airports/ paths)
+            token = await self._get_airportdb_token()
+            base_paths = [
+                f"https://airportdb.io/api/v1/airport/{airport_code}",
+            ]
+
+            for base in base_paths:
+                # Build URL using the documented query param format exactly once, with URL-encoded token
+                encoded_token = quote_plus(token) if token else None
+                url = f"{base}?apiToken={encoded_token}" if encoded_token else base
+
+                try:
+                    async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if data and 'runways' in data:
+                                return {'runways': data['runways']}
+                        else:
+                            try:
+                                body = await response.text()
+                            except Exception:
+                                body = ''
+                            short = (body[:400] + '...') if body and len(body) > 400 else body
+                            redacted_url = self._redact_airportdb_url(url) if url else ''
+                            return {'error': f'HTTP {response.status}: {short or response.reason}', 'url': redacted_url}
+                except (aiohttp.ClientError, KeyError, ValueError):
+                    # Try next path variant
+                    continue
+        except Exception:
             pass
-        
+
         return None
 
     async def get_navaid_data(self, airport_code: str):
         """Get navigational aids for an airport."""
         self._ensure_http_client()
-        
+        url = ''
         try:
-            # Try airportdb.io API for navaids
-            url = f"https://airportdb.io/api/v1/airports/{airport_code}/navaids"
+            token = await self._get_airportdb_token()
+            base = f"https://airportdb.io/api/v1/airport/{airport_code}"
+            if not token:
+                return {'error': 'Airportdb API token not configured'}
+            # Use the documented endpoint format exactly, with URL-encoded token
+            encoded_token = quote_plus(token)
+            url = f"{base}?apiToken={encoded_token}"
+
             async with self.cog._http_client.get(url, headers=await self._get_http_headers()) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if data and 'navaids' in data:
-                        return {
-                            'navaids': data['navaids']
-                        }
-        except (aiohttp.ClientError, KeyError, ValueError):
-            pass
-        
-        return None
+                    # Return navaids if present. If the endpoint returned a valid
+                    # airport object but no navaids key, return an empty list so
+                    # callers can distinguish between "no data" and an error.
+                    if data and isinstance(data, dict):
+                        if 'navaids' in data:
+                            return {'navaids': data['navaids']}
+                        if 'data' in data and isinstance(data['data'], dict) and 'navaids' in data['data']:
+                            return {'navaids': data['data']['navaids']}
+                        # Successful fetch but no navaids key -> explicit empty list
+                        return {'navaids': []}
+                else:
+                    try:
+                        body = await response.text()
+                    except Exception:
+                        body = ''
+                    short = (body[:400] + '...') if body and len(body) > 400 else body
+                    redacted_url = self._redact_airportdb_url(url) if url else ''
+                    return {'error': f'HTTP {response.status}: {short or response.reason}', 'url': redacted_url}
+        except Exception:
+            # Return error info for callers to display
+            import traceback as _tb
+            try:
+                exc_msg = str(_tb.format_exc().splitlines()[-1])
+                if 'url' in locals():
+                    redacted = self._redact_airportdb_url(url)
+                    return {'error': exc_msg, 'url': redacted}
+                return {'error': exc_msg}
+            except Exception:
+                return {'error': 'Unknown exception while fetching navaids'}
+
+        # Fallback error
+        return {'error': 'Unknown failure during navaid lookup'}
+
+    async def _get_airportdb_token(self) -> str | None:
+        """Retrieve Airportdb API token from Red's shared API tokens.
+
+        Looks for the `airportdbio` shared token and returns the `api_token` value
+        (supports async or sync `get_shared_api_tokens` implementations).
+        """
+        try:
+            getter = getattr(self.cog.bot, 'get_shared_api_tokens', None)
+            if not getter:
+                return None
+
+            tokens = getter('airportdbio')
+            if asyncio.iscoroutine(tokens):
+                tokens = await tokens
+
+            if not tokens:
+                return None
+
+            # Common key from install instructions is `api_token`
+            token = tokens.get('api_token') or tokens.get('apiToken') or tokens.get('token') or tokens.get('client_id')
+            # Strip any whitespace that might be stored with the token
+            return token.strip() if token else None
+        except Exception:
+            return None
+
+    def _redact_airportdb_url(self, url: str) -> str:
+        """Return the URL with the Airportdb API token redacted for safe logging.
+
+        Replaces the value of `apiToken` or `api_token` query parameters with
+        the literal 'REDACTED'. If parsing fails, falls back to a simple regex
+        replacement or a placeholder.
+        """
+        try:
+            parsed = urlparse(url)
+            qs = parse_qs(parsed.query, keep_blank_values=True)
+            changed = False
+            if 'apiToken' in qs:
+                qs['apiToken'] = ['REDACTED']
+                changed = True
+            if 'api_token' in qs:
+                qs['api_token'] = ['REDACTED']
+                changed = True
+            if changed:
+                # parse_qs produces lists; urlencode expects key->value mapping
+                safe_q = {k: v[0] for k, v in qs.items()}
+                new_q = urlencode(safe_q)
+                return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_q, parsed.fragment))
+            return url
+        except Exception:
+            try:
+                import re
+
+                return re.sub(r'(apiToken=)[^&]+', r"\1REDACTED", url)
+            except Exception:
+                return 'REDACTED_URL'
 
 
     # for feeder link command stuff
@@ -769,6 +874,20 @@ class HelperUtils:
             style=discord.ButtonStyle.link
         ))
         return view
+
+    def create_aircraft_view_with_watchlist(self, aircraft_data, include_watchlist_button=True):
+        """
+        Create a view with aircraft buttons (globe link, social sharing) plus Add to Watchlist.
+        
+        Args:
+            aircraft_data: Aircraft data dict (for building social links)
+            include_watchlist_button: If True, add interactive Add to Watchlist button
+            
+        Returns:
+            discord.ui.View: View with all buttons
+        """
+        from .add_to_watchlist_view import AddToWatchlistView
+        return AddToWatchlistView(self.cog, aircraft_data, include_watchlist=include_watchlist_button)
     
     def extract_aircraft_status(self, aircraft_data):
         """

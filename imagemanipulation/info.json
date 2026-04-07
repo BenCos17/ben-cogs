@@ -1,0 +1,19 @@
+{
+    "author": [
+        "bencos17"
+    ],
+    "name": "ImageManipulation",
+    "short": "Add simple captions to images.",
+    "description": "Adds a caption bar to an attached or replied image using the caption command.",
+    "install_msg": "Use `[p]caption <text>` with an attachment or by replying to an image.",
+    "requirements": [
+        "Pillow"
+    ],
+    "tags": [
+        "image",
+        "caption",
+        "utility"
+    ],
+    "type": "COG",
+    "end_user_data_statement": "This cog does not persistently store user data."
+}

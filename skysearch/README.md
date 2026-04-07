@@ -11,6 +11,7 @@ To use the SkySearch cog, follow these steps:
 
 2. **Configure API Keys** :
    - Set up airplanes.live API key: `[p]setapikey <your-api-key>`
+   - Optional: Set up AVWX token for aviation weather: `[p]airport setavwxtoken <your-token>`
    - Optional: Set a custom User-Agent for outbound HTTP (useful for APIs that require it): `[p]setuseragent <user-agent>`
    - Optional: Configure Google Maps API for airport imagery
    - Optional: Configure OpenAI API for airport summaries
@@ -60,6 +61,9 @@ To use the SkySearch cog, follow these steps:
 - `[p]airport runway <code>` - Get runway information
 - `[p]airport navaid <code>` - Get navigational aids
 - `[p]airport forecast <code>` - Get weather forecast
+- `[p]airport avwx <code>` - Get AVWX aviation weather overview with refresh/select controls
+- `[p]airport metar <code>` - Get current AVWX METAR
+- `[p]airport taf <code>` - Get current AVWX TAF
 - `[p]airport faastatus [code]` - Get FAA National Airspace Status (delays/closures). Optionally filter by airport code (e.g., SAN, LAS). Use the dropdown to filter by type; use **Refresh** to re-fetch.
 - **FAA status alerts** (like squawk alerts): `[p]airport faaalertchannel [#channel]` `[p]airport faaalertrole [@role]` `[p]airport faaalertcooldown [minutes]` `[p]airport showfaaalerts` — get notified when FAA delays/closures change (task runs every 5 minutes).
 
@@ -91,6 +95,9 @@ Notes:
 - `[p]aircraft setuseragent <value>` - Set a custom User-Agent header for outbound HTTP requests
 - `[p]aircraft useragent` - Show current User-Agent setting
 - `[p]aircraft clearuseragent` - Clear User-Agent setting (use aiohttp default)
+- `[p]airport setavwxtoken <token>` - Set AVWX API token
+- `[p]airport avwxtoken` - Check AVWX token status
+- `[p]airport clearavwxtoken` - Clear AVWX token
 
 ### API Monitoring Commands
 - `[p]skysearch apistats` - View comprehensive API request statistics and performance metrics

@@ -7,6 +7,7 @@ import aiohttp
 import asyncio
 import re
 from datetime import datetime
+from typing import Optional
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 
 from ..utils.api import APIManager
@@ -108,7 +109,11 @@ class FAAStatusView(discord.ui.View):
     
     async def on_select(self, interaction: discord.Interaction):
         """Handle dropdown selection."""
-        selected = interaction.data['values'][0]
+        values = interaction.data.get('values') if isinstance(interaction.data, dict) else None
+        if not values:
+            await interaction.response.defer()
+            return
+        selected = values[0]
         self.current_filter = selected
         
         # Update default option
@@ -234,6 +239,279 @@ class FAAStatusView(discord.ui.View):
         return embed
 
 
+class AVWXRefreshButton(discord.ui.Button):
+    """Button to refresh AVWX data."""
+
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.secondary, label="Refresh", emoji="🔄", custom_id="avwx_refresh")
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if not isinstance(view, AVWXWeatherView) or view.airport_commands is None:
+            await interaction.response.defer()
+            return
+        await interaction.response.defer()
+        reports, error = await view.airport_commands._avwx_fetch_bundle(view.station_code)
+        if error:
+            await interaction.followup.send(error, ephemeral=True)
+            return
+        view.report_data = reports
+        embed = view.build_embed(view.current_filter)
+        await interaction.edit_original_response(embed=embed, view=view)
+
+
+class AVWXWeatherView(discord.ui.View):
+    """View for switching between AVWX overview, METAR, and TAF."""
+
+    def __init__(self, station_code, report_data, airport_commands=None, initial_filter="overview"):
+        super().__init__(timeout=600)
+        self.station_code = station_code.upper()
+        self.report_data = report_data
+        self.airport_commands = airport_commands
+        self.current_filter = initial_filter
+
+        options = [
+            discord.SelectOption(label="Overview", value="overview", description="Show combined aviation weather overview", emoji="🧭", default=initial_filter == "overview"),
+            discord.SelectOption(label="METAR", value="metar", description="Show current observation details", emoji="🌤️", default=initial_filter == "metar"),
+            discord.SelectOption(label="TAF", value="taf", description="Show current terminal forecast", emoji="📈", default=initial_filter == "taf"),
+        ]
+
+        self.select_menu = discord.ui.Select(
+            placeholder="Select AVWX report view...",
+            options=options,
+            min_values=1,
+            max_values=1,
+        )
+        self.select_menu.callback = self.on_select
+        self.add_item(self.select_menu)
+        self.add_item(AVWXRefreshButton())
+
+    async def on_select(self, interaction: discord.Interaction):
+        values = interaction.data.get("values") if isinstance(interaction.data, dict) else None
+        if not values:
+            await interaction.response.defer()
+            return
+        selected = values[0]
+        self.current_filter = selected
+        for option in self.select_menu.options:
+            option.default = option.value == selected
+        embed = self.build_embed(selected)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    def build_embed(self, filter_type="overview"):
+        report_data = self.report_data or {}
+        metar = report_data.get("metar") or {}
+        taf = report_data.get("taf") or {}
+        summary = report_data.get("summary") or {}
+        info = (metar.get("info") or taf.get("info") or summary.get("info") or {})
+
+        station_name = info.get("name") or self.station_code
+        title_prefix = {
+            "overview": "AVWX Overview",
+            "metar": "AVWX METAR",
+            "taf": "AVWX TAF",
+        }.get(filter_type, "AVWX Weather")
+        embed = discord.Embed(title=f"{title_prefix} - {self.station_code}", color=0xfffffe)
+
+        location_bits = [info.get("city"), info.get("country")]
+        location = ", ".join(part for part in location_bits if part)
+        description_parts = []
+        if station_name and station_name != self.station_code:
+            description_parts.append(f"**{station_name}**")
+        if location:
+            description_parts.append(location)
+        if description_parts:
+            embed.description = "\n".join(description_parts)
+
+        meta = metar.get("meta") or taf.get("meta") or summary.get("meta") or {}
+        timestamp = meta.get("timestamp")
+        if timestamp:
+            embed.set_footer(text=f"AVWX data refreshed: {timestamp}")
+
+        if filter_type == "overview":
+            self._add_overview_fields(embed, summary, metar, taf)
+        elif filter_type == "metar":
+            self._add_metar_fields(embed, metar)
+        else:
+            self._add_taf_fields(embed, taf)
+
+        return embed
+
+    def _add_overview_fields(self, embed: discord.Embed, summary: dict, metar: dict, taf: dict):
+        summary_metar = summary.get("metar") or {}
+        summary_taf = summary.get("taf") or {}
+
+        rules = summary_metar.get("flight_rules") or metar.get("flight_rules") or "Unknown"
+        visibility = (summary_metar.get("visibility") or {}).get("repr") or (metar.get("visibility") or {}).get("repr") or "Unknown"
+        wx_codes = summary_metar.get("wx_codes") or metar.get("wx_codes") or []
+        wx_parts = [
+            str(code.get("value") or code.get("repr"))
+            for code in wx_codes
+            if isinstance(code, dict) and (code.get("value") or code.get("repr"))
+        ]
+        wx_text = ", ".join(wx_parts) if wx_parts else "None"
+        embed.add_field(name="Current Conditions", value=f"**Flight Rules:** {rules}\n**Visibility:** {visibility}\n**Weather:** {wx_text}", inline=False)
+
+        metar_summary = metar.get("summary") or self._truncate_report(metar.get("raw"), 500)
+        if metar_summary:
+            embed.add_field(name="METAR Summary", value=self._truncate_report(metar_summary, 1024), inline=False)
+
+        taf_periods = summary_taf.get("forecast") or []
+        if taf_periods:
+            period_lines = []
+            for period in taf_periods[:4]:
+                start = self._short_dt(period.get("start_time"))
+                end = self._short_dt(period.get("end_time"))
+                rules = period.get("flight_rules") or "Unknown"
+                period_lines.append(f"`{start}` → `{end}`: **{rules}**")
+            embed.add_field(name="TAF Trend", value="\n".join(period_lines), inline=False)
+
+        raw_taf = taf.get("raw")
+        if raw_taf:
+            embed.add_field(name="Raw TAF", value=self._truncate_report(raw_taf, 1024), inline=False)
+
+    def _add_metar_fields(self, embed: discord.Embed, metar: dict):
+        if not metar:
+            embed.description = "No METAR data available for this station."
+            return
+
+        rules = metar.get("flight_rules") or "Unknown"
+        wind = self._format_wind(metar)
+        visibility = self._format_visibility(metar)
+        temperature = self._format_temperature(metar)
+        altimeter = self._format_altimeter(metar)
+        clouds = self._format_clouds(metar.get("clouds") or [])
+        wx_codes = self._format_wx_codes(metar.get("wx_codes") or [])
+
+        embed.add_field(name="Observation", value=f"**Flight Rules:** {rules}\n**Wind:** {wind}\n**Visibility:** {visibility}\n**Altimeter:** {altimeter}", inline=False)
+        embed.add_field(name="Temperature", value=temperature, inline=True)
+        embed.add_field(name="Weather", value=wx_codes, inline=True)
+        embed.add_field(name="Clouds", value=clouds, inline=False)
+
+        report_time = self._short_dt((metar.get("time") or {}).get("dt"))
+        if report_time:
+            embed.add_field(name="Observed", value=report_time, inline=True)
+
+        summary = metar.get("summary")
+        if summary:
+            embed.add_field(name="Summary", value=self._truncate_report(summary, 1024), inline=False)
+
+        raw = metar.get("raw") or metar.get("sanitized")
+        if raw:
+            embed.add_field(name="Raw Report", value=self._truncate_report(raw, 1024), inline=False)
+
+    def _add_taf_fields(self, embed: discord.Embed, taf: dict):
+        if not taf:
+            embed.description = "No TAF data available for this station."
+            return
+
+        start_time = self._short_dt((taf.get("start_time") or {}).get("dt"))
+        end_time = self._short_dt((taf.get("end_time") or {}).get("dt"))
+        if start_time or end_time:
+            embed.add_field(name="Validity", value=f"`{start_time or 'Unknown'}` → `{end_time or 'Unknown'}`", inline=False)
+
+        forecast_periods = taf.get("forecast") or []
+        if forecast_periods:
+            for index, period in enumerate(forecast_periods[:4], start=1):
+                start = self._short_dt((period.get("start_time") or {}).get("dt"))
+                end = self._short_dt((period.get("end_time") or {}).get("dt"))
+                rules = period.get("flight_rules") or "Unknown"
+                summary = period.get("summary") or self._truncate_report(period.get("raw"), 300) or "No summary available"
+                embed.add_field(
+                    name=f"Forecast {index}",
+                    value=f"`{start or 'Unknown'}` → `{end or 'Unknown'}`\n**{rules}**\n{self._truncate_report(summary, 900)}",
+                    inline=False,
+                )
+
+        raw = taf.get("raw") or taf.get("sanitized")
+        if raw:
+            embed.add_field(name="Raw TAF", value=self._truncate_report(raw, 1024), inline=False)
+
+    @staticmethod
+    def _truncate_report(text, limit):
+        if not text:
+            return None
+        text = str(text)
+        if len(text) <= limit:
+            return text
+        return text[: limit - 3] + "..."
+
+    @staticmethod
+    def _short_dt(value):
+        if not value:
+            return None
+        if "T" in value:
+            return value.replace("T", " ").replace("+00:00Z", "Z").replace("+00:00", "Z")
+        return value
+
+    @staticmethod
+    def _format_visibility(report):
+        visibility = report.get("visibility") or {}
+        repr_value = visibility.get("repr")
+        units = (report.get("units") or {}).get("visibility") or "sm"
+        if repr_value:
+            return f"{repr_value} {units}"
+        return "Unknown"
+
+    @staticmethod
+    def _format_wind(report):
+        direction = (report.get("wind_direction") or {}).get("repr") or "VRB"
+        speed = (report.get("wind_speed") or {}).get("repr") or "0"
+        gust = (report.get("wind_gust") or {}).get("repr")
+        units = (report.get("units") or {}).get("wind_speed") or "kt"
+        base = f"{direction} at {speed}{units}"
+        if gust:
+            base += f" gusting {gust}{units}"
+        return base
+
+    @staticmethod
+    def _format_temperature(report):
+        temperature = (report.get("temperature") or {}).get("repr")
+        dewpoint = (report.get("dewpoint") or {}).get("repr")
+        units = (report.get("units") or {}).get("temperature") or "C"
+        if temperature is None and dewpoint is None:
+            return "Unknown"
+        return f"{temperature if temperature is not None else '?'}{units} / {dewpoint if dewpoint is not None else '?'}{units}"
+
+    @staticmethod
+    def _format_altimeter(report):
+        altimeter = report.get("altimeter") or {}
+        repr_value = altimeter.get("repr")
+        value = altimeter.get("value")
+        units = (report.get("units") or {}).get("altimeter") or "inHg"
+        if repr_value and value is not None:
+            return f"{repr_value} ({value} {units})"
+        if repr_value:
+            return repr_value
+        return "Unknown"
+
+    @staticmethod
+    def _format_clouds(clouds):
+        if not clouds:
+            return "None reported"
+        parts = []
+        for cloud in clouds[:5]:
+            base = cloud.get("base")
+            cloud_type = cloud.get("type") or cloud.get("repr") or "Cloud"
+            if base is not None:
+                parts.append(f"{cloud_type} {base}00ft")
+            else:
+                parts.append(cloud_type)
+        return ", ".join(parts)
+
+    @staticmethod
+    def _format_wx_codes(wx_codes):
+        if not wx_codes:
+            return "None reported"
+        parts = []
+        for code in wx_codes:
+            if isinstance(code, dict):
+                parts.append(code.get("value") or code.get("repr") or "Unknown")
+            else:
+                parts.append(str(code))
+        return ", ".join(parts)
+
+
 def _clean_closure_reason(raw):
     """Clean and humanize closure reason text from FAA XML."""
     clean_msg = re.sub(r'^![A-Z0-9]{3,4}\s\d+/\d+\s[A-Z0-9]{3,4}\s', '', raw)
@@ -254,8 +532,61 @@ class AirportCommands:
         self.api = APIManager(cog)
         self.helpers = HelperUtils(cog)
         self.xml_parser = XMLParser()
+
+    async def _avwx_fetch_bundle(self, station_code: str):
+        """Fetch AVWX summary, METAR, and TAF data for a station."""
+        station_code = station_code.upper().strip()
+
+        summary_task = self.cog.api.get_avwx_summary(station_code)
+        metar_task = self.cog.api.get_avwx_report("metar", station_code)
+        taf_task = self.cog.api.get_avwx_report("taf", station_code)
+        summary_result, metar_result, taf_result = await asyncio.gather(summary_task, metar_task, taf_task)
+
+        summary, summary_error = summary_result
+        metar, metar_error = metar_result
+        taf, taf_error = taf_result
+
+        if not any((summary, metar, taf)):
+            errors = [msg for msg in (summary_error, metar_error, taf_error) if msg]
+            return None, errors[0] if errors else f"No AVWX data available for {station_code}."
+
+        return {
+            "summary": summary,
+            "metar": metar,
+            "taf": taf,
+        }, None
+
+    async def _send_avwx_view(self, ctx, station_code: str, initial_filter: str = "overview"):
+        """Fetch AVWX data and send the interactive report view."""
+        station_code = station_code.upper().strip()
+        reports, error = await self._avwx_fetch_bundle(station_code)
+        if error:
+            embed = discord.Embed(title="AVWX Unavailable", description=error, color=0xff4545)
+            await ctx.send(embed=embed)
+            return
+
+        view = AVWXWeatherView(
+            station_code=station_code,
+            report_data=reports,
+            airport_commands=self,
+            initial_filter=initial_filter,
+        )
+        embed = view.build_embed(initial_filter)
+        await ctx.send(embed=embed, view=view)
+
+    async def avwx_conditions(self, ctx, station_code: str):
+        """Show AVWX aviation weather overview for a station."""
+        await self._send_avwx_view(ctx, station_code, initial_filter="overview")
+
+    async def avwx_metar(self, ctx, station_code: str):
+        """Show AVWX METAR for a station."""
+        await self._send_avwx_view(ctx, station_code, initial_filter="metar")
+
+    async def avwx_taf(self, ctx, station_code: str):
+        """Show AVWX TAF for a station."""
+        await self._send_avwx_view(ctx, station_code, initial_filter="taf")
     
-    async def _faa_fetch_data(self, airport_code: str = None):
+    async def _faa_fetch_data(self, airport_code: Optional[str] = None):
         """Fetch and parse FAA airport status. Returns (ground_delays, arrival_departure_delays, closures, update_time) or None."""
         try:
             headers = {}
@@ -374,6 +705,16 @@ class AirportCommands:
         
         # Get runway data
         runway_data = await self.helpers.get_runway_data(airport_code)
+
+        # Surface HTTP/errors from helper (includes redacted URL when available)
+        if isinstance(runway_data, dict) and 'error' in runway_data:
+            reason = runway_data.get('error') or 'Unknown error'
+            url = runway_data.get('url')
+            desc = f"Could not fetch runway information for {airport_code}.\nReason: {reason}"
+            if url:
+                desc += f"\nURL: {url}"
+            await ctx.send(embed=discord.Embed(title="Runway Lookup Failed", description=desc, color=0xff4545))
+            return
         
         if runway_data and runway_data.get('runways'):
             embed = discord.Embed(title=f"Runway Information - {airport_code}", color=0xfffffe)
@@ -403,26 +744,53 @@ class AirportCommands:
         
         # Get navaid data
         navaid_data = await self.helpers.get_navaid_data(airport_code)
-        
-        if navaid_data and navaid_data.get('navaids'):
-            embed = discord.Embed(title=f"Navigational Aids - {airport_code}", color=0xfffffe)
-            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
-            
-            navaids = navaid_data['navaids']
-            for navaid in navaids:
-                navaid_name = navaid.get('name', 'N/A')
-                navaid_type = navaid.get('type', 'N/A')
-                frequency = navaid.get('frequency', 'N/A')
-                
-                navaid_info = f"**Type:** {navaid_type}\n"
-                navaid_info += f"**Frequency:** {frequency}"
-                
-                embed.add_field(name=navaid_name, value=navaid_info, inline=True)
-            
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(title="No Navaid Data", description=f"No navigational aid information found for {airport_code}.", color=0xff4545)
-            await ctx.send(embed=embed)
+
+        # If helper returned None, treat as an unexpected error
+        if navaid_data is None:
+            await ctx.send(embed=discord.Embed(title="Navaid Lookup Failed", description=f"Could not fetch navaid information for {airport_code}.", color=0xff4545))
+            return
+
+        # If helper returned an error dict, surface the reason to the user
+        if isinstance(navaid_data, dict) and 'error' in navaid_data:
+            reason = navaid_data.get('error') or 'Unknown error'
+            url = navaid_data.get('url')
+            desc = f"Could not fetch navaid information for {airport_code}.\nReason: {reason}"
+            if url:
+                desc += f"\nURL: {url}"
+            await ctx.send(embed=discord.Embed(title="Navaid Lookup Failed", description=desc, color=0xff4545))
+            return
+
+        navaids = navaid_data.get('navaids', []) or []
+        if not navaids:
+            await ctx.send(embed=discord.Embed(title="No Navaid Data", description=f"No navigational aid information found for {airport_code}.", color=0xff4545))
+            return
+
+        embed = discord.Embed(title=f"Navigational Aids - {airport_code}", color=0xfffffe)
+
+        def _format_frequency(n):
+            # Prefer common keys used by airportdb.io
+            freq = n.get('frequency') or n.get('frequency_khz') or n.get('dme_frequency_khz') or n.get('dme_frequency')
+            if not freq:
+                return 'N/A'
+            try:
+                fstr = str(freq)
+                # If looks like kHz integer (e.g. 115900), convert to MHz
+                if fstr.isdigit() and len(fstr) >= 4:
+                    mhz = float(fstr) / 1000.0
+                    return f"{mhz:.3f} MHz"
+                return fstr
+            except Exception:
+                return str(freq)
+
+        for navaid in navaids:
+            # Use ident if available as the concise label
+            ident = navaid.get('ident') or navaid.get('filename') or navaid.get('name') or 'Unknown'
+            frequency = _format_frequency(navaid)
+
+            # Minimal field: ident -> frequency
+            embed.add_field(name=ident, value=frequency, inline=True)
+
+        await ctx.send(embed=embed)
 
     async def weather_forecast(self, ctx, airport_code: str):
         """Get weather forecast for an airport."""
@@ -671,7 +1039,7 @@ class AirportCommands:
         await self.cog.config.openweathermap_api.set(None)
         await ctx.send("OpenWeatherMap API key cleared.")
 
-    async def faa_status(self, ctx, airport_code: str = None):
+    async def faa_status(self, ctx, airport_code: Optional[str] = None):
         """Get FAA National Airspace Status for airports with delays or closures.
         
         If airport_code is provided, filters to that specific airport (e.g., 'SAN' or 'LAS').

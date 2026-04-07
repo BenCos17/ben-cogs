@@ -224,14 +224,6 @@ The tracking system is **enabled by default** and requires no configuration:
 - **Understanding** of system reliability
 - **Monitoring** of service health
 
-## 🧪 Testing
-
-### Test Script
-Run the included test script to verify functionality:
-```bash
-python test_api_tracking.py
-```
-
 ### Manual Testing
 1. **Make API requests** through normal SkySearch commands
 2. **Check statistics** with `skysearch apistats`

@@ -617,6 +617,27 @@ class AdminCommands:
         await self.cog.config.openweathermap_api.set(None)
         await ctx.send("OpenWeatherMap API key cleared.") 
 
+    async def set_avwx_token(self, ctx, token: str):
+        """Set the AVWX API token."""
+        await self.cog.config.avwx_token.set(token)
+        embed = discord.Embed(title="AVWX Token Updated", description="The AVWX API token has been set successfully.", color=0x2BBD8E)
+        embed.add_field(name="Status", value="✅ AVWX token configured", inline=True)
+        await ctx.send(embed=embed)
+
+    async def check_avwx_token(self, ctx):
+        """Show the current AVWX API token status."""
+        token = await self.cog.config.avwx_token()
+        if token:
+            masked = f"{token[:4]}{'*' * (len(token) - 8)}{token[-4:]}" if len(token) > 8 else token
+            await ctx.send(f"AVWX API token: `{masked}`")
+        else:
+            await ctx.send("No AVWX API token set.")
+
+    async def clear_avwx_token(self, ctx):
+        """Clear the AVWX API token."""
+        await self.cog.config.avwx_token.set(None)
+        await ctx.send("AVWX API token cleared.")
+
     async def apistats(self, ctx):
         """Show comprehensive API request statistics and charts."""
         await self.cog.api.wait_for_stats_initialization()
