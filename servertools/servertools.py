@@ -16,10 +16,10 @@ class Servertools(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=492089091320446976, force_registration=True)
+        self.config = Config.get_conf(self, identifier=492089091320446976)
         
         default_guild = {
-            "auto_reactions": {},
+            "auto_reactions": [], 
             "spotify_autoclean": False,
             "invite_filter_enabled": False,
             "min_members": 0,
@@ -29,10 +29,7 @@ class Servertools(commands.Cog):
             "spotify_dm_autoclean": False,
         }
         
-        #  register these individually to prevent the 'Group vs Value' conflict from blocking the entire registration block.
-        for key, value in default_guild.items():
-            self.config.register_guild(**{key: value})
-            
+        self.config.register_guild(**default_guild)
         self.config.register_user(**default_user)
 
     # UI 
@@ -60,7 +57,8 @@ class Servertools(commands.Cog):
 
         @discord.ui.button(label="Wipe Auto-Reactions", style=discord.ButtonStyle.danger)
         async def clear_reactions(self, interaction: discord.Interaction, button: discord.ui.Button):
-            await self.cog.config.guild(self.guild).auto_reactions.set({})
+            # CHANGED: Resets to a list [] instead of a dict {}
+            await self.cog.config.guild(self.guild).auto_reactions.set([])
             await interaction.response.send_message("🚨 All auto-reactions for this server have been cleared.", ephemeral=True)
 
 #config stuff
@@ -74,7 +72,6 @@ class Servertools(commands.Cog):
             description="Toggle guild utilities using the buttons below.",
             color=await ctx.embed_color()
         )
-        # Fetch current statuses for the embed
         spotify = await self.config.guild(ctx.guild).spotify_autoclean()
         invites = await self.config.guild(ctx.guild).invite_filter_enabled()
         min_m = await self.config.guild(ctx.guild).min_members()
@@ -98,7 +95,6 @@ class Servertools(commands.Cog):
         """Set minimum member count required for an invite link to stay."""
         await self.config.guild(ctx.guild).min_members.set(count)
         await ctx.send(f"Invites must now have at least **{count}** members to be allowed.")
-
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
@@ -187,7 +183,7 @@ class Servertools(commands.Cog):
     async def on_message(self, message):
         if message.author.bot: return
 
-        #  Invite Filters
+        # Invite Filters
         if message.guild and await self.config.guild(message.guild).invite_filter_enabled():
             match = self.INVITE_RE.search(message.content)
             if match:
@@ -200,7 +196,7 @@ class Servertools(commands.Cog):
                         return
                 except discord.NotFound: pass
 
-        # Spotify Cleaning
+        #  Spotify Cleaning
         if message.guild:
             if await self.config.guild(message.guild).spotify_autoclean():
                 cleaned = self._extract_clean_spotify_urls(message.content)
@@ -210,17 +206,10 @@ class Servertools(commands.Cog):
                 cleaned = self._extract_clean_spotify_urls(message.content)
                 if cleaned: await message.channel.send("\n".join(cleaned))
 
-        # 3. Auto-Reactions
         if message.guild:
             reactions = await self.config.guild(message.guild).auto_reactions()
-            # Safety check: Ensure reactions is a dict before trying to access it
-            if isinstance(reactions, dict):
-                key = f"{message.channel.id}-{message.author.id}"
-                if key in reactions:
-                    try: await message.add_reaction(reactions[key])
-                    except: pass
 
-    # SPOTIFY HELPERS
+    # SPOTIFY HELPERS 
 
     def _clean_spotify_url(self, url: str):
         try:
