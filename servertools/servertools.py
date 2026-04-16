@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 class Servertools(commands.Cog):
     """Advanced server management utilities with interactive UI controls."""
 
+    # --- REGEX PATTERNS ---
     SPOTIFY_URL_RE = re.compile(r'https?://open\.spotify\.com/[^\s<>"]+', re.IGNORECASE)
     INVITE_RE = re.compile(r"(discord\.gg\/|discord\.com\/invite\/)([a-zA-Z0-9\-]+)", re.IGNORECASE)
 
@@ -23,6 +24,7 @@ class Servertools(commands.Cog):
             "spotify_autoclean": False,
             "invite_filter_enabled": False,
             "min_members": 0,
+            "invite_rules": [], # Format: {"text": "keyword", "action": "delete/warn/ban"}
         }
         default_user = {
             "online_notifications": [],
@@ -32,7 +34,26 @@ class Servertools(commands.Cog):
         self.config.register_guild(**default_guild)
         self.config.register_user(**default_user)
 
-    # UI 
+    # --- UI COMPONENTS ---
+
+    class InviteRuleModal(discord.ui.Modal, title="Add Invite Rule"):
+        """Pop-up modal to add specific server name triggers."""
+        trigger_text = discord.ui.TextInput(label="Keyword in Server Name", placeholder="e.g. Free Nitro", required=True)
+        action_type = discord.ui.TextInput(label="Action (delete / warn / ban)", placeholder="delete", min_length=3, max_length=6, required=True)
+
+        def __init__(self, cog, guild):
+            super().__init__()
+            self.cog = cog
+            self.guild = guild
+
+        async def on_submit(self, interaction: discord.Interaction):
+            action = self.action_type.value.lower()
+            if action not in ["delete", "warn", "ban"]:
+                return await interaction.response.send_message("❌ Invalid action! Use delete, warn, or ban.", ephemeral=True)
+            
+            async with self.cog.config.guild(self.guild).invite_rules() as rules:
+                rules.append({"text": self.trigger_text.value.lower(), "action": action})
+            await interaction.response.send_message(f"✅ Rule added: Servers containing **{self.trigger_text.value}** will trigger a **{action}**.", ephemeral=True)
 
     class ControlPanel(discord.ui.View):
         """Interactive UI for Cog settings."""
@@ -55,33 +76,35 @@ class Servertools(commands.Cog):
             status = "Enabled" if not current else "Disabled"
             await interaction.response.send_message(f"✅ Invite filtering is now **{status}**.", ephemeral=True)
 
-        @discord.ui.button(label="Wipe Auto-Reactions", style=discord.ButtonStyle.danger)
-        async def clear_reactions(self, interaction: discord.Interaction, button: discord.ui.Button):
-            # CHANGED: Resets to a list [] instead of a dict {}
-            await self.cog.config.guild(self.guild).auto_reactions.set([])
-            await interaction.response.send_message("🚨 All auto-reactions for this server have been cleared.", ephemeral=True)
+        @discord.ui.button(label="Add Rule", style=discord.ButtonStyle.success)
+        async def add_rule(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await interaction.response.send_modal(Servertools.InviteRuleModal(self.cog, self.guild))
 
-#config stuff
+        @discord.ui.button(label="Wipe Rules/Reactions", style=discord.ButtonStyle.danger)
+        async def clear_all(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await self.cog.config.guild(self.guild).invite_rules.set([])
+            await self.cog.config.guild(self.guild).auto_reactions.set([])
+            await interaction.response.send_message("🚨 Rules and reactions have been reset.", ephemeral=True)
+
+    # --- CONFIG COMMANDS ---
+
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def servertools(self, ctx):
         """Open the interactive management panel for settings."""
-        embed = discord.Embed(
-            title="🛠️ ServerTools Control Panel",
-            description="Toggle guild utilities using the buttons below.",
-            color=await ctx.embed_color()
-        )
         spotify = await self.config.guild(ctx.guild).spotify_autoclean()
         invites = await self.config.guild(ctx.guild).invite_filter_enabled()
-        min_m = await self.config.guild(ctx.guild).min_members()
+        rules = await self.config.guild(ctx.guild).invite_rules()
 
+        embed = discord.Embed(title="🛠️ ServerTools Dashboard", color=await ctx.embed_color())
         embed.add_field(name="Spotify Clean", value="✅ ON" if spotify else "❌ OFF")
         embed.add_field(name="Invite Filter", value="✅ ON" if invites else "❌ OFF")
-        embed.add_field(name="Min Invite Members", value=str(min_m))
         
-        view = self.ControlPanel(self, ctx.guild)
-        await ctx.send(embed=embed, view=view)
+        rule_list = "\n".join([f"`{r['text']}` ➔ **{r['action']}**" for r in rules]) if rules else "No custom rules."
+        embed.add_field(name="Invite Rules", value=rule_list, inline=False)
+        
+        await ctx.send(embed=embed, view=self.ControlPanel(self, ctx.guild))
 
     @commands.group()
     @commands.has_permissions(manage_guild=True)
@@ -95,6 +118,8 @@ class Servertools(commands.Cog):
         """Set minimum member count required for an invite link to stay."""
         await self.config.guild(ctx.guild).min_members.set(count)
         await ctx.send(f"Invites must now have at least **{count}** members to be allowed.")
+
+    # --- UTILITY COMMANDS ---
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
@@ -113,12 +138,9 @@ class Servertools(commands.Cog):
                     dm.set_footer(text=f"Sent from {ctx.guild.name}")
                     await user.send(embed=dm)
                     await ctx.send("✅ Message sent.")
-                except discord.Forbidden:
-                    await ctx.send("❌ Cannot DM this user.")
-            else:
-                await ctx.send("Canceled.")
-        except asyncio.TimeoutError:
-            await ctx.send("Timed out.")
+                except discord.Forbidden: await ctx.send("❌ Cannot DM this user.")
+            else: await ctx.send("Canceled.")
+        except asyncio.TimeoutError: await ctx.send("Timed out.")
 
     @commands.command()
     @commands.has_permissions(move_members=True)
@@ -127,8 +149,7 @@ class Servertools(commands.Cog):
         try:
             await user.move_to(channel)
             await ctx.send(f"Moved {user.name} to {channel.name}.")
-        except discord.Forbidden:
-            await ctx.send("Permission denied.")
+        except discord.Forbidden: await ctx.send("Permission denied.")
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
@@ -137,8 +158,7 @@ class Servertools(commands.Cog):
         try:
             await channel.set_permissions(ctx.guild.default_role, send_messages=False)
             await ctx.send(f"Locked down {channel.mention}.")
-        except discord.Forbidden:
-            await ctx.send("Permission denied.")
+        except discord.Forbidden: await ctx.send("Permission denied.")
 
     @commands.command()
     @commands.has_permissions(manage_messages=True)
@@ -178,38 +198,46 @@ class Servertools(commands.Cog):
                 buffer.seek(0)
                 await ctx.send(file=discord.File(buffer, filename='ping.png'))
 
+    # --- EVENT LISTENERS ---
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author.bot: return
+        if message.author.bot or not message.guild: return
 
-        # Invite Filters
-        if message.guild and await self.config.guild(message.guild).invite_filter_enabled():
+        # 1. Invite Filtering & Rules
+        if await self.config.guild(message.guild).invite_filter_enabled():
             match = self.INVITE_RE.search(message.content)
             if match:
                 try:
                     invite = await self.bot.fetch_invite(match.group(2), with_counts=True)
+                    server_name = invite.guild.name.lower() if invite.guild else ""
+                    rules = await self.config.guild(message.guild).invite_rules()
                     min_req = await self.config.guild(message.guild).min_members()
+
+                    # Check rules
+                    for rule in rules:
+                        if rule["text"] in server_name:
+                            await message.delete()
+                            if rule["action"] == "ban":
+                                try: await message.author.ban(reason=f"Blacklisted Invite: {server_name}")
+                                except: pass
+                            return await message.channel.send(f"🚫 {message.author.mention}, that invite is not allowed.", delete_after=5)
+
+                    # Check member count
                     if (invite.approximate_member_count or 0) < min_req:
                         await message.delete()
-                        await message.channel.send(f"⚠️ {message.author.mention}, invites must be to servers with {min_req}+ members.", delete_after=5)
-                        return
-                except discord.NotFound: pass
+                        return await message.channel.send(f"⚠️ {message.author.mention}, invites must have {min_req}+ members.", delete_after=5)
+                except: pass
 
-        #  Spotify Cleaning
-        if message.guild:
-            if await self.config.guild(message.guild).spotify_autoclean():
-                cleaned = self._extract_clean_spotify_urls(message.content)
-                if cleaned: await message.channel.send("\n".join(cleaned))
-        else: # DMs
-            if await self.config.user(message.author).spotify_dm_autoclean():
-                cleaned = self._extract_clean_spotify_urls(message.content)
-                if cleaned: await message.channel.send("\n".join(cleaned))
+        # 2. Spotify Cleaning
+        if await self.config.guild(message.guild).spotify_autoclean():
+            cleaned = self._extract_clean_spotify_urls(message.content)
+            if cleaned: await message.channel.send("\n".join(cleaned))
 
-        if message.guild:
-            reactions = await self.config.guild(message.guild).auto_reactions()
+        # 3. Auto-Reactions (Placeholder for logic)
+        reactions = await self.config.guild(message.guild).auto_reactions()
 
-    # SPOTIFY HELPERS 
+    # --- SPOTIFY HELPERS ---
 
     def _clean_spotify_url(self, url: str):
         try:
