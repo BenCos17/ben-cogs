@@ -394,7 +394,7 @@ class Servertools(commands.Cog):
             if cleaned and cleaned not in cleaned_links: cleaned_links.append(cleaned)
         return cleaned_links
 
-    @commands.command(name="bancheck")
+    @commands.command(name="ban_check")
     @commands.has_permissions(manage_guild=True)
     async def bancheck(self, ctx, member: discord.Member):
         """Check whether the bot can ban the provided member and why."""
