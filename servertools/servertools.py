@@ -433,3 +433,52 @@ class Servertools(commands.Cog):
             lines.append(f"Member.bannable: {'✅' if bannable else '❌'}")
 
         await ctx.send("\n".join(lines))
+
+    @commands.command(name="ban_inspect")
+    @commands.has_permissions(manage_guild=True)
+    async def ban_inspect(self, ctx, identifier: str):
+        """Inspect a user/ID/mention and report bannable/role info for debugging."""
+        gid = ctx.guild.id
+        # extract digits from mention or ID
+        m = re.search(r"(\d+)", identifier)
+        if not m:
+            return await ctx.send("Please provide a user mention or numeric ID.")
+        user_id = int(m.group(1))
+
+        # Try to resolve member from cache
+        member = ctx.guild.get_member(user_id)
+        resolved_via = "cache"
+        if member is None:
+            try:
+                member = await ctx.guild.fetch_member(user_id)
+                resolved_via = "api/fetch"
+            except discord.NotFound:
+                member = None
+                resolved_via = "not found"
+            except Exception as e:
+                return await ctx.send(f"Failed to fetch member: {e!r}")
+
+        bot_member = ctx.guild.me or await ctx.guild.fetch_member(self.bot.user.id)
+
+        lines = [f"Resolved via: {resolved_via}"]
+        if member is None:
+            lines.append("Member not in guild (cannot ban by member object). If you want to ban by ID, use the Mod cog or ensure target is in server.")
+            return await ctx.send("\n".join(lines))
+
+        lines.append(f"Type: {type(member)}")
+        lines.append(f"Has attribute 'bannable': {'bannable' in dir(member)}")
+        bannable = getattr(member, 'bannable', None)
+        if bannable is not None:
+            lines.append(f"Member.bannable: {'✅' if bannable else '❌'}")
+
+        try:
+            lines.append(f"Member top role: {member.top_role} (position {member.top_role.position})")
+            lines.append(f"Bot top role: {bot_member.top_role} (position {bot_member.top_role.position})")
+            lines.append(f"Bot higher than member: {'✅' if bot_member.top_role.position > member.top_role.position else '❌'}")
+        except Exception:
+            pass
+
+        # permissions
+        lines.append(f"Bot has ban permission: {'✅' if bot_member.guild_permissions.ban_members else '❌'}")
+
+        await ctx.send("\n".join(lines))
