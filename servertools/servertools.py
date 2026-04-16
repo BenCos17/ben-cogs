@@ -7,6 +7,9 @@ import re
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Servertools(commands.Cog):
     """Advanced server management utilities with interactive UI controls."""
@@ -179,6 +182,27 @@ class Servertools(commands.Cog):
         await self.config.guild(ctx.guild).invite_warn_message.set(message)
         await ctx.send("Custom warn DM updated. You can use {guild} and {offending_server} in the message.")
 
+    # --- SPOTIFY HELPERS ---
+
+    def _clean_spotify_url(self, url: str):
+        try:
+            parts = urlsplit(url)
+            params = parse_qsl(parts.query, keep_blank_values=True)
+            filtered = [(k, v) for k, v in params if k.lower() != "si"]
+            new_query = urlencode(filtered, doseq=True)
+            cleaned = urlunsplit((parts.scheme, parts.netloc, parts.path, new_query, parts.fragment))
+            return cleaned if cleaned != url else None
+        except:
+            return None
+
+    def _extract_clean_spotify_urls(self, content: str):
+        cleaned_links = []
+        for match in self.SPOTIFY_URL_RE.findall(content):
+            cleaned = self._clean_spotify_url(match)
+            if cleaned and cleaned not in cleaned_links:
+                cleaned_links.append(cleaned)
+        return cleaned_links
+
     # --- UTILITY COMMANDS ---
 
     @commands.command()
@@ -338,10 +362,16 @@ class Servertools(commands.Cog):
                                         
                                         f"Bot has ban permission: {getattr(getattr(bot_member, 'guild_permissions', None), 'ban_members', 'N/A')}",
                                     ]
+                                    # Log diagnostics to the bot logs as well as attempt to send to channel
+                                    try:
+                                        logger.info("\n".join(diag_lines))
+                                    except Exception:
+                                        pass
                                     # Send diagnostics as a short-lived channel message so admins can see why bans fail
                                     await message.channel.send("\n".join(diag_lines), delete_after=30)
                                 except Exception:
                                     # Don't let diagnostics break the flow
+                                    logger.exception("Failed to send invite ban diagnostics")
                                     pass
 
                                 # If the Member object reports not bannable, inform the channel and include diagnostics above
@@ -391,170 +421,12 @@ class Servertools(commands.Cog):
                     if (invite.approximate_member_count or 0) < min_req:
                         await message.delete()
                         return await message.channel.send(f"⚠️ {message.author.mention}, invites must have {min_req}+ members.", delete_after=5)
-                except: pass
-
-        # 2. Spotify Cleaning
-        if await self.config.guild(message.guild).spotify_autoclean():
-            cleaned = self._extract_clean_spotify_urls(message.content)
-            if cleaned: await message.channel.send("\n".join(cleaned))
-
-        # 3. Auto-Reactions (Placeholder for logic)
-        reactions = await self.config.guild(message.guild).auto_reactions()
-
-    # --- SPOTIFY HELPERS ---
-
-    def _clean_spotify_url(self, url: str):
-        try:
-            parts = urlsplit(url)
-            params = parse_qsl(parts.query, keep_blank_values=True)
-            filtered = [(k, v) for k, v in params if k.lower() != "si"]
-            new_query = urlencode(filtered, doseq=True)
-            cleaned = urlunsplit((parts.scheme, parts.netloc, parts.path, new_query, parts.fragment))
-            return cleaned if cleaned != url else None
-        except: return None
-
-    def _extract_clean_spotify_urls(self, content: str):
-        cleaned_links = []
-        for match in self.SPOTIFY_URL_RE.findall(content):
-            cleaned = self._clean_spotify_url(match)
-            if cleaned and cleaned not in cleaned_links: cleaned_links.append(cleaned)
-        return cleaned_links
-
-    @commands.command(name="ban_check")
-    @commands.has_permissions(manage_guild=True)
-    async def bancheck(self, ctx, member: discord.Member):
-        """Check whether the bot can ban the provided member and why."""
-        guild = ctx.guild
-        bot_member = guild.me or await guild.fetch_member(self.bot.user.id)
-
-        lines = []
-        # Permission check
-        can_ban_perm = bot_member.guild_permissions.ban_members if bot_member else False
-        lines.append(f"Bot has Ban Members permission: {'✅' if can_ban_perm else '❌'}")
-
-        # Member resolution
-        if member is None:
-            lines.append("Could not resolve the target member.")
-            return await ctx.send("\n".join(lines))
-
-        # Owner and self checks
-        lines.append(f"Target is server owner: {'✅' if member == guild.owner else '❌'}")
-        lines.append(f"Target is the bot itself: {'✅' if member.id == bot_member.id else '❌'}")
-
-        # Role hierarchy
-        try:
-            bot_top = bot_member.top_role.position
-            member_top = member.top_role.position
-            lines.append(f"Bot top role position: {bot_top}")
-            lines.append(f"Member top role position: {member_top}")
-            lines.append(f"Bot higher than member: {'✅' if bot_top > member_top else '❌'}")
-        except Exception:
-            pass
-
-        # bannable attribute
-        bannable = getattr(member, 'bannable', None)
-        if bannable is None:
-            lines.append(f"Member.bannable unknown (object may be a User proxy). Try running the command with a mention.)")
-        else:
-            lines.append(f"Member.bannable: {'✅' if bannable else '❌'}")
-
-        await ctx.send("\n".join(lines))
-
-    @commands.command(name="ban_inspect")
-    @commands.has_permissions(manage_guild=True)
-    async def ban_inspect(self, ctx, identifier: str):
-        """Inspect a user/ID/mention and report bannable/role info for debugging."""
-        gid = ctx.guild.id
-        # extract digits from mention or ID
-        m = re.search(r"(\d+)", identifier)
-        if not m:
-            return await ctx.send("Please provide a user mention or numeric ID.")
-        user_id = int(m.group(1))
-
-        # Try to resolve member from cache
-        member = ctx.guild.get_member(user_id)
-        resolved_via = "cache"
-        if member is None:
-            try:
-                member = await ctx.guild.fetch_member(user_id)
-                resolved_via = "api/fetch"
-            except discord.NotFound:
-                member = None
-                resolved_via = "not found"
-            except Exception as e:
-                return await ctx.send(f"Failed to fetch member: {e!r}")
-
-        bot_member = ctx.guild.me or await ctx.guild.fetch_member(self.bot.user.id)
-
-        lines = [f"Resolved via: {resolved_via}"]
-        if member is None:
-            lines.append("Member not in guild (cannot ban by member object). If you want to ban by ID, use the Mod cog or ensure target is in server.")
-            return await ctx.send("\n".join(lines))
-
-        lines.append(f"Type: {type(member)}")
-        lines.append(f"Has attribute 'bannable': {'bannable' in dir(member)}")
-        bannable = getattr(member, 'bannable', None)
-        if bannable is not None:
-            lines.append(f"Member.bannable: {'✅' if bannable else '❌'}")
-
-        try:
-            lines.append(f"Member top role: {member.top_role} (position {member.top_role.position})")
-            lines.append(f"Bot top role: {bot_member.top_role} (position {bot_member.top_role.position})")
-            lines.append(f"Bot higher than member: {'✅' if bot_member.top_role.position > member.top_role.position else '❌'}")
-        except Exception:
-            pass
-
-        # permissions
-        lines.append(f"Bot has ban permission: {'✅' if bot_member.guild_permissions.ban_members else '❌'}")
-
-        await ctx.send("\n".join(lines))
-
-    @commands.command(name="testban")
-    @commands.has_permissions(manage_guild=True)
-    async def testban(self, ctx, member: discord.Member):
-        """Attempt to ban then immediately unban a member to test ban behavior (requires confirmation)."""
-        if not ctx.guild:
-            return await ctx.send("This command must be used in a guild.")
-
-        # Check bot permissions
-        bot_member = ctx.guild.me or await ctx.guild.fetch_member(self.bot.user.id)
-        if bot_member is None or not bot_member.guild_permissions.ban_members:
-            return await ctx.send("❌ I don't have the Ban Members permission.")
-
-        if member == ctx.guild.owner:
-            return await ctx.send("❌ I cannot test-ban the server owner.")
-        if member.id == bot_member.id:
-            return await ctx.send("❌ I won't ban myself.")
-
-        confirm = await ctx.send(f"Are you sure you want to test-ban {member.mention}? Reply with `yes` to confirm (30s).")
-
-        def check(m):
-            return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() in ("yes", "y")
-
-        try:
-            await self.bot.wait_for("message", check=check, timeout=30.0)
-        except asyncio.TimeoutError:
-            return await ctx.send("Timed out; canceled test ban.")
-
-        user_id = member.id
-        reason = f"Test ban by {ctx.author} (will be unbanned)"
-        try:
-            await ctx.guild.ban(member, reason=reason)
-            msg = await ctx.send(f"✅ Successfully banned {member}. Attempting to unban...")
-        except discord.Forbidden:
-            return await ctx.send("❌ Failed to ban: Missing permissions or role hierarchy.")
-        except Exception as e:
-            return await ctx.send(f"❌ Failed to ban: {e!r}")
-
-        # Attempt to unban immediately
-        try:
-            # Use discord.Object to refer to the user ID for unban
-            await asyncio.sleep(1)
-            await ctx.guild.unban(discord.Object(id=user_id), reason="Undo test ban")
-            await msg.edit(content=f"✅ Test ban completed: {member} was banned then unbanned.")
-        except discord.Forbidden:
-            await ctx.send("⚠️ Banned but failed to unban: missing unban permissions.")
-        except discord.NotFound:
-            await ctx.send("⚠️ Could not find ban entry to unban (may have failed).")
-        except Exception as e:
-            await ctx.send(f"⚠️ Unban failed: {e!r}")
+                except Exception as e:
+                    # Log the full traceback so the owner/admin can inspect console logs if channel messages fail
+                    logger.exception("Exception in invite filter processing")
+                    try:
+                        await message.channel.send(f"⚠️ ServerTools encountered an internal error while processing an invite: {e!r}", delete_after=20)
+                    except Exception:
+                        # best-effort only; don't raise from the listener
+                        logger.exception("Failed to notify channel about invite filter exception")
+                        pass
