@@ -286,7 +286,19 @@ class Servertools(commands.Cog):
 
                             # BAN: attempt to ban the member from the current guild with clear error handling
                             if action == "ban":
-                                # Resolve the guild Member object (message.author may be a User proxy)
+                                # Ensure the bot has guild-level ban permission
+                                bot_member = message.guild.me
+                                if bot_member is None:
+                                    try:
+                                        bot_member = await message.guild.fetch_member(self.bot.user.id)
+                                    except Exception:
+                                        bot_member = None
+
+                                if bot_member is None or not bot_member.guild_permissions.ban_members:
+                                    await message.channel.send("❌ I don't have the **Ban Members** permission. Please grant it and ensure my role is high enough.", delete_after=10)
+                                    return
+
+                                # Resolve the guild Member object for the target
                                 member = message.guild.get_member(message.author.id)
                                 if member is None:
                                     try:
@@ -298,18 +310,27 @@ class Servertools(commands.Cog):
                                     await message.channel.send(f"❌ Could not locate member {message.author}.", delete_after=5)
                                     return
 
-                                # Check if the bot can ban this member (role hierarchy / permissions)
+                                # Prevent banning the bot itself or the guild owner
+                                if member.id == bot_member.id:
+                                    await message.channel.send("❌ I won't ban myself.", delete_after=5)
+                                    return
+                                if member == message.guild.owner:
+                                    await message.channel.send("❌ Cannot ban the server owner.", delete_after=5)
+                                    return
+
+                                # Check role hierarchy / bannable flag
                                 if hasattr(member, "bannable") and not member.bannable:
-                                    await message.channel.send(f"❌ Cannot ban {member.mention}. Check role hierarchy or bot permissions.", delete_after=10)
+                                    await message.channel.send("❌ I cannot ban that member — check role hierarchy and my permissions.", delete_after=10)
                                     return
 
                                 try:
                                     await member.ban(reason=f"Blacklisted Invite: {server_name}")
                                     await message.channel.send(f"🚫 {member.mention} has been banned for posting a blacklisted invite.", delete_after=5)
-                                except discord.Forbidden:
-                                    await message.channel.send(f"❌ Could not ban {member.mention}. Missing permissions.", delete_after=5)
-                                except Exception:
-                                    await message.channel.send(f"❌ Failed to ban {member.mention}.", delete_after=5)
+                                except discord.Forbidden as e:
+                                    await message.channel.send(f"❌ Could not ban {member.mention}. Missing permissions.", delete_after=10)
+                                except Exception as e:
+                                    # Provide minimal diagnostic info for debugging (short repr)
+                                    await message.channel.send(f"❌ Failed to ban {member.mention}. Error: {e!r}", delete_after=10)
                                 return
 
                             # WARN: try to DM the user and notify the channel
@@ -372,3 +393,43 @@ class Servertools(commands.Cog):
             cleaned = self._clean_spotify_url(match)
             if cleaned and cleaned not in cleaned_links: cleaned_links.append(cleaned)
         return cleaned_links
+
+    @commands.command(name="bancheck")
+    @commands.has_permissions(manage_guild=True)
+    async def bancheck(self, ctx, member: discord.Member):
+        """Check whether the bot can ban the provided member and why."""
+        guild = ctx.guild
+        bot_member = guild.me or await guild.fetch_member(self.bot.user.id)
+
+        lines = []
+        # Permission check
+        can_ban_perm = bot_member.guild_permissions.ban_members if bot_member else False
+        lines.append(f"Bot has Ban Members permission: {'✅' if can_ban_perm else '❌'}")
+
+        # Member resolution
+        if member is None:
+            lines.append("Could not resolve the target member.")
+            return await ctx.send("\n".join(lines))
+
+        # Owner and self checks
+        lines.append(f"Target is server owner: {'✅' if member == guild.owner else '❌'}")
+        lines.append(f"Target is the bot itself: {'✅' if member.id == bot_member.id else '❌'}")
+
+        # Role hierarchy
+        try:
+            bot_top = bot_member.top_role.position
+            member_top = member.top_role.position
+            lines.append(f"Bot top role position: {bot_top}")
+            lines.append(f"Member top role position: {member_top}")
+            lines.append(f"Bot higher than member: {'✅' if bot_top > member_top else '❌'}")
+        except Exception:
+            pass
+
+        # bannable attribute
+        bannable = getattr(member, 'bannable', None)
+        if bannable is None:
+            lines.append(f"Member.bannable unknown (object may be a User proxy). Try running the command with a mention.)")
+        else:
+            lines.append(f"Member.bannable: {'✅' if bannable else '❌'}")
+
+        await ctx.send("\n".join(lines))
