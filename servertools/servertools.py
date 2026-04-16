@@ -293,14 +293,33 @@ class Servertools(commands.Cog):
             match = self.INVITE_RE.search(message.content)
             if match:
                 try:
-                    invite = await self.bot.fetch_invite(match.group(2), with_counts=True)
-                    server_name = invite.guild.name.lower() if invite.guild else ""
+                    # Try to fetch invite details. If the invite cannot be resolved (expired/unknown),
+                    # fall back to matching rules against the invite code itself.
+                    code_text = (match.group(2) or "").lower()
+                    invite = None
+                    invite_fetch_failed = False
+                    try:
+                        invite = await self.bot.fetch_invite(code_text, with_counts=True)
+                        server_name = invite.guild.name.lower() if invite and invite.guild else ""
+                    except discord.NotFound:
+                        invite_fetch_failed = True
+                        server_name = ""
+                        logger.info(f"Could not fetch invite code {code_text} (NotFound)")
+                    except Exception:
+                        invite_fetch_failed = True
+                        server_name = ""
+                        logger.exception("Unexpected error fetching invite")
+
                     rules = await self.config.guild(message.guild).invite_rules()
                     min_req = await self.config.guild(message.guild).min_members()
 
                     # Check rules
+                    matched = False
                     for rule in rules:
-                        if rule["text"] in server_name:
+                        # Allow rules to match either the resolved server name OR the invite code (fallback)
+                        text_to_check = server_name or code_text
+                        if rule["text"] in text_to_check:
+                            matched = True
                             # remove the offending message first
                             try:
                                 await message.delete()
@@ -343,50 +362,26 @@ class Servertools(commands.Cog):
                                     await message.channel.send("❌ Cannot ban the server owner.", delete_after=5)
                                     return
 
-                                # Check role hierarchy / bannable flag
-                                if hasattr(member, "bannable") and not member.bannable:
-                                    await message.channel.send("❌ I cannot ban that member — check role hierarchy and my permissions.", delete_after=10)
-                                    return
-
-                                # Prepare and send channel diagnostics to help debug ban failures
+                                # Check role hierarchy via top role positions (preferred over member.bannable)
                                 try:
-                                    diag_lines = [
-                                        "Invite Ban Diagnostics:",
-                                        f"Resolved member object: {member!r}",
-                                        f"Resolved member type: {type(member)}",
-                                        f"Member ID: {getattr(member, 'id', 'N/A')}",
-                                        f"Member display_name: {getattr(member, 'display_name', 'N/A')}",
-                                        f"Member.bannable: {getattr(member, 'bannable', 'N/A')}",
-                                        f"Bot member object: {bot_member!r}",
-                                        f"Bot ID: {getattr(bot_member, 'id', 'N/A')}",
-                                        
-                                        f"Bot has ban permission: {getattr(getattr(bot_member, 'guild_permissions', None), 'ban_members', 'N/A')}",
-                                    ]
-                                    # Log diagnostics to the bot logs as well as attempt to send to channel
-                                    try:
-                                        logger.info("\n".join(diag_lines))
-                                    except Exception:
-                                        pass
-                                    # Send diagnostics as a short-lived channel message so admins can see why bans fail
-                                    await message.channel.send("\n".join(diag_lines), delete_after=30)
+                                    bot_top_pos = bot_member.top_role.position
+                                    member_top_pos = member.top_role.position
                                 except Exception:
-                                    # Don't let diagnostics break the flow
-                                    logger.exception("Failed to send invite ban diagnostics")
-                                    pass
+                                    bot_top_pos = None
+                                    member_top_pos = None
 
-                                # If the Member object reports not bannable, inform the channel and include diagnostics above
-                                if hasattr(member, "bannable") and not getattr(member, "bannable", False):
-                                    await message.channel.send("❌ I cannot ban that member — check role hierarchy and my permissions. See diagnostics above.", delete_after=20)
+                                if bot_top_pos is not None and member_top_pos is not None and bot_top_pos <= member_top_pos:
+                                    await message.channel.send("❌ I cannot ban that member — my top role must be above the target's top role.", delete_after=10)
                                     return
 
                                 try:
-                                    await member.ban(reason=f"Blacklisted Invite: {server_name}")
+                                    await member.ban(reason=f"Blacklisted Invite: {server_name or code_text}")
                                     await message.channel.send(f"🚫 {member.mention} has been banned for posting a blacklisted invite.", delete_after=5)
-                                except discord.Forbidden as e:
-                                    # Send the exception to channel so admins can diagnose permission/hierarchy issues
-                                    await message.channel.send(f"❌ Could not ban {member.mention}. Missing permissions. Exception: {e!r}\nDiagnostics were posted above.", delete_after=30)
-                                except Exception as e:
-                                    await message.channel.send(f"❌ Failed to ban {member.mention}. Error: {e!r}\nDiagnostics were posted above.", delete_after=30)
+                                except discord.Forbidden:
+                                    await message.channel.send(f"❌ Could not ban {member.mention}. Missing permissions or role hierarchy.", delete_after=10)
+                                except Exception:
+                                    logger.exception("Unexpected exception when attempting to ban member")
+                                    await message.channel.send(f"❌ Failed to ban {member.mention}.", delete_after=10)
                                 return
 
                             # WARN: try to DM the user and notify the channel
@@ -396,11 +391,11 @@ class Servertools(commands.Cog):
                                 warn_msg = await self.config.guild(message.guild).invite_warn_message()
                                 if warn_msg:
                                     try:
-                                        formatted = warn_msg.format(guild=message.guild.name, offending_server=server_name, author=message.author.name)
+                                        formatted = warn_msg.format(guild=message.guild.name, offending_server=server_name or code_text, author=message.author.name)
                                     except Exception:
                                         formatted = warn_msg
                                 else:
-                                    formatted = f"You were warned in **{message.guild.name}** for posting an invite to **{server_name}**, which is disallowed."
+                                    formatted = f"You were warned in **{message.guild.name}** for posting an invite to **{server_name or code_text}**, which is disallowed."
 
                                 try:
                                     await message.author.send(formatted)
@@ -417,16 +412,26 @@ class Servertools(commands.Cog):
                             await message.channel.send(f"🚫 {message.author.mention}, that invite is not allowed.", delete_after=5)
                             return
 
-                    # Check member count
-                    if (invite.approximate_member_count or 0) < min_req:
-                        await message.delete()
+                    # If invite resolution failed and no rule matched against the invite code, remove unknown/invalid invites
+                    if invite_fetch_failed and not matched:
+                        try:
+                            await message.delete()
+                        except Exception:
+                            pass
+                        try:
+                            await message.channel.send("⚠️ Removed an unknown or invalid invite.", delete_after=8)
+                        except Exception:
+                            pass
+                        return
+
+                    # Check member count (only when invite was fetched successfully)
+                    if invite and (invite.approximate_member_count or 0) < min_req:
+                        try:
+                            await message.delete()
+                        except Exception:
+                            pass
                         return await message.channel.send(f"⚠️ {message.author.mention}, invites must have {min_req}+ members.", delete_after=5)
-                except Exception as e:
-                    # Log the full traceback so the owner/admin can inspect console logs if channel messages fail
+                except Exception:
+                    # Log the full traceback for operators but avoid posting traces to chat
                     logger.exception("Exception in invite filter processing")
-                    try:
-                        await message.channel.send(f"⚠️ ServerTools encountered an internal error while processing an invite: {e!r}", delete_after=20)
-                    except Exception:
-                        # best-effort only; don't raise from the listener
-                        logger.exception("Failed to notify channel about invite filter exception")
-                        pass
+                    return
