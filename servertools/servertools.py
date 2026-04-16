@@ -25,6 +25,7 @@ class Servertools(commands.Cog):
             "invite_filter_enabled": False,
             "min_members": 0,
             "invite_rules": [], # Format: {"text": "keyword", "action": "delete/warn/ban"}
+            "invite_warn_message": None,  # Custom DM sent on warn (can use {guild} and {offending_server})
         }
         default_user = {
             "online_notifications": [],
@@ -118,6 +119,34 @@ class Servertools(commands.Cog):
         """Set minimum member count required for an invite link to stay."""
         await self.config.guild(ctx.guild).min_members.set(count)
         await ctx.send(f"Invites must now have at least **{count}** members to be allowed.")
+
+    @invitefilter.command(name="warnmsg")
+    @commands.has_permissions(manage_guild=True)
+    async def warnmsg(self, ctx, *, message: str = None):
+        """Set, clear, or view the DM sent when users are warned for invites.
+
+        Usage:
+        - .invitefilter warnmsg <message>  -> sets custom DM (use {guild} and {offending_server} placeholders)
+        - .invitefilter warnmsg clear      -> clears custom DM
+        - .invitefilter warnmsg            -> shows current message
+        """
+        if not ctx.guild:
+            return
+        if message is None:
+            current = await self.config.guild(ctx.guild).invite_warn_message()
+            if current:
+                await ctx.send(f"Current warn DM:\n{current}")
+            else:
+                await ctx.send("No custom warn DM set. Using default.")
+            return
+
+        if message.lower().strip() == "clear":
+            await self.config.guild(ctx.guild).invite_warn_message.set(None)
+            await ctx.send("Custom warn DM cleared.")
+            return
+
+        await self.config.guild(ctx.guild).invite_warn_message.set(message)
+        await ctx.send("Custom warn DM updated. You can use {guild} and {offending_server} in the message.")
 
     # --- UTILITY COMMANDS ---
 
@@ -217,11 +246,52 @@ class Servertools(commands.Cog):
                     # Check rules
                     for rule in rules:
                         if rule["text"] in server_name:
-                            await message.delete()
-                            if rule["action"] == "ban":
-                                try: await message.author.ban(reason=f"Blacklisted Invite: {server_name}")
-                                except: pass
-                            return await message.channel.send(f"🚫 {message.author.mention}, that invite is not allowed.", delete_after=5)
+                            # remove the offending message first
+                            try:
+                                await message.delete()
+                            except Exception:
+                                pass
+
+                            action = (rule.get("action") or "delete").lower()
+
+                            # BAN: attempt to ban the member from the current guild with clear error handling
+                            if action == "ban":
+                                try:
+                                    await message.guild.ban(message.author, reason=f"Blacklisted Invite: {server_name}")
+                                    await message.channel.send(f"🚫 {message.author.mention} has been banned for posting a blacklisted invite.", delete_after=5)
+                                except discord.Forbidden:
+                                    await message.channel.send(f"❌ Could not ban {message.author.mention}. Missing permissions.", delete_after=5)
+                                except Exception:
+                                    await message.channel.send(f"❌ Failed to ban {message.author.mention}.", delete_after=5)
+                                return
+
+                            # WARN: try to DM the user and notify the channel
+                            if action == "warn":
+                                dm_sent = False
+                                # use custom warn DM if set, allow placeholders {guild} and {offending_server}
+                                warn_msg = await self.config.guild(message.guild).invite_warn_message()
+                                if warn_msg:
+                                    try:
+                                        formatted = warn_msg.format(guild=message.guild.name, offending_server=server_name, author=message.author.name)
+                                    except Exception:
+                                        formatted = warn_msg
+                                else:
+                                    formatted = f"You were warned in **{message.guild.name}** for posting an invite to **{server_name}**, which is disallowed."
+
+                                try:
+                                    await message.author.send(formatted)
+                                    dm_sent = True
+                                except discord.Forbidden:
+                                    dm_sent = False
+                                except Exception:
+                                    dm_sent = False
+
+                                await message.channel.send(f"⚠️ {message.author.mention} has been warned. {'(DM sent)' if dm_sent else '(Could not DM)'}", delete_after=5)
+                                return
+
+                            # Default / delete: just delete and notify
+                            await message.channel.send(f"🚫 {message.author.mention}, that invite is not allowed.", delete_after=5)
+                            return
 
                     # Check member count
                     if (invite.approximate_member_count or 0) < min_req:
