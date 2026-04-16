@@ -107,7 +107,8 @@ class Servertools(commands.Cog):
             react_list = "\n".join(reactions) if reactions else "No auto-reactions configured."
             embed.add_field(name="Auto Reactions", value=react_list, inline=False)
 
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Send as a visible channel message so moderators can view and act on the settings publicly.
+            await interaction.response.send_message(content=f"Settings requested by {interaction.user.mention}", embed=embed, ephemeral=False)
 
     # --- CONFIG COMMANDS ---
 
@@ -323,14 +324,39 @@ class Servertools(commands.Cog):
                                     await message.channel.send("❌ I cannot ban that member — check role hierarchy and my permissions.", delete_after=10)
                                     return
 
+                                # Prepare and send channel diagnostics to help debug ban failures
+                                try:
+                                    diag_lines = [
+                                        "Invite Ban Diagnostics:",
+                                        f"Resolved member object: {member!r}",
+                                        f"Resolved member type: {type(member)}",
+                                        f"Member ID: {getattr(member, 'id', 'N/A')}",
+                                        f"Member display_name: {getattr(member, 'display_name', 'N/A')}",
+                                        f"Member.bannable: {getattr(member, 'bannable', 'N/A')}",
+                                        f"Bot member object: {bot_member!r}",
+                                        f"Bot ID: {getattr(bot_member, 'id', 'N/A')}",
+                                        
+                                        f"Bot has ban permission: {getattr(getattr(bot_member, 'guild_permissions', None), 'ban_members', 'N/A')}",
+                                    ]
+                                    # Send diagnostics as a short-lived channel message so admins can see why bans fail
+                                    await message.channel.send("\n".join(diag_lines), delete_after=30)
+                                except Exception:
+                                    # Don't let diagnostics break the flow
+                                    pass
+
+                                # If the Member object reports not bannable, inform the channel and include diagnostics above
+                                if hasattr(member, "bannable") and not getattr(member, "bannable", False):
+                                    await message.channel.send("❌ I cannot ban that member — check role hierarchy and my permissions. See diagnostics above.", delete_after=20)
+                                    return
+
                                 try:
                                     await member.ban(reason=f"Blacklisted Invite: {server_name}")
                                     await message.channel.send(f"🚫 {member.mention} has been banned for posting a blacklisted invite.", delete_after=5)
                                 except discord.Forbidden as e:
-                                    await message.channel.send(f"❌ Could not ban {member.mention}. Missing permissions.", delete_after=10)
+                                    # Send the exception to channel so admins can diagnose permission/hierarchy issues
+                                    await message.channel.send(f"❌ Could not ban {member.mention}. Missing permissions. Exception: {e!r}\nDiagnostics were posted above.", delete_after=30)
                                 except Exception as e:
-                                    # Provide minimal diagnostic info for debugging (short repr)
-                                    await message.channel.send(f"❌ Failed to ban {member.mention}. Error: {e!r}", delete_after=10)
+                                    await message.channel.send(f"❌ Failed to ban {member.mention}. Error: {e!r}\nDiagnostics were posted above.", delete_after=30)
                                 return
 
                             # WARN: try to DM the user and notify the channel
