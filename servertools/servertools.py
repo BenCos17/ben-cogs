@@ -482,3 +482,53 @@ class Servertools(commands.Cog):
         lines.append(f"Bot has ban permission: {'✅' if bot_member.guild_permissions.ban_members else '❌'}")
 
         await ctx.send("\n".join(lines))
+
+    @commands.command(name="testban")
+    @commands.has_permissions(manage_guild=True)
+    async def testban(self, ctx, member: discord.Member):
+        """Attempt to ban then immediately unban a member to test ban behavior (requires confirmation)."""
+        if not ctx.guild:
+            return await ctx.send("This command must be used in a guild.")
+
+        # Check bot permissions
+        bot_member = ctx.guild.me or await ctx.guild.fetch_member(self.bot.user.id)
+        if bot_member is None or not bot_member.guild_permissions.ban_members:
+            return await ctx.send("❌ I don't have the Ban Members permission.")
+
+        if member == ctx.guild.owner:
+            return await ctx.send("❌ I cannot test-ban the server owner.")
+        if member.id == bot_member.id:
+            return await ctx.send("❌ I won't ban myself.")
+
+        confirm = await ctx.send(f"Are you sure you want to test-ban {member.mention}? Reply with `yes` to confirm (30s).")
+
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() in ("yes", "y")
+
+        try:
+            await self.bot.wait_for("message", check=check, timeout=30.0)
+        except asyncio.TimeoutError:
+            return await ctx.send("Timed out; canceled test ban.")
+
+        user_id = member.id
+        reason = f"Test ban by {ctx.author} (will be unbanned)"
+        try:
+            await ctx.guild.ban(member, reason=reason)
+            msg = await ctx.send(f"✅ Successfully banned {member}. Attempting to unban...")
+        except discord.Forbidden:
+            return await ctx.send("❌ Failed to ban: Missing permissions or role hierarchy.")
+        except Exception as e:
+            return await ctx.send(f"❌ Failed to ban: {e!r}")
+
+        # Attempt to unban immediately
+        try:
+            # Use discord.Object to refer to the user ID for unban
+            await asyncio.sleep(1)
+            await ctx.guild.unban(discord.Object(id=user_id), reason="Undo test ban")
+            await msg.edit(content=f"✅ Test ban completed: {member} was banned then unbanned.")
+        except discord.Forbidden:
+            await ctx.send("⚠️ Banned but failed to unban: missing unban permissions.")
+        except discord.NotFound:
+            await ctx.send("⚠️ Could not find ban entry to unban (may have failed).")
+        except Exception as e:
+            await ctx.send(f"⚠️ Unban failed: {e!r}")
