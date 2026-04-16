@@ -286,13 +286,30 @@ class Servertools(commands.Cog):
 
                             # BAN: attempt to ban the member from the current guild with clear error handling
                             if action == "ban":
+                                # Resolve the guild Member object (message.author may be a User proxy)
+                                member = message.guild.get_member(message.author.id)
+                                if member is None:
+                                    try:
+                                        member = await message.guild.fetch_member(message.author.id)
+                                    except Exception:
+                                        member = None
+
+                                if member is None:
+                                    await message.channel.send(f"❌ Could not locate member {message.author}.", delete_after=5)
+                                    return
+
+                                # Check if the bot can ban this member (role hierarchy / permissions)
+                                if hasattr(member, "bannable") and not member.bannable:
+                                    await message.channel.send(f"❌ Cannot ban {member.mention}. Check role hierarchy or bot permissions.", delete_after=10)
+                                    return
+
                                 try:
-                                    await message.guild.ban(message.author, reason=f"Blacklisted Invite: {server_name}")
-                                    await message.channel.send(f"🚫 {message.author.mention} has been banned for posting a blacklisted invite.", delete_after=5)
+                                    await member.ban(reason=f"Blacklisted Invite: {server_name}")
+                                    await message.channel.send(f"🚫 {member.mention} has been banned for posting a blacklisted invite.", delete_after=5)
                                 except discord.Forbidden:
-                                    await message.channel.send(f"❌ Could not ban {message.author.mention}. Missing permissions.", delete_after=5)
+                                    await message.channel.send(f"❌ Could not ban {member.mention}. Missing permissions.", delete_after=5)
                                 except Exception:
-                                    await message.channel.send(f"❌ Failed to ban {message.author.mention}.", delete_after=5)
+                                    await message.channel.send(f"❌ Failed to ban {member.mention}.", delete_after=5)
                                 return
 
                             # WARN: try to DM the user and notify the channel
