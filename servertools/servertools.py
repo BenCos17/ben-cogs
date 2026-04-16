@@ -87,6 +87,28 @@ class Servertools(commands.Cog):
             await self.cog.config.guild(self.guild).auto_reactions.set([])
             await interaction.response.send_message("🚨 Rules and reactions have been reset.", ephemeral=True)
 
+        @discord.ui.button(label="View Settings", style=discord.ButtonStyle.secondary)
+        async def view_settings(self, interaction: discord.Interaction, button: discord.ui.Button):
+            """Show current guild configuration in an ephemeral embed."""
+            spotify = await self.cog.config.guild(self.guild).spotify_autoclean()
+            invites = await self.cog.config.guild(self.guild).invite_filter_enabled()
+            rules = await self.cog.config.guild(self.guild).invite_rules()
+            min_members = await self.cog.config.guild(self.guild).min_members()
+            reactions = await self.cog.config.guild(self.guild).auto_reactions()
+            warn_msg = await self.cog.config.guild(self.guild).invite_warn_message()
+
+            embed = discord.Embed(title=f"Settings for {self.guild.name}", color=0x00aaff)
+            embed.add_field(name="Spotify Auto-clean", value="✅ ON" if spotify else "❌ OFF", inline=True)
+            embed.add_field(name="Invite Filter", value="✅ ON" if invites else "❌ OFF", inline=True)
+            embed.add_field(name="Minimum Invite Members", value=str(min_members), inline=True)
+            embed.add_field(name="Invite Warn DM", value=warn_msg if warn_msg else "<Default/Not set>", inline=False)
+            rule_list = "\n".join([f"`{r['text']}` ➔ **{r['action']}**" for r in rules]) if rules else "No custom rules."
+            embed.add_field(name="Invite Rules", value=rule_list, inline=False)
+            react_list = "\n".join(reactions) if reactions else "No auto-reactions configured."
+            embed.add_field(name="Auto Reactions", value=react_list, inline=False)
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
     # --- CONFIG COMMANDS ---
 
     @commands.command()
@@ -97,14 +119,22 @@ class Servertools(commands.Cog):
         spotify = await self.config.guild(ctx.guild).spotify_autoclean()
         invites = await self.config.guild(ctx.guild).invite_filter_enabled()
         rules = await self.config.guild(ctx.guild).invite_rules()
+        min_members = await self.config.guild(ctx.guild).min_members()
+        reactions = await self.config.guild(ctx.guild).auto_reactions()
+        warn_msg = await self.config.guild(ctx.guild).invite_warn_message()
 
         embed = discord.Embed(title="🛠️ ServerTools Dashboard", color=await ctx.embed_color())
-        embed.add_field(name="Spotify Clean", value="✅ ON" if spotify else "❌ OFF")
-        embed.add_field(name="Invite Filter", value="✅ ON" if invites else "❌ OFF")
-        
+        embed.add_field(name="Spotify Clean", value="✅ ON" if spotify else "❌ OFF", inline=True)
+        embed.add_field(name="Invite Filter", value="✅ ON" if invites else "❌ OFF", inline=True)
+        embed.add_field(name="Minimum Invite Members", value=str(min_members), inline=True)
+
         rule_list = "\n".join([f"`{r['text']}` ➔ **{r['action']}**" for r in rules]) if rules else "No custom rules."
         embed.add_field(name="Invite Rules", value=rule_list, inline=False)
-        
+
+        embed.add_field(name="Invite Warn DM", value=warn_msg if warn_msg else "<Default/Not set>", inline=False)
+        react_list = "\n".join(reactions) if reactions else "No auto-reactions configured."
+        embed.add_field(name="Auto Reactions", value=react_list, inline=False)
+
         await ctx.send(embed=embed, view=self.ControlPanel(self, ctx.guild))
 
     @commands.group()
@@ -126,9 +156,9 @@ class Servertools(commands.Cog):
         """Set, clear, or view the DM sent when users are warned for invites.
 
         Usage:
-        - .invitefilter warnmsg <message>  -> sets custom DM (use {guild} and {offending_server} placeholders)
-        - .invitefilter warnmsg clear      -> clears custom DM
-        - .invitefilter warnmsg            -> shows current message
+        - [p]invitefilter warnmsg <message>  -> sets custom DM (use {guild} and {offending_server} placeholders)
+        - [p]invitefilter warnmsg clear      -> clears custom DM
+        - [p]invitefilter warnmsg            -> shows current message
         """
         if not ctx.guild:
             return
