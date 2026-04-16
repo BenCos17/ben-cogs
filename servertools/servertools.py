@@ -16,23 +16,21 @@ class Servertools(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=492089091320446976)
+        self.config = Config.get_conf(self, identifier=492089091320446976, force_registration=True)
         
-        default_guild = {
-            "auto_reactions": {},
-            "spotify_autoclean": False,
-            "invite_filter_enabled": False,
-            "min_members": 0,
-        }
-        default_user = {
-            "online_notifications": [],
-            "spotify_dm_autoclean": False,
-        }
         
-        self.config.register_guild(**default_guild)
-        self.config.register_user(**default_user)
+        self.config.register_guild(
+            auto_reactions={},
+            spotify_autoclean=False,
+            invite_filter_enabled=False,
+            min_members=0
+        )
+        self.config.register_user(
+            online_notifications=[],
+            spotify_dm_autoclean=False
+        )
 
-    # UI 
+    # UI
 
     class ControlPanel(discord.ui.View):
         """Interactive UI for Cog settings."""
@@ -60,25 +58,25 @@ class Servertools(commands.Cog):
             await self.cog.config.guild(self.guild).auto_reactions.set({})
             await interaction.response.send_message("🚨 All auto-reactions for this server have been cleared.", ephemeral=True)
 
-#config stuff
+    # config stuff
+
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def servertools(self, ctx):
         """Open the interactive management panel for settings."""
-        embed = discord.Embed(
-            title="🛠️ ServerTools Control Panel",
-            description="Toggle guild utilities using the buttons below.",
-            color=await ctx.embed_color()
-        )
-        # Fetch current statuses for the embed
         spotify = await self.config.guild(ctx.guild).spotify_autoclean()
         invites = await self.config.guild(ctx.guild).invite_filter_enabled()
         min_m = await self.config.guild(ctx.guild).min_members()
 
+        embed = discord.Embed(
+            title="🛠️ ServerTools Control Panel",
+            description="Use buttons below to toggle features.",
+            color=await ctx.embed_color()
+        )
         embed.add_field(name="Spotify Clean", value="✅ ON" if spotify else "❌ OFF")
         embed.add_field(name="Invite Filter", value="✅ ON" if invites else "❌ OFF")
-        embed.add_field(name="Min Invite Members", value=str(min_m))
+        embed.add_field(name="Min Members", value=str(min_m))
         
         view = self.ControlPanel(self, ctx.guild)
         await ctx.send(embed=embed, view=view)
@@ -92,17 +90,17 @@ class Servertools(commands.Cog):
 
     @invitefilter.command(name="minmembers")
     async def set_min_members(self, ctx, count: int):
-        """Set minimum member count required for an invite link to stay."""
+        """Set minimum member count required for an invite link."""
         await self.config.guild(ctx.guild).min_members.set(count)
-        await ctx.send(f"Invites must now have at least **{count}** members to be allowed.")
+        await ctx.send(f"Invites must now have at least **{count}** members to stay.")
 
+    # --- CORE UTILITY COMMANDS ---
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
     async def moddm(self, ctx, user: discord.User, *, message):
-        """Send a direct message to a user as a moderator."""
-        if not ctx.guild: return
-        confirm_embed = discord.Embed(title="Confirmation", description=f"Send this to {user.name}?", color=0x00ff00)
+        """Send a DM to a user as a moderator with confirmation."""
+        confirm_embed = discord.Embed(title="Confirmation", description=f"Send to {user.name}?", color=0x00ff00)
         await ctx.send(embed=confirm_embed)
         
         def check(m): return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() in ['yes', 'y', 'no', 'n']
@@ -113,13 +111,9 @@ class Servertools(commands.Cog):
                     dm = discord.Embed(title="Message from Server", description=message, color=0x00ff00)
                     dm.set_footer(text=f"Sent from {ctx.guild.name}")
                     await user.send(embed=dm)
-                    await ctx.send("✅ Message sent.")
-                except discord.Forbidden:
-                    await ctx.send("❌ Cannot DM this user.")
-            else:
-                await ctx.send("Canceled.")
-        except asyncio.TimeoutError:
-            await ctx.send("Timed out.")
+                    await ctx.send("✅ Sent.")
+                except discord.Forbidden: await ctx.send("❌ Forbidden.")
+        except asyncio.TimeoutError: await ctx.send("Timed out.")
 
     @commands.command()
     @commands.has_permissions(move_members=True)
@@ -128,32 +122,22 @@ class Servertools(commands.Cog):
         try:
             await user.move_to(channel)
             await ctx.send(f"Moved {user.name} to {channel.name}.")
-        except discord.Forbidden:
-            await ctx.send("Permission denied.")
+        except discord.Forbidden: await ctx.send("Permission denied.")
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def ld(self, ctx, channel: discord.TextChannel):
-        """Lock down a text channel."""
+        """Lock down a text channel for the default role."""
         try:
             await channel.set_permissions(ctx.guild.default_role, send_messages=False)
-            await ctx.send(f"Locked down {channel.mention}.")
-        except discord.Forbidden:
-            await ctx.send("Permission denied.")
+            await ctx.send(f"Locked {channel.mention}.")
+        except: await ctx.send("Failed.")
 
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def purge(self, ctx, amount: int):
-        """Delete messages in current channel."""
+        """Purge messages in the current channel."""
         await ctx.channel.purge(limit=amount + 1)
-
-    @commands.command()
-    @commands.has_permissions(view_audit_log=True)
-    async def auditlog(self, ctx, amount: int = 5):
-        """Display recent audit log entries."""
-        async for log in ctx.guild.audit_logs(limit=amount):
-            action = log.action.name.replace("_", " ").title()
-            await ctx.send(f"**{log.user}** performed **{action}** on **{log.target}**")
 
     @commands.command(name='fakeping')
     @commands.guild_only()
@@ -167,8 +151,7 @@ class Servertools(commands.Cog):
                 image = Image.open(BytesIO(image_bytes)).convert('RGBA')
                 image.thumbnail((64, 64))
                 draw = ImageDraw.Draw(image)
-                badge_radius = 14
-                badge_center = (image.width - badge_radius, image.height - badge_radius)
+                badge_center = (image.width - 14, image.height - 14)
                 draw.ellipse([badge_center[0]-16, badge_center[1]-16, badge_center[0]+16, badge_center[1]+16], fill=(255, 255, 255))
                 draw.ellipse([badge_center[0]-14, badge_center[1]-14, badge_center[0]+14, badge_center[1]+14], fill=(237, 66, 69))
                 try: font = ImageFont.truetype("arial.ttf", 20)
@@ -184,7 +167,7 @@ class Servertools(commands.Cog):
     async def on_message(self, message):
         if message.author.bot: return
 
-        # 1. Invite Filtering
+        #  Invite Filter
         if message.guild and await self.config.guild(message.guild).invite_filter_enabled():
             match = self.INVITE_RE.search(message.content)
             if match:
@@ -193,29 +176,29 @@ class Servertools(commands.Cog):
                     min_req = await self.config.guild(message.guild).min_members()
                     if (invite.approximate_member_count or 0) < min_req:
                         await message.delete()
-                        await message.channel.send(f"⚠️ {message.author.mention}, invites must be to servers with {min_req}+ members.", delete_after=5)
+                        await message.channel.send(f"⚠️ {message.author.mention}, that server doesn't meet the member requirement.", delete_after=5)
                         return
                 except discord.NotFound: pass
 
-        # 2. Spotify Cleaning
+        # Spotify 
         if message.guild:
             if await self.config.guild(message.guild).spotify_autoclean():
                 cleaned = self._extract_clean_spotify_urls(message.content)
                 if cleaned: await message.channel.send("\n".join(cleaned))
-        else: # DM Logic
+        else:
             if await self.config.user(message.author).spotify_dm_autoclean():
                 cleaned = self._extract_clean_spotify_urls(message.content)
                 if cleaned: await message.channel.send("\n".join(cleaned))
 
-        # 3. Auto-Reactions
+        # Auto Reactions
         if message.guild:
-            reactions = await self.config.guild(message.guild).auto_reactions()
-            key = f"{message.channel.id}-{message.author.id}"
-            if key in reactions:
-                try: await message.add_reaction(reactions[key])
-                except: pass
+            data = await self.config.guild(message.guild).auto_reactions()
+            if isinstance(data, dict):
+                key = f"{message.channel.id}-{message.author.id}"
+                if key in data:
+                    try: await message.add_reaction(data[key])
+                    except: pass
 
-    # --- SPOTIFY HELPERS ---
 
     def _clean_spotify_url(self, url: str):
         try:
