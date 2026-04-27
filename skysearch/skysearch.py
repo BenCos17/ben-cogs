@@ -53,11 +53,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.config.register_global(user_agent=None)  # Optional custom User-Agent header for all outbound HTTP requests
         self.config.register_global(api_stats=None)  # API request statistics for persistence
         self.config.register_guild(alert_channel=None, alert_role=None, auto_icao=False, auto_delete_not_found=True, emergency_cooldown=5, last_alerts={}, custom_alerts={}, faa_alert_channel=None, faa_alert_role=None, faa_alert_cooldown=5, last_faa_status=None, faa_last_alert_time=None, geofence_alerts={})
-        # Watchlist config supports ICAO codes, aircraft types, callsigns, registrations, and squawk codes
-        # Structure: {"icao": [list], "type": [list], "callsign": [list], "reg": [list], "squawk": [list]}
-        # Notifications: maps "type:value" (e.g., "icao:A2F41D", "type:military") to last notification timestamp
-        # Aircraft state: maps "type:value" to current state (flying/landed/unknown)
-        self.config.register_user(watchlist={}, watchlist_notifications={}, watchlist_cooldown=10, watchlist_aircraft_state={})
+        # Watchlist stores: ICAO codes, aircraft types, callsigns, registrations, squawk codes
+        # Format handled by normalize_watchlist() for backward compatibility with list format
+        self.config.register_user(watchlist=[], watchlist_notifications={}, watchlist_cooldown=10, watchlist_aircraft_state={})
         
         # Initialize utility managers
         self.api = APIManager(self)
