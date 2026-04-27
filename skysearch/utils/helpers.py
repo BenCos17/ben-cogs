@@ -1066,6 +1066,185 @@ class HelperUtils:
         
         return False
 
+    async def normalize_watchlist(self, user_config) -> dict:
+        """
+        Normalize watchlist from old format (list of ICAO codes) to new format (dict by type).
+        
+        REUSED BY: watchlist commands, background task initialization
+        
+        This method provides backward compatibility by automatically converting watchlists
+        from the old list-based format to the new type-based dictionary format on first run.
+        
+        Old format: ["A2F41D", "B3E52C", ...]
+        New format: {"icao": ["A2F41D", "B3E52C"], "type": [...], ...}
+        
+        Args:
+            user_config: User config object from self.cog.config.user(user)
+            
+        Returns:
+            dict: Normalized watchlist in new format
+            
+        Example:
+            >>> watchlist = await self.normalize_watchlist(user_config)
+            >>> # Returns: {"icao": ["A2F41D"], "type": ["military"]}
+        """
+        watchlist = await user_config.watchlist()
+        
+        # If already in new format (dict), return as-is
+        if isinstance(watchlist, dict):
+            return watchlist
+        
+        # If in old format (list), convert to new format
+        if isinstance(watchlist, list):
+            normalized = {
+                'icao': [item.upper() for item in watchlist if item],
+                'type': [],
+                'callsign': [],
+                'reg': [],
+                'squawk': [],
+            }
+            # Save the normalized version
+            await user_config.watchlist.set(normalized)
+            return normalized
+        
+        # Empty or invalid format - return empty new format
+        return {'icao': [], 'type': [], 'callsign': [], 'reg': [], 'squawk': []}
+
+    async def watchlist_add_item(self, user_config, item_type: str, value: str):
+        """
+        Add an item to the user's watchlist (reuses normalize_watchlist).
+        
+        REUSED BY: watchlist add command, button callback
+        
+        Args:
+            user_config: User config object from self.cog.config.user(user)
+            item_type (str): Type of item ('icao', 'type', 'callsign', 'reg', 'squawk')
+            value (str): Value of the item to add
+            
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        # Normalize first
+        watchlist = await self.normalize_watchlist(user_config)
+        
+        # Validate item_type
+        if item_type not in watchlist:
+            return False, f"Invalid item type. Must be one of: {', '.join(watchlist.keys())}"
+        
+        # Normalize value
+        normalized_value = value.upper().strip() if item_type == 'icao' else value.lower().strip()
+        
+        # Check if already in watchlist
+        if normalized_value in watchlist[item_type]:
+            return False, f"**{value}** is already in your watchlist."
+        
+        # Add to watchlist
+        watchlist[item_type].append(normalized_value)
+        await user_config.watchlist.set(watchlist)
+        
+        return True, f"Added **{value}** ({item_type}) to your watchlist."
+
+    async def watchlist_remove_item(self, user_config, item_type: str, value: str):
+        """
+        Remove an item from the user's watchlist (reuses normalize_watchlist).
+        
+        REUSED BY: watchlist remove command
+        
+        Args:
+            user_config: User config object from self.cog.config.user(user)
+            item_type (str): Type of item ('icao', 'type', 'callsign', 'reg', 'squawk')
+            value (str): Value of the item to remove
+            
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        # Normalize first
+        watchlist = await self.normalize_watchlist(user_config)
+        
+        # Validate item_type
+        if item_type not in watchlist:
+            return False, f"Invalid item type. Must be one of: {', '.join(watchlist.keys())}"
+        
+        # Normalize value
+        normalized_value = value.upper().strip() if item_type == 'icao' else value.lower().strip()
+        
+        # Check if in watchlist
+        if normalized_value not in watchlist[item_type]:
+            return False, f"**{value}** is not in your watchlist."
+        
+        # Remove from watchlist
+        watchlist[item_type].remove(normalized_value)
+        await user_config.watchlist.set(watchlist)
+        
+        return True, f"Removed **{value}** ({item_type}) from your watchlist."
+
+    async def get_all_watchlist_items(self, user_config) -> dict:
+        """
+        Get all watchlist items for a user (reuses normalize_watchlist).
+        
+        REUSED BY: watchlist list/status commands, background task
+        
+        Args:
+            user_config: User config object from self.cog.config.user(user)
+            
+        Returns:
+            dict: All watchlist items organized by type
+            
+        Example:
+            >>> items = await self.get_all_watchlist_items(user_config)
+            >>> # Returns: {"icao": ["A2F41D"], "type": ["military"], ...}
+        """
+        return await self.normalize_watchlist(user_config)
+
+    def aircraft_matches_watchlist(self, aircraft_data: dict, watchlist: dict) -> bool:
+        """
+        Check if an aircraft matches any item in the user's watchlist.
+        
+        REUSED BY: check_watched_aircraft background task, status checking
+        
+        This method checks against all watchlist entry types (ICAO, type, callsign, registration, squawk).
+        It provides centralized matching logic to avoid duplication in the background task.
+        
+        Args:
+            aircraft_data (dict): Aircraft data from API
+            watchlist (dict): Watchlist structure from normalize_watchlist()
+            
+        Returns:
+            bool: True if aircraft matches any watchlist entry, False otherwise
+            
+        Example:
+            >>> watchlist = {"icao": ["A2F41D"], "type": ["military"], "callsign": [], ...}
+            >>> aircraft = {"hex": "A2F41D", "flight": "TEST123", ...}
+            >>> if self.aircraft_matches_watchlist(aircraft, watchlist):
+            >>>     print("Aircraft is in watchlist!")
+        """
+        # Check ICAO hex code
+        aircraft_icao = (aircraft_data.get('hex') or '').upper()
+        if aircraft_icao in watchlist.get('icao', []):
+            return True
+        
+        # Check aircraft types
+        aircraft_types = self.get_aircraft_types(aircraft_icao)
+        if any(t in watchlist.get('type', []) for t in aircraft_types):
+            return True
+        
+        # Check callsign (flight number)
+        aircraft_callsign = (aircraft_data.get('flight') or '').lower().strip()
+        if aircraft_callsign and aircraft_callsign in watchlist.get('callsign', []):
+            return True
+        
+        # Check registration (tail number)
+        aircraft_reg = (aircraft_data.get('reg') or '').lower().strip()
+        if aircraft_reg and aircraft_reg in watchlist.get('reg', []):
+            return True
+        
+        # Check squawk code
+        aircraft_squawk = aircraft_data.get('squawk', '')
+        if aircraft_squawk and aircraft_squawk in watchlist.get('squawk', []):
+            return True
+        
+        return False
+
     def create_watchlist_landing_embed(self, icao, aircraft_data):
         """
         Create a landing notification embed for watchlist aircraft.

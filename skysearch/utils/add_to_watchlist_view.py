@@ -85,7 +85,7 @@ class AddToWatchlistButton(discord.ui.Button):
         self.icao = icao
 
     async def callback(self, interaction: discord.Interaction):
-        """Handle button click - add aircraft to user's watchlist."""
+        """Handle button click - add aircraft ICAO to user's watchlist (REUSES watchlist_add_item helper)."""
         user = interaction.user
         user_config = self.cog.config.user(user)
 
@@ -98,26 +98,11 @@ class AddToWatchlistButton(discord.ui.Button):
             )
             return
 
-        watchlist = await user_config.watchlist()
+        # Add to watchlist using helper method (reuses normalize_watchlist)
+        success, message = await self.cog.helpers.watchlist_add_item(user_config, 'icao', self.icao)
 
-        if self.icao in watchlist:
-            await interaction.response.send_message(
-                _("**{icao}** is already in your watchlist.").format(icao=self.icao),
-                ephemeral=True,
-            )
-            return
-
-        watchlist.append(self.icao)
-        await user_config.watchlist.set(watchlist)
-
-        # Initialize aircraft state
-        aircraft_state = await user_config.watchlist_aircraft_state()
-        aircraft_state[self.icao] = "unknown"
-        await user_config.watchlist_aircraft_state.set(aircraft_state)
-
+        color = "✅" if success else "❌"
         await interaction.response.send_message(
-            _("✅ Added **{icao}** to your watchlist. You'll be notified when it comes online, takes off, or lands.").format(
-                icao=self.icao
-            ),
+            f"{color} {message}\n\nYou'll be notified when it comes online, takes off, or lands.",
             ephemeral=True,
         )
