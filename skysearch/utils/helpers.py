@@ -929,6 +929,143 @@ class HelperUtils:
                 return False
         return False
     
+    def get_aircraft_types(self, icao: str) -> list:
+        """
+        Get all aircraft types/categories for a given ICAO code.
+        
+        REUSED BY: watchlist type matching, aircraft classification, type-based notifications
+        
+        This method centralizes type detection logic to avoid duplication across the codebase.
+        It checks the aircraft against all available ICAO type sets defined in data/icao_codes.py.
+        
+        Args:
+            icao (str): Aircraft ICAO hex code (will be normalized to uppercase)
+            
+        Returns:
+            list: List of type names (e.g., ['military', 'law_enforcement']) or empty list if no types
+            
+        Example:
+            >>> types = self.get_aircraft_types('AE152C')
+            >>> # Returns: ['military']
+        """
+        if not icao:
+            return []
+        
+        icao = icao.upper().strip()
+        types = []
+        
+        # Check against each aircraft type set
+        # Maps type name to cog attribute
+        type_mapping = {
+            'law_enforcement': self.cog.law_enforcement_icao_set,
+            'military': self.cog.military_icao_set,
+            'medical': self.cog.medical_icao_set,
+            'suspicious': self.cog.suspicious_icao_set,
+            'newsagency': self.cog.newsagency_icao_set,
+            'balloons': self.cog.balloons_icao_set,
+            'agri_utility': self.cog.agri_utility_set,
+            'ukr_conflict': self.cog.ukr_conflict_set,
+            'global_prior_known_accident': self.cog.global_prior_known_accident_set,
+        }
+        
+        # Check if trainer_educational_set exists (may not in all versions)
+        if hasattr(self.cog, 'trainer_educational_set'):
+            type_mapping['trainer_educational'] = self.cog.trainer_educational_set
+        
+        for type_name, icao_set in type_mapping.items():
+            if icao in icao_set:
+                types.append(type_name)
+        
+        return types
+    
+    def get_all_aircraft_type_names(self) -> list:
+        """
+        Get all available aircraft type category names.
+        
+        REUSED BY: watchlist validation, type selection UI, help text
+        
+        Returns:
+            list: Sorted list of all available type names
+            
+        Example:
+            >>> types = self.get_all_aircraft_type_names()
+            >>> # Returns: ['agri_utility', 'balloons', 'global_prior_known_accident', ...]
+        """
+        type_names = [
+            'law_enforcement',
+            'military', 
+            'medical',
+            'suspicious',
+            'newsagency',
+            'balloons',
+            'agri_utility',
+            'ukr_conflict',
+            'global_prior_known_accident',
+        ]
+        
+        # Add trainer_educational if it exists
+        if hasattr(self.cog, 'trainer_educational_set'):
+            type_names.append('trainer_educational')
+        
+        return sorted(type_names)
+    
+    def get_readable_aircraft_type_name(self, type_name: str) -> str:
+        """
+        Convert type name to readable format for display.
+        
+        REUSED BY: watchlist notifications, help text, embeds
+        
+        Args:
+            type_name (str): Internal type name (e.g., 'law_enforcement', 'agri_utility')
+            
+        Returns:
+            str: Readable display name (e.g., 'Law Enforcement', 'Agriculture & Utility')
+        """
+        readable_names = {
+            'law_enforcement': 'Law Enforcement',
+            'military': 'Military',
+            'medical': 'Medical',
+            'suspicious': 'Suspicious',
+            'newsagency': 'News Agency',
+            'balloons': 'Balloons',
+            'agri_utility': 'Agriculture & Utility',
+            'ukr_conflict': 'Ukrainian Conflict',
+            'global_prior_known_accident': 'Prior Known Accident',
+            'trainer_educational': 'Trainer & Educational',
+        }
+        return readable_names.get(type_name, type_name)
+    
+    def aircraft_matches_type_filter(self, icao: str, type_filter: str | list) -> bool:
+        """
+        Check if aircraft matches one or more type filters.
+        
+        REUSED BY: watchlist filtering, search queries, notifications
+        
+        This method supports both single type strings and lists of types, providing
+        flexible filtering for watchlist checks and aircraft queries.
+        
+        Args:
+            icao (str): Aircraft ICAO hex code
+            type_filter (str or list): Single type name or list of type names to check against
+            
+        Returns:
+            bool: True if aircraft matches any of the specified types, False otherwise
+            
+        Example:
+            >>> if self.aircraft_matches_type_filter('AE152C', 'military'):
+            >>>     print("Military aircraft!")
+            >>> if self.aircraft_matches_type_filter(icao, ['military', 'law_enforcement']):
+            >>>     print("Military or law enforcement!")
+        """
+        aircraft_types = self.get_aircraft_types(icao)
+        
+        if isinstance(type_filter, str):
+            return type_filter in aircraft_types
+        elif isinstance(type_filter, (list, tuple)):
+            return any(t in aircraft_types for t in type_filter)
+        
+        return False
+
     def create_watchlist_landing_embed(self, icao, aircraft_data):
         """
         Create a landing notification embed for watchlist aircraft.

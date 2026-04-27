@@ -18,7 +18,8 @@ from discord.ext import tasks
 from .data.icao_codes import (
     law_enforcement_icao_set, military_icao_set, medical_icao_set, 
     suspicious_icao_set, newsagency_icao_set, balloons_icao_set, 
-    global_prior_known_accident_set, ukr_conflict_set, agri_utility_set
+    global_prior_known_accident_set, ukr_conflict_set, agri_utility_set,
+    trainer_educational_set
 )
 from .utils.api import APIManager
 from .utils.helpers import HelperUtils
@@ -74,6 +75,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         self.global_prior_known_accident_set = global_prior_known_accident_set
         self.ukr_conflict_set = ukr_conflict_set
         self.agri_utility_set = agri_utility_set
+        self.trainer_educational_set = trainer_educational_set
         
         # Start background tasks
         self.check_emergency_squawks.start()
