@@ -766,10 +766,23 @@ class AircraftCommands:
         - `watchlist add reg N814AK` - Watch this registration
         - `watchlist add squawk 7700` - Watch aircraft squawking 7700
         """
-        # Handle backward compatibility: if only one argument, assume it's an ICAO code
+        # Handle backward compatibility: if only one argument, auto-detect the type
         if item_type is not None and value is None:
-            value = item_type
-            item_type = 'icao'
+            value = item_type.upper()
+            # Auto-detect type based on format
+            if value.isdigit() and len(value) == 4:
+                item_type = 'squawk'  # 4 digits = squawk code
+            elif all(c in '0123456789ABCDEFabcdef' for c in value) and len(value) == 6:
+                item_type = 'icao'  # 6 hex chars = ICAO
+            elif any(c.isalpha() for c in value) and value.replace('-', '').replace(' ', '').isalnum():
+                # Has letters + optional dashes/spaces = registration or callsign
+                # Check if it looks like a registration (usually short, with letter prefix)
+                if len(value) <= 6 and value[0].isalpha():
+                    item_type = 'reg'  # Likely a registration
+                else:
+                    item_type = 'callsign'  # Likely a callsign
+            else:
+                item_type = 'icao'  # Default fallback
         
         # Validate arguments
         if item_type is None or value is None:
