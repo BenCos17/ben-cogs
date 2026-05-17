@@ -822,10 +822,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
                             }
                             # Compose the embed and view as before
                             aircraft_data = aircraft_info
-                            image_url, photographer = await self._run_background_io(
+                            image_url, photographer, photo_err = await self._run_background_io(
                                 self.helpers.get_photo_by_aircraft_data(aircraft_data)
                             )
-                            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+                            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer, photo_err)
 
                             # Create buttons for emergency alerts
                             view = discord.ui.View()
@@ -1173,8 +1173,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
     async def _send_geofence_alert(self, channel, fence, aircraft_info, event_type, role_mention):
         """Send a geo-fence alert (entry or exit)."""
         fence_name = fence.get("name", "Unnamed")
-        image_url, photographer = await self._run_background_io(self.helpers.get_photo_by_aircraft_data(aircraft_info))
-        embed = self.helpers.create_aircraft_embed(aircraft_info, image_url, photographer)
+        image_url, photographer, photo_err = await self._run_background_io(self.helpers.get_photo_by_aircraft_data(aircraft_info))
+        embed = self.helpers.create_aircraft_embed(aircraft_info, image_url, photographer, photo_err)
         if event_type == "entry":
             embed.title = f"🟢 Geo-fence: {aircraft_info.get('desc', 'Aircraft')} entered **{fence_name}**"
             embed.color = 0x00ff00
@@ -1527,8 +1527,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
             # Create embed
             aircraft_data = aircraft_info
-            image_url, photographer = await self._run_background_io(self.helpers.get_photo_by_aircraft_data(aircraft_data))
-            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+            image_url, photographer, photo_err = await self._run_background_io(self.helpers.get_photo_by_aircraft_data(aircraft_data))
+            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer, photo_err)
             # Add custom alert header
             embed.title = f"🔔 Custom Alert: {alert_data['type'].upper()} '{alert_data['value']}'"
             embed.color = 0xffaa00  # Orange color for custom alerts
@@ -1760,8 +1760,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         
         # Create embed and buttons (same as real background task)
         aircraft_data = fake_aircraft
-        image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
-        embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+        image_url, photographer, photo_err = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
+        embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer, photo_err)
         
         # Create buttons (same as real emergency alerts)
         view = discord.ui.View()

@@ -113,6 +113,7 @@ class HelperUtils:
         """
         self._ensure_http_client()
         log.debug("get_photo_by_hex called: hex=%s registration=%s", hex_id, registration)
+        error_msg = None
         
         # First try to get photo by hex ICAO directly
         if hex_id:
@@ -124,21 +125,25 @@ class HelperUtils:
                 ) as response:
                     if response.status != 200:
                         log.debug("Planespotters hex request %s returned status %s", url_req, response.status)
+                        error_msg = f"planespotters returned HTTP {response.status}"
                     else:
                         json_out = await response.json()
                         photos = json_out.get('photos') if isinstance(json_out, dict) else None
                         if not photos:
                             log.debug("Planespotters hex %s returned no photos", url_req)
+                            error_msg = "no photos found"
                         else:
                             photo = photos[0]
                             url = photo.get('thumbnail_large', {}).get('src', '')
                             photographer = photo.get('photographer', '')
                             if not url:
                                 log.debug("Planespotters hex %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
+                                error_msg = "photos found but no usable thumbnail"
                             else:
-                                return url, photographer
+                                return url, photographer, None
             except Exception as e:
                 log.debug("Exception fetching planespotters hex %s: %s", hex_id, e, exc_info=True)
+                error_msg = str(e)
 
         # If no photo found by hex, try by registration if provided
         if registration:
@@ -150,21 +155,25 @@ class HelperUtils:
                 ) as response:
                     if response.status != 200:
                         log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
+                        error_msg = f"planespotters returned HTTP {response.status}"
                     else:
                         json_out = await response.json()
                         photos = json_out.get('photos') if isinstance(json_out, dict) else None
                         if not photos:
                             log.debug("Planespotters reg %s returned no photos", url_req)
+                            error_msg = "no photos found"
                         else:
                             photo = photos[0]
                             url = photo.get('thumbnail_large', {}).get('src', '')
                             photographer = photo.get('photographer', '')
                             if not url:
                                 log.debug("Planespotters reg %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
+                                error_msg = "photos found but no usable thumbnail"
                             else:
-                                return url, photographer
+                                return url, photographer, None
             except Exception as e:
                 log.debug("Exception fetching planespotters reg %s: %s", registration, e, exc_info=True)
+                error_msg = str(e)
 
         # If still no photo found, try to get aircraft data to find registration and try again
         if hex_id:
@@ -177,7 +186,7 @@ class HelperUtils:
                 if response and 'aircraft' in response and response['aircraft']:
                     aircraft_data = response['aircraft'][0]
                     reg = aircraft_data.get('reg')
-                    
+
                     if reg and reg != registration:  # Only try if we haven't already tried this registration
                         # try to get photo using the registration
                         try:
@@ -186,27 +195,31 @@ class HelperUtils:
                                 url_req,
                                 headers=await self._get_http_headers(),
                             ) as response:
-                                if response.status != 200:
-                                    log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
-                                else:
-                                    json_out = await response.json()
-                                    photos = json_out.get('photos') if isinstance(json_out, dict) else None
-                                    if not photos:
-                                        log.debug("Planespotters reg %s returned no photos", url_req)
+                                    if response.status != 200:
+                                        log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
+                                        error_msg = f"planespotters returned HTTP {response.status}"
                                     else:
-                                        photo = photos[0]
-                                        url = photo.get('thumbnail_large', {}).get('src', '')
-                                        photographer = photo.get('photographer', '')
-                                        if not url:
-                                            log.debug("Planespotters reg %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
+                                        json_out = await response.json()
+                                        photos = json_out.get('photos') if isinstance(json_out, dict) else None
+                                        if not photos:
+                                            log.debug("Planespotters reg %s returned no photos", url_req)
+                                            error_msg = "no photos found"
                                         else:
-                                            return url, photographer
+                                            photo = photos[0]
+                                            url = photo.get('thumbnail_large', {}).get('src', '')
+                                            photographer = photo.get('photographer', '')
+                                            if not url:
+                                                log.debug("Planespotters reg %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
+                                                error_msg = "photos found but no usable thumbnail"
+                                            else:
+                                                return url, photographer, None
                         except Exception as e:
                             log.debug("Exception fetching planespotters reg %s: %s", reg, e, exc_info=True)
+                            error_msg = str(e)
             except Exception:
                 pass
 
-        return None, None  # Return None if no photo found
+        return None, None, error_msg  # Return None if no photo found
 
     async def get_photo_by_aircraft_data(self, aircraft_data):
         """
@@ -231,7 +244,7 @@ class HelperUtils:
             
         return await self.get_photo_by_hex(hex_id, registration)
     
-    def create_aircraft_embed(self, aircraft_data, image_url=None, photographer=None):
+    def create_aircraft_embed(self, aircraft_data, image_url=None, photographer=None, photo_error: str | None = None):
         """
         Create a Discord embed for aircraft information.
         
@@ -417,7 +430,12 @@ class HelperUtils:
         else:
             # Attachment-based fallback is resolved by send_embed_with_default_thumbnail.
             embed.set_thumbnail(url="attachment://defaultairplane.png")
-            embed.set_footer(text="No photo available")
+            if photo_error:
+                # Shorten lengthy error messages for display
+                short = photo_error if len(photo_error) <= 120 else photo_error[:117] + '...'
+                embed.set_footer(text=f"No photo available — {short}")
+            else:
+                embed.set_footer(text="No photo available")
 
         return embed
 

@@ -405,7 +405,7 @@ class DashboardIntegration:
                         
                         for i, aircraft_data in enumerate(aircraft_list[:5]):  # Limit to 5 results
                             # Get photo for the aircraft using full aircraft data
-                            image_url, photographer = await cog.helpers.get_photo_by_aircraft_data(aircraft_data)
+                            image_url, photographer, photo_err = await cog.helpers.get_photo_by_aircraft_data(aircraft_data)
                             
                             # Extract ICAO for later use
                             icao = aircraft_data.get('hex', '')
@@ -580,6 +580,7 @@ class DashboardIntegration:
                             safe_emergency_status = _esc(emergency_status)
                             safe_image_url = _safe_https_url(image_url)
                             safe_photographer = _esc(photographer) if photographer else ""
+                            safe_photo_err = _esc(photo_err) if photo_err else ""
                             safe_globe_link = _safe_https_url(f"https://globe.airplanes.live/?icao={quote_plus(str(icao or ''))}")
                             
                             result_html += f'''
@@ -624,6 +625,7 @@ class DashboardIntegration:
                                         <h4 style="color: #000000; margin-bottom: 10px;">Aircraft Photo</h4>
                                         {f'<img src="{safe_image_url}" alt="Aircraft photo" style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #666;">' if safe_image_url else '<div style="background-color: #666; padding: 40px; text-align: center; border-radius: 8px;"><p style="color: #999; font-style: italic;">No photo available</p></div>'}
                                         {f'<p style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;">Photo by: {safe_photographer}</p>' if safe_photographer else ''}
+                                        {f'<p style="font-size: 12px; color: #a00; margin-top: 6px; text-align: center;">{safe_photo_err}</p>' if (not safe_image_url and safe_photo_err) else ''}
                                     </div>
                                 </div>
                                 

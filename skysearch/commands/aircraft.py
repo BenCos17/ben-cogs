@@ -42,9 +42,9 @@ class AircraftCommands:
             await ctx.typing()
             aircraft_data = aircraft_list[0]
             # Get photo for the aircraft using full aircraft data
-            image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
+            image_url, photographer, photo_err = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
             # Create embed
-            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+            embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer, photo_err)
             # Create view with buttons including Add to Watchlist
             view = self.helpers.create_aircraft_view_with_watchlist(aircraft_data)
 
@@ -276,7 +276,7 @@ class AircraftCommands:
 
                     # Create temporary aircraft data for photo lookup
                     temp_aircraft_data = {'hex': aircraft_hex}
-                    photo_url, photographer = await self.helpers.get_photo_by_aircraft_data(temp_aircraft_data)
+                    photo_url, photographer, photo_err = await self.helpers.get_photo_by_aircraft_data(temp_aircraft_data)
                     if photo_url:
                         embed.set_image(url=photo_url)
                         if photographer:
@@ -584,7 +584,7 @@ class AircraftCommands:
             
             # Add photo if available
             temp_aircraft_data = {'hex': icao}
-            image_url, photographer = await self.helpers.get_photo_by_aircraft_data(temp_aircraft_data)
+            image_url, photographer, photo_err = await self.helpers.get_photo_by_aircraft_data(temp_aircraft_data)
             if image_url:
                 embed.set_thumbnail(url=image_url)
                 if photographer:
@@ -687,8 +687,8 @@ class AircraftCommands:
                 aircraft_list = response.get('aircraft') or response.get('ac')
                 if aircraft_list:
                     aircraft_data = aircraft_list[0]
-                    image_url, photographer = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
-                    embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer)
+                    image_url, photographer, photo_err = await self.helpers.get_photo_by_aircraft_data(aircraft_data)
+                    embed = self.helpers.create_aircraft_embed(aircraft_data, image_url, photographer, photo_err)
                     view = self.helpers.create_aircraft_view_with_watchlist(aircraft_data)
                     return embed, view
                 else:
