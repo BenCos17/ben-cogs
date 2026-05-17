@@ -400,14 +400,21 @@ class AdminCommands:
             return
 
         # Validate contact info as required by planespotters
+        # Normalize whitespace to handle multi-line or oddly separated inputs
         contact_ok = False
         try:
-            m = re.search(r"\(([^)]+)\)", user_agent)
+            normalized = re.sub(r"\s+", " ", user_agent).strip()
+            # parenthesized contact (preferred)
+            m = re.search(r"\(([^)]+)\)", normalized)
             if m:
                 inner = m.group(1)
-                if re.search(r"https?://", inner) or re.search(r"@", inner):
+                if re.search(r"https?://", inner) or re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", inner):
                     contact_ok = True
-            if not contact_ok and re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", user_agent):
+            # fallback: bare URL anywhere
+            if not contact_ok and re.search(r"https?://[\w./?&=#%+-]+", normalized):
+                contact_ok = True
+            # fallback: bare email anywhere
+            if not contact_ok and re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", normalized):
                 contact_ok = True
         except Exception:
             contact_ok = False
@@ -445,13 +452,16 @@ class AdminCommands:
             embed.add_field(name="User-Agent", value=f"`{ua}`", inline=False)
             # warn if missing contact info
             try:
-                m = re.search(r"\(([^)]+)\)", ua)
+                normalized = re.sub(r"\s+", " ", ua).strip()
                 has_contact = False
+                m = re.search(r"\(([^)]+)\)", normalized)
                 if m:
                     inner = m.group(1)
-                    if re.search(r"https?://", inner) or re.search(r"@", inner):
+                    if re.search(r"https?://", inner) or re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", inner):
                         has_contact = True
-                if not has_contact and re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", ua):
+                if not has_contact and re.search(r"https?://[\w./?&=#%+-]+", normalized):
+                    has_contact = True
+                if not has_contact and re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", normalized):
                     has_contact = True
                 if not has_contact:
                     embed.add_field(name="Warning", value="Configured User-Agent has no contact URL or email; Planespotters may reject it (403).", inline=False)
