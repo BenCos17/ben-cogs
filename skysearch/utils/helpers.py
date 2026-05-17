@@ -91,6 +91,74 @@ class HelperUtils:
             # In case config isn't available for some reason, fall back to aiohttp defaults.
             pass
         return headers
+
+    def _is_http_image_url(self, value) -> bool:
+        """Return True when value looks like an HTTP(S) image URL."""
+        if not isinstance(value, str):
+            return False
+        value = value.strip()
+        return value.startswith("http://") or value.startswith("https://")
+
+    def _extract_first_url(self, value):
+        """Extract first usable URL from a nested dict/list/string value."""
+        if isinstance(value, str):
+            return value if self._is_http_image_url(value) else None
+        if isinstance(value, dict):
+            for key in ("src", "url", "link", "href"):
+                candidate = value.get(key)
+                if self._is_http_image_url(candidate):
+                    return candidate
+            for nested in value.values():
+                candidate = self._extract_first_url(nested)
+                if candidate:
+                    return candidate
+            return None
+        if isinstance(value, list):
+            for item in value:
+                candidate = self._extract_first_url(item)
+                if candidate:
+                    return candidate
+        return None
+
+    def _extract_photo_from_planespotters_payload(self, payload):
+        """Extract best available photo URL and photographer from planespotters payload."""
+        photos = payload.get("photos") if isinstance(payload, dict) else None
+        if not isinstance(photos, list) or not photos:
+            return None, None
+
+        photo = photos[0]
+        if not isinstance(photo, dict):
+            return None, None
+
+        url = (
+            self._extract_first_url(photo.get("thumbnail_large"))
+            or self._extract_first_url(photo.get("thumbnail"))
+            or self._extract_first_url(photo.get("large"))
+            or self._extract_first_url(photo.get("full"))
+            or self._extract_first_url(photo.get("image"))
+            or self._extract_first_url(photo)
+        )
+        photographer = photo.get("photographer") if isinstance(photo.get("photographer"), str) else None
+        if photographer:
+            photographer = photographer.strip() or None
+
+        return (url, photographer) if url else (None, None)
+
+    def _extract_photo_from_aircraft_data(self, aircraft_data):
+        """Extract photo URL from aircraft payload when available."""
+        if not isinstance(aircraft_data, dict):
+            return None, None
+
+        for key in ("pic", "photo", "image", "img", "thumbnail", "thumb", "photo_url", "image_url"):
+            url = self._extract_first_url(aircraft_data.get(key))
+            if url:
+                photographer = aircraft_data.get("photographer")
+                if isinstance(photographer, str):
+                    photographer = photographer.strip() or None
+                else:
+                    photographer = None
+                return url, photographer
+        return None, None
     
     async def get_photo_by_hex(self, hex_id, registration=None):
         """
@@ -151,6 +219,12 @@ class HelperUtils:
                 
                 if response and 'aircraft' in response and response['aircraft']:
                     aircraft_data = response['aircraft'][0]
+
+                    # Some upstream responses include direct image fields.
+                    upstream_image_url, upstream_photographer = self._extract_photo_from_aircraft_data(aircraft_data)
+                    if upstream_image_url:
+                        return upstream_image_url, upstream_photographer
+
                     reg = aircraft_data.get('reg')
                     
                     if reg and reg != registration:  # Only try if we haven't already tried this registration
@@ -261,12 +335,9 @@ class HelperUtils:
         heading = aircraft_data.get('true_heading', None)
         if heading is not None:
             if 0 <= heading < 45:
-                emoji = ":arrow_upper_right:"
-            elif 45 <= heading < 90:
-                emoji = ":arrow_right:"
-            elif 90 <= heading < 135:
-                emoji = ":arrow_lower_right:"
-            elif 135 <= heading < 180:
+                            url, photographer = self._extract_photo_from_planespotters_payload(json_out)
+                            if url:
+                                return url, photographer
                 emoji = ":arrow_down:"
             elif 180 <= heading < 225:
                 emoji = ":arrow_lower_left:"
@@ -279,12 +350,9 @@ class HelperUtils:
             embed.add_field(name="Heading", value=f"{emoji} {heading}°", inline=True)
         
         # Add position information
-        lat = aircraft_data.get('lat', 'N/A')
-        lon = aircraft_data.get('lon', 'N/A')
-        if lat != 'N/A':
-            lat = round(float(lat), 2)
-            lat_dir = "N" if lat >= 0 else "S"
-            lat = f"{abs(lat)}{lat_dir}"
+                            url, photographer = self._extract_photo_from_planespotters_payload(json_out)
+                            if url:
+                                return url, photographer
         if lon != 'N/A':
             lon = round(float(lon), 2)
             lon_dir = "E" if lon >= 0 else "W"
@@ -315,12 +383,9 @@ class HelperUtils:
             "B7": "Space / trans-atmospheric vehicle", "C0": "No info available",
             "C1": "Emergency vehicle", "C2": "Service vehicle", "C3": "Point obstacle",
             "C4": "Cluster obstacle", "C5": "Line obstacle", "C6": "Reserved", "C7": "Reserved"
-        }
-        category = aircraft_data.get('category', None)
-        if category is not None:
-            category_label = category_code_to_label.get(category, "Unknown category")
-            embed.add_field(name="Category", value=f"{category_label}", inline=True)
-
+                                        url, photographer = self._extract_photo_from_planespotters_payload(json_out)
+                                        if url:
+                                            return url, photographer
         # Add operator information
         operator = aircraft_data.get('ownOp', None)
         if operator is not None:
