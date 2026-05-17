@@ -302,3 +302,13 @@ For questions or issues with API tracking:
 ---
 
 **SkySearch API Request Tracking** - Providing comprehensive insights into your airplanes.live API usage! 🚁📊
+
+## Planespotters User-Agent
+
+Note: When SkySearch fetches photos from `api.planespotters.net`, Planespotters requires a descriptive User-Agent that includes a contact URL or email for server-side clients. Owners can configure a planespotters-specific User-Agent using the admin commands in the cog. Example:
+
+```
+*aircraft setplanespottersuseragent MyTracker/1.0 (+https://example.com/contact)
+```
+
+After configuring, use `*aircraft debugapi` to validate that Planespotters responds correctly (the debug command checks the sample registration `N625UP`).
