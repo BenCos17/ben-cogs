@@ -48,7 +48,7 @@ class AircraftCommands:
             # Create view with buttons including Add to Watchlist
             view = self.helpers.create_aircraft_view_with_watchlist(aircraft_data)
 
-            await ctx.send(embed=embed, view=view)
+            await self.helpers.send_embed_with_default_thumbnail(ctx, embed, view=view)
         else:
             embed = discord.Embed(title=_("No results found for your query"), color=discord.Colour(0xff4545))
             embed.add_field(name=_("Details"), value=_("No aircraft information found or the response format is incorrect."), inline=False)
@@ -257,7 +257,7 @@ class AircraftCommands:
 
                 async def create_embed(aircraft):
                     embed = discord.Embed(title=f"Live military aircraft ({page_index + 1} of {len(aircraft_list)})", color=0xfffffe)
-                    embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                    embed.set_thumbnail(url="attachment://defaultairplane.png")
                     aircraft_description = aircraft.get('desc', 'N/A')  # Aircraft Description
                     aircraft_squawk = aircraft.get('squawk', 'N/A')  # Squawk
                     aircraft_lat = aircraft.get('lat', 'N/A')  # Latitude
@@ -288,7 +288,7 @@ class AircraftCommands:
                     await message.edit(embed=embed)
 
                 embed = await create_embed(aircraft_list[page_index])
-                message = await ctx.send(embed=embed)
+                message = await self.helpers.send_embed_with_default_thumbnail(ctx, embed)
 
                 await message.add_reaction("⬅️")
                 await message.add_reaction("❌")
@@ -332,7 +332,7 @@ class AircraftCommands:
                 
                 while True:
                     embed = discord.Embed(title=f"Limited Aircraft Data Displayed (Page {page_index + 1}/{len(pages)})", color=0xfffffe)
-                    embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                    embed.set_thumbnail(url="attachment://defaultairplane.png")
                     
                     for aircraft in pages[page_index]:
                         aircraft_description = aircraft.get('desc', 'N/A')  # Aircraft Description
@@ -351,7 +351,7 @@ class AircraftCommands:
 
                         embed.add_field(name=aircraft_description, value=aircraft_info, inline=False)
 
-                    message = await ctx.send(embed=embed)
+                    message = await self.helpers.send_embed_with_default_thumbnail(ctx, embed)
                     await message.add_reaction("⬅️")  # Adding a reaction to scroll to the previous page
                     await message.add_reaction("❌")  # Adding a reaction to close
                     await message.add_reaction("➡️")  # Adding a reaction to scroll to the next page
@@ -395,7 +395,7 @@ class AircraftCommands:
                 
                 while True:
                     embed = discord.Embed(title=f"Private ICAO Aircraft Data Displayed (Page {page_index + 1}/{len(pages)})", color=0xfffffe)
-                    embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                    embed.set_thumbnail(url="attachment://defaultairplane.png")
                     
                     for aircraft in pages[page_index]:
                         aircraft_description = aircraft.get('desc', 'N/A')  # Aircraft Description
@@ -414,7 +414,7 @@ class AircraftCommands:
 
                         embed.add_field(name=aircraft_description, value=aircraft_info, inline=False)
 
-                    message = await ctx.send(embed=embed)
+                    message = await self.helpers.send_embed_with_default_thumbnail(ctx, embed)
                     await message.add_reaction("⬅️")  # Adding a reaction to scroll to the previous page
                     await message.add_reaction("❌")  # Adding a reaction to close
                     await message.add_reaction("➡️")  # Adding a reaction to scroll to the next page
@@ -494,7 +494,7 @@ class AircraftCommands:
             
             # Create a custom embed for closest aircraft with distance info
             embed = discord.Embed(title="Closest Aircraft Found", color=0xfffffe)
-            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            embed.set_thumbnail(url="attachment://defaultairplane.png")
             
             # Add distance information if available
             distance_nmi = aircraft_data.get('dst', 'Unknown')
@@ -590,13 +590,13 @@ class AircraftCommands:
                 embed.set_footer(text=f"Photo by {photographer}")
             else:
                 # Set default aircraft image when no photo is available
-                embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                embed.set_thumbnail(url="attachment://defaultairplane.png")
                 embed.set_footer(text="No photo available")
             
             # Create view with buttons including Add to Watchlist
             view = self.helpers.create_aircraft_view_with_watchlist(aircraft_data)
             
-            await ctx.send(embed=embed, view=view)
+            await self.helpers.send_embed_with_default_thumbnail(ctx, embed, view=view)
             
         elif response and 'aircraft' in response and not response['aircraft']:
             embed = discord.Embed(title=_("No Aircraft Found"), description=_("No aircraft found within {radius} nautical miles of the specified location.").format(radius=radius), color=0xff4545)
@@ -657,7 +657,7 @@ class AircraftCommands:
                     if self.message:
                         await self.message.edit(embed=embed, view=self)
                     else:
-                        self.message = await self.ctx.send(embed=embed, view=self)
+                        self.message = await self.parent.helpers.send_embed_with_default_thumbnail(self.ctx, embed, view=self)
                 async def interaction_check(self, interaction: discord.Interaction) -> bool:
                     return interaction.user == self.ctx.author
                 @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="prev", row=0)

@@ -202,7 +202,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         data = await self.api.get_stats()
 
         embed = discord.Embed(title=_("SkySearch Statistics"), description=_("Consolidated statistics and data sources for SkySearch."), color=0xfffffe)
-        embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+        embed.set_thumbnail(url="attachment://defaultairplane.png")
 
         if data:
             if "beast" in data:
@@ -234,7 +234,18 @@ class Skysearch(commands.Cog, DashboardIntegration):
         embed.add_field(name=_("Runway data"), value=_("Runway data is powered by the [airportdb.io](https://airportdb.io) API service"), inline=True)
         embed.add_field(name=_("Mapping and imagery"), value=_("Mapping and ground imagery powered by [Google Maps](https://maps.google.com) and the [Maps Static API](https://developers.google.com/maps/documentation/maps-static)"), inline=False)
 
-        await ctx.send(embed=embed)
+        icon_file = None
+        try:
+            icon_path = self.get_airplane_icon_path()
+            if icon_path.exists():
+                icon_file = discord.File(str(icon_path), filename="defaultairplane.png")
+        except Exception:
+            icon_file = None
+
+        if icon_file is not None:
+            await ctx.send(embed=embed, file=icon_file)
+        else:
+            await ctx.send(embed=embed)
 
     @commands.guild_only()
     @skysearch.command(name='apistats', help=_('View comprehensive API request statistics, performance metrics, and usage analytics'))
@@ -908,9 +919,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                     allowed_mentions = discord.AllowedMentions(roles=True)
                             sent_message = await asyncio.wait_for(
                                 self._run_background_io(
-                                    alert_channel.send(
+                                    self.helpers.send_embed_with_default_thumbnail(
+                                        alert_channel,
+                                        message_data.get('embed'),
                                         content=message_data.get('content'),
-                                        embed=message_data.get('embed'),
                                         view=message_data.get('view'),
                                         allowed_mentions=allowed_mentions,
                                     )
@@ -1176,7 +1188,13 @@ class Skysearch(commands.Cog, DashboardIntegration):
         allowed_mentions = discord.AllowedMentions(roles=True) if role_mention else None
         await asyncio.wait_for(
             self._run_background_io(
-                channel.send(content=role_mention or None, embed=embed, view=view, allowed_mentions=allowed_mentions)
+                self.helpers.send_embed_with_default_thumbnail(
+                    channel,
+                    embed,
+                    content=role_mention or None,
+                    view=view,
+                    allowed_mentions=allowed_mentions,
+                )
             ),
             timeout=10.0,
         )
@@ -1586,9 +1604,10 @@ class Skysearch(commands.Cog, DashboardIntegration):
                     allowed_mentions = discord.AllowedMentions(roles=True)
             sent_message = await asyncio.wait_for(
                 self._run_background_io(
-                    alert_channel.send(
+                    self.helpers.send_embed_with_default_thumbnail(
+                        alert_channel,
+                        message_data.get('embed'),
                         content=message_data.get('content'),
-                        embed=message_data.get('embed'),
                         view=message_data.get('view'),
                         allowed_mentions=allowed_mentions
                     )
@@ -1817,12 +1836,20 @@ class Skysearch(commands.Cog, DashboardIntegration):
                 allowed_mentions = discord.AllowedMentions(roles=[role_obj])
             else:
                 allowed_mentions = discord.AllowedMentions(roles=True)
-        sent_message = await alert_channel.send(
-            content=message_data.get('content'),
-            embed=message_data.get('embed'),
-            view=message_data.get('view'),
-            allowed_mentions=allowed_mentions
-        )
+        if message_data.get('embed') is not None:
+            sent_message = await self.helpers.send_embed_with_default_thumbnail(
+                alert_channel,
+                message_data.get('embed'),
+                content=message_data.get('content'),
+                view=message_data.get('view'),
+                allowed_mentions=allowed_mentions,
+            )
+        else:
+            sent_message = await alert_channel.send(
+                content=message_data.get('content'),
+                view=message_data.get('view'),
+                allowed_mentions=allowed_mentions
+            )
 
         # Let other cogs react after the message is sent
         await self.squawk_api.run_post_send(guild, fake_aircraft, squawk_code, sent_message)

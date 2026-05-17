@@ -533,6 +533,25 @@ class AirportCommands:
         self.helpers = HelperUtils(cog)
         self.xml_parser = XMLParser()
 
+    def _get_default_airplane_file(self):
+        """Return the local default airplane image as a Discord file when available."""
+        try:
+            icon_path = self.cog.get_airplane_icon_path()
+            if icon_path.exists():
+                return discord.File(str(icon_path), filename="defaultairplane.png")
+        except Exception:
+            return None
+        return None
+
+    async def _send_embed(self, ctx, embed: discord.Embed, **kwargs):
+        """Send an embed and attach the local default thumbnail image when needed."""
+        thumbnail_url = embed.to_dict().get("thumbnail", {}).get("url")
+        if thumbnail_url == "attachment://defaultairplane.png":
+            icon_file = self._get_default_airplane_file()
+            if icon_file is not None:
+                return await ctx.send(embed=embed, file=icon_file, **kwargs)
+        return await ctx.send(embed=embed, **kwargs)
+
     async def _avwx_fetch_bundle(self, station_code: str):
         """Fetch AVWX summary, METAR, and TAF data for a station."""
         station_code = station_code.upper().strip()
@@ -656,7 +675,7 @@ class AirportCommands:
         
         if airport_data:
             embed = discord.Embed(title=f"Airport Information - {airport_code}", color=0xfffffe)
-            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            embed.set_thumbnail(url="attachment://defaultairplane.png")
             
             # Basic airport information
             name = airport_data.get('name', 'N/A')
@@ -694,7 +713,7 @@ class AirportCommands:
                 google_maps_url = f"https://www.google.com/maps?q={lat},{lon}"
                 view.add_item(discord.ui.Button(label="View on Google Maps", emoji="🗺️", url=google_maps_url, style=discord.ButtonStyle.link))
             
-            await ctx.send(embed=embed, view=view)
+            await self._send_embed(ctx, embed, view=view)
         else:
             embed = discord.Embed(title="Airport Not Found", description=f"No airport found with code {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed)
@@ -718,7 +737,7 @@ class AirportCommands:
         
         if runway_data and runway_data.get('runways'):
             embed = discord.Embed(title=f"Runway Information - {airport_code}", color=0xfffffe)
-            embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+            embed.set_thumbnail(url="attachment://defaultairplane.png")
             
             runways = runway_data['runways']
             for runway in runways:
@@ -733,7 +752,7 @@ class AirportCommands:
                 
                 embed.add_field(name=f"Runway {runway_name}", value=runway_info, inline=False)
             
-            await ctx.send(embed=embed)
+            await self._send_embed(ctx, embed)
         else:
             embed = discord.Embed(title="No Runway Data", description=f"No runway information found for {airport_code}.", color=0xff4545)
             await ctx.send(embed=embed)
@@ -809,7 +828,7 @@ class AirportCommands:
                 
                 if weather_data:
                     embed = discord.Embed(title=f"Weather Forecast - {airport_code}", color=0xfffffe)
-                    embed.set_thumbnail(url="https://www.beehive.systems/hubfs/Icon%20Packs/White/airplane.png")
+                    embed.set_thumbnail(url="attachment://defaultairplane.png")
                     
                     # Current weather
                     current = weather_data.get('current', {})
@@ -833,7 +852,7 @@ class AirportCommands:
                             day_info = f"**Max:** {max_temp}°C\n**Min:** {min_temp}°C\n**Condition:** {condition}"
                             embed.add_field(name=date, value=day_info, inline=True)
                     
-                    await ctx.send(embed=embed)
+                    await self._send_embed(ctx, embed)
                 else:
                     embed = discord.Embed(title="Weather Data Unavailable", description=f"Weather forecast data is not available for {airport_code}.", color=0xff4545)
                     await ctx.send(embed=embed)

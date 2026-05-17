@@ -14,6 +14,28 @@ class HelperUtils:
     
     def __init__(self, cog):
         self.cog = cog
+
+    def get_default_airplane_file(self):
+        """Return the local default airplane image as a Discord file when available."""
+        try:
+            icon_path = self.cog.get_airplane_icon_path()
+            if icon_path.exists():
+                return discord.File(str(icon_path), filename="defaultairplane.png")
+        except Exception:
+            return None
+        return None
+
+    async def send_embed_with_default_thumbnail(self, ctx, embed: discord.Embed, **kwargs):
+        """Send an embed and attach the local default thumbnail image when needed."""
+        if "file" in kwargs or "files" in kwargs:
+            return await ctx.send(embed=embed, **kwargs)
+
+        thumbnail_url = embed.to_dict().get("thumbnail", {}).get("url")
+        if thumbnail_url == "attachment://defaultairplane.png":
+            icon_file = self.get_default_airplane_file()
+            if icon_file is not None:
+                return await ctx.send(embed=embed, file=icon_file, **kwargs)
+        return await ctx.send(embed=embed, **kwargs)
     
     def _ensure_http_client(self):
         """Ensure HTTP client is initialized."""
@@ -319,18 +341,8 @@ class HelperUtils:
             embed.set_thumbnail(url=image_url)
             embed.set_footer(text=f"Photo by {photographer}")
         else:
-            # Set default aircraft image when no photo is available
-            try:
-                # Try to use local icon first
-                icon_path = self.cog.get_airplane_icon_path()
-                if icon_path.exists():
-                    embed.set_thumbnail(url=f"attachment://defaultairplane.png")
-                else:
-                    # Fallback to external URL
-                    embed.set_thumbnail(url="https://raw.githubusercontent.com/BenCos17/ben-cogs/main/skysearch/data/defaultairplane.png")
-            except Exception:
-                # Fallback to external URL
-                embed.set_thumbnail(url="https://raw.githubusercontent.com/BenCos17/ben-cogs/main/skysearch/data/defaultairplane.png")
+            # Attachment-based fallback is resolved by send_embed_with_default_thumbnail.
+            embed.set_thumbnail(url="attachment://defaultairplane.png")
             embed.set_footer(text="No photo available")
 
         return embed
