@@ -3,6 +3,32 @@ import discord
 import wtforms
 from redbot.core import commands
 import datetime
+import html
+import logging
+from urllib.parse import quote_plus, urlparse
+
+
+log = logging.getLogger("red.skysearch.dashboard")
+
+
+def _esc(value: typing.Any) -> str:
+    """Escape dynamic values before inserting into HTML."""
+    return html.escape(str(value), quote=True)
+
+
+def _safe_https_url(url: typing.Any) -> str:
+    """Allow only well-formed HTTPS URLs for HTML href/src attributes."""
+    if not url:
+        return ""
+    try:
+        parsed = urlparse(str(url).strip())
+        if parsed.scheme.lower() != "https":
+            return ""
+        if not parsed.netloc:
+            return ""
+        return _esc(parsed.geturl())
+    except Exception:
+        return ""
 
 # Decorator for dashboard pages
 
@@ -156,13 +182,14 @@ class DashboardIntegration:
                 }
             }
             
-        except Exception as e:
+        except Exception:
+            log.exception("Error loading API statistics in dashboard")
             return {
                 "status": 1,
                 "web_content": {
-                    "source": f"<p>Error loading API statistics: {str(e)}</p>"
+                    "source": "<p>Error loading API statistics.</p>"
                 },
-                "notifications": [{"message": f"Error loading API statistics: {str(e)}", "category": "error"}]
+                "notifications": [{"message": "Error loading API statistics.", "category": "error"}]
             }
 
     @dashboard_page(name="lookup", description="SkySearch Aircraft Lookup", methods=("GET", "POST"), context_ids=["guild_id"])
@@ -530,45 +557,64 @@ class DashboardIntegration:
                                 asset_intelligence_html = f'''
                                 <div style="margin-top: 20px;">
                                     <h4 style="color: #000000; margin-bottom: 10px;">Asset Intelligence</h4>
-                                    {chr(10).join([f'<p style="margin: 5px 0;">{intel}</p>' for intel in asset_intelligence])}
+                                    {chr(10).join([f'<p style="margin: 5px 0;">{_esc(intel)}</p>' for intel in asset_intelligence])}
                                 </div>
                                 '''
-                            
-                            globe_link = f"https://globe.airplanes.live/?icao={icao}"
+
+                            safe_description = _esc(description)
+                            safe_callsign = _esc(callsign)
+                            safe_registration = _esc(registration)
+                            safe_icao = _esc(icao)
+                            safe_aircraft_model = _esc(aircraft_model)
+                            safe_category_text = _esc(category_text)
+                            safe_operator = _esc(operator)
+                            safe_altitude_text = _esc(altitude_text)
+                            safe_speed_text = _esc(speed_text)
+                            safe_heading_text = _esc(heading_text)
+                            safe_position_text = _esc(position_text)
+                            safe_squawk_style = _esc(squawk_style)
+                            safe_squawk_code = _esc(squawk_code)
+                            safe_altitude_trend_text = _esc(altitude_trend_text)
+                            safe_last_seen_text = _esc(last_seen_text)
+                            safe_last_seen_pos_text = _esc(last_seen_pos_text)
+                            safe_emergency_status = _esc(emergency_status)
+                            safe_image_url = _safe_https_url(image_url)
+                            safe_photographer = _esc(photographer) if photographer else ""
+                            safe_globe_link = _safe_https_url(f"https://globe.airplanes.live/?icao={quote_plus(str(icao or ''))}")
                             
                             result_html += f'''
                             <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background-color: #808080; color: #000000;">
-                                <h3 style="margin-top: 0; color: #000000; border-bottom: 2px solid #666; padding-bottom: 10px;">{description}</h3>
+                                <h3 style="margin-top: 0; color: #000000; border-bottom: 2px solid #666; padding-bottom: 10px;">{safe_description}</h3>
                                 
                                 <div style="display: flex; gap: 30px;">
                                     <div style="flex: 1;">
                                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                                             <div>
                                                 <h4 style="color: #000000; margin-bottom: 10px;">Flight Information</h4>
-                                                <p><strong>Callsign:</strong> {callsign}</p>
-                                                <p><strong>Registration:</strong> {registration}</p>
-                                                <p><strong>ICAO:</strong> {icao}</p>
-                                                <p><strong>Model:</strong> {aircraft_model}</p>
-                                                <p><strong>Category:</strong> {category_text}</p>
-                                                <p><strong>Operated by:</strong> {operator}</p>
+                                                <p><strong>Callsign:</strong> {safe_callsign}</p>
+                                                <p><strong>Registration:</strong> {safe_registration}</p>
+                                                <p><strong>ICAO:</strong> {safe_icao}</p>
+                                                <p><strong>Model:</strong> {safe_aircraft_model}</p>
+                                                <p><strong>Category:</strong> {safe_category_text}</p>
+                                                <p><strong>Operated by:</strong> {safe_operator}</p>
                                             </div>
                                             
                                             <div>
                                                 <h4 style="color: #000000; margin-bottom: 10px;">Position & Navigation</h4>
-                                                <p><strong>Altitude:</strong> {altitude_text}</p>
-                                                <p><strong>Speed:</strong> {speed_text}</p>
-                                                <p><strong>Heading:</strong> {heading_text}</p>
-                                                <p><strong>Position:</strong> {position_text}</p>
-                                                <p><strong>Squawk:</strong> <span style="{squawk_style}">{squawk_code}</span></p>
-                                                <p><strong>Altitude Trend:</strong> {altitude_trend_text}</p>
+                                                <p><strong>Altitude:</strong> {safe_altitude_text}</p>
+                                                <p><strong>Speed:</strong> {safe_speed_text}</p>
+                                                <p><strong>Heading:</strong> {safe_heading_text}</p>
+                                                <p><strong>Position:</strong> {safe_position_text}</p>
+                                                <p><strong>Squawk:</strong> <span style="{safe_squawk_style}">{safe_squawk_code}</span></p>
+                                                <p><strong>Altitude Trend:</strong> {safe_altitude_trend_text}</p>
                                             </div>
                                         </div>
                                         
                                         <div style="margin-top: 20px;">
                                             <h4 style="color: #000000; margin-bottom: 10px;">Timing Information</h4>
-                                            <p><strong>Last signal:</strong> {last_seen_text}</p>
-                                            <p><strong>Last position:</strong> {last_seen_pos_text}</p>
-                                            <p><strong>Flight status:</strong> {emergency_status}</p>
+                                            <p><strong>Last signal:</strong> {safe_last_seen_text}</p>
+                                            <p><strong>Last position:</strong> {safe_last_seen_pos_text}</p>
+                                            <p><strong>Flight status:</strong> {safe_emergency_status}</p>
                                         </div>
                                         
                                         {asset_intelligence_html}
@@ -576,13 +622,13 @@ class DashboardIntegration:
                                     
                                     <div style="flex: 0 0 250px;">
                                         <h4 style="color: #000000; margin-bottom: 10px;">Aircraft Photo</h4>
-                                        {f'<img src="{image_url}" alt="Aircraft photo" style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #666;">' if image_url else '<div style="background-color: #666; padding: 40px; text-align: center; border-radius: 8px;"><p style="color: #999; font-style: italic;">No photo available</p></div>'}
-                                        {f'<p style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;">Photo by: {photographer}</p>' if photographer else ''}
+                                        {f'<img src="{safe_image_url}" alt="Aircraft photo" style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #666;">' if safe_image_url else '<div style="background-color: #666; padding: 40px; text-align: center; border-radius: 8px;"><p style="color: #999; font-style: italic;">No photo available</p></div>'}
+                                        {f'<p style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;">Photo by: {safe_photographer}</p>' if safe_photographer else ''}
                                     </div>
                                 </div>
                                 
                                 <div style="margin-top: 20px; text-align: center;">
-                                    <a href="{globe_link}" target="_blank" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View on Globe</a>
+                                    <a href="{safe_globe_link}" target="_blank" rel="noopener noreferrer" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View on Globe</a>
                                 </div>
                             </div>
                             '''
@@ -606,10 +652,11 @@ class DashboardIntegration:
                     </div>
                     '''
                     
-            except Exception as e:
+            except Exception:
+                log.exception("Error during dashboard aircraft lookup")
                 result_html = f'''
                 <div style="margin-top: 20px; padding: 10px; background-color: #2b1518; border: 1px solid #5a1e24; border-radius: 4px; color: #ffb3b8;">
-                    <strong>Error:</strong> An error occurred while searching: {str(e)}
+                    <strong>Error:</strong> An error occurred while searching.
                 </div>
                 '''
         
