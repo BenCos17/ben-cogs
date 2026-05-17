@@ -402,6 +402,7 @@ class AdminCommands:
         # Validate contact info as required by planespotters
         # Normalize whitespace to handle multi-line or oddly separated inputs
         contact_ok = False
+        auto_fixed = None
         try:
             normalized = re.sub(r"\s+", " ", user_agent).strip()
             # parenthesized contact (preferred)
@@ -411,11 +412,14 @@ class AdminCommands:
                 if re.search(r"https?://", inner) or re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", inner):
                     contact_ok = True
             # fallback: bare URL anywhere
-            if not contact_ok and re.search(r"https?://[\w./?&=#%+-]+", normalized):
-                contact_ok = True
-            # fallback: bare email anywhere
-            if not contact_ok and re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", normalized):
-                contact_ok = True
+            if not contact_ok:
+                url_match = re.search(r"https?://[\w./?&=#%+-]+", normalized)
+                email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", normalized)
+                if url_match or email_match:
+                    # If contact isn't parenthesized, auto-wrap and accept
+                    contact = (url_match.group(0) if url_match else email_match.group(0))
+                    auto_fixed = f"{normalized} (+{contact})"
+                    contact_ok = True
         except Exception:
             contact_ok = False
 
@@ -430,6 +434,10 @@ class AdminCommands:
             )
             await ctx.send(embed=embed)
             return
+
+        # If we auto-fixed the UA to parenthesize the contact, save that corrected value instead
+        if auto_fixed:
+            user_agent = auto_fixed
 
         await self.cog.config.planespotters_user_agent.set(user_agent)
         embed = discord.Embed(
