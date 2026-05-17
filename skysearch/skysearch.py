@@ -632,6 +632,24 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Clear the configured User-Agent header."""
         await self.admin_commands.clear_user_agent(ctx)
 
+    @commands.is_owner()
+    @aircraft_group.command(name="setplanespottersuseragent")
+    async def aircraft_set_planespotters_useragent(self, ctx, *, user_agent: str):
+        """Set a Planespotters-specific User-Agent header (must include contact)."""
+        await self.admin_commands.set_planespotters_user_agent(ctx, user_agent)
+
+    @commands.is_owner()
+    @aircraft_group.command(name="checkplanespottersuseragent")
+    async def aircraft_check_planespotters_useragent(self, ctx):
+        """Show the configured Planespotters-specific User-Agent."""
+        await self.admin_commands.check_planespotters_user_agent(ctx)
+
+    @commands.is_owner()
+    @aircraft_group.command(name="clearplanespottersuseragent")
+    async def aircraft_clear_planespotters_useragent(self, ctx):
+        """Clear the Planespotters-specific User-Agent."""
+        await self.admin_commands.clear_planespotters_user_agent(ctx)
+
     # Airport commands
     @commands.guild_only()
     @commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)
