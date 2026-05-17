@@ -387,6 +387,95 @@ class AdminCommands:
         )
         await ctx.send(embed=embed)
 
+    async def set_planespotters_user_agent(self, ctx, user_agent: str):
+        """Set the User-Agent header specifically used for Planespotters requests."""
+        user_agent = (user_agent or "").strip()
+        if not user_agent:
+            embed = discord.Embed(
+                title="Planespotters User-Agent Error",
+                description="User-Agent cannot be empty. Use `clearplanespottersuseragent` to clear it.",
+                color=0xff4545,
+            )
+            await ctx.send(embed=embed)
+            return
+
+        # Validate contact info as required by planespotters
+        contact_ok = False
+        try:
+            m = re.search(r"\(([^)]+)\)", user_agent)
+            if m:
+                inner = m.group(1)
+                if re.search(r"https?://", inner) or re.search(r"@", inner):
+                    contact_ok = True
+            if not contact_ok and re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", user_agent):
+                contact_ok = True
+        except Exception:
+            contact_ok = False
+
+        if not contact_ok:
+            embed = discord.Embed(
+                title="User-Agent Error: Contact Required",
+                description=(
+                    "Planespotters requires server User-Agent strings to include a contact URL or email. "
+                    "Example: `MyFlightTracker/1.2 (+https://example.com/contact)`"
+                ),
+                color=0xff4545,
+            )
+            await ctx.send(embed=embed)
+            return
+
+        await self.cog.config.planespotters_user_agent.set(user_agent)
+        embed = discord.Embed(
+            title="Planespotters User-Agent Updated",
+            description="Planespotters-specific User-Agent has been configured.",
+            color=0x2BBD8E,
+        )
+        embed.add_field(name="User-Agent", value=f"`{user_agent}`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def check_planespotters_user_agent(self, ctx):
+        """Show the currently configured Planespotters User-Agent."""
+        ua = await self.cog.config.planespotters_user_agent()
+        if ua:
+            embed = discord.Embed(
+                title="Planespotters User-Agent",
+                description="✅ Planespotters-specific User-Agent is configured.",
+                color=0x2BBD8E,
+            )
+            embed.add_field(name="User-Agent", value=f"`{ua}`", inline=False)
+            # warn if missing contact info
+            try:
+                m = re.search(r"\(([^)]+)\)", ua)
+                has_contact = False
+                if m:
+                    inner = m.group(1)
+                    if re.search(r"https?://", inner) or re.search(r"@", inner):
+                        has_contact = True
+                if not has_contact and re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", ua):
+                    has_contact = True
+                if not has_contact:
+                    embed.add_field(name="Warning", value="Configured User-Agent has no contact URL or email; Planespotters may reject it (403).", inline=False)
+            except Exception:
+                pass
+        else:
+            embed = discord.Embed(
+                title="Planespotters User-Agent",
+                description="ℹ️ No Planespotters-specific User-Agent is configured. The general User-Agent or a default will be used.",
+                color=0xfffffe,
+            )
+            embed.add_field(name="Set", value="Use `*aircraft setplanespottersuseragent <value>`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def clear_planespotters_user_agent(self, ctx):
+        """Clear the Planespotters-specific User-Agent."""
+        await self.cog.config.planespotters_user_agent.clear()
+        embed = discord.Embed(
+            title="Planespotters User-Agent Cleared",
+            description="Planespotters-specific User-Agent cleared.",
+            color=0xff4545,
+        )
+        await ctx.send(embed=embed)
+
     async def debug_api(self, ctx):
         """Debug API key and connection issues - sends detailed info via DM."""
         try:
@@ -498,7 +587,7 @@ class AdminCommands:
             try:
                 # Get headers the cog would send to planespotters
                 try:
-                    ps_headers = await self.cog.helpers._get_http_headers()
+                    ps_headers = await self.cog.helpers._get_http_headers(service="planespotters")
                 except Exception:
                     ps_headers = {}
                 debug_info += f"**Headers to Planespotters:**\n```{ps_headers}```\n"

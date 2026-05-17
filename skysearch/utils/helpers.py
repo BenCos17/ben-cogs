@@ -84,19 +84,29 @@ class HelperUtils:
         except Exception:
             return False
 
-    async def _get_http_headers(self) -> dict:
-        """Get outbound HTTP headers (includes configured User-Agent if set)."""
+    async def _get_http_headers(self, service: str | None = None) -> dict:
+        """Get outbound HTTP headers (includes configured User-Agent if set).
+
+        If `service` is "planespotters", prefer a planespotters-specific User-Agent
+        if configured via `planespotters_user_agent`.
+        """
         headers = {}
         try:
+            # Service-specific override for Planespotters
+            if service == "planespotters":
+                ua = await self.cog.config.planespotters_user_agent()
+                if ua:
+                    headers["User-Agent"] = ua
+                    return headers
+
+            # Fall back to the general configured user agent
             user_agent = await self.cog.config.user_agent()
             if user_agent:
                 headers["User-Agent"] = user_agent
             else:
-                # Planespotters requires a descriptive User-Agent for server-side clients.
-                # Provide a reasonable default including a contact URL; owners may override via config.
+                # Default descriptive User-Agent with contact URL
                 headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/ben-cogs/skysearch)"
         except Exception:
-            # If config lookup fails, still set a descriptive default User-Agent.
             headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/ben-cogs/skysearch)"
         return headers
     
@@ -121,7 +131,7 @@ class HelperUtils:
                 url_req = f'https://api.planespotters.net/pub/photos/hex/{hex_id}'
                 async with self.cog._http_client.get(
                     url_req,
-                    headers=await self._get_http_headers(),
+                    headers=await self._get_http_headers(service="planespotters"),
                 ) as response:
                     if response.status != 200:
                         log.debug("Planespotters hex request %s returned status %s", url_req, response.status)
@@ -151,7 +161,7 @@ class HelperUtils:
                 url_req = f'https://api.planespotters.net/pub/photos/reg/{registration}'
                 async with self.cog._http_client.get(
                     url_req,
-                    headers=await self._get_http_headers(),
+                    headers=await self._get_http_headers(service="planespotters"),
                 ) as response:
                     if response.status != 200:
                         log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
@@ -193,7 +203,7 @@ class HelperUtils:
                             url_req = f'https://api.planespotters.net/pub/photos/reg/{reg}'
                             async with self.cog._http_client.get(
                                 url_req,
-                                headers=await self._get_http_headers(),
+                                headers=await self._get_http_headers(service="planespotters"),
                             ) as response:
                                     if response.status != 200:
                                         log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
