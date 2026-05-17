@@ -411,15 +411,27 @@ class AdminCommands:
                 inner = m.group(1)
                 if re.search(r"https?://", inner) or re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", inner):
                     contact_ok = True
-            # fallback: bare URL anywhere
+            # fallback: accept simple indicators (contains '@' or 'http') for robustness
             if not contact_ok:
                 url_match = re.search(r"https?://[\w./?&=#%+-]+", normalized)
                 email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", normalized)
                 if url_match or email_match:
-                    # If contact isn't parenthesized, auto-wrap and accept
                     contact = (url_match.group(0) if url_match else email_match.group(0))
                     auto_fixed = f"{normalized} (+{contact})"
                     contact_ok = True
+                else:
+                    # Very permissive fallback: any '@' or 'http' substring counts; try to extract token
+                    if "@" in normalized or "http" in normalized:
+                        # Extract first token that looks like an email or url, falling back to the whole UA
+                        tokens = normalized.split()
+                        found = None
+                        for t in tokens:
+                            if "@" in t or t.startswith("http"):
+                                found = t
+                                break
+                        contact = found if found else (tokens[-1] if tokens else normalized)
+                        auto_fixed = f"{normalized} (+{contact})"
+                        contact_ok = True
         except Exception:
             contact_ok = False
 
