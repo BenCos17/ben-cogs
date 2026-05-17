@@ -436,14 +436,22 @@ class AdminCommands:
             contact_ok = False
 
         if not contact_ok:
-            embed = discord.Embed(
-                title="User-Agent Error: Contact Required",
-                description=(
-                    "Planespotters requires server User-Agent strings to include a contact URL or email. "
-                    "Example: `MyFlightTracker/1.2 (+https://example.com/contact)`"
-                ),
-                color=0xff4545,
+            # Provide diagnostic info to help owners troubleshoot why their UA was rejected
+            desc = (
+                "Planespotters requires server User-Agent strings to include a contact URL or email. "
+                "Example: `MyFlightTracker/1.2 (+https://example.com/contact)`"
             )
+            embed = discord.Embed(title="User-Agent Error: Contact Required", description=desc, color=0xff4545)
+            try:
+                norm = normalized if 'normalized' in locals() else user_agent
+                embed.add_field(name="Normalized input", value=norm, inline=False)
+                # Show whether a URL/email regex matched (for debugging)
+                urlm = url_match.group(0) if 'url_match' in locals() and url_match else None
+                mailm = email_match.group(0) if 'email_match' in locals() and email_match else None
+                embed.add_field(name="Detected URL", value=urlm or "(none)", inline=True)
+                embed.add_field(name="Detected Email", value=mailm or "(none)", inline=True)
+            except Exception:
+                pass
             await ctx.send(embed=embed)
             return
 
