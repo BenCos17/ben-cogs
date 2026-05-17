@@ -9,6 +9,13 @@ from urllib.parse import quote_plus, urlparse, parse_qs, urlencode, urlunparse
 import asyncio
 
 
+FEEDER_FETCH_TIMEOUT_SECONDS = 10
+FEEDER_MAX_RESPONSE_BYTES = 1_000_000
+FEEDER_ALLOWED_DOMAINS: tuple[str, ...] = (
+    "airplanes.live",
+)
+
+
 class HelperUtils:
     """Helper utilities for SkySearch."""
     
@@ -41,6 +48,37 @@ class HelperUtils:
         """Ensure HTTP client is initialized."""
         if not hasattr(self.cog, '_http_client'):
             self.cog._http_client = aiohttp.ClientSession()
+
+    def _get_allowed_feeder_domains(self) -> tuple[str, ...]:
+        """Return normalized feeder URL allowlist domains."""
+        domains = list(FEEDER_ALLOWED_DOMAINS)
+
+        # Optional runtime extension point for additional allowed domains.
+        extra_domains = getattr(self.cog, "feeder_allowed_domains", None)
+        if isinstance(extra_domains, (list, tuple, set)):
+            domains.extend(str(domain) for domain in extra_domains if domain)
+
+        normalized = []
+        for domain in domains:
+            cleaned = str(domain).lower().strip().strip(".")
+            if cleaned and cleaned not in normalized:
+                normalized.append(cleaned)
+
+        return tuple(normalized)
+
+    def _is_allowed_feeder_url(self, url: str) -> bool:
+        """Allow feeder URL fetches only over HTTPS from allowed domains and subdomains."""
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme.lower() != "https":
+                return False
+            host = (parsed.hostname or "").lower().strip(".")
+            for domain in self._get_allowed_feeder_domains():
+                if host == domain or host.endswith(f".{domain}"):
+                    return True
+            return False
+        except Exception:
+            return False
 
     async def _get_http_headers(self) -> dict:
         """Get outbound HTTP headers (includes configured User-Agent if set)."""
@@ -594,14 +632,47 @@ class HelperUtils:
         """
         # Check if input looks like a URL
         if json_input.startswith(('http://', 'https://')):
+            if not self._is_allowed_feeder_url(json_input):
+                allowed_domains = ", ".join(self._get_allowed_feeder_domains())
+                raise ValueError(
+                    f"Only HTTPS URLs from approved domains are allowed ({allowed_domains}). "
+                    "If you need another site, ask the bot owner to whitelist that domain."
+                )
+
             # Fetch the JSON data from the URL
             self._ensure_http_client()
-            
-            async with self.cog._http_client.get(json_input, headers=await self._get_http_headers()) as response:
+
+            timeout = aiohttp.ClientTimeout(total=FEEDER_FETCH_TIMEOUT_SECONDS)
+            async with self.cog._http_client.get(
+                json_input,
+                headers=await self._get_http_headers(),
+                allow_redirects=False,
+                timeout=timeout,
+            ) as response:
                 if response.status != 200:
                     raise ValueError(f"Failed to fetch JSON data. Status: {response.status}")
-                
-                return await response.json()
+
+                # Enforce response size limits to avoid abuse.
+                content_length = response.headers.get("Content-Length")
+                if content_length:
+                    try:
+                        content_length_int = int(content_length)
+                    except ValueError:
+                        # Ignore malformed Content-Length and fall back to bounded read.
+                        content_length_int = None
+                    if content_length_int is not None and content_length_int > FEEDER_MAX_RESPONSE_BYTES:
+                        raise ValueError("JSON payload is too large.")
+
+                body = await response.content.read(FEEDER_MAX_RESPONSE_BYTES + 1)
+                if len(body) > FEEDER_MAX_RESPONSE_BYTES:
+                    raise ValueError("JSON payload is too large.")
+
+                try:
+                    return json.loads(body.decode("utf-8"))
+                except UnicodeDecodeError:
+                    raise ValueError("Response is not valid UTF-8 JSON.")
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"Invalid JSON format from URL: {str(e)}")
         else:
             # Try to parse as direct JSON
             try:
