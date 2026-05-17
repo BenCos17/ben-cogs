@@ -493,6 +493,39 @@ class AdminCommands:
                 except Exception as e:
                     debug_info += f"❌ **{endpoint_name}:** Error - {str(e)}\n"
 
+            # Test Planespotters API connectivity and headers (use example identifiers)
+            debug_info += f"\n**Planespotters API Tests:**\n"
+            try:
+                # Get headers the cog would send to planespotters
+                try:
+                    ps_headers = await self.cog.helpers._get_http_headers()
+                except Exception:
+                    ps_headers = {}
+                debug_info += f"**Headers to Planespotters:**\n```{ps_headers}```\n"
+
+                planespotters_tests = [
+                    ("Planespotters hex example", "https://api.planespotters.net/pub/photos/hex/ABC123"),
+                    ("Planespotters reg N625UP", "https://api.planespotters.net/pub/photos/reg/N625UP"),
+                ]
+
+                for name, url in planespotters_tests:
+                    try:
+                        if not self.cog.api._http_client:
+                            self.cog.api._http_client = aiohttp.ClientSession()
+                        async with self.cog.api._http_client.get(url, headers=ps_headers) as resp:
+                            debug_info += f"🔗 **{name}:** Status {resp.status}\n"
+                            try:
+                                body = await resp.text()
+                                short = body[:800] + ('...' if len(body) > 800 else '')
+                                debug_info += f"📋 **Response Headers:** `{dict(resp.headers)}`\n"
+                                debug_info += f"📄 **Body (truncated):**\n```\n{short}\n```\n"
+                            except Exception as e:
+                                debug_info += f"📄 **Error reading body:** {e}\n"
+                    except Exception as e:
+                        debug_info += f"❌ **{name}:** Error - {str(e)}\n"
+            except Exception as e:
+                debug_info += f"❌ **Planespotters tests failed:** {str(e)}\n"
+
             # Test both API modes with comprehensive endpoints
             debug_info += f"\n**Testing both API modes...**\n"
             
