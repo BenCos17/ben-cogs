@@ -585,9 +585,12 @@ class AircraftCommands:
             # Add photo if available
             temp_aircraft_data = {'hex': icao}
             image_url, photographer = await self.helpers.get_photo_by_aircraft_data(temp_aircraft_data)
-            if image_url and photographer:
+            if image_url:
                 embed.set_thumbnail(url=image_url)
-                embed.set_footer(text=f"Photo by {photographer}")
+                if photographer:
+                    embed.set_footer(text=f"Photo by {photographer}")
+                else:
+                    embed.set_footer(text="Photo available")
             else:
                 # Set default aircraft image when no photo is available
                 embed.set_thumbnail(url="attachment://defaultairplane.png")

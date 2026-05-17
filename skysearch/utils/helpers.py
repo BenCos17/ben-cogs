@@ -375,9 +375,12 @@ class HelperUtils:
             embed.add_field(name="Asset intelligence", value=":corn: Used for **agriculture surveys, easement validation, or land inspection**", inline=False)
 
         # Add photo if available
-        if image_url and photographer:
+        if image_url:
             embed.set_thumbnail(url=image_url)
-            embed.set_footer(text=f"Photo by {photographer}")
+            if photographer:
+                embed.set_footer(text=f"Photo by {photographer}")
+            else:
+                embed.set_footer(text="Photo available")
         else:
             # Attachment-based fallback is resolved by send_embed_with_default_thumbnail.
             embed.set_thumbnail(url="attachment://defaultairplane.png")
