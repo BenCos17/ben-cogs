@@ -21,6 +21,8 @@ class Clusters(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567890)
         self.config.register_global(custom_names={})
         self.shard_names = {}
+        self.runner = None
+        self.site = None
 
         # Start aiohttp web server
         self.app = web.Application()
@@ -29,9 +31,25 @@ class Clusters(commands.Cog):
         self.bot.loop.create_task(self.start_webserver())
 
     async def start_webserver(self):
+        if self.runner is None:
+            self.runner = web.AppRunner(self.app)
+
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)  # Change IP/port if needed
         await self.site.start()
+
+    async def shutdown_webserver(self):
+        if self.site is not None:
+            await self.site.stop()
+            self.site = None
+
+        if self.runner is not None:
+            await self.runner.cleanup()
+            self.runner = None
+
+    def cog_unload(self):
+        if self.bot and self.bot.loop.is_running():
+            self.bot.loop.create_task(self.shutdown_webserver())
 
     async def initialize_shard_names(self):
         """Load names from config or assign defaults based on shard ID."""
