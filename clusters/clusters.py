@@ -2,6 +2,7 @@
 from redbot.core import commands, Config
 import psutil, datetime, json, aiohttp
 from aiohttp import web
+import asyncio
 import platform
 import os
 from pathlib import Path
@@ -35,8 +36,23 @@ class Clusters(commands.Cog):
             self.runner = web.AppRunner(self.app)
 
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)  # Change IP/port if needed
-        await self.site.start()
+
+        last_error = None
+        for _ in range(10):
+            try:
+                self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)  # Change IP/port if needed
+                await self.site.start()
+                return
+            except OSError as error:
+                last_error = error
+                if error.errno != 98:
+                    raise
+                await asyncio.sleep(0.5)
+
+        if last_error is not None:
+            raise last_error
+
+        raise RuntimeError("Failed to start the clusters webserver for an unknown reason.")
 
     async def shutdown_webserver(self):
         if self.site is not None:
