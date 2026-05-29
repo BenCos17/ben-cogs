@@ -31,6 +31,7 @@ Top-level keys:
 
 | Key | Description |
 | --- | --- |
+| `version` | API version for the payload |
 | `bot_uptime` | Bot uptime as a formatted string |
 | `server_uptime` | Host uptime as a formatted string |
 | `system_stats` | Host and process statistics |
@@ -80,6 +81,7 @@ Each object in `clusters` includes:
 
 ```json
 {
+	"version": "1.0.0",
 	"bot_uptime": "Unknown",
 	"server_uptime": "12 weeks and 3 days and 5 hours ago",
 	"system_stats": {

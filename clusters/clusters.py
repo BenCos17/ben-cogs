@@ -11,6 +11,8 @@ MARVEL_NAMES = [
     "DoctorStrange", "SpiderMan", "BlackPanther", "ScarletWitch"
 ]
 
+COG_VERSION = "1.0.0"
+
 class Clusters(commands.Cog):
     """Shows dynamic Marvel-themed cluster status with customizable names and uptime, plus a web endpoint."""
 
@@ -202,6 +204,7 @@ class Clusters(commands.Cog):
         server_uptime_str = self.format_timedelta(self.get_server_uptime())
 
         data = {
+            "version": COG_VERSION,
             "bot_uptime": bot_uptime_str,
             "server_uptime": server_uptime_str,
             "system_stats": {
