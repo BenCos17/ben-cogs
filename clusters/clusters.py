@@ -3,6 +3,7 @@ from redbot.core import commands, Config
 import psutil, datetime, json, aiohttp
 from aiohttp import web
 import platform
+import os
 from pathlib import Path
 
 MARVEL_NAMES = [
@@ -57,8 +58,15 @@ class Clusters(commands.Cog):
         virt_mem = psutil.virtual_memory()
         swap_mem = psutil.swap_memory()
         proc = psutil.Process()
-        cpu_count_logical = psutil.cpu_count(logical=True) or 0
-        cpu_count_physical = psutil.cpu_count(logical=False) or 0
+        cpu_count_logical = psutil.cpu_count(logical=True) or os.cpu_count()
+        cpu_count_physical = psutil.cpu_count(logical=False)
+        cpu_count_affinity = None
+        try:
+            cpu_count_affinity = len(proc.cpu_affinity())
+        except (AttributeError, NotImplementedError, psutil.Error):
+            cpu_count_affinity = None
+
+        cpu_count_display = cpu_count_physical or cpu_count_affinity or cpu_count_logical
         disk_root = Path.cwd().anchor or Path.cwd().drive or "/"
 
         try:
@@ -76,6 +84,8 @@ class Clusters(commands.Cog):
             "python_version": platform.python_version(),
             "cpu_logical": cpu_count_logical,
             "cpu_physical": cpu_count_physical,
+            "cpu_count": cpu_count_display,
+            "cpu_affinity": cpu_count_affinity,
             "cpu_usage_percent": psutil.cpu_percent(interval=None),
             "load_average": list(psutil.getloadavg()) if hasattr(psutil, "getloadavg") else None,
             "ram_used_gb": round(virt_mem.used / 1024**3, 2),
@@ -118,7 +128,13 @@ class Clusters(commands.Cog):
             name="System",
             value=(
                 f"**OS:** {system['platform']}\n"
-                f"**CPU:** {system['cpu_usage_percent']}% ({system['cpu_physical']} physical / {system['cpu_logical']} logical)\n"
+                f"**CPU:** {system['cpu_usage_percent']}% ({system['cpu_count']} cores"
+                + (
+                    f", {system['cpu_physical']} physical / {system['cpu_logical']} logical"
+                    if system['cpu_physical'] is not None and system['cpu_logical'] is not None
+                    else ""
+                )
+                + ")\n"
                 f"**RAM:** {system['ram_used_gb']} / {system['ram_total_gb']} GB ({system['ram_percent']}%)\n"
                 f"**Swap:** {system['swap_used_gb']} / {system['swap_total_gb']} GB ({system['swap_percent']}%)"
             ),
