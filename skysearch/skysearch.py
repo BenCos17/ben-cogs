@@ -102,6 +102,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Limit concurrent background network-heavy operations across tasks.
         self._background_io_semaphore = asyncio.Semaphore(4)
         self._squawk_hook_timeout = 5.0
+        self._debug_squawk_callbacks = False    # disabled by default to avoid log spam, can be enabled to print this for debugging if needed (red.skysearch: DEBUG: Calling callbacks for a0b81d (7600) )
 
     async def _refresh_auto_icao_cache(self):
         """Refresh the cache of guilds with auto_icao enabled."""
@@ -895,7 +896,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                             message_data['view'] = view
 
                             # Let other cogs know about the alert first
-                            log.error(f"DEBUG: Calling callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
+                            if self._debug_squawk_callbacks:
+                                log.debug(f"Calling callbacks for {icao_hex} ({squawk_code}) in {guild.name}")
                             try:
                                 await asyncio.wait_for(
                                     self.squawk_api.call_callbacks(guild, aircraft_info, squawk_code),
@@ -903,7 +905,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                 )
                             except asyncio.TimeoutError:
                                 log.warning(f"Squawk callback timeout for {icao_hex} ({squawk_code}) in {guild.name}")
-                            log.error(f"DEBUG: Finished callbacks for {icao_hex}")
+                            if self._debug_squawk_callbacks:
+                                log.debug(f"Finished callbacks for {icao_hex}")
 
                             # Let other cogs modify the message before sending
                             original_view = message_data.get('view')
