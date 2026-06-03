@@ -10,8 +10,8 @@ class Airframes(commands.Cog):
     """Integrates core Airframes REST API endpoints as simple commands.
 
     Commands:
-    - `[p]airframes set base <url>`: set API base URL
-    - `[p]airframes set key <key>`: set X-API-KEY
+    - `[p]airframesadmin set base <url>`: set API base URL (owner-only)
+    - `[p]airframesadmin set key <key>`: set X-API-KEY (owner-only)
     - `[p]airframes search [tail]`: search airframes
     - `[p]airframes get <id>`: get airframe by id
     - `[p]airlines search`: search airlines
@@ -58,21 +58,26 @@ class Airframes(commands.Cog):
         """Airframes API commands."""
         pass
 
-    @airframes.group()
+    @commands.group()
+    async def airframesadmin(self, ctx: commands.Context):
+        """Admin commands for Airframes (owner-only)."""
+        pass
+
+    @airframesadmin.group()
     async def set(self, ctx: commands.Context):
-        """Configuration for Airframes API."""
+        """Configuration for Airframes API (owner-only)."""
         pass
 
     @set.command(name="base")
     @commands.is_owner()
-    async def set_base(self, ctx: commands.Context, base_url: str):
+    async def admin_set_base(self, ctx: commands.Context, base_url: str):
         """Set the API base URL."""
         await self.config.base_url.set(base_url)
         await ctx.send(f"Base URL set to: {base_url}")
 
     @set.command(name="key")
     @commands.is_owner()
-    async def set_key(self, ctx: commands.Context, key: str):
+    async def admin_set_key(self, ctx: commands.Context, key: str):
         """Set the X-API-KEY header value."""
         await self.config.api_key.set(key)
         await ctx.send("API key saved.")
@@ -133,6 +138,13 @@ class Airframes(commands.Cog):
     @messages.command(name="get")
     async def messages_get(self, ctx: commands.Context, id: str):
         data = await self._request(f"messages/{id}")
+        await self._send_json(ctx, data)
+
+    @messages.command(name="list")
+    async def messages_list(self, ctx: commands.Context, limit: int = 25, page: int = 1):
+        """List messages with optional pagination."""
+        params = {"limit": limit, "page": page}
+        data = await self._request("messages", params=params)
         await self._send_json(ctx, data)
 
     @commands.group()

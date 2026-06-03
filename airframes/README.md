@@ -13,9 +13,6 @@ Requirements
 - Python dependency: `aiohttp` (listed in `info.json`)
 
 Installation
-
-Preferred (via Red's repo/cog system):
-
 ```text
 [p]repo add ben-cogs https://github.com/bencos/ben-cogs
 [p]cog install ben-cogs airframes
