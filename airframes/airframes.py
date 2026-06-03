@@ -116,6 +116,77 @@ class Airframes(commands.Cog):
         else:
             await ctx.send(f"```json\n{s}\n```")
 
+    def _make_message_embed(self, msg: dict) -> discord.Embed:
+        # Create a rich embed for a single message record
+        title = f"Message {msg.get('id', '')}"
+        embed = discord.Embed(title=title, timestamp=None)
+        # Timestamp
+        try:
+            if msg.get('timestamp'):
+                embed.timestamp = discord.utils.parse_time(msg.get('timestamp'))
+        except Exception:
+            pass
+
+        # Station info
+        station = msg.get('station') or {}
+        station_ident = station.get('ident') if isinstance(station, dict) else None
+        if station_ident:
+            embed.add_field(name="Station", value=f"{station_ident} (id {station.get('id')})", inline=True)
+
+        # Airframe
+        airframe = msg.get('airframe') or {}
+        if airframe:
+            embed.add_field(name="Airframe", value=f"{airframe.get('tail') or 'N/A'} — {airframe.get('icao') or ''}", inline=True)
+
+        # Source and direction
+        embed.add_field(name="Source", value=f"{msg.get('source','?')} / {msg.get('sourceType','?')} ({msg.get('linkDirection','?')})", inline=False)
+
+        # Short text preview
+        text = msg.get('text') or ''
+        if text:
+            t = text.strip()
+            if len(t) > 750:
+                t = t[:750] + "..."
+            embed.add_field(name="Text", value=t, inline=False)
+
+        # Other useful metadata
+        meta = []
+        if msg.get('tail'):
+            meta.append(f"Tail: {msg.get('tail')}")
+        if msg.get('fromHex'):
+            meta.append(f"From: {msg.get('fromHex')}")
+        if msg.get('toHex'):
+            meta.append(f"To: {msg.get('toHex')}")
+        if msg.get('uuid'):
+            meta.append(f"UUID: {msg.get('uuid')}")
+        if meta:
+            embed.add_field(name="Meta", value=" • ".join(meta), inline=False)
+
+        # Station thumbnail or user gravatar
+        thumb = None
+        user = station.get('user') if isinstance(station, dict) else None
+        if user and isinstance(user, dict):
+            thumb = user.get('gravatarUrl')
+        if not thumb:
+            thumb = station.get('flagImageUrl') if isinstance(station, dict) else None
+        if thumb:
+            try:
+                embed.set_thumbnail(url=thumb)
+            except Exception:
+                pass
+
+        # Footer with timestamps
+        created = msg.get('createdAt') or msg.get('updatedAt')
+        footer = []
+        if created:
+            footer.append(f"created: {created}")
+        if station and station.get('lastReportAt'):
+            footer.append(f"station last report: {station.get('lastReportAt')}")
+        if footer:
+            embed.set_footer(text=" | ".join(footer))
+
+        return embed
+
     @commands.group()
     async def airframes(self, ctx: commands.Context):
         """Airframes API commands."""
@@ -201,14 +272,32 @@ class Airframes(commands.Cog):
     @messages.command(name="get")
     async def messages_get(self, ctx: commands.Context, id: str):
         data = await self._request(f"messages/{id}")
-        await self._present_result(ctx, data, title=f"Message {id}")
+        if isinstance(data, dict):
+            embed = self._make_message_embed(data)
+            await ctx.send(embed=embed)
+            # also send raw JSON as file if large
+            s = json.dumps(data, indent=2, default=str)
+            if len(s) > 1800:
+                await ctx.send(file=discord.File(io.BytesIO(s.encode()), filename="message.json"))
+        else:
+            await self._present_result(ctx, data, title=f"Message {id}")
 
     @messages.command(name="list")
     async def messages_list(self, ctx: commands.Context, limit: int = 25, page: int = 1):
         """List messages with optional pagination."""
         params = {"limit": limit, "page": page}
         data = await self._request("messages", params=params)
-        await self._present_result(ctx, data, title="Messages List")
+        # If we got a list of messages, present as embeds (up to 5) then summary
+        if isinstance(data, list):
+            embeds = []
+            for item in data[:5]:
+                if isinstance(item, dict):
+                    embeds.append(self._make_message_embed(item))
+            for e in embeds:
+                await ctx.send(embed=e)
+            await self._present_result(ctx, data, title="Messages List")
+        else:
+            await self._present_result(ctx, data, title="Messages List")
 
     @messages.command(name="find")
     async def messages_find(
@@ -281,7 +370,14 @@ class Airframes(commands.Cog):
                 await ctx.send("No matches found.")
                 return
 
-            # Present first N matches; full JSON attached if large
+            # Present first N matches as embeds (up to 5), then full summary
+            if matches and isinstance(matches, list):
+                embeds = []
+                for item in matches[:5]:
+                    if isinstance(item, dict):
+                        embeds.append(self._make_message_embed(item))
+                for e in embeds:
+                    await ctx.send(embed=e)
             await self._present_result(ctx, matches, title=f"Found {len(matches)} matches for '{term}'")
 
         except commands.CommandError:
