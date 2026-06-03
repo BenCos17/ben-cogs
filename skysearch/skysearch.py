@@ -102,7 +102,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
         # Limit concurrent background network-heavy operations across tasks.
         self._background_io_semaphore = asyncio.Semaphore(4)
         self._squawk_hook_timeout = 5.0
-        self._debug_squawk_callbacks = False    # disabled by default to avoid log spam, can be enabled to print this for debugging if needed (red.skysearch: DEBUG: Calling callbacks for a0b81d (7600) )
+        # Set this to True when you want squawk/emergency hook tracing in the logs.
+        self._debug_squawk_callbacks = False
 
     async def _refresh_auto_icao_cache(self):
         """Refresh the cache of guilds with auto_icao enabled."""
@@ -831,8 +832,9 @@ class Skysearch(commands.Cog, DashboardIntegration):
                             alert_role_id = runtime["alert_role_id"]
                             alert_role_mention = f"<@&{alert_role_id}>" if alert_role_id else ""
 
-                            # Debug logging for emergency alerts
-                            log.info(f"EMERGENCY ALERT {icao_hex}: alert_role_id={alert_role_id}, mention='{alert_role_mention}'")
+                            # Keep this behind the debug toggle so normal alert handling stays quiet.
+                            if self._debug_squawk_callbacks:
+                                log.info(f"EMERGENCY ALERT {icao_hex}: alert_role_id={alert_role_id}, mention='{alert_role_mention}'")
 
                             # Prepare message data for pre-send hooks
                             message_data = {
@@ -928,8 +930,8 @@ class Skysearch(commands.Cog, DashboardIntegration):
                                 log.warning(f"Pre-send callback removed content for {icao_hex}, restoring mention content")
                                 message_data['content'] = original_content
 
-                            # Debug final content before sending
-                            log.info(f"EMERGENCY ALERT {icao_hex}: Final content before send: '{message_data.get('content')}'")
+                            if self._debug_squawk_callbacks:
+                                log.info(f"EMERGENCY ALERT {icao_hex}: Final content before send: '{message_data.get('content')}'")
 
                             # Send the message using the possibly modified data (allow role mentions)
                             allowed_mentions = None
