@@ -1,0 +1,20 @@
+{
+    "name": "Airframes",
+    "author": [
+        "bencos17"
+    ],
+    "description": "Integrates the Airframes REST API into Red-DiscordBot with simple commands.",
+    "install_msg": "Configure with [p]airframes set base and [p]airframes set key.",
+    "short": "Airframes API",
+    "requirements": [
+        "aiohttp"
+    ],
+    "version": "0.0.1",
+    "permissions": [],
+    "tags": [
+        "api",
+        "airframes",
+        "aviation"
+    ],
+    "min_bot_version": "3.6.0"
+}

@@ -4,7 +4,6 @@ Provides simple commands to query the Airframes REST API.
 
 Installation
 
-- Place `airframes.py` into your Red `cogs/airframes/` folder or load it via the bot's cog loader.
 
 Basic setup (owner-only):
 
