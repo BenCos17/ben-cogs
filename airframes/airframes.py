@@ -4,6 +4,8 @@ from redbot.core import commands, Config
 import aiohttp
 import asyncio
 import json
+import io
+import discord
 
 
 class Airframes(commands.Cog):
@@ -35,8 +37,12 @@ class Airframes(commands.Cog):
         base = await self.config.base_url()
         api_key = await self.config.api_key()
         headers = {}
+        # Support either explicit Bearer tokens or X-API-KEY header
         if api_key:
-            headers["X-API-KEY"] = api_key
+            if isinstance(api_key, str) and api_key.strip().lower().startswith("bearer "):
+                headers["Authorization"] = api_key.strip()
+            else:
+                headers["X-API-KEY"] = api_key
         url = base.rstrip("/") + "/" + path.lstrip("/")
         async with self.session.get(url, params=params or {}, headers=headers) as resp:
             text = await resp.text()
@@ -48,10 +54,67 @@ class Airframes(commands.Cog):
             raise commands.CommandError(f"{resp.status}: {text}")
 
     async def _send_json(self, ctx, data):
+        # Backwards compatibility: keep raw JSON sender
         s = json.dumps(data, indent=2, default=str)
-        if len(s) > 1900:
-            s = s[:1900] + "\n... (truncated)"
+        if len(s) > 1800:
+            await ctx.send(file=discord.File(io.BytesIO(s.encode()), filename="data.json"))
+            return
         await ctx.send(f"```json\n{s}\n```")
+
+    def _summarize_object(self, obj: dict) -> str:
+        if not isinstance(obj, dict):
+            return str(obj)
+        # Attempt lightweight summaries for known schema types
+        if "tail" in obj or "icao" in obj or "manufacturerModel" in obj:
+            return f"Airframe {obj.get('id','?')}: tail={obj.get('tail')}, icao={obj.get('icao')}, model={obj.get('manufacturerModel') or obj.get('manufacturer')}"
+        if "name" in obj and ("iata" in obj or "icao" in obj):
+            return f"Airline {obj.get('id','?')}: {obj.get('name')} ({obj.get('iata') or obj.get('icao')})"
+        if "ident" in obj and "latitude" in obj:
+            return f"Airport {obj.get('id','?')}: {obj.get('name')} ({obj.get('ident')}) @ {obj.get('latitude')},{obj.get('longitude')}"
+        if "flight" in obj:
+            return f"Flight {obj.get('id','?')}: {obj.get('flight')} status={obj.get('status')} dep={obj.get('departingAirport')} dest={obj.get('destinationAirport')}"
+        if "messageNumber" in obj or "fromHex" in obj or "text" in obj:
+            txt = obj.get('text') or obj.get('fromHex') or ''
+            txt = (txt[:140] + '...') if len(txt) > 140 else txt
+            return f"Message {obj.get('id','?')}: tail={obj.get('tail')} time={obj.get('timestamp')} text={txt}"
+        if "ident" in obj and "messageCount" in obj:
+            return f"Station {obj.get('id','?')}: {obj.get('ident')} ({obj.get('countryName')}) messages={obj.get('messageCount')}"
+        # Fallback: show top-level keys
+        keys = ", ".join(list(obj.keys())[:6])
+        return f"Object {obj.get('id','?')}: keys={keys}"
+
+    def _summarize(self, data) -> str:
+        if data is None:
+            return "No results."
+        if isinstance(data, list):
+            if len(data) == 0:
+                return "No results (empty list)."
+            lines = []
+            max_items = min(10, len(data))
+            for i in range(max_items):
+                item = data[i]
+                if isinstance(item, dict):
+                    lines.append(self._summarize_object(item))
+                else:
+                    lines.append(str(item))
+            if len(data) > max_items:
+                lines.append(f"... and {len(data)-max_items} more items")
+            return "\n".join(lines)
+        if isinstance(data, dict):
+            return self._summarize_object(data)
+        return str(data)
+
+    async def _present_result(self, ctx, data, title: str | None = None):
+        summary = self._summarize(data)
+        header = f"**{title}**\n" if title else ""
+        # Send summary first
+        await ctx.send(header + summary)
+        # Then send raw JSON if small enough, else as a file
+        s = json.dumps(data, indent=2, default=str)
+        if len(s) > 1800:
+            await ctx.send(file=discord.File(io.BytesIO(s.encode()), filename="data.json"))
+        else:
+            await ctx.send(f"```json\n{s}\n```")
 
     @commands.group()
     async def airframes(self, ctx: commands.Context):
@@ -89,13 +152,13 @@ class Airframes(commands.Cog):
         if tail:
             params["tail"] = tail
         data = await self._request("airframes", params=params)
-        await self._send_json(ctx, data)
+        await self._present_result(ctx, data, title="Airframes Search")
 
     @airframes.command(name="get")
     async def airframe_get(self, ctx: commands.Context, id: str):
         """Get an airframe by ID."""
         data = await self._request(f"airframes/{id}")
-        await self._send_json(ctx, data)
+        await self._present_result(ctx, data, title=f"Airframe {id}")
 
     @commands.group()
     async def airlines(self, ctx: commands.Context):
@@ -105,7 +168,7 @@ class Airframes(commands.Cog):
     @airlines.command(name="search")
     async def airlines_search(self, ctx: commands.Context):
         data = await self._request("airlines")
-        await self._send_json(ctx, data)
+        await self._present_result(ctx, data, title="Airlines")
 
     @commands.group()
     async def airports(self, ctx: commands.Context):
@@ -115,7 +178,7 @@ class Airframes(commands.Cog):
     @airports.command(name="search")
     async def airports_search(self, ctx: commands.Context):
         data = await self._request("airports")
-        await self._send_json(ctx, data)
+        await self._present_result(ctx, data, title="Airports")
 
     @commands.group()
     async def flights(self, ctx: commands.Context):
@@ -128,7 +191,7 @@ class Airframes(commands.Cog):
         if query:
             params["query"] = query
         data = await self._request("flights/active", params=params)
-        await self._send_json(ctx, data)
+        await self._present_result(ctx, data, title="Active Flights")
 
     @commands.group()
     async def messages(self, ctx: commands.Context):
@@ -138,14 +201,14 @@ class Airframes(commands.Cog):
     @messages.command(name="get")
     async def messages_get(self, ctx: commands.Context, id: str):
         data = await self._request(f"messages/{id}")
-        await self._send_json(ctx, data)
+        await self._present_result(ctx, data, title=f"Message {id}")
 
     @messages.command(name="list")
     async def messages_list(self, ctx: commands.Context, limit: int = 25, page: int = 1):
         """List messages with optional pagination."""
         params = {"limit": limit, "page": page}
         data = await self._request("messages", params=params)
-        await self._send_json(ctx, data)
+        await self._present_result(ctx, data, title="Messages List")
 
     @commands.group()
     async def stations(self, ctx: commands.Context):
@@ -155,7 +218,7 @@ class Airframes(commands.Cog):
     @stations.command(name="list")
     async def stations_list(self, ctx: commands.Context):
         data = await self._request("stations")
-        await self._send_json(ctx, data)
+        await self._present_result(ctx, data, title="Stations")
 
 
 def setup(bot):
