@@ -210,6 +210,85 @@ class Airframes(commands.Cog):
         data = await self._request("messages", params=params)
         await self._present_result(ctx, data, title="Messages List")
 
+    @messages.command(name="find")
+    async def messages_find(
+        self,
+        ctx: commands.Context,
+        term: str,
+        limit_per_page: int = 50,
+        pages: int = 3,
+        field: str = None,
+        regex: bool = False,
+        case_sensitive: bool = False,
+    ):
+        """Search messages client-side.
+
+        term: search term or regex pattern (if --regex True)
+        limit_per_page: how many items to fetch per page from the API
+        pages: how many pages to fetch
+        field: optional specific field to search (e.g. text, tail, fromHex)
+        regex: whether to treat `term` as a regular expression
+        case_sensitive: whether matching is case-sensitive
+        """
+        import re
+
+        matches: list[dict] = []
+        try:
+            for p in range(1, max(1, pages) + 1):
+                params = {"limit": max(1, limit_per_page), "page": p}
+                data = await self._request("messages", params=params)
+                if not data:
+                    break
+                for item in data:
+                    hay_fields = []
+                    if field:
+                        v = item.get(field)
+                        if v is None:
+                            continue
+                        hay_fields = [str(v)]
+                    else:
+                        hay_fields = [str(item.get("text", "")), str(item.get("fromHex", "")), str(item.get("tail", "")), str(item.get("id", ""))]
+
+                    matched = False
+                    for h in hay_fields:
+                        if regex:
+                            flags = 0 if case_sensitive else re.IGNORECASE
+                            try:
+                                if re.search(term, h, flags=flags):
+                                    matched = True
+                                    break
+                            except re.error:
+                                await ctx.send("Invalid regular expression pattern.")
+                                return
+                        else:
+                            if case_sensitive:
+                                if term in h:
+                                    matched = True
+                                    break
+                            else:
+                                if term.lower() in h.lower():
+                                    matched = True
+                                    break
+
+                    if matched:
+                        matches.append(item)
+
+                # small safety: stop early if we gathered a reasonable number
+                if len(matches) >= 500:
+                    break
+
+            if not matches:
+                await ctx.send("No matches found.")
+                return
+
+            # Present first N matches; full JSON attached if large
+            await self._present_result(ctx, matches, title=f"Found {len(matches)} matches for '{term}'")
+
+        except commands.CommandError:
+            raise
+        except Exception as e:
+            raise commands.CommandError(str(e))
+
     @commands.group()
     async def stations(self, ctx: commands.Context):
         """Stations API commands."""
