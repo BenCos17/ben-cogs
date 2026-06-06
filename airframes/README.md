@@ -66,25 +66,6 @@ python -m pyflakes airframes/__init__.py
 	load the cog; or use a small test harness that imports `airframes.Airframes`
 	and exercises `_request` with a mock session.
 
-Troubleshooting
 
-- If Red refuses to load due to version checks, either remove
-	`min_bot_version` from `info.json` (this repo does not enforce it) or
-	update your Red installation.
-- If HTTP requests fail, verify `airframes set base` and `airframes set key`
-	values and ensure the bot host has network access to the API endpoints.
 
-Security
-
-- Never paste your API key into public channels. Use owner-only commands to
-	set the key.
-
-Contributing
-
-- Open a focused PR for improvements: more endpoints, rate-limiting,
-	better error handling, or additional formatting helpers.
-
-License
-
-- No license file included — add one if you intend to publish publicly.
 
