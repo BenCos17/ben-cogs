@@ -1,4 +1,4 @@
-﻿import discord
+import discord
 from redbot.core import commands, Config
 import psutil, datetime, json, aiohttp
 from aiohttp import web
@@ -154,9 +154,20 @@ class Clusters(commands.Cog):
         server_uptime = self.format_timedelta(self.get_server_uptime())
         system = self.get_system_snapshot()
 
+        description = (
+            f"**Bot uptime:** {bot_uptime_str}\n"
+            f"**Server uptime:** {server_uptime}"
+        )
+        if ctx.guild is not None:
+            shard_id = ctx.guild.shard_id
+            cluster_name = self.shard_names.get(
+                shard_id, MARVEL_NAMES[shard_id % len(MARVEL_NAMES)]
+            )
+            description += f"\n**This server:** Cluster #{cluster_name} (shard {shard_id})"
+
         embed = discord.Embed(
             title="Cluster Status",
-            description=f"**Bot uptime:** {bot_uptime_str}\n**Server uptime:** {server_uptime}",
+            description=description,
             color=discord.Color.blue()
         )
 
