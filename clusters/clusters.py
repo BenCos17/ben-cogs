@@ -12,7 +12,7 @@ MARVEL_NAMES = [
     "DoctorStrange", "SpiderMan", "BlackPanther", "ScarletWitch"
 ]
 
-COG_VERSION = "1.0.0"
+COG_VERSION = "1.0.1"
 
 class Clusters(commands.Cog):
     """Shows dynamic Marvel-themed cluster status with customizable names and uptime, plus a web endpoint."""
