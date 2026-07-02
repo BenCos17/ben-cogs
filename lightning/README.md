@@ -15,9 +15,6 @@ A Redbot cog for tracking lightning strikes using multiple free APIs!
 
 ## Installation
 
-1. Place this cog in your Redbot cogs directory
-2. Load the cog with: `[p]load lightning`
-3. Configure an API provider (see below)
 
 ## API Setup
 
