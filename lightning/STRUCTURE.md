@@ -1,6 +1,5 @@
 # Lightning Cog Structure
 
-The cog is now organized into modular services for better maintainability.
 
 ## Directory Structure
 
@@ -34,7 +33,6 @@ lightning/
 - **blitzortung.py** - Blitzortung real-time lightning API
   - Fetches actual detected lightning strikes
   - Formats data for Discord display
-  - No API key required
 
 - **weatherapi.py** - WeatherAPI.com service
   - Fetches weather-based lightning detection
