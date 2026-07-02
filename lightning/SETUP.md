@@ -2,14 +2,11 @@
 
 ## What's Included
 
-Your Lightning cog now supports **3 free APIs** for lightning tracking:
 
-### 1. **Blitzortung** (Recommended - No API Key!)
+### 1. **Blitzortung** 
 - Real-time actual lightning strike detection
 - Crowdsourced global network
-- No authentication needed
 - Best for: Real-time lightning observations
-- Free: ✅ Yes
 
 ### 2. **WeatherAPI**
 - Weather-based thunderstorm detection
@@ -27,7 +24,7 @@ Your Lightning cog now supports **3 free APIs** for lightning tracking:
 
 ## Quick Start
 
-### Without API Key (Blitzortung)
+### (Blitzortung)
 ```
 [p]lightning setprovider blitzortung
 [p]lightning check 40.7128 -74.0060 "New York"
