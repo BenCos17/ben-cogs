@@ -4,6 +4,7 @@ from redbot.core import commands, Config
 from datetime import datetime
 from typing import Optional, Literal
 import aiohttp
+import asyncio
 
 class Lightning(commands.Cog):
     """Track and display lightning strike statistics from multiple free APIs."""
