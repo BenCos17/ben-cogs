@@ -3,8 +3,12 @@ import discord
 from redbot.core import commands, Config
 from datetime import datetime
 from typing import Optional, Literal
-import aiohttp
-import asyncio
+
+from .services import (
+    BlitzortungService,
+    WeatherAPIService,
+    OpenWeatherMapService,
+)
 
 class Lightning(commands.Cog):
     """Track and display lightning strike statistics from multiple free APIs."""
@@ -26,13 +30,13 @@ class Lightning(commands.Cog):
         self.config.register_user(
             strikes_triggered=0
         )
-        self.session = None
-
-    async def get_session(self):
-        """Get or create aiohttp session."""
-        if not self.session:
-            self.session = aiohttp.ClientSession()
-        return self.session
+        
+        # Initialize services
+        self.services = {
+            "weatherapi": WeatherAPIService(),
+            "owm": OpenWeatherMapService(),
+            "blitzortung": BlitzortungService(),
+        }
 
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
@@ -98,52 +102,18 @@ class Lightning(commands.Cog):
 
     async def fetch_weatherapi(self, lat: float, lon: float, api_key: str) -> dict:
         """Fetch data from WeatherAPI.com"""
-        session = await self.get_session()
-        url = f"https://api.weatherapi.com/v1/current.json?key={api_key}&q={lat},{lon}&aqi=no"
-        
-        try:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                else:
-                    return {"error": f"WeatherAPI returned status {resp.status}"}
-        except Exception as e:
-            return {"error": f"WeatherAPI error: {str(e)}"}
+        service = self.services["weatherapi"]
+        return await service.fetch(lat, lon, api_key=api_key)
 
     async def fetch_openweathermap(self, lat: float, lon: float, api_key: str) -> dict:
         """Fetch data from OpenWeatherMap"""
-        session = await self.get_session()
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}"
-        
-        try:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                else:
-                    return {"error": f"OpenWeatherMap returned status {resp.status}"}
-        except Exception as e:
-            return {"error": f"OpenWeatherMap error: {str(e)}"}
+        service = self.services["owm"]
+        return await service.fetch(lat, lon, api_key=api_key)
 
     async def fetch_blitzortung(self, lat: float, lon: float, radius_km: int = 25) -> dict:
         """Fetch data from Blitzortung (real-time lightning strikes)"""
-        session = await self.get_session()
-        # Try the correct Blitzortung endpoint
-        url = f"https://api.blitzortung.org/webservice/json/3/strikes/region/{lat}/{lon}/{radius_km}"
-        
-        try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    # Blitzortung returns the data directly or in a "strikes" field
-                    if isinstance(data, list):
-                        return {"strikes": data}
-                    return data
-                else:
-                    return {"error": f"Blitzortung returned status {resp.status}"}
-        except asyncio.TimeoutError:
-            return {"error": "Blitzortung request timed out"}
-        except Exception as e:
-            return {"error": f"Blitzortung error: {str(e)}"}
+        service = self.services["blitzortung"]
+        return await service.fetch(lat, lon, radius_km=radius_km)
 
     async def get_lightning_data(self, guild_id: int, lat: float, lon: float) -> dict:
         """Get lightning data from configured provider."""
@@ -188,92 +158,13 @@ class Lightning(commands.Cog):
         provider = await self.config.guild(ctx.guild).api_provider()
         location_name = label if label else f"{latitude}, {longitude}"
         
-        if provider == "blitzortung":
-            await self._display_blitzortung(ctx, data, location_name)
-        elif provider == "weatherapi":
-            await self._display_weatherapi(ctx, data, location_name)
-        elif provider == "owm":
-            await self._display_openweathermap(ctx, data, location_name)
-
-    async def _display_blitzortung(self, ctx, data: dict, location_name: str):
-        """Display Blitzortung real-time lightning data."""
-        strikes = data.get("strikes", [])
-        
-        embed = discord.Embed(
-            title="⚡ Real-Time Lightning Strikes (Blitzortung)",
-            color=discord.Color.gold() if strikes else discord.Color.blue(),
-            timestamp=datetime.now()
-        )
-        embed.add_field(name="Location", value=location_name, inline=False)
-        
-        if strikes:
-            embed.add_field(name=f"Strikes Detected: {len(strikes)}", value=f"⚠️ **{len(strikes)}** active strike(s) in the area!", inline=False)
-            
-            strikes_text = ""
-            for i, strike in enumerate(strikes[:5], 1):
-                lat = strike.get("lat", "N/A")
-                lon = strike.get("lon", "N/A")
-                strikes_text += f"{i}. Lat: {lat}, Lon: {lon}\n"
-            
-            embed.add_field(name="Recent Strikes", value=strikes_text[:1024], inline=False)
+        # Use the service's display method
+        service = self.services.get(provider)
+        if service:
+            embed = service.display_data(data, location_name)
+            await ctx.send(embed=embed)
         else:
-            embed.add_field(name="Status", value="✓ No recent lightning detected", inline=False)
-        
-        embed.set_footer(text="Data from Blitzortung (crowdsourced, real-time)")
-        await ctx.send(embed=embed)
-
-    async def _display_weatherapi(self, ctx, data: dict, location_name: str):
-        """Display WeatherAPI weather data."""
-        current = data.get("current", {})
-        condition = current.get("condition", {})
-        is_thunderstorm = "thunder" in condition.get("text", "").lower()
-        
-        embed = discord.Embed(
-            title="⚡ Lightning Check (WeatherAPI)",
-            color=discord.Color.gold() if is_thunderstorm else discord.Color.blue(),
-            timestamp=datetime.now()
-        )
-        embed.add_field(name="Location", value=location_name, inline=False)
-        embed.add_field(name="Weather", value=condition.get("text", "N/A"), inline=True)
-        embed.add_field(name="Temperature", value=f"{current.get('temp_c', 'N/A')}°C", inline=True)
-        embed.add_field(name="Humidity", value=f"{current.get('humidity', 'N/A')}%", inline=True)
-        embed.add_field(name="Wind Speed", value=f"{current.get('wind_kph', 'N/A')} kph", inline=True)
-        embed.add_field(name="Cloud Cover", value=f"{current.get('cloud', 'N/A')}%", inline=True)
-        embed.add_field(name="Pressure", value=f"{current.get('pressure_mb', 'N/A')} mb", inline=True)
-        
-        if is_thunderstorm:
-            embed.add_field(name="⚠️ Thunderstorm Active", value="Lightning possible in this area!", inline=False)
-        else:
-            embed.add_field(name="✓ No Thunderstorm", value="No lightning currently detected.", inline=False)
-        
-        embed.set_footer(text="Data from WeatherAPI")
-        await ctx.send(embed=embed)
-
-    async def _display_openweathermap(self, ctx, data: dict, location_name: str):
-        """Display OpenWeatherMap weather data."""
-        weather_list = data.get("weather", [])
-        is_thunderstorm = any(w["id"] >= 200 and w["id"] <= 232 for w in weather_list)
-        
-        embed = discord.Embed(
-            title="⚡ Lightning Check (OpenWeatherMap)",
-            color=discord.Color.gold() if is_thunderstorm else discord.Color.blue(),
-            timestamp=datetime.now()
-        )
-        embed.add_field(name="Location", value=location_name, inline=False)
-        embed.add_field(name="Weather", value=weather_list[0].get("description", "N/A") if weather_list else "N/A", inline=True)
-        embed.add_field(name="Temperature", value=f"{data.get('main', {}).get('temp', 'N/A')}K", inline=True)
-        embed.add_field(name="Humidity", value=f"{data.get('main', {}).get('humidity', 'N/A')}%", inline=True)
-        embed.add_field(name="Wind Speed", value=f"{data.get('wind', {}).get('speed', 'N/A')} m/s", inline=True)
-        embed.add_field(name="Cloud Cover", value=f"{data.get('clouds', {}).get('all', 'N/A')}%", inline=True)
-        embed.add_field(name="Pressure", value=f"{data.get('main', {}).get('pressure', 'N/A')} hPa", inline=True)
-        
-        if is_thunderstorm:
-            embed.add_field(name="⚠️ Thunderstorm Active", value="Lightning possible in this area!", inline=False)
-        else:
-            embed.add_field(name="✓ No Thunderstorm", value="No lightning currently detected.", inline=False)
-        
-        embed.set_footer(text="Data from OpenWeatherMap")
-        await ctx.send(embed=embed)
+            await ctx.send("❌ Unknown provider configured")
 
     @lightning.command(name="strike")
     @commands.guild_only()
@@ -322,6 +213,8 @@ class Lightning(commands.Cog):
         embed.add_field(name="Your Strikes", value=user_data["strikes_triggered"], inline=True)
         
         await ctx.send(embed=embed)
+
+    @lightning.command(name="stats")
     @commands.guild_only()
     async def stats(self, ctx: commands.Context, user: Optional[discord.Member] = None):
         """
