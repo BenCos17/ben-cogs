@@ -9,6 +9,7 @@ from .services import (
     WeatherAPIService,
     OpenWeatherMapService,
 )
+from .services.map_parser import MapParser
 
 class Lightning(commands.Cog):
     """Track and display lightning strike statistics from multiple free APIs."""
@@ -157,6 +158,62 @@ class Lightning(commands.Cog):
         
         provider = await self.config.guild(ctx.guild).api_provider()
         location_name = label if label else f"{latitude}, {longitude}"
+        
+        # Use the service's display method
+        service = self.services.get(provider)
+        if service:
+            embed = service.display_data(data, location_name)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("❌ Unknown provider configured")
+
+    @lightning.command(name="map")
+    @commands.guild_only()
+    async def check_lightning_map(self, ctx: commands.Context, *, map_url: str):
+        """
+        Check for lightning at a location from a Google Maps link.
+        
+        Parameters:
+            map_url: Google Maps URL (e.g., https://maps.google.com/?q=40.7128,-74.0060)
+        
+        Supported formats:
+        - https://maps.google.com/?q=40.7128,-74.0060
+        - https://www.google.com/maps/place/40.7128,-74.0060
+        - https://www.google.com/maps/@40.7128,-74.0060,15z
+        """
+        # Parse the map URL
+        coords = MapParser.parse_maps_url(map_url)
+        
+        if coords is None:
+            embed = discord.Embed(
+                title="❌ Invalid Map Link",
+                description="Could not extract coordinates from the provided Google Maps link.",
+                color=discord.Color.red()
+            )
+            embed.add_field(
+                name="Supported Formats",
+                value="```\nhttps://maps.google.com/?q=LAT,LNG\nhttps://www.google.com/maps/@LAT,LNG,15z\nhttps://www.google.com/maps/place/LAT,LNG\n```",
+                inline=False
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        latitude, longitude = coords
+        location_name = MapParser.format_location_name(map_url)
+        
+        # If no location name extracted, use coordinates
+        if not location_name:
+            location_name = f"{latitude}, {longitude}"
+        
+        async with ctx.typing():
+            data = await self.get_lightning_data(ctx.guild.id, latitude, longitude)
+        
+        if data is None or data.get("error"):
+            error_msg = data.get("error", "Failed to fetch data") if data else "Failed to fetch data"
+            await ctx.send(f"❌ {error_msg}")
+            return
+        
+        provider = await self.config.guild(ctx.guild).api_provider()
         
         # Use the service's display method
         service = self.services.get(provider)
