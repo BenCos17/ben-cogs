@@ -104,9 +104,10 @@ class Lightning(commands.Cog):
             async with session.get(url) as resp:
                 if resp.status == 200:
                     return await resp.json()
+                else:
+                    return {"error": f"WeatherAPI returned status {resp.status}"}
         except Exception as e:
-            print(f"WeatherAPI error: {e}")
-        return None
+            return {"error": f"WeatherAPI error: {str(e)}"}
 
     async def fetch_openweathermap(self, lat: float, lon: float, api_key: str) -> dict:
         """Fetch data from OpenWeatherMap"""
@@ -117,22 +118,31 @@ class Lightning(commands.Cog):
             async with session.get(url) as resp:
                 if resp.status == 200:
                     return await resp.json()
+                else:
+                    return {"error": f"OpenWeatherMap returned status {resp.status}"}
         except Exception as e:
-            print(f"OpenWeatherMap error: {e}")
-        return None
+            return {"error": f"OpenWeatherMap error: {str(e)}"}
 
     async def fetch_blitzortung(self, lat: float, lon: float, radius_km: int = 25) -> dict:
         """Fetch data from Blitzortung (real-time lightning strikes)"""
         session = await self.get_session()
-        url = f"https://api.blitzortung.org/webservice/json/3/strikes/{lat}/{lon}/{radius_km}?limit=10"
+        # Try the correct Blitzortung endpoint
+        url = f"https://api.blitzortung.org/webservice/json/3/strikes/region/{lat}/{lon}/{radius_km}"
         
         try:
-            async with session.get(url) as resp:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status == 200:
-                    return await resp.json()
+                    data = await resp.json()
+                    # Blitzortung returns the data directly or in a "strikes" field
+                    if isinstance(data, list):
+                        return {"strikes": data}
+                    return data
+                else:
+                    return {"error": f"Blitzortung returned status {resp.status}"}
+        except asyncio.TimeoutError:
+            return {"error": "Blitzortung request timed out"}
         except Exception as e:
-            print(f"Blitzortung error: {e}")
-        return None
+            return {"error": f"Blitzortung error: {str(e)}"}
 
     async def get_lightning_data(self, guild_id: int, lat: float, lon: float) -> dict:
         """Get lightning data from configured provider."""
@@ -169,8 +179,9 @@ class Lightning(commands.Cog):
         async with ctx.typing():
             data = await self.get_lightning_data(ctx.guild.id, latitude, longitude)
         
-        if not data or "error" in data:
-            await ctx.send(f"❌ {data.get('error', 'Failed to fetch data')}")
+        if data is None or data.get("error"):
+            error_msg = data.get("error", "Failed to fetch data") if data else "Failed to fetch data"
+            await ctx.send(f"❌ {error_msg}")
             return
         
         provider = await self.config.guild(ctx.guild).api_provider()
