@@ -5,7 +5,7 @@ A Redbot cog for tracking lightning strikes using multiple free APIs!
 ## Features
 
 - **Multi-API Support**: Choose from 3 free lightning APIs
-  - **Blitzortung**: Real-time crowdsourced lightning strikes (no API key needed!)
+  - **Blitzortung**: Real-time crowdsourced lightning strikes (needs a feed
   - **WeatherAPI**: Weather-based lightning detection (free tier available)
   - **OpenWeatherMap**: Weather-based lightning data (free tier available)
 - **Real-Time Checks**: Check for active lightning at any location
@@ -20,8 +20,8 @@ A Redbot cog for tracking lightning strikes using multiple free APIs!
 
 ### Option 1: Blitzortung 
 - **Best for**: Real-time actual lightning detection
-- **Cost**: Free
-- **API Key Required**: No
+- **Cost**: needs a feed
+- **API Key Required**: yes
 - Setup:
   ```
   [p]lightning setprovider blitzortung
