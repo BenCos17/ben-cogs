@@ -106,6 +106,6 @@ Examples:
 |---------|-----------|-----------|-----------------|
 | Real-time strikes | ✅ Yes | ⚠️ Forecast only | ⚠️ Forecast only |
 | API Key Required | ✅ yes | ✅ Yes | ✅ Yes |
-| Free Tier | ✅ Unlimited | ✅ 1M/month | ✅ 1000/day |
+| Free Tier | ✅ needs caching on server end  | ✅ 1M/month | ✅ 1000/day |
 | Coverage | Global | Global | Global |
 | Data Type | Actual strikes | Weather forecast | Weather data |
