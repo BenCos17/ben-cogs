@@ -1,17 +1,14 @@
 # Lightning Cog
 
-A Redbot cog for tracking lightning strikes using multiple free APIs!
+A Redbot cog for tracking lightning strikes using multiple APIs!
 
 ## Features
 
 - **Multi-API Support**: Choose from 3 free lightning APIs
-  - **Blitzortung**: Real-time crowdsourced lightning strikes (needs a feed
+  - **Blitzortung**: Real-time crowdsourced lightning strikes (needs a feed)
   - **WeatherAPI**: Weather-based lightning detection (free tier available)
   - **OpenWeatherMap**: Weather-based lightning data (free tier available)
 - **Real-Time Checks**: Check for active lightning at any location
-- **Manual Logging**: Record custom lightning strikes for fun/games
-- **Statistics Tracking**: Track who triggered the most strikes
-- **Leaderboards**: See top strikers in your server
 
 ## Installation
 
