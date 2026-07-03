@@ -18,7 +18,7 @@ A Redbot cog for tracking lightning strikes using multiple free APIs!
 
 ## API Setup
 
-### Option 1: Blitzortung (Recommended - No Key Needed!)
+### Option 1: Blitzortung 
 - **Best for**: Real-time actual lightning detection
 - **Cost**: Free
 - **API Key Required**: No
@@ -26,6 +26,8 @@ A Redbot cog for tracking lightning strikes using multiple free APIs!
   ```
   [p]lightning setprovider blitzortung
   ```
+
+  unfinished don't use ^
 
 ### Option 2: WeatherAPI (Free Tier Available)
 - **Best for**: Simple weather-based lightning detection
@@ -49,7 +51,7 @@ A Redbot cog for tracking lightning strikes using multiple free APIs!
 
 ### Configuration
 - `[p]lightning setprovider <weatherapi|owm|blitzortung>` - Choose your API provider (admin)
-- `[p]lightning setkey <api_key>` - Set API key for current provider (admin, not needed for Blitzortung)
+- `[p]lightning setkey <api_key>` - Set API key for current provider (admin)
 
 ### Checking Lightning
 - `[p]lightning check <latitude> <longitude> [label]` - Check for lightning at a location
@@ -103,7 +105,7 @@ Examples:
 | Feature | Blitzortung | WeatherAPI | OpenWeatherMap |
 |---------|-----------|-----------|-----------------|
 | Real-time strikes | ✅ Yes | ⚠️ Forecast only | ⚠️ Forecast only |
-| API Key Required | ❌ No | ✅ Yes | ✅ Yes |
+| API Key Required | ✅ yes | ✅ Yes | ✅ Yes |
 | Free Tier | ✅ Unlimited | ✅ 1M/month | ✅ 1000/day |
 | Coverage | Global | Global | Global |
 | Data Type | Actual strikes | Weather forecast | Weather data |
