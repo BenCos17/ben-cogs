@@ -85,7 +85,7 @@ Examples:
 ## Examples
 
 ```
-# Set up Blitzortung (easiest - no key!)
+# Set up Blitzortung 
 [p]lightning setprovider blitzortung
 [p]lightning check 40.7128 -74.0060 "Times Square"
 
