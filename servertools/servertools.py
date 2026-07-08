@@ -435,3 +435,29 @@ class Servertools(commands.Cog):
                     # Log the full traceback for operators but avoid posting traces to chat
                     logger.exception("Exception in invite filter processing")
                     return
+
+
+    @commands.command()
+    @commands.has_permissions(ban_members=True)
+    async def guserinfo(self, ctx, user_id: int):
+        """
+        Lookup a user's basic info globally using their User ID.
+        Restricted to users with 'Ban Members' permission.
+        """
+        try:
+            # fetch_user hits the API and works for any user on Discord
+            user = await self.bot.fetch_user(user_id)
+        except discord.NotFound:
+            return await ctx.send("❌ User not found. Please verify the ID.")
+        except discord.HTTPException:
+            return await ctx.send("❌ An error occurred while fetching user data.")
+
+        # Construct an embed with the returned user object
+        embed = discord.Embed(title="User Lookup", color=0x00aaff)
+        embed.set_thumbnail(url=user.display_avatar.url)
+        embed.add_field(name="Username", value=user.name, inline=True)
+        embed.add_field(name="User ID", value=user.id, inline=True)
+        embed.add_field(name="Account Created", value=user.created_at.strftime("%B %d, %Y"), inline=False)
+        embed.add_field(name="Is Bot", value="Yes" if user.bot else "No", inline=True)
+
+        await ctx.send(embed=embed)
