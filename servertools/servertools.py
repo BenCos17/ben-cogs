@@ -437,27 +437,25 @@ class Servertools(commands.Cog):
                     return
 
 
+
     @commands.command()
     @commands.has_permissions(ban_members=True)
     async def guserinfo(self, ctx, user_id: int):
-        """
-        Lookup a user's basic info globally using their User ID.
-        Restricted to users with 'Ban Members' permission.
-        """
+        """Lookup a user's globally accessible profile data."""
         try:
-            # fetch_user hits the API and works for any user on Discord
             user = await self.bot.fetch_user(user_id)
         except discord.NotFound:
-            return await ctx.send("❌ User not found. Please verify the ID.")
+            return await ctx.send("❌ User not found.")
         except discord.HTTPException:
-            return await ctx.send("❌ An error occurred while fetching user data.")
-
-        # Construct an embed with the returned user object
-        embed = discord.Embed(title="User Lookup", color=0x00aaff)
+            return await ctx.send("❌ Failed to fetch user data. Please try again later.")
+        account_age = (ctx.message.created_at - user.created_at).days
+        embed = discord.Embed(title=f"User Lookup: {user.name}", color=0x00aaff)
         embed.set_thumbnail(url=user.display_avatar.url)
-        embed.add_field(name="Username", value=user.name, inline=True)
         embed.add_field(name="User ID", value=user.id, inline=True)
-        embed.add_field(name="Account Created", value=user.created_at.strftime("%B %d, %Y"), inline=False)
-        embed.add_field(name="Is Bot", value="Yes" if user.bot else "No", inline=True)
-
+        embed.add_field(name="Is Bot", value="✅ Yes" if user.bot else "❌ No", inline=True)
+        embed.add_field(name="Account Created", value=user.created_at.strftime("%Y-%m-%d"), inline=False)
+        embed.add_field(name="Account Age", value=f"{account_age} days old", inline=True)
+        if user.banner:
+            embed.set_image(url=user.banner.url)
+        embed.set_footer(text="Lookup requested by " + ctx.author.name)
         await ctx.send(embed=embed)
