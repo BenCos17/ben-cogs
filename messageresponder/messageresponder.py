@@ -53,7 +53,7 @@ class MessageResponder(commands.Cog):
 
 
 
-    @responder.hybrid_command(name="ui")
+    @responder.hybrid_command(name="responderui")
     async def ui_add_trigger(self, ctx: commands.Context):
         """Open a UI to add a new trigger."""
         # Check if this is being called as a slash command
