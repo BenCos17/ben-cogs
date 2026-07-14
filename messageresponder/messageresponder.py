@@ -6,12 +6,17 @@ class MessageResponder(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config = Config.get_conf(self, identifier=492089091320446976
         self.config.register_global(triggers={})
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot or not message.guild:
+            return
+
+        # Check if the message is a command. If so, do not trigger auto-responses.
+        ctx = await self.bot.get_context(message)
+        if ctx.valid:
             return
 
         content = message.content.lower()
@@ -22,7 +27,9 @@ class MessageResponder(commands.Cog):
                 await message.channel.send(response)
                 break 
         
-        await self.bot.process_commands(message)
+        # We don't need process_commands here because get_context 
+        # already checked if it was a command, and the bot 
+        # handles the command execution separately.
 
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
@@ -49,7 +56,7 @@ class MessageResponder(commands.Cog):
                 await ctx.send("❌ Trigger not found.")
 
     @responder.command(name="list")
-    async def list_triggers(self, ctx):         
+    async def list_triggers(self, ctx):        
         """List all custom triggers."""
         triggers = await self.config.triggers()
         if not triggers:
