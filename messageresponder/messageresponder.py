@@ -6,14 +6,16 @@ class MessageResponder(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890) # Use a unique ID
+        self.config = Config.get_conf(self, identifier=1234567890)
         self.config.register_global(triggers={})
 
     @commands.Cog.listener()
-    async def on_message_without_command(self, message: discord.Message):
+    async def on_message(self, message: discord.Message):
+        # 1. Ignore bots and DMs
         if message.author.bot or not message.guild:
             return
 
+        # 2. Check for triggers
         content = message.content.lower()
         triggers = await self.config.triggers()
 
@@ -21,8 +23,9 @@ class MessageResponder(commands.Cog):
             if trigger in content:
                 await message.channel.send(response)
                 break 
-
-
+        
+        # 3. IMPORTANT: Required to keep your commands working
+        await self.bot.process_commands(message)
 
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
@@ -30,7 +33,6 @@ class MessageResponder(commands.Cog):
         """Manage custom triggers."""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
-
 
     @responder.command(name="add")
     async def add_trigger(self, ctx, trigger: str, *, response: str):
@@ -48,3 +50,14 @@ class MessageResponder(commands.Cog):
                 await ctx.send(f"🗑️ Trigger '{trigger}' removed.")
             else:
                 await ctx.send("❌ Trigger not found.")
+
+    @responder.command(name="list")
+    async def list_triggers(self, ctx):         
+        """List all custom triggers."""
+        triggers = await self.config.triggers()
+        if not triggers:
+            await ctx.send("No triggers set.")
+            return
+
+        trigger_list = "\n".join(f"**{trigger}**: {response}" for trigger, response in triggers.items())
+        await ctx.send(f"📜 Current triggers:\n{trigger_list}")
