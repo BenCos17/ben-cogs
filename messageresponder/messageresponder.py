@@ -37,13 +37,13 @@ class MessageResponder(commands.Cog):
         triggers = await self.config.triggers()
         for trigger, response in triggers.items():
             if trigger in content:
+                # Pinging allowed in auto-responses
                 await message.channel.send(response)
                 break 
-            
+        
         # I don't need process_commands here because get_context 
         # already checked if it was a command, and the bot 
         # handles the command execution separately
-
 
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
@@ -52,14 +52,14 @@ class MessageResponder(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-
-
     @commands.hybrid_command(name="responderui")
     async def ui_add_trigger(self, ctx: commands.Context):
         """Open a UI to add a new trigger."""
+        # Check if this is being called as a slash command
         if ctx.interaction:
             await ctx.interaction.response.send_modal(TriggerModal(self))
         else:
+            # If called as a prefix command, tell the user to use slash
             await ctx.send("Please use the slash command `/responderui` to open the UI.")
 
     @responder.command(name="add")
@@ -86,5 +86,18 @@ class MessageResponder(commands.Cog):
         if not triggers:
             await ctx.send("No triggers set.")
             return
-        trigger_list = "\n".join(f"**{trigger}**: {response}" for trigger, response in triggers.items())
-        await ctx.send(f"📜 Current triggers:\n{trigger_list}")
+
+        # Build the embed
+        embed = discord.Embed(
+            title="📜 Current Triggers",
+            color=await ctx.embed_color()
+        )
+        
+        trigger_list = "\n".join(f"**{t}**: {r}" for t, r in triggers.items())
+        embed.description = trigger_list[:4096]
+        
+        # Send with allowed_mentions=none to prevent pings in the list output
+        await ctx.send(
+            embed=embed, 
+            allowed_mentions=discord.AllowedMentions.none()
+        )
