@@ -11,11 +11,9 @@ class MessageResponder(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        # 1. Ignore bots and DMs
         if message.author.bot or not message.guild:
             return
 
-        # 2. Check for triggers
         content = message.content.lower()
         triggers = await self.config.triggers()
 
@@ -24,7 +22,6 @@ class MessageResponder(commands.Cog):
                 await message.channel.send(response)
                 break 
         
-        # 3. IMPORTANT: Required to keep your commands working
         await self.bot.process_commands(message)
 
     @commands.group(invoke_without_command=True)
