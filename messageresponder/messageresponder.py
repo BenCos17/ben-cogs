@@ -6,7 +6,7 @@ class MessageResponder(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=492089091320446976
+        self.config = Config.get_conf(self, identifier=492089091320446976)
         self.config.register_global(triggers={})
 
     @commands.Cog.listener()
