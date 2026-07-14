@@ -53,15 +53,16 @@ class MessageResponder(commands.Cog):
 
 
 
-    @responder.hybrid_command(name="responderui")
+
+
+    # Change this from @responder.hybrid_command to @commands.hybrid_command
+    @commands.hybrid_command(name="responderui")
     async def ui_add_trigger(self, ctx: commands.Context):
         """Open a UI to add a new trigger."""
-        # Check if this is being called as a slash command
         if ctx.interaction:
             await ctx.interaction.response.send_modal(TriggerModal(self))
         else:
-            # If called as a prefix command, tell the user to use slash
-            await ctx.send("Please use the slash command `/responder ui` to open the UI.")
+            await ctx.send("Please use the slash command `/responderui` to open the UI.")
 
     @responder.command(name="add")
     async def add_trigger(self, ctx, trigger: str, *, response: str):
