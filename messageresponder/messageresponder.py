@@ -22,11 +22,15 @@ class MessageResponder(commands.Cog):
                 await message.channel.send(response)
                 break 
 
-    @commands.group()
-    @commands.admin_or_permissions(manage_guild=True)
+
+
+    @commands.group(invoke_without_command=True)
+    @commands.guild_only()
     async def responder(self, ctx):
         """Manage custom triggers."""
-        pass
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
 
     @responder.command(name="add")
     async def add_trigger(self, ctx, trigger: str, *, response: str):
