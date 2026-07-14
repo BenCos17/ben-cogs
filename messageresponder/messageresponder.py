@@ -39,6 +39,7 @@ class MessageResponder(commands.Cog):
             if trigger in content:
                 await message.channel.send(response)
                 break 
+            
         # I don't need process_commands here because get_context 
         # already checked if it was a command, and the bot 
         # handles the command execution separately
@@ -53,9 +54,6 @@ class MessageResponder(commands.Cog):
 
 
 
-
-
-    # Change this from @responder.hybrid_command to @commands.hybrid_command
     @commands.hybrid_command(name="responderui")
     async def ui_add_trigger(self, ctx: commands.Context):
         """Open a UI to add a new trigger."""
