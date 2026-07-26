@@ -77,7 +77,7 @@ class Firms(commands.Cog):
                     return await ctx.send("No fire data found for the given time frame.")
 
                 # Clean and isolate useful columns
-                sub_df = df_area[['latitude', 'longitude', 'acq_date', 'confidence', 'frp']]
+                sub_df = df_area[['latitude', 'longitude', 'acq_date', 'acq_time', 'satellite', 'confidence', 'frp', 'daynight']]
                 
                 # Split the dataframe into pages of 10 rows each
                 rows_per_page = 10
