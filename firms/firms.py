@@ -9,7 +9,7 @@ class Firms(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    asyncల్ప async def get_map_key(self):
+    async def get_map_key(self):
         """Helper to fetch the firms map key from Red's shared API storage."""
         tokens = await self.bot.get_shared_api_tokens("firms")
         return tokens.get("map_key")
