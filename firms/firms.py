@@ -28,7 +28,6 @@ class Firms(commands.Cog):
             except Exception:
                 return 0
 
-        # Run synchronous blocking requests inside a separate thread pool
         return await asyncio.to_thread(_fetch)
 
     @commands.group(name="firms")
@@ -62,7 +61,7 @@ class Firms(commands.Cog):
 
     @firms.command(name="fires")
     async def firms_fires(self, ctx: commands.Context, days: int = 1):
-        """Get recent world-wide VIIRS NOAA-20 fire hotspots using clean interactive embeds."""
+        """Get recent world-wide VIIRS NOAA-20 fire hotspots."""
         map_key = await self.get_map_key()
         if not map_key:
             return await ctx.send(
@@ -75,10 +74,7 @@ class Firms(commands.Cog):
         async with ctx.typing():
             try:
                 start_count = await self.get_transaction_count(map_key)
-                
-                # Offload heavy CSV downloading and parsing to a background thread
                 df_area = await asyncio.to_thread(pd.read_csv, area_url)
-                
                 end_count = await self.get_transaction_count(map_key)
                 
                 used_tokens = end_count - start_count
@@ -96,20 +92,26 @@ class Firms(commands.Cog):
                     
                     embed = discord.Embed(
                         title="🔥 NASA FIRMS Worldwide Fire Detections",
-                        description=f"Sensor: **VIIRS NOAA-20 (NRT)** | Timeframe: **Past {days} day(s)**",
+                        description=(
+                            f"Sensor: **VIIRS NOAA-20 (NRT)** | Timeframe: **Past {days} day(s)**\n\n"
+                            "📖 **Quick Read Key:**\n"
+                            "• ☀️ / 🌙 = Day or Night detection\n"
+                            "• **Confidence:** Detection quality (`l`=low, `n`=nominal, `h`=high)\n"
+                            "• **FRP:** Fire Radiative Power in Megawatts (heat output intensity)"
+                        ),
                         color=discord.Color.orange()
                     )
                     embed.set_footer(
-                        text=f"Page {page_idx} of {total_pages} • Total Fires Tracked: {total_fires:,} • API Cost: {used_tokens} tx"
+                        text=f"Page {page_idx} of {total_pages} • Total Fires: {total_fires:,} • API Cost: {used_tokens} tx"
                     )
 
                     for _, row in chunk.iterrows():
                         time_icon = "☀️" if str(row.get('daynight')) == "D" else "🌙"
                         field_title = f"{time_icon} Location: {row['latitude']}°, {row['longitude']}°"
                         field_value = (
-                            f"• **Date/Time (UTC):** {row['acq_date']} at {row['acq_time']}\n"
+                            f"• **Date / Time:** `{row['acq_date']}` at `{row['acq_time']} UTC`\n"
                             f"• **Confidence:** `{row['confidence']}` | **FRP:** `{row['frp']} MW`\n"
-                            f"• **Satellite:** {row['satellite']}"
+                            f"• **Satellite:** `{row['satellite']}`"
                         )
                         embed.add_field(name=field_title, value=field_value, inline=False)
 
