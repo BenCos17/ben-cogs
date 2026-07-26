@@ -54,7 +54,7 @@ class Firms(commands.Cog):
 
     @firms.command(name="fires")
     async def firms_fires(self, ctx: commands.Context, days: int = 1):
-        """Get recent world-wide VIIRS NOAA-20 fire hotspots with interactive pages."""
+        """Get recent world-wide VIIRS NOAA-20 fire hotspots using clean interactive embeds."""
         map_key = await self.get_map_key()
         if not map_key:
             return await ctx.send(
@@ -76,21 +76,36 @@ class Firms(commands.Cog):
                 if total_fires == 0:
                     return await ctx.send("No fire data found for the given time frame.")
 
-                # Clean and isolate useful columns
-                sub_df = df_area[['latitude', 'longitude', 'acq_date', 'acq_time', 'satellite', 'confidence', 'frp', 'daynight']]
-                
-                # Split the dataframe into pages of 10 rows each
-                rows_per_page = 10
+                # Group rows into chunks of 5 per page for a structured embed layout
+                rows_per_page = 5
                 pages = []
-                
-                for i in range(0, total_fires, rows_per_page):
-                    chunk = sub_df.iloc[i:i + rows_per_page]
-                    page_text = (
-                        f"**NASA FIRMS Fire Data** (Showing results {i+1} to {min(i+rows_per_page, total_fires)} of {total_fires})\n"
-                        f"Transactions consumed: `{used_tokens}`\n"
-                        f"```yaml\n{chunk.to_string()}```"
+                total_pages = (total_fires + rows_per_page - 1) // rows_per_page
+
+                for page_idx, i in enumerate(range(0, total_fires, rows_per_page), 1):
+                    chunk = df_area.iloc[i:i + rows_per_page]
+                    
+                    embed = discord.Embed(
+                        title="🔥 NASA FIRMS Worldwide Fire Detections",
+                        description=f"Sensor: **VIIRS NOAA-20 (NRT)** | Timeframe: **Past {days} day(s)**",
+                        color=discord.Color.orange()
                     )
-                    pages.append(page_text)
+                    embed.set_footer(
+                        text=f"Page {page_idx} of {total_pages} • Total Fires Tracked: {total_fires:,} • API Cost: {used_tokens} tx"
+                    )
+
+                    for _, row in chunk.iterrows():
+                        # Add helpful formatting symbols
+                        time_icon = "☀️" if str(row.get('daynight')) == "D" else "🌙"
+                        
+                        field_title = f"{time_icon} Location: {row['latitude']}°, {row['longitude']}°"
+                        field_value = (
+                            f"• **Date/Time (UTC):** {row['acq_date']} at {row['acq_time']}\n"
+                            f"• **Confidence:** `{row['confidence']}` | **FRP:** `{row['frp']} MW`\n"
+                            f"• **Satellite:** {row['satellite']}"
+                        )
+                        embed.add_field(name=field_title, value=field_value, inline=False)
+
+                    pages.append(embed)
 
                 await SimpleMenu(pages, use_select_menu=False).start(ctx)
 
