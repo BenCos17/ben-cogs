@@ -1,5 +1,6 @@
 import discord
 from redbot.core import commands
+from redbot.core.utils.menus import SimpleMenu
 import pandas as pd
 import requests
 
@@ -53,7 +54,7 @@ class Firms(commands.Cog):
 
     @firms.command(name="fires")
     async def firms_fires(self, ctx: commands.Context, days: int = 1):
-        """Get recent world-wide VIIRS NOAA-20 fire hotspots (Default: last 1 day)."""
+        """Get recent world-wide VIIRS NOAA-20 fire hotspots with interactive pages."""
         map_key = await self.get_map_key()
         if not map_key:
             return await ctx.send(
@@ -72,10 +73,26 @@ class Firms(commands.Cog):
                 used_tokens = end_count - start_count
                 total_fires = len(df_area)
 
-                await ctx.send(
-                    f"Successfully fetched **{total_fires}** fire hotspots worldwide "
-                    f"using the VIIRS NOAA-20 sensor for the past {days} day(s).\n"
-                    f"Transactions consumed: `{used_tokens}`"
-                )
+                if total_fires == 0:
+                    return await ctx.send("No fire data found for the given time frame.")
+
+                # Clean and isolate useful columns
+                sub_df = df_area[['latitude', 'longitude', 'acq_date', 'confidence', 'frp']]
+                
+                # Split the dataframe into pages of 10 rows each
+                rows_per_page = 10
+                pages = []
+                
+                for i in range(0, total_fires, rows_per_page):
+                    chunk = sub_df.iloc[i:i + rows_per_page]
+                    page_text = (
+                        f"**NASA FIRMS Fire Data** (Showing results {i+1} to {min(i+rows_per_page, total_fires)} of {total_fires})\n"
+                        f"Transactions consumed: `{used_tokens}`\n"
+                        f"```yaml\n{chunk.to_string()}```"
+                    )
+                    pages.append(page_text)
+
+                await SimpleMenu(pages, use_select_menu=False).start(ctx)
+
             except Exception as e:
                 await ctx.send(f"Failed to fetch fire data. Error: `{e}`")
