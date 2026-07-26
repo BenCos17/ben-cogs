@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from redbot.core import commands
 from redbot.core.utils.menus import SimpleMenu
@@ -17,15 +18,18 @@ class Firms(commands.Cog):
 
     async def get_transaction_count(self, map_key: str) -> int:
         url = f'https://firms.modaps.eosdis.nasa.gov/mapserver/mapkey_status/?MAP_KEY={map_key}'
-        count = 0
-        try:
-            response = requests.get(url)
-            data = response.json()
-            df = pd.Series(data)
-            count = int(df['current_transactions'])
-        except Exception:
-            pass
-        return count
+        
+        def _fetch():
+            try:
+                response = requests.get(url, timeout=10)
+                data = response.json()
+                df = pd.Series(data)
+                return int(df['current_transactions'])
+            except Exception:
+                return 0
+
+        # Run synchronous blocking requests inside a separate thread pool
+        return await asyncio.to_thread(_fetch)
 
     @commands.group(name="firms")
     async def firms(self, ctx: commands.Context):
@@ -43,10 +47,14 @@ class Firms(commands.Cog):
             )
 
         url = f'https://firms.modaps.eosdis.nasa.gov/mapserver/mapkey_status/?MAP_KEY={map_key}'
-        try:
-            response = requests.get(url)
+        
+        def _fetch_status():
+            response = requests.get(url, timeout=10)
             data = response.json()
-            df = pd.Series(data)
+            return pd.Series(data)
+
+        try:
+            df = await asyncio.to_thread(_fetch_status)
             output = f"```yaml\n{df.to_string()}```"
             await ctx.send(output)
         except Exception as e:
@@ -67,7 +75,10 @@ class Firms(commands.Cog):
         async with ctx.typing():
             try:
                 start_count = await self.get_transaction_count(map_key)
-                df_area = pd.read_csv(area_url)
+                
+                # Offload heavy CSV downloading and parsing to a background thread
+                df_area = await asyncio.to_thread(pd.read_csv, area_url)
+                
                 end_count = await self.get_transaction_count(map_key)
                 
                 used_tokens = end_count - start_count
@@ -76,7 +87,6 @@ class Firms(commands.Cog):
                 if total_fires == 0:
                     return await ctx.send("No fire data found for the given time frame.")
 
-                # Group rows into chunks of 5 per page for a structured embed layout
                 rows_per_page = 5
                 pages = []
                 total_pages = (total_fires + rows_per_page - 1) // rows_per_page
@@ -94,9 +104,7 @@ class Firms(commands.Cog):
                     )
 
                     for _, row in chunk.iterrows():
-                        # Add helpful formatting symbols
                         time_icon = "☀️" if str(row.get('daynight')) == "D" else "🌙"
-                        
                         field_title = f"{time_icon} Location: {row['latitude']}°, {row['longitude']}°"
                         field_value = (
                             f"• **Date/Time (UTC):** {row['acq_date']} at {row['acq_time']}\n"
