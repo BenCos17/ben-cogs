@@ -6,14 +6,15 @@ class TriggerModal(Modal, title="Add New Trigger"):
     trigger = TextInput(label="Trigger Word", style=discord.TextStyle.short, placeholder="e.g. hello", required=True)
     response = TextInput(label="Response", style=discord.TextStyle.paragraph, placeholder="e.g. Hi there!", required=True)
 
-    def __init__(self, cog):
+    def __init__(self, cog, guild: discord.Guild):
         super().__init__()
         self.cog = cog
+        self.guild = guild
 
     async def on_submit(self, interaction: discord.Interaction):
-        async with self.cog.config.triggers() as triggers:
+        async with self.cog.config.guild(self.guild).triggers() as triggers:
             triggers[self.trigger.value.lower()] = self.response.value
-        await interaction.response.send_message(f"✅ Trigger '{self.trigger.value}' added!", ephemeral=True)
+        await interaction.response.send_message(f"✅ Trigger '{self.trigger.value}' added for this server!", ephemeral=True)
 
 class MessageResponder(commands.Cog):
     """Responds to specific keywords in messages."""
@@ -21,12 +22,12 @@ class MessageResponder(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
-        self.config.register_global(triggers={})
+        # Changed from register_global to register_guild
+        self.config.register_guild(triggers={})
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot or not message.guild:
-        # Checks if the message is a command. If so, do not trigger auto-responses.
             return
 
         ctx = await self.bot.get_context(message)
@@ -34,16 +35,12 @@ class MessageResponder(commands.Cog):
             return
 
         content = message.content.lower()
-        triggers = await self.config.triggers()
+        # Fetch triggers specific to the current guild
+        triggers = await self.config.guild(message.guild).triggers()
         for trigger, response in triggers.items():
             if trigger in content:
-                # Pinging allowed in auto-responses
                 await message.channel.send(response)
                 break 
-        
-        # I don't need process_commands here because get_context 
-        # already checked if it was a command, and the bot 
-        # handles the command execution separately
 
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
@@ -53,26 +50,28 @@ class MessageResponder(commands.Cog):
             await ctx.send_help(ctx.command)
 
     @commands.hybrid_command(name="responderui")
+    @commands.guild_only()
     async def ui_add_trigger(self, ctx: commands.Context):
         """Open a UI to add a new trigger."""
-        # Check if this is being called as a slash command
         if ctx.interaction:
-            await ctx.interaction.response.send_modal(TriggerModal(self))
+            # Pass the guild into the modal so it knows where to save
+            await ctx.interaction.response.send_modal(TriggerModal(self, ctx.guild))
         else:
-            # If called as a prefix command, tell the user to use slash
             await ctx.send("Please use the slash command `/responderui` to open the UI.")
 
     @responder.command(name="add")
+    @commands.guild_only()
     async def add_trigger(self, ctx, trigger: str, *, response: str):
         """Add a custom trigger via command."""
-        async with self.config.triggers() as triggers:
+        async with self.config.guild(ctx.guild).triggers() as triggers:
             triggers[trigger.lower()] = response
         await ctx.send(f"✅ Trigger added: '{trigger}'")
 
     @responder.command(name="remove")
+    @commands.guild_only()
     async def remove_trigger(self, ctx, trigger: str):
         """Remove a custom trigger."""
-        async with self.config.triggers() as triggers:
+        async with self.config.guild(ctx.guild).triggers() as triggers:
             if trigger.lower() in triggers:
                 del triggers[trigger.lower()]
                 await ctx.send(f"🗑️ Trigger '{trigger}' removed.")
@@ -80,23 +79,22 @@ class MessageResponder(commands.Cog):
                 await ctx.send("❌ Trigger not found.")
 
     @responder.command(name="list")
+    @commands.guild_only()
     async def list_triggers(self, ctx):        
         """List all custom triggers."""
-        triggers = await self.config.triggers()
+        triggers = await self.config.guild(ctx.guild).triggers()
         if not triggers:
-            await ctx.send("No triggers set.")
+            await ctx.send("No triggers set for this server.")
             return
 
-        # Build the embed
         embed = discord.Embed(
-            title="📜 Current Triggers",
+            title="📜 Current Server Triggers",
             color=await ctx.embed_color()
         )
         
         trigger_list = "\n".join(f"**{t}**: {r}" for t, r in triggers.items())
         embed.description = trigger_list[:4096]
         
-        # Send with allowed_mentions=none to prevent pings in the list output
         await ctx.send(
             embed=embed, 
             allowed_mentions=discord.AllowedMentions.none()
