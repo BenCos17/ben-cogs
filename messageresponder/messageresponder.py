@@ -1,6 +1,6 @@
 import discord
 from redbot.core import commands, Config
-from discord.ui import Modal, TextInput
+from discord.ui import Modal, TextInput, View
 
 class TriggerModal(Modal, title="Add New Trigger"):
     trigger = TextInput(label="Trigger Word", style=discord.TextStyle.short, placeholder="e.g. hello", required=True)
@@ -16,13 +16,22 @@ class TriggerModal(Modal, title="Add New Trigger"):
             triggers[self.trigger.value.lower()] = self.response.value
         await interaction.response.send_message(f"✅ Trigger '{self.trigger.value}' added for this server!", ephemeral=True)
 
+class TriggerButtonView(View):
+    def __init__(self, cog, guild: discord.Guild):
+        super().__init__(timeout=60)
+        self.cog = cog
+        self.guild = guild
+
+    @discord.ui.button(label="Open Trigger Form", style=discord.ButtonStyle.primary, emoji="📝")
+    async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(TriggerModal(self.cog, self.guild))
+
 class MessageResponder(commands.Cog):
     """Responds to specific keywords in messages."""
 
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
-        # Changed from register_global to register_guild
         self.config.register_guild(triggers={})
 
     @commands.Cog.listener()
@@ -35,7 +44,6 @@ class MessageResponder(commands.Cog):
             return
 
         content = message.content.lower()
-        # Fetch triggers specific to the current guild
         triggers = await self.config.guild(message.guild).triggers()
         for trigger, response in triggers.items():
             if trigger in content:
@@ -53,11 +61,18 @@ class MessageResponder(commands.Cog):
     @commands.guild_only()
     async def ui_add_trigger(self, ctx: commands.Context):
         """Open a UI to add a new trigger."""
+        view = TriggerButtonView(self, ctx.guild)
+        
         if ctx.interaction:
-            # Pass the guild into the modal so it knows where to save
+            # If used via slash command, send the modal directly or via a ephemeral response with view
             await ctx.interaction.response.send_modal(TriggerModal(self, ctx.guild))
         else:
-            await ctx.send("Please use the slash command `/responderui` to open the UI.")
+            # If used via prefix command, send a button message since prefix commands can't trigger modals directly
+            await ctx.send(
+                "Click the button below to open the trigger creation form:", 
+                view=view, 
+                delete_after=60
+            )
 
     @responder.command(name="add")
     @commands.guild_only()
