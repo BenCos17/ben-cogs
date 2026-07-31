@@ -32,7 +32,11 @@ class MessageResponder(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976)
-        self.config.register_guild(triggers={})
+        # Added allowed_channels storage (list of channel IDs)
+        self.config.register_guild(
+            triggers={},
+            allowed_channels=[]
+        )
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -43,8 +47,15 @@ class MessageResponder(commands.Cog):
         if ctx.valid:
             return
 
+        guild_config = self.config.guild(message.guild)
+        
+        # Check channel restriction
+        allowed_channels = await guild_config.allowed_channels()
+        if allowed_channels and message.channel.id not in allowed_channels:
+            return
+
         content = message.content.lower()
-        triggers = await self.config.guild(message.guild).triggers()
+        triggers = await guild_config.triggers()
         for trigger, response in triggers.items():
             if trigger in content:
                 await message.channel.send(response)
@@ -64,10 +75,8 @@ class MessageResponder(commands.Cog):
         view = TriggerButtonView(self, ctx.guild)
         
         if ctx.interaction:
-            # If used via slash command, send the modal directly or via a ephemeral response with view
             await ctx.interaction.response.send_modal(TriggerModal(self, ctx.guild))
         else:
-            # If used via prefix command, send a button message since prefix commands can't trigger modals directly
             await ctx.send(
                 "Click the button below to open the trigger creation form:", 
                 view=view, 
@@ -96,21 +105,57 @@ class MessageResponder(commands.Cog):
     @responder.command(name="list")
     @commands.guild_only()
     async def list_triggers(self, ctx):        
-        """List all custom triggers."""
-        triggers = await self.config.guild(ctx.guild).triggers()
-        if not triggers:
-            await ctx.send("No triggers set for this server.")
-            return
+        """List all custom triggers and allowed channels."""
+        guild_data = self.config.guild(ctx.guild)
+        triggers = await guild_data.triggers()
+        allowed_channels = await guild_data.allowed_channels()
 
         embed = discord.Embed(
             title="📜 Current Server Triggers",
             color=await ctx.embed_color()
         )
         
-        trigger_list = "\n".join(f"**{t}**: {r}" for t, r in triggers.items())
-        embed.description = trigger_list[:4096]
+        # Display allowed channels info
+        if allowed_channels:
+            channels_str = ", ".join(f"<#{cid}>" for cid in allowed_channels)
+            embed.add_field(name="Allowed Channels", value=channels_str, inline=False)
+        else:
+            embed.add_field(name="Allowed Channels", value="*All channels (None restricted)*", inline=False)
+
+        if triggers:
+            trigger_list = "\n".join(f"**{t}**: {r}" for t, r in triggers.items())
+            embed.description = trigger_list[:4096]
+        else:
+            embed.description = "No triggers set for this server."
         
         await ctx.send(
             embed=embed, 
             allowed_mentions=discord.AllowedMentions.none()
         )
+
+    @responder.group(name="channel")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def responder_channel(self, ctx):
+        """Configure channels where triggers are active."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @responder_channel.command(name="add")
+    async def channel_add(self, ctx, channel: discord.TextChannel):
+        """Restrict triggers to a specific channel."""
+        async with self.config.guild(ctx.guild).allowed_channels() as channels:
+            if channel.id in channels:
+                await ctx.send(f"❌ {channel.mention} is already in the allowed list.")
+                return
+            channels.append(channel.id)
+        await ctx.send(f"✅ Triggers can now fire in {channel.mention}.")
+
+    @responder_channel.command(name="remove")
+    async def channel_remove(self, ctx, channel: discord.TextChannel):
+        """Remove a channel restriction (allow it everywhere again, or drop from whitelist)."""
+        async with self.config.guild(ctx.guild).allowed_channels() as channels:
+            if channel.id not in channels:
+                await ctx.send(f"❌ {channel.mention} is not in the allowed list.")
+                return
+            channels.remove(channel.id)
+        await ctx.send(f"🗑️ Removed {channel.mention} from the allowed channels list.")
