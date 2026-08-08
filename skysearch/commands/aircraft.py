@@ -512,7 +512,7 @@ class AircraftCommands:
             # Basic aircraft info
             callsign = aircraft_data.get('flight', 'N/A').strip()
             if not callsign or callsign == 'N/A':
-                callsign = 'BLOCKED'
+                callsign = 'N/A'
             embed.add_field(name="Callsign", value=f"{callsign}", inline=True)
             
             registration = aircraft_data.get('reg', None)
