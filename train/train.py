@@ -22,7 +22,7 @@ class Train(commands.Cog):
       print(f"[Train API Error] Could not connect to {url}: {e}")
       return 500, None
 
-  # --- Train Commands ---
+  # --- Train Commands Group ---
 
   @commands.hybrid_group(name="train", aliases=["trains"])
   async def train(self, ctx: commands.Context):
@@ -98,13 +98,142 @@ class Train(commands.Cog):
 
       await ctx.send(embed=embed)
 
-  # --- Station Commands ---
+  @train.command(name="movements")
+  @app_commands.describe(code="The train's 4-character code (e.g., E401)")
+  async def train_movements(self, ctx: commands.Context, code: str):
+    """Get movements for a specific train by its code."""
+    async with ctx.typing():
+      status, data = await self._make_request(f"/trains/{code.upper()}/movements")
+
+      if status == 404 or (data and not data.get("success")):
+        err_msg = (
+            data.get("errorMessage", f"Movements for train {code.upper()} not found.")
+            if data
+            else f"Movements for train {code.upper()} not found."
+        )
+        await ctx.send(f"❌ {err_msg}")
+        return
+
+      if status != 200 or not data:
+        await ctx.send(f"❌ Could not retrieve movements for train {code.upper()}.")
+        return
+
+      # Handle array or object layout depending on exact response shape
+      movements = data.get("movements", data.get("trainMovements", []))
+      embed = discord.Embed(
+          title=f"🛤️ Train Movements: {code.upper()}",
+          description=f"Found **{len(movements)}** recorded movements.",
+          color=discord.Color.purple(),
+      )
+
+      mov_text = ""
+      for m in movements[:8]:
+        mov_text += (
+            f"• **{m.get('LocationFullName', m.get('location', 'Stop'))}** — "
+            f"Arr: {m.get('Arr', 'N/E')} | Dep: {m.get('Dep', 'N/E')}\n"
+        )
+
+      if mov_text:
+        embed.add_field(name="Recent Stops", value=mov_text, inline=False)
+      else:
+        embed.add_field(name="Recent Stops", value="No movement details available.", inline=False)
+
+      await ctx.send(embed=embed)
+
+  @train.command(name="hacon")
+  async def train_hacon(self, ctx: commands.Context):
+    """Get all Hacon trains used by the Irish Rail app."""
+    async with ctx.typing():
+      status, data = await self._make_request("/hacon-trains")
+
+      if status != 200 or not data:
+        await ctx.send("❌ Could not fetch Hacon trains data.")
+        return
+
+      trains = data.get("trains", data.get("haconTrains", []))
+      embed = discord.Embed(
+          title="🚄 Hacon Trains",
+          description=f"Loaded **{len(trains)}** Hacon trains.",
+          color=discord.Color.teal(),
+      )
+      
+      sample = trains[:5]
+      sample_text = ""
+      for t in sample:
+        sample_text += f"• **{t.get('trainCode', t.get('code', 'N/A'))}**\n"
+
+      if sample_text:
+        embed.add_field(name="Sample Hacon Trains", value=sample_text, inline=False)
+
+      await ctx.send(embed=embed)
+
+  # --- Station Commands Group ---
 
   @commands.hybrid_group(name="station", aliases=["stations"])
   async def station(self, ctx: commands.Context):
     """Irish Rail station commands."""
     if ctx.invoked_subcommand is None:
       await ctx.send_help()
+
+  @station.command(name="all")
+  @app_commands.describe(station_type="Filter stations by type (D, S, A)")
+  async def station_all(self, ctx: commands.Context, station_type: str = None):
+    """Get all stations operated by Irish Rail."""
+    async with ctx.typing():
+      params = {"type": station_type.upper()} if station_type else None
+      status, data = await self._make_request("/stations", params=params)
+
+      if status != 200 or not data or not data.get("success"):
+        await ctx.send("❌ Could not fetch stations list.")
+        return
+
+      stations = data.get("stations", [])
+      embed = discord.Embed(
+          title="🏢 Irish Rail Stations",
+          description=f"Found **{len(stations)}** stations across the network.",
+          color=discord.Color.gold(),
+      )
+
+      sample = stations[:8]
+      sample_text = ""
+      for s in sample:
+        sample_text += f"• **{s.get('code')}**: {s.get('name')}\n"
+
+      if sample_text:
+        embed.add_field(name="Sample Stations", value=sample_text, inline=False)
+      
+      await ctx.send(embed=embed)
+
+  @station.command(name="info")
+  @app_commands.describe(code="The 5-character station code (e.g., CNLLY)")
+  async def station_info(self, ctx: commands.Context, code: str):
+    """Get details for a specific station by its code."""
+    async with ctx.typing():
+      status, data = await self._make_request(f"/stations/{code.upper()}")
+
+      if status == 404 or (data and not data.get("success")):
+        err_msg = (
+            data.get("errorMessage", f"No station found matching code '{code.upper()}'")
+            if data
+            else f"No station found matching code '{code.upper()}'"
+        )
+        await ctx.send(f"❌ {err_msg}")
+        return
+
+      if status != 200 or not data or "station" not in data:
+        await ctx.send(f"❌ Could not retrieve details for station **{code.upper()}**.")
+        return
+
+      s = data["station"]
+      embed = discord.Embed(
+          title=f"🏢 Station: {s.get('name')} ({s.get('code')})",
+          color=discord.Color.gold(),
+      )
+      embed.add_field(name="Alias", value=s.get("alias", "N/A"), inline=False)
+      embed.add_field(name="Latitude", value=str(s.get("latitude", "N/A")), inline=True)
+      embed.add_field(name="Longitude", value=str(s.get("longitude", "N/A")), inline=True)
+
+      await ctx.send(embed=embed)
 
   @station.command(name="timetable")
   @app_commands.describe(code="The 5-character station code (e.g., CNLLY)")
