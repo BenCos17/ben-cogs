@@ -3,6 +3,76 @@ import discord
 from redbot.core import Config, app_commands, commands
 
 
+class StationSelectView(discord.ui.View):
+  """A view with a dropdown select menu for station disambiguation."""
+
+  def __init__(self, cog, ctx, matches, callback_func, *args, **kwargs):
+    super().__init__(timeout=60)
+    self.cog = cog
+    self.ctx = ctx
+    self.callback_func = callback_func
+    self.args = args
+    self.kwargs = kwargs
+    self.selected_code = None
+
+    # Build select options (limit to max 25 items due to Discord API limits)
+    options = []
+    for m in matches[:25]:
+      label = m.get("name")[:100]
+      code = m.get("code")
+      description = f"Code: {code}"
+      if m.get("alias"):
+        description += f" | Alias: {m.get('alias')}"
+      description = description[:100]
+
+      options.append(
+          discord.SelectOption(
+              label=label, value=code, description=description
+          )
+      )
+
+    # Add the select component to the view
+    self.select_menu = discord.ui.Select(
+        placeholder="Choose the correct station...",
+        min_values=1,
+        max_values=1,
+        options=options,
+    )
+    self.select_menu.callback = self.select_callback
+    self.add_item(self.select_menu)
+
+  async def select_callback(self, interaction: discord.Interaction):
+    if interaction.user.id != self.ctx.author.id:
+      await interaction.response.send_message(
+          "❌ You are not allowed to use this menu.", ephemeral=True
+      )
+      return
+
+    self.selected_code = self.select_menu.values[0]
+    
+    # Disable the dropdown after selection
+    for item in self.children:
+      item.disabled = True
+    
+    await interaction.response.edit_message(
+        content=f"✅ Selected station code: **{self.selected_code}**. Loading...",
+        view=self,
+    )
+    
+    # Stop the view listener and trigger the original requested command logic
+    self.stop()
+    await self.callback_func(self.ctx, self.selected_code, *self.args, **self.kwargs)
+
+  async def on_timeout(self):
+    # Disable components on timeout
+    for item in self.children:
+      item.disabled = True
+    try:
+      await self.message.edit(content="⌛ Station selection timed out.", view=self)
+    except Exception:
+      pass
+
+
 class Train(commands.Cog):
   """Interact with the Iarnród Éireann (Irish Rail) REST API v1."""
 
@@ -10,7 +80,7 @@ class Train(commands.Cog):
     self.bot = bot
     self.base_url = "https://ie.api.thediabetic.dev"
     
-    # Initialize Red's Config for settings (using your specified identifier)
+    # Initialize Red's Config for settings
     self.config = Config.get_conf(
         self, identifier=492089091320446976, force_registration=True
     )
@@ -37,6 +107,50 @@ class Train(commands.Cog):
     except Exception as e:
       print(f"[Train API Error] Could not connect to {url}: {e}")
       return 500, None
+
+  async def _resolve_station(self, ctx: commands.Context, query: str, callback_func, *args, **kwargs):
+    """Helper to resolve station names or codes. 
+    
+    If multiple matches are found, sends a dropdown menu view.
+    """
+    query_clean = query.strip().lower()
+    
+    status, data = await self._make_request("/stations")
+    if status != 200 or not data or not data.get("success"):
+      return query.upper() # Fallback
+
+    stations = data.get("stations", [])
+    
+    # 1. Check exact code match first
+    for s in stations:
+      if s.get("code", "").lower() == query_clean:
+        return s.get("code")
+
+    # 2. Check matching names or aliases
+    matches = [
+        s for s in stations 
+        if query_clean in s.get("name", "").lower() or query_clean in s.get("alias", "").lower()
+    ]
+
+    if not matches:
+      await ctx.send(f"❌ No stations found matching **'{query}'**.")
+      return None
+
+    # 3. Exactly one match
+    if len(matches) == 1:
+      return matches[0].get("code")
+
+    # 4. Multiple matches — invoke selection view dropdown
+    embed = discord.Embed(
+        title=f"⚠️ Multiple Stations Found for '{query}'",
+        description="Please select the correct station from the dropdown menu below:",
+        color=discord.Color.orange(),
+    )
+    
+    view = StationSelectView(self, ctx, matches, callback_func, *args, **kwargs)
+    msg = await ctx.send(embed=embed, view=view)
+    view.message = msg
+    return None
 
   # --- Settings / Config Group (Owner Only) ---
 
@@ -220,7 +334,6 @@ class Train(commands.Cog):
       stations = data.get("stations", [])
       query = name.lower()
       
-      # Find matches based on name or alias containing the query string
       matches = [
           s for s in stations 
           if query in s.get("name", "").lower() or query in s.get("alias", "").lower()
@@ -237,7 +350,7 @@ class Train(commands.Cog):
       )
 
       match_text = ""
-      for m in matches[:10]: # Limit to 10 matches to avoid embed limits
+      for m in matches[:10]:
         match_text += f"• **{m.get('name')}** — Code: `{m.get('code')}`"
         if m.get('alias'):
           match_text += f" *(Alias: {m.get('alias')})*"
@@ -275,20 +388,18 @@ class Train(commands.Cog):
       
       await ctx.send(embed=embed)
 
-  @station.command(name="info")
-  @app_commands.describe(code="The 5-character station code (e.g., CNLLY)")
-  async def station_info(self, ctx: commands.Context, code: str):
-    """Get details for a specific station by its code."""
+  async def _do_station_info(self, ctx: commands.Context, code: str):
+    """Worker logic for station info after resolution."""
     async with ctx.typing():
-      status, data = await self._make_request(f"/stations/{code.upper()}")
+      status, data = await self._make_request(f"/stations/{code}")
 
       if status == 404 or (data and not data.get("success")):
-        err_msg = data.get("errorMessage", f"No station found matching code '{code.upper()}'") if data else f"No station found matching code '{code.upper()}'"
+        err_msg = data.get("errorMessage", f"No station found matching code '{code}'") if data else f"No station found matching code '{code}'"
         await ctx.send(f"❌ {err_msg}")
         return
 
       if status != 200 or not data or "station" not in data:
-        await ctx.send(f"❌ Could not retrieve details for station **{code.upper()}**.")
+        await ctx.send(f"❌ Could not retrieve details for station **{code}**.")
         return
 
       s = data["station"]
@@ -302,25 +413,31 @@ class Train(commands.Cog):
 
       await ctx.send(embed=embed)
 
-  @station.command(name="timetable")
-  @app_commands.describe(code="The 5-character station code (e.g., CNLLY)")
-  async def station_timetable(self, ctx: commands.Context, code: str):
-    """Get the live timetable for a specific station code."""
+  @station.command(name="info")
+  @app_commands.describe(station_query="The station code or name (e.g., CNLLY or Connolly)")
+  async def station_info(self, ctx: commands.Context, *, station_query: str):
+    """Get details for a specific station by its code or name."""
+    code = await self._resolve_station(ctx, station_query, self._do_station_info)
+    if code:
+      await self._do_station_info(ctx, code)
+
+  async def _do_station_timetable(self, ctx: commands.Context, code: str):
+    """Worker logic for station timetable after resolution."""
     async with ctx.typing():
-      status, data = await self._make_request(f"/stations/{code.upper()}/timetable")
+      status, data = await self._make_request(f"/stations/{code}/timetable")
 
       if status == 404 or (data and not data.get("success")):
-        err_msg = data.get("errorMessage", f"No station found matching code '{code.upper()}'") if data else f"No station found matching code '{code.upper()}'"
+        err_msg = data.get("errorMessage", f"No station found matching code '{code}'") if data else f"No station found matching code '{code}'"
         await ctx.send(f"❌ {err_msg}")
         return
 
       if status != 200 or not data or "timetable" not in data:
-        await ctx.send(f"❌ Could not retrieve timetable for station **{code.upper()}**.")
+        await ctx.send(f"❌ Could not retrieve timetable for station **{code}**.")
         return
 
       timetable = data["timetable"]
       embed = discord.Embed(
-          title=f"🕒 Timetable for Station: {code.upper()}",
+          title=f"🕒 Timetable for Station: {code}",
           description=f"Found **{len(timetable)}** upcoming movements.",
           color=discord.Color.orange(),
       )
@@ -338,3 +455,13 @@ class Train(commands.Cog):
         embed.add_field(name="Upcoming Services", value="No upcoming services listed right now.", inline=False)
 
       await ctx.send(embed=embed)
+
+  @station.command(name="timetable")
+  @app_commands.describe(station_query="The station code or name (e.g., CNLLY or Connolly)")
+  async def station_timetable(self, ctx: commands.Context, *, station_query: str):
+    """Get the live timetable for a specific station by code or name."""
+    code = await self._resolve_station(ctx, station_query, self._do_station_timetable)
+    if code:
+      await self._do_station_timetable(ctx, code)
+
+
