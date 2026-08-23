@@ -15,7 +15,6 @@ class StationSelectView(discord.ui.View):
     self.kwargs = kwargs
     self.selected_code = None
 
-    # Build select options (limit to max 25 items due to Discord API limits)
     options = []
     for m in matches[:25]:
       label = m.get("name")[:100]
@@ -31,7 +30,6 @@ class StationSelectView(discord.ui.View):
           )
       )
 
-    # Add the select component to the view
     self.select_menu = discord.ui.Select(
         placeholder="Choose the correct station...",
         min_values=1,
@@ -50,7 +48,6 @@ class StationSelectView(discord.ui.View):
 
     self.selected_code = self.select_menu.values[0]
     
-    # Disable the dropdown after selection
     for item in self.children:
       item.disabled = True
     
@@ -59,12 +56,10 @@ class StationSelectView(discord.ui.View):
         view=self,
     )
     
-    # Stop the view listener and trigger the original requested command logic
     self.stop()
     await self.callback_func(self.ctx, self.selected_code, *self.args, **self.kwargs)
 
   async def on_timeout(self):
-    # Disable components on timeout
     for item in self.children:
       item.disabled = True
     try:
@@ -80,7 +75,6 @@ class Train(commands.Cog):
     self.bot = bot
     self.base_url = "https://ie.api.thediabetic.dev"
     
-    # Initialize Red's Config for settings
     self.config = Config.get_conf(
         self, identifier=492089091320446976, force_registration=True
     )
@@ -88,7 +82,6 @@ class Train(commands.Cog):
     self.config.register_global(**default_global)
 
   async def _get_headers(self) -> dict:
-    """Retrieves the configured User-Agent and formats request headers."""
     ua = await self.config.user_agent()
     return {
         "User-Agent": ua,
@@ -96,7 +89,6 @@ class Train(commands.Cog):
     }
 
   async def _make_request(self, endpoint: str, params: dict = None):
-    """Helper method to fetch data from the Irish Rail REST API safely."""
     url = f"{self.base_url}{endpoint}"
     headers = await self._get_headers()
     try:
@@ -109,24 +101,18 @@ class Train(commands.Cog):
       return 500, None
 
   async def _resolve_station(self, ctx: commands.Context, query: str, callback_func, *args, **kwargs):
-    """Helper to resolve station names or codes. 
-    
-    If multiple matches are found, sends a dropdown menu view.
-    """
     query_clean = query.strip().lower()
     
     status, data = await self._make_request("/stations")
     if status != 200 or not data or not data.get("success"):
-      return query.upper() # Fallback
+      return query.upper()
 
     stations = data.get("stations", [])
     
-    # 1. Check exact code match first
     for s in stations:
       if s.get("code", "").lower() == query_clean:
         return s.get("code")
 
-    # 2. Check matching names or aliases
     matches = [
         s for s in stations 
         if query_clean in s.get("name", "").lower() or query_clean in s.get("alias", "").lower()
@@ -136,11 +122,9 @@ class Train(commands.Cog):
       await ctx.send(f"❌ No stations found matching **'{query}'**.")
       return None
 
-    # 3. Exactly one match
     if len(matches) == 1:
       return matches[0].get("code")
 
-    # 4. Multiple matches — invoke selection view dropdown
     embed = discord.Embed(
         title=f"⚠️ Multiple Stations Found for '{query}'",
         description="Please select the correct station from the dropdown menu below:",
@@ -398,13 +382,13 @@ class Train(commands.Cog):
         await ctx.send(f"❌ {err_msg}")
         return
 
-      if status != 200 or not data or "station" not in data:
+      if status != 200 or not data or not data.get("station"):
         await ctx.send(f"❌ Could not retrieve details for station **{code}**.")
         return
 
       s = data["station"]
       embed = discord.Embed(
-          title=f"🏢 Station: {s.get('name')} ({s.get('code')})",
+          title=f"🏢 Station: {s.get('name', 'Unknown')} ({s.get('code', code)})",
           color=discord.Color.gold(),
       )
       embed.add_field(name="Alias", value=s.get("alias", "N/A"), inline=False)
