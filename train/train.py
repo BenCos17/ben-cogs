@@ -1,6 +1,6 @@
 import aiohttp
 import discord
-from redbot.core import app_commands, commands
+from redbot.core import Config, app_commands, commands
 
 
 class Train(commands.Cog):
@@ -9,18 +9,65 @@ class Train(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
     self.base_url = "https://ie.api.thediabetic.dev"
+    
+    # Initialize Red's Config for guild/global settings (stores the custom User-Agent)
+    self.config = Config.get_conf(
+        self, identifier=492089091320446976, force_registration=True
+    )
+    default_global = {"user_agent": "Red-DiscordBot (IrishRail Cog)"}
+    self.config.register_global(**default_global)
+
+  async def _get_headers(self) -> dict:
+    """Retrieves the configured User-Agent and formats request headers."""
+    ua = await self.config.user_agent()
+    return {
+        "User-Agent": ua,
+        "Accept": "application/json"
+    }
 
   async def _make_request(self, endpoint: str, params: dict = None):
     """Helper method to fetch data from the Irish Rail REST API safely."""
     url = f"{self.base_url}{endpoint}"
+    headers = await self._get_headers()
     try:
       async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params, timeout=10) as response:
+        async with session.get(url, params=params, headers=headers, timeout=10) as response:
           data = await response.json()
           return response.status, data
     except Exception as e:
       print(f"[Train API Error] Could not connect to {url}: {e}")
       return 500, None
+
+  # --- Settings / Config Group (Owner Only) ---
+
+  @commands.group(name="trainset", invoke_without_command=True)
+  @commands.is_owner()
+  async def trainset(self, ctx: commands.Context):
+    """Configure settings for the Train cog."""
+    await ctx.send_help()
+
+  @trainset.command(name="useragent")
+  @commands.is_owner()
+  async def trainset_useragent(self, ctx: commands.Context, *, user_agent: str = None):
+    """View or set the custom User-Agent used for API requests.
+    
+    Leave blank to see the current User-Agent.
+    """
+    if not user_agent:
+      current_ua = await self.config.user_agent()
+      await ctx.send(f"🔍 Current API `User-Agent` is configured as:\n`{current_ua}`")
+      return
+
+    await self.config.user_agent.set(user_agent)
+    await ctx.send(f"✅ Successfully updated custom `User-Agent` to:\n`{user_agent}`")
+
+  @trainset.command(name="resetuseragent")
+  @commands.is_owner()
+  async def trainset_resetuseragent(self, ctx: commands.Context):
+    """Reset the User-Agent back to the default value."""
+    await self.config.user_agent.clear()
+    default_ua = await self.config.user_agent()
+    await ctx.send(f"🔄 Reset `User-Agent` back to default:\n`{default_ua}`")
 
   # --- Train Commands Group ---
 
@@ -118,7 +165,6 @@ class Train(commands.Cog):
         await ctx.send(f"❌ Could not retrieve movements for train {code.upper()}.")
         return
 
-      # Handle array or object layout depending on exact response shape
       movements = data.get("movements", data.get("trainMovements", []))
       embed = discord.Embed(
           title=f"🛤️ Train Movements: {code.upper()}",
@@ -275,5 +321,4 @@ class Train(commands.Cog):
         embed.add_field(name="Upcoming Services", value="No upcoming services listed right now.", inline=False)
 
       await ctx.send(embed=embed)
-
 
