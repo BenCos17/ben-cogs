@@ -20,7 +20,7 @@ class Airframes(commands.Cog):
     - `[p]airports search`: search airports
     - `[p]flights active`: list active flights
     - `[p]messages get <id>`: get message by id
-    - `[p]stations list`: list stations
+    - `[p]airframesstations list`: list stations
     """
 
     def __init__(self, bot):
@@ -386,15 +386,14 @@ class Airframes(commands.Cog):
             raise commands.CommandError(str(e))
 
     @commands.group()
-    async def stations(self, ctx: commands.Context):
-        """Stations API commands."""
+    async def airframesstations(self, ctx: commands.Context):
+        """airframesstations API commands."""
         pass
 
-    @stations.command(name="list")
+    @airframesstations.command(name="list")
     async def stations_list(self, ctx: commands.Context):
         data = await self._request("stations")
         await self._present_result(ctx, data, title="Stations")
 
 
-def setup(bot):
-    bot.add_cog(Airframes(bot))
+
