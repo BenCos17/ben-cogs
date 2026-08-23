@@ -10,7 +10,7 @@ class Train(commands.Cog):
     self.bot = bot
     self.base_url = "https://ie.api.thediabetic.dev"
     
-    # Initialize Red's Config for guild/global settings (stores the custom User-Agent)
+    # Initialize Red's Config for settings (using your specified identifier)
     self.config = Config.get_conf(
         self, identifier=492089091320446976, force_registration=True
     )
@@ -49,10 +49,7 @@ class Train(commands.Cog):
   @trainset.command(name="useragent")
   @commands.is_owner()
   async def trainset_useragent(self, ctx: commands.Context, *, user_agent: str = None):
-    """View or set the custom User-Agent used for API requests.
-    
-    Leave blank to see the current User-Agent.
-    """
+    """View or set the custom User-Agent used for API requests."""
     if not user_agent:
       current_ua = await self.config.user_agent()
       await ctx.send(f"🔍 Current API `User-Agent` is configured as:\n`{current_ua}`")
@@ -86,9 +83,7 @@ class Train(commands.Cog):
       status, data = await self._make_request("/trains", params=params)
 
       if status != 200 or not data or not data.get("success"):
-        await ctx.send(
-            "❌ Could not fetch train data or the API is currently unavailable."
-        )
+        await ctx.send("❌ Could not fetch train data or the API is currently unavailable.")
         return
 
       trains = data.get("trains", [])
@@ -107,9 +102,7 @@ class Train(commands.Cog):
         )
 
       if sample_text:
-        embed.add_field(
-            name="Sample of Running Trains", value=sample_text, inline=False
-        )
+        embed.add_field(name="Sample of Running Trains", value=sample_text, inline=False)
       embed.set_footer(text="Data source: Iarnród Éireann REST API v1")
       await ctx.send(embed=embed)
 
@@ -121,11 +114,7 @@ class Train(commands.Cog):
       status, data = await self._make_request(f"/trains/{code.upper()}")
 
       if status == 404 or (data and not data.get("success")):
-        err_msg = (
-            data.get("errorMessage", f"Train code {code.upper()} not found.")
-            if data
-            else f"Train code {code.upper()} not found."
-        )
+        err_msg = data.get("errorMessage", f"Train code {code.upper()} not found.") if data else f"Train code {code.upper()} not found."
         await ctx.send(f"❌ {err_msg}")
         return
 
@@ -153,11 +142,7 @@ class Train(commands.Cog):
       status, data = await self._make_request(f"/trains/{code.upper()}/movements")
 
       if status == 404 or (data and not data.get("success")):
-        err_msg = (
-            data.get("errorMessage", f"Movements for train {code.upper()} not found.")
-            if data
-            else f"Movements for train {code.upper()} not found."
-        )
+        err_msg = data.get("errorMessage", f"Movements for train {code.upper()} not found.") if data else f"Movements for train {code.upper()} not found."
         await ctx.send(f"❌ {err_msg}")
         return
 
@@ -221,6 +206,46 @@ class Train(commands.Cog):
     if ctx.invoked_subcommand is None:
       await ctx.send_help()
 
+  @station.command(name="lookup")
+  @app_commands.describe(name="The station name to search for (e.g., Connolly, Cork)")
+  async def station_lookup(self, ctx: commands.Context, *, name: str):
+    """Search for a station name to find its station code/ID."""
+    async with ctx.typing():
+      status, data = await self._make_request("/stations")
+
+      if status != 200 or not data or not data.get("success"):
+        await ctx.send("❌ Could not fetch station database.")
+        return
+
+      stations = data.get("stations", [])
+      query = name.lower()
+      
+      # Find matches based on name or alias containing the query string
+      matches = [
+          s for s in stations 
+          if query in s.get("name", "").lower() or query in s.get("alias", "").lower()
+      ]
+
+      if not matches:
+        await ctx.send(f"❌ No stations found matching **'{name}'**.")
+        return
+
+      embed = discord.Embed(
+          title=f"🔍 Station Lookup: '{name}'",
+          description=f"Found **{len(matches)}** matching station(s):",
+          color=discord.Color.blurple(),
+      )
+
+      match_text = ""
+      for m in matches[:10]: # Limit to 10 matches to avoid embed limits
+        match_text += f"• **{m.get('name')}** — Code: `{m.get('code')}`"
+        if m.get('alias'):
+          match_text += f" *(Alias: {m.get('alias')})*"
+        match_text += "\n"
+
+      embed.add_field(name="Results", value=match_text, inline=False)
+      await ctx.send(embed=embed)
+
   @station.command(name="all")
   @app_commands.describe(station_type="Filter stations by type (D, S, A)")
   async def station_all(self, ctx: commands.Context, station_type: str = None):
@@ -258,11 +283,7 @@ class Train(commands.Cog):
       status, data = await self._make_request(f"/stations/{code.upper()}")
 
       if status == 404 or (data and not data.get("success")):
-        err_msg = (
-            data.get("errorMessage", f"No station found matching code '{code.upper()}'")
-            if data
-            else f"No station found matching code '{code.upper()}'"
-        )
+        err_msg = data.get("errorMessage", f"No station found matching code '{code.upper()}'") if data else f"No station found matching code '{code.upper()}'"
         await ctx.send(f"❌ {err_msg}")
         return
 
@@ -289,11 +310,7 @@ class Train(commands.Cog):
       status, data = await self._make_request(f"/stations/{code.upper()}/timetable")
 
       if status == 404 or (data and not data.get("success")):
-        err_msg = (
-            data.get("errorMessage", f"No station found matching code '{code.upper()}'")
-            if data
-            else f"No station found matching code '{code.upper()}'"
-        )
+        err_msg = data.get("errorMessage", f"No station found matching code '{code.upper()}'") if data else f"No station found matching code '{code.upper()}'"
         await ctx.send(f"❌ {err_msg}")
         return
 
@@ -321,4 +338,3 @@ class Train(commands.Cog):
         embed.add_field(name="Upcoming Services", value="No upcoming services listed right now.", inline=False)
 
       await ctx.send(embed=embed)
-
