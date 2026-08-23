@@ -8,7 +8,7 @@ class Train(commands.Cog):
 
   def __init__(self, bot):
     self.bot = bot
-    self.base_url = "https://api.irishrail.ie/rest"  # Base or custom REST wrapper URL
+    self.base_url = "https://irish-rail-rest-api.fly.dev"  # api url
 
   async def _make_request(self, endpoint: str, params: dict = None):
     """Helper method to fetch data from the Irish Rail REST API."""
