@@ -8,16 +8,19 @@ class Train(commands.Cog):
 
   def __init__(self, bot):
     self.bot = bot
-    self.base_url = "https://ie.api.thediabetic.dev"  # api url
+    self.base_url = "https://ie.api.thediabetic.dev"
 
   async def _make_request(self, endpoint: str, params: dict = None):
-    """Helper method to fetch data from the Irish Rail REST API."""
+    """Helper method to fetch data from the Irish Rail REST API safely."""
     url = f"{self.base_url}{endpoint}"
-    async with aiohttp.ClientSession() as session:
-      async with session.get(url, params=params) as response:
-        if response.status != 200:
-          return None
-        return await response.json()
+    try:
+      async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params, timeout=10) as response:
+          data = await response.json()
+          return response.status, data
+    except Exception as e:
+      print(f"[Train API Error] Could not connect to {url}: {e}")
+      return 500, None
 
   # --- Train Commands ---
 
@@ -28,30 +31,32 @@ class Train(commands.Cog):
       await ctx.send_help()
 
   @train.command(name="all")
-  async def train_all(self, ctx: commands.Context):
-    """Get a count and sample of all currently running trains."""
+  @app_commands.describe(train_type="Filter trains by type (A, D, S, M)")
+  async def train_all(self, ctx: commands.Context, train_type: str = None):
+    """Get all running trains, optionally filtered by type."""
     async with ctx.typing():
-      data = await self._make_request("/trains")
-      if not data or "objTrainPositions" not in data:
+      params = {"type": train_type.upper()} if train_type else None
+      status, data = await self._make_request("/trains", params=params)
+
+      if status != 200 or not data or not data.get("success"):
         await ctx.send(
             "❌ Could not fetch train data or the API is currently unavailable."
         )
         return
 
-      trains = data["objTrainPositions"]
+      trains = data.get("trains", [])
       embed = discord.Embed(
           title="🚆 Live Irish Rail Trains",
           description=f"Currently tracking **{len(trains)}** active trains across the network.",
           color=discord.Color.green(),
       )
 
-      # Display a small sample to avoid spamming the chat
       sample = trains[:5]
       sample_text = ""
       for t in sample:
         sample_text += (
-            f"• **{t.get('TrainCode')}**: {t.get('PublicMessage', 'No info')}"
-            f" (Status: {t.get('TrainStatus')})\n"
+            f"• **{t.get('code')}**: {t.get('public_message', 'No info')}"
+            f" (Status: {t.get('status')})\n"
         )
 
       if sample_text:
@@ -62,47 +67,34 @@ class Train(commands.Cog):
       await ctx.send(embed=embed)
 
   @train.command(name="info")
-  @app_commands.describe(code="The unique train code (e.g., E810)")
+  @app_commands.describe(code="The train's 4-character code (e.g., E401)")
   async def train_info(self, ctx: commands.Context, code: str):
     """Get details for a specific train by its code."""
     async with ctx.typing():
-      data = await self._make_request(f"/trains/{code.upper()}")
-      if not data or not data.get("objTrainMovements"):
-        await ctx.send(
-            f"❌ Train code **{code.upper()}** not found or not currently"
-            " running."
+      status, data = await self._make_request(f"/trains/{code.upper()}")
+
+      if status == 404 or (data and not data.get("success")):
+        err_msg = (
+            data.get("errorMessage", f"Train code {code.upper()} not found.")
+            if data
+            else f"Train code {code.upper()} not found."
         )
+        await ctx.send(f"❌ {err_msg}")
         return
 
+      if status != 200 or not data or "train" not in data:
+        await ctx.send(f"❌ Could not retrieve details for train {code.upper()}.")
+        return
+
+      t = data["train"]
       embed = discord.Embed(
-          title=f"🚆 Train Details: {code.upper()}",
+          title=f"🚆 Train Details: {t.get('code', code.upper())}",
+          description=f"**Message:** {t.get('public_message', 'N/A')}",
           color=discord.Color.blue(),
       )
-
-      movements = data["objTrainMovements"]
-      if movements:
-        first = movements[0]
-        embed.add_field(
-            name="Journey Info",
-            value=(
-                f"• **Origin:** {first.get('LocationFullName')}\n• **Server"
-                f" Time:** {first.get('ServerTime')}"
-            ),
-            inline=False,
-        )
-
-      # Show up to 5 recent/upcoming movements
-      mov_text = ""
-      for m in movements[:5]:
-        mov_text += (
-            f"• **{m.get('LocationFullName')}** — Arr: {m.get('Arr', 'N/E')} |"
-            f" Dep: {m.get('Dep', 'N/E')}\n"
-        )
-
-      if mov_text:
-        embed.add_field(
-            name="Recent/Next Stops", value=mov_text, inline=False
-        )
+      embed.add_field(name="Direction", value=t.get("direction", "N/A"), inline=True)
+      embed.add_field(name="Status", value=t.get("status", "N/A"), inline=True)
+      embed.add_field(name="Date", value=t.get("date", "N/A"), inline=True)
 
       await ctx.send(embed=embed)
 
@@ -114,44 +106,44 @@ class Train(commands.Cog):
     if ctx.invoked_subcommand is None:
       await ctx.send_help()
 
-  @station.command(name="search")
-  @app_commands.describe(code="The station code (e.g., HUSTN, CONN, CORK)")
+  @station.command(name="timetable")
+  @app_commands.describe(code="The 5-character station code (e.g., CNLLY)")
   async def station_timetable(self, ctx: commands.Context, code: str):
     """Get the live timetable for a specific station code."""
     async with ctx.typing():
-      # Fetching station timetable endpoint
-      data = await self._make_request(f"/stations/{code.upper()}/timetable")
-      if not data or "objStationData" not in data:
-        await ctx.send(
-            f"❌ Could not retrieve timetable for station code **{code.upper()}**."
-            " Check the code."
+      status, data = await self._make_request(f"/stations/{code.upper()}/timetable")
+
+      if status == 404 or (data and not data.get("success")):
+        err_msg = (
+            data.get("errorMessage", f"No station found matching code '{code.upper()}'")
+            if data
+            else f"No station found matching code '{code.upper()}'"
         )
+        await ctx.send(f"❌ {err_msg}")
         return
 
-      trains = data["objStationData"]
+      if status != 200 or not data or "timetable" not in data:
+        await ctx.send(f"❌ Could not retrieve timetable for station **{code.upper()}**.")
+        return
+
+      timetable = data["timetable"]
       embed = discord.Embed(
           title=f"🕒 Timetable for Station: {code.upper()}",
-          description=f"Found **{len(trains)}** upcoming movements.",
+          description=f"Found **{len(timetable)}** upcoming movements.",
           color=discord.Color.orange(),
       )
 
       timetable_snippet = ""
-      for t in trains[:8]:  # Limit to 8 entries to fit nicely in an embed
+      for t in timetable[:8]:
         timetable_snippet += (
-            f"• **{t.get('Traintype')}** to **{t.get('Destination')}** — Due:"
-            f" **{t.get('Duein')}m** (Exp: {t.get('Expectedarrival')})\n"
+            f"• **{t.get('train_type')}** ({t.get('train_code')}) to **{t.get('destination')}** — "
+            f"Due in **{t.get('due_in')}m** (Exp: {t.get('exp_arrival')})\n"
         )
 
       if timetable_snippet:
-        embed.add_field(
-            name="Upcoming Services", value=timetable_snippet, inline=False
-        )
+        embed.add_field(name="Upcoming Services", value=timetable_snippet, inline=False)
       else:
-        embed.add_field(
-            name="Upcoming Services",
-            value="No upcoming services listed right now.",
-            inline=False,
-        )
+        embed.add_field(name="Upcoming Services", value="No upcoming services listed right now.", inline=False)
 
       await ctx.send(embed=embed)
 
