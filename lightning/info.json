@@ -1,0 +1,16 @@
+{
+    "author": [
+        "benco"
+    ],
+    "name": "lightning",
+    "short": "Lightning lookup cog",
+    "description": "WIP not ready for public use yet",
+    "min_bot_version": "3.5.0",
+    "requirements": [],
+    "tags": [
+        "lookup",
+        "weather"
+    ],
+    "type": "COG",
+    "hidden": true
+}

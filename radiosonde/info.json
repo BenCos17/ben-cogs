@@ -16,6 +16,5 @@
         "api",
         "sondehub"
     ],
-    "hidden": false,
-    "disabled": false
+    "hidden": true
 }
