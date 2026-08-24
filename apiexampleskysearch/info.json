@@ -1,12 +1,26 @@
 {
-    "author": ["bencos17"],
+    "author": [
+        "bencos17"
+    ],
     "install_msg": "## :white_check_mark: Successfully installed Enhanced SquawkExample.\n\nThis enhanced cog demonstrates advanced integration with the SkySearch SquawkAlertAPI, featuring:\n- 🚨 Real-time alert detection and logging\n- 📊 Alert history tracking and statistics\n- 🔄 Automatic message updates\n- ⚙️ Configurable tracking settings\n\nUse `[p]squawkexample` to get started!\n\n**Note:** This cog requires the SkySearch cog to be loaded first.",
     "name": "squawkexample",
     "short": "Enhanced cog for SquawkAlertAPI integration with message updating",
     "description": "An enhanced example cog that demonstrates advanced integration with the SkySearch SquawkAlertAPI. Features include real-time alert detection, message updating capabilities, alert history tracking, statistics, and configurable settings. Shows developers how to register callbacks, handle squawk alert events, and update existing messages from the SkySearch cog.",
-    "tags": ["aviation", "alerts", "example", "squawk", "api", "tracking", "monitoring"],
+    "tags": [
+        "aviation",
+        "alerts",
+        "example",
+        "squawk",
+        "api",
+        "tracking",
+        "monitoring"
+    ],
     "end_user_data_statement": "This cog stores alert history data including timestamps, aircraft information, and guild information for tracking purposes. No personal user data is stored.",
     "requirements": [],
-    "permissions": ["add_reactions", "embed_links"],
-    "min_bot_version": "3.5.0"
-} 
+    "permissions": [
+        "add_reactions",
+        "embed_links"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": true
+}

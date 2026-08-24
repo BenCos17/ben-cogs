@@ -12,5 +12,6 @@
         "social deduction",
         "blood on the clocktower"
     ],
-    "type": "COG"
+    "type": "COG",
+    "hidden": true
 }
