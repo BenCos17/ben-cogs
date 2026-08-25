@@ -4,10 +4,9 @@ SkySearch - A powerful aircraft tracking and information Discord bot cog
 
 from .skysearch import Skysearch
 
-__red_end_user_data_statement__ = "This cog does not store any end user data."
+__red_end_user_data_statement__ = "This cog stores data when a user adds an aircraft to their watchlist and uses the user id to know what user added it."
 
 async def setup(bot):
-    """Add the Skysearch cog to the bot."""
     cog = Skysearch(bot)
     await bot.add_cog(cog)
     # Dashboard integration is handled within the dashboard_integration.py file

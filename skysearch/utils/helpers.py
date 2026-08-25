@@ -268,7 +268,7 @@ class HelperUtils:
         """
         emergency_squawk_codes = ['7500', '7600', '7700']
         hex_id = aircraft_data.get('hex', '')
-        registration = aircraft_data.get('reg', '')
+        registration = aircraft_data.get('r') or aircraft_data.get('reg', '')
         link = f"https://globe.airplanes.live/?icao={hex_id}"
         squawk_code = aircraft_data.get('squawk', 'N/A')
         description = f"{aircraft_data.get('desc', 'N/A')}"
