@@ -11,8 +11,8 @@ To add the cogs to your instance please do: [p]repo add ben-cogs https://github.
 
 <a href="https://www.star-history.com/?repos=bencos17%2Fben-cogs&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=bencos17/ben-cogs&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=bencos17/ben-cogs&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=bencos17/ben-cogs&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=bencos17/ben-cogs&type=date&theme=dark&legend=top-left&sealed_token=fiG6kqTMS6FjUTKJ9Sk0FmpkJAYcJ4MygDBva1HAkXU5bUSxlLxg-AuhQPO-mj3YyNLt0mWUvo3pMAo1XseKgW0wNC9fuxmbztLoOmB-Kffgu8DVeaMrqg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=bencos17/ben-cogs&type=date&legend=top-left&sealed_token=fiG6kqTMS6FjUTKJ9Sk0FmpkJAYcJ4MygDBva1HAkXU5bUSxlLxg-AuhQPO-mj3YyNLt0mWUvo3pMAo1XseKgW0wNC9fuxmbztLoOmB-Kffgu8DVeaMrqg" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=bencos17/ben-cogs&type=date&legend=top-left&sealed_token=fiG6kqTMS6FjUTKJ9Sk0FmpkJAYcJ4MygDBva1HAkXU5bUSxlLxg-AuhQPO-mj3YyNLt0mWUvo3pMAo1XseKgW0wNC9fuxmbztLoOmB-Kffgu8DVeaMrqg" />
  </picture>
 </a>
