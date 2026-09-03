@@ -208,7 +208,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 hours_to_show = [h for h in available_hours if h >= (current_hour - 50)]
             
             if hours_to_show:
-                labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%m/%d %H:%M") for h in hours_to_show]
+                labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%d/%m %H:%M") for h in hours_to_show]
                 data_vals = [int(hourly.get(h, 0)) for h in hours_to_show]
                 
                 chart = {
@@ -229,7 +229,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                     },
                 }
                 url = _quickchart_url(chart, 800, 300)
-                e = discord.Embed(title=f"Hourly Requests (Historical: {len(hours_to_show)} hours from {datetime.datetime.fromtimestamp(hours_to_show[0] * 3600).strftime('%m/%d')} to {datetime.datetime.fromtimestamp(hours_to_show[-1] * 3600).strftime('%m/%d')})")
+                e = discord.Embed(title=f"Hourly Requests (Historical: {len(hours_to_show)} hours from {datetime.datetime.fromtimestamp(hours_to_show[0] * 3600).strftime('%d/%m')} to {datetime.datetime.fromtimestamp(hours_to_show[-1] * 3600).strftime('%d/%m')})")
                 e.set_image(url=url)
                 chart_embeds.append(e)
         else:
@@ -278,7 +278,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
             days_to_show = available_days
             
             if days_to_show:
-                labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%m/%d") for d in days_to_show]
+                labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%d/%m") for d in days_to_show]
                 data_vals = [int(daily.get(d, 0)) for d in days_to_show]
                 
                 chart = {
@@ -297,14 +297,14 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                     },
                 }
                 url = _quickchart_url(chart, 800, 300)
-                e = discord.Embed(title=f"Total Requests (Historical: {len(days_to_show)} days from {datetime.datetime.fromtimestamp(days_to_show[0] * 86400).strftime('%m/%d')} to {datetime.datetime.fromtimestamp(days_to_show[-1] * 86400).strftime('%m/%d')})")
+                e = discord.Embed(title=f"Total Requests (Historical: {len(days_to_show)} days from {datetime.datetime.fromtimestamp(days_to_show[0] * 86400).strftime('%d/%m')} to {datetime.datetime.fromtimestamp(days_to_show[-1] * 86400).strftime('%d/%m')})")
                 e.set_image(url=url)
                 chart_embeds.append(e)
         else:
             # No data available, show empty chart
             current_day = int(time.time() // 86400)
             days = [current_day - i for i in reversed(range(30))]
-            labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%b %d") for d in days]
+            labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%d/%m") for d in days]
             data_vals = [0] * 30
             
             chart = {
