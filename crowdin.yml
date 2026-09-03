@@ -1,0 +1,17 @@
+project_id: jarvisdiscordbot # Add your Crowdin project ID here
+
+files:
+  # SkySearch cog
+  - source: /skysearch/locales/messages.json
+    translation: /skysearch/locales/%locale_with_underscore%/LC_MESSAGES/messages.json
+    type: json
+
+  # Add more cogs with locales as needed
+  # - source: /other_cog/locales/messages.json
+  #   translation: /other_cog/locales/%locale_with_underscore%/LC_MESSAGES/messages.json
+  #   type: json
+
+# Crowdin-supported language codes for your project
+languages:
+  - en-US
+  - ga-IE
