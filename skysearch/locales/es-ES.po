@@ -1,0 +1,1272 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: jarvisdiscordbot\n"
+"POT-Creation-Date: 2026-09-03 12:51+0100\n"
+"PO-Revision-Date: 2026-09-03 13:48\n"
+"Last-Translator: \n"
+"Language-Team: Spanish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: redgettext 3.4.2\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: jarvisdiscordbot\n"
+"X-Crowdin-Project-ID: 786438\n"
+"X-Crowdin-Language: es-ES\n"
+"X-Crowdin-File: /main/skysearch/locales/messages.pot\n"
+"X-Crowdin-File-ID: 8\n"
+"Language: es_ES\n"
+
+#: commands\admin.py:19
+#, docstring
+msgid "Admin-related commands for SkySearch."
+msgstr ""
+
+#: commands\admin.py:29
+msgid "Alert channel set to {channel}"
+msgstr ""
+
+#: commands\admin.py:37
+msgid "Alert channel cleared. No more alerts will be sent."
+msgstr ""
+
+#: commands\admin.py:48
+msgid "Alert role set to {role}"
+msgstr ""
+
+#: commands\admin.py:56
+msgid "Alert role cleared. No more role mentions will be made."
+msgstr ""
+
+#: commands\admin.py:85 commands\admin.py:164
+msgid "Cooldown must be a positive number."
+msgstr ""
+
+#: commands\admin.py:90
+msgid "Emergency alert cooldown set to {seconds} seconds."
+msgstr ""
+
+#: commands\admin.py:92
+msgid "Emergency alert cooldown set to {minutes} minutes."
+msgstr ""
+
+#: commands\admin.py:94
+msgid "Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds ('30s')"
+msgstr ""
+
+#: commands\admin.py:98
+msgid "Current emergency alert cooldown is {seconds} seconds."
+msgstr ""
+
+#: commands\admin.py:100
+msgid "Current emergency alert cooldown is {minutes} minutes."
+msgstr ""
+
+#: commands\admin.py:108
+msgid "FAA status alert channel set to {channel}"
+msgstr ""
+
+#: commands\admin.py:119
+msgid "FAA status alert channel cleared. No more FAA change notifications will be sent."
+msgstr ""
+
+#: commands\admin.py:133
+msgid "FAA status alert role set to {role}"
+msgstr ""
+
+#: commands\admin.py:144
+msgid "FAA status alert role cleared."
+msgstr ""
+
+#: commands\admin.py:168
+msgid "FAA alert cooldown set to {seconds} seconds."
+msgstr ""
+
+#: commands\admin.py:170
+msgid "FAA alert cooldown set to {minutes} minutes."
+msgstr ""
+
+#: commands\admin.py:172
+msgid "Invalid duration. Use a number, '5m', or '30s'."
+msgstr ""
+
+#: commands\admin.py:176
+msgid "Current FAA alert cooldown is {seconds} seconds."
+msgstr ""
+
+#: commands\admin.py:178
+msgid "Current FAA alert cooldown is {minutes} minutes."
+msgstr ""
+
+#: commands\admin.py:219
+msgid "Auto Settings Status"
+msgstr ""
+
+#: commands\admin.py:222
+msgid "ICAO Lookup"
+msgstr ""
+
+#: commands\admin.py:222
+msgid "✅ **Enabled** - Automatic ICAO lookup is active"
+msgstr ""
+
+#: commands\aircraft.py:28
+#, docstring
+msgid "Aircraft-related commands for SkySearch."
+msgstr ""
+
+#: commands\aircraft.py:53 commands\aircraft.py:129
+msgid "No results found for your query"
+msgstr ""
+
+#: commands\aircraft.py:54 commands\aircraft.py:130
+msgid "Details"
+msgstr ""
+
+#: commands\aircraft.py:54 commands\aircraft.py:130
+msgid "No aircraft information found or the response format is incorrect."
+msgstr ""
+
+#: commands\aircraft.py:141 commands\aircraft.py:152 commands\aircraft.py:163
+#: commands\aircraft.py:181 commands\aircraft.py:186 commands\aircraft.py:197
+#: commands\aircraft.py:216 commands\aircraft.py:225 commands\aircraft.py:608
+#: commands\aircraft.py:631
+msgid "Error"
+msgstr ""
+
+#: commands\aircraft.py:141
+msgid "No aircraft found with the specified callsign."
+msgstr ""
+
+#: commands\aircraft.py:152 commands\aircraft.py:163
+msgid "Error retrieving aircraft information."
+msgstr ""
+
+#: commands\aircraft.py:181
+msgid "Invalid search type specified. Use one of: icao, callsign, squawk, or type."
+msgstr ""
+
+#: commands\aircraft.py:186
+msgid "Invalid file format specified. Use one of: csv, pdf, txt, or html."
+msgstr ""
+
+#: commands\aircraft.py:197
+msgid "No valid ICAO codes provided."
+msgstr ""
+
+#: commands\aircraft.py:216
+msgid "Invalid search type specified."
+msgstr ""
+
+#: commands\aircraft.py:225
+msgid "No aircraft data found."
+msgstr ""
+
+#: commands\aircraft.py:237
+msgid "Export Complete"
+msgstr ""
+
+#: commands\aircraft.py:237
+msgid "Successfully exported {count} aircraft to {format} format."
+msgstr ""
+
+#: commands\aircraft.py:238
+msgid "Search Type"
+msgstr ""
+
+#: commands\aircraft.py:239
+msgid "Search Value"
+msgstr ""
+
+#: commands\aircraft.py:240
+msgid "File Format"
+msgstr ""
+
+#: commands\aircraft.py:241
+msgid "Aircraft Count"
+msgstr ""
+
+#: commands\aircraft.py:242
+msgid "File Name"
+msgstr ""
+
+#: commands\aircraft.py:504
+msgid "**Distance:** {distance} nautical miles\n"
+"**Direction:** {direction}° from your location"
+msgstr ""
+
+#: commands\aircraft.py:605
+msgid "No Aircraft Found"
+msgstr ""
+
+#: commands\aircraft.py:605
+msgid "No aircraft found within {radius} nautical miles of the specified location."
+msgstr ""
+
+#: commands\aircraft.py:608
+msgid "Error retrieving closest aircraft information."
+msgstr ""
+
+#: commands\aircraft.py:631
+msgid "No response from the API."
+msgstr ""
+
+#: commands\aircraft.py:794 utils\add_to_watchlist_view.py:79
+msgid "Add to Watchlist"
+msgstr ""
+
+#: commands\aircraft.py:795
+msgid "Add aircraft or types to watch and get notified when they're active."
+msgstr ""
+
+#: commands\aircraft.py:798 commands\aircraft.py:903
+msgid "Usage"
+msgstr ""
+
+#: commands\aircraft.py:798
+msgid "`watchlist add <type> <value>`"
+msgstr ""
+
+#: commands\aircraft.py:800 commands\aircraft.py:905
+msgid "Types"
+msgstr ""
+
+#: commands\aircraft.py:801
+msgid "• `icao` - Aircraft by hex code (6 hex digits)\n"
+"• `type` - Watch aircraft category\n"
+"• `callsign` - Watch flight number\n"
+"• `reg` - Watch registration/tail number\n"
+"• `squawk` - Watch squawk code"
+msgstr ""
+
+#: commands\aircraft.py:805
+msgid "Aircraft types"
+msgstr ""
+
+#: commands\aircraft.py:810
+msgid "Examples"
+msgstr ""
+
+#: commands\aircraft.py:811
+msgid "• `watchlist add icao A2F41D`\n"
+"• `watchlist add type military`\n"
+"• `watchlist add callsign UNITED123`\n"
+"• `watchlist add reg N814AK`\n"
+"• `watchlist add squawk 7700`"
+msgstr ""
+
+#: commands\aircraft.py:824
+msgid "Invalid Type"
+msgstr ""
+
+#: commands\aircraft.py:825
+msgid "Type must be one of: {types}"
+msgstr ""
+
+#: commands\aircraft.py:836
+msgid "Invalid ICAO Code"
+msgstr ""
+
+#: commands\aircraft.py:846
+msgid "Invalid Aircraft Type"
+msgstr ""
+
+#: commands\aircraft.py:847
+msgid "Unknown type: **{type}**\n\n"
+"Available types: {types}"
+msgstr ""
+
+#: commands\aircraft.py:859
+msgid "Invalid Squawk Code"
+msgstr ""
+
+#: commands\aircraft.py:860
+msgid "Squawk code must be 4 digits (e.g., 7700)."
+msgstr ""
+
+#: commands\aircraft.py:872
+msgid "✅ Watchlist Updated"
+msgstr ""
+
+#: commands\aircraft.py:872
+msgid "❌ Error"
+msgstr ""
+
+#: commands\aircraft.py:899
+msgid "Remove from Watchlist"
+msgstr ""
+
+#: commands\aircraft.py:900
+msgid "Remove aircraft or types from your watchlist."
+msgstr ""
+
+#: commands\aircraft.py:903
+msgid "`watchlist remove <type> <value>`"
+msgstr ""
+
+#: commands\aircraft.py:906
+msgid "• `icao` - Remove by aircraft hex code\n"
+"• `type` - Remove aircraft type\n"
+"• `callsign` - Remove by flight number\n"
+"• `reg` - Remove by registration\n"
+"• `squawk` - Remove by squawk code"
+msgstr ""
+
+#: commands\aircraft.py:921
+msgid "✅ Removed"
+msgstr ""
+
+#: commands\aircraft.py:921
+msgid "❌ Not Found"
+msgstr ""
+
+#: commands\aircraft.py:938 commands\aircraft.py:984
+msgid "Watchlist Empty"
+msgstr ""
+
+#: commands\aircraft.py:939
+msgid "Your watchlist is empty.\n\n"
+"Use `{prefix}aircraft watchlist add <type> <value>` to add items.\n\n"
+"Example: `{prefix}aircraft watchlist add type military`"
+msgstr ""
+
+#: commands\aircraft.py:947
+msgid "Your Watchlist"
+msgstr ""
+
+#: commands\aircraft.py:948
+msgid "You are watching **{count}** items:"
+msgstr ""
+
+#: commands\aircraft.py:969
+msgid "None"
+msgstr ""
+
+#: commands\aircraft.py:973
+msgid "Use `{prefix}aircraft watchlist status` for detailed status."
+msgstr ""
+
+#: commands\aircraft.py:985
+msgid "Your watchlist is empty."
+msgstr ""
+
+#: commands\aircraft.py:1012
+msgid "Watchlist Status"
+msgstr ""
+
+#: commands\aircraft.py:1013
+msgid "**{total}** items in watchlist | **{online}** aircraft currently online"
+msgstr ""
+
+#: commands\aircraft.py:1050
+msgid "🟢 Aircraft Online"
+msgstr ""
+
+#: commands\aircraft.py:1065
+msgid "Watchlist Already Empty"
+msgstr ""
+
+#: commands\aircraft.py:1066
+msgid "Your watchlist is already empty."
+msgstr ""
+
+#: commands\aircraft.py:1079
+msgid "✅ Watchlist Cleared"
+msgstr ""
+
+#: commands\aircraft.py:1080
+msgid "Removed **{count}** items from your watchlist."
+msgstr ""
+
+#: commands\aircraft.py:1099 commands\aircraft.py:1170
+msgid "{seconds} seconds"
+msgstr ""
+
+#: commands\aircraft.py:1101 commands\aircraft.py:1103
+#: commands\aircraft.py:1172 commands\aircraft.py:1174
+msgid "{minutes} minutes"
+msgstr ""
+
+#: commands\aircraft.py:1106
+msgid "Watchlist Cooldown"
+msgstr ""
+
+#: commands\aircraft.py:1107
+msgid "Current notification cooldown: **{cooldown}**\n\n"
+"Use `{prefix}aircraft watchlist cooldown <duration>` to change it.\n\n"
+"Examples: `20m`, `30s`, `1h`, `15.5m`"
+msgstr ""
+
+#: commands\aircraft.py:1114
+msgid "How it works"
+msgstr ""
+
+#: commands\aircraft.py:1115
+msgid "After you receive a notification for a watched aircraft, you won't receive another notification for the same aircraft until the cooldown period expires."
+msgstr ""
+
+#: commands\aircraft.py:1119
+msgid "Time formats"
+msgstr ""
+
+#: commands\aircraft.py:1120
+msgid "You can use:\n"
+"• Minutes: `20`, `20m`, `20.5m`\n"
+"• Seconds: `30s`, `120s`\n"
+"• Hours: `1h`, `2.5h`"
+msgstr ""
+
+#: commands\aircraft.py:1149 commands\aircraft.py:1158
+msgid "Invalid Cooldown"
+msgstr ""
+
+#: commands\aircraft.py:1150
+msgid "Cooldown must be at least 1 second."
+msgstr ""
+
+#: commands\aircraft.py:1159
+msgid "Cooldown cannot exceed 1440 minutes (24 hours)."
+msgstr ""
+
+#: commands\aircraft.py:1177
+msgid "✅ Cooldown Updated"
+msgstr ""
+
+#: commands\aircraft.py:1178
+msgid "Watchlist notification cooldown set to **{cooldown}**."
+msgstr ""
+
+#: commands\aircraft.py:1185
+msgid "Invalid Duration Format"
+msgstr ""
+
+#: commands\aircraft.py:1186
+msgid "Invalid duration format. Use a number (e.g. '20'), minutes ('20m'), seconds ('30s'), or hours ('1h').\n\n"
+"Examples:\n"
+"• `20m` - 20 minutes\n"
+"• `30s` - 30 seconds\n"
+"• `1h` - 1 hour\n"
+"• `15.5m` - 15.5 minutes"
+msgstr ""
+
+#: commands\airport.py:528
+#, docstring
+msgid "Airport-related commands for SkySearch."
+msgstr ""
+
+#: commands\airport.py:1040 skysearch.py:731
+#, docstring
+msgid "Set the OpenWeatherMap API key."
+msgstr ""
+
+#: commands\airport.py:1047 skysearch.py:737
+#, docstring
+msgid "Show the current OpenWeatherMap API key (partially masked)."
+msgstr ""
+
+#: commands\airport.py:1057 skysearch.py:743
+#, docstring
+msgid "Clear the OpenWeatherMap API key."
+msgstr ""
+
+#: skysearch.py:43
+#, docstring
+msgid "SkySearch - Aircraft tracking and information cog."
+msgstr ""
+
+#: skysearch.py:194
+#, docstring
+msgid "SkySearch command group"
+msgstr ""
+
+#: skysearch.py:195
+msgid "Thanks for using SkySearch"
+msgstr ""
+
+#: skysearch.py:195
+msgid "SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft."
+msgstr ""
+
+#: skysearch.py:196
+msgid "Use `aircraft` to show available commands to fetch information about live aircraft and configure emergency squawk alerts."
+msgstr ""
+
+#: skysearch.py:197
+msgid "Use `airport` to show available commands to fetch information and imagery of airports around the world."
+msgstr ""
+
+#: skysearch.py:198 skysearch.py:307
+msgid "Use `skysearch apistats` to view API performance and usage statistics"
+msgstr ""
+
+#: skysearch.py:204
+#, docstring
+msgid "Get SkySearch statistics."
+msgstr ""
+
+#: skysearch.py:207
+msgid "SkySearch Statistics"
+msgstr ""
+
+#: skysearch.py:207
+msgid "Consolidated statistics and data sources for SkySearch."
+msgstr ""
+
+#: skysearch.py:222 skysearch.py:232
+msgid "This data appears in the following commands"
+msgstr ""
+
+#: skysearch.py:223
+msgid "Law enforcement aircraft"
+msgstr ""
+
+#: skysearch.py:224
+msgid "Military & government aircraft"
+msgstr ""
+
+#: skysearch.py:225
+msgid "Medical aircraft"
+msgstr ""
+
+#: skysearch.py:226
+msgid "Media aircraft"
+msgstr ""
+
+#: skysearch.py:227
+msgid "Damaged aircraft"
+msgstr ""
+
+#: skysearch.py:228
+msgid "Wartime aircraft"
+msgstr ""
+
+#: skysearch.py:229
+msgid "Utility aircraft"
+msgstr ""
+
+#: skysearch.py:230
+msgid "Balloons"
+msgstr ""
+
+#: skysearch.py:231
+msgid "Suspicious aircraft"
+msgstr ""
+
+#: skysearch.py:233
+msgid "Other services"
+msgstr ""
+
+#: skysearch.py:233
+msgid "Additional data used in this cog is shown below"
+msgstr ""
+
+#: skysearch.py:234
+msgid "ADSB-B Data"
+msgstr ""
+
+#: skysearch.py:234
+msgid "ADSB tracking data is powered by [airplanes.live](https://airplanes.live)"
+msgstr ""
+
+#: skysearch.py:235
+msgid "Photography"
+msgstr ""
+
+#: skysearch.py:235
+msgid "Photos are powered by community contributions at [planespotters.net](https://www.planespotters.net/)"
+msgstr ""
+
+#: skysearch.py:236
+msgid "Airport data"
+msgstr ""
+
+#: skysearch.py:236
+msgid "Airport data is powered by the [airport-data.com](https://airport-data.com/) API service"
+msgstr ""
+
+#: skysearch.py:237
+msgid "Runway data"
+msgstr ""
+
+#: skysearch.py:237
+msgid "Runway data is powered by the [airportdb.io](https://airportdb.io) API service"
+msgstr ""
+
+#: skysearch.py:238
+msgid "Mapping and imagery"
+msgstr ""
+
+#: skysearch.py:238
+msgid "Mapping and ground imagery powered by [Google Maps](https://maps.google.com) and the [Maps Static API](https://developers.google.com/maps/documentation/maps-static)"
+msgstr ""
+
+#: skysearch.py:256
+#, docstring
+msgid "Get detailed API request statistics (delegates to AdminCommands)."
+msgstr ""
+
+#: skysearch.py:263
+#, docstring
+msgid "Reset API request statistics (delegates to AdminCommands)."
+msgstr ""
+
+#: skysearch.py:270
+#, docstring
+msgid "Manually save API statistics to config (delegates to AdminCommands)."
+msgstr ""
+
+#: skysearch.py:277
+#, docstring
+msgid "View API statistics saving configuration (delegates to AdminCommands)."
+msgstr ""
+
+#: skysearch.py:284
+#, docstring
+msgid "Debug API statistics data structure (delegates to AdminCommands)."
+msgstr ""
+
+#: skysearch.py:291
+#, docstring
+msgid "Command center for aircraft related commands and API monitoring"
+msgstr ""
+
+#: skysearch.py:292
+msgid "Aircraft Commands"
+msgstr ""
+
+#: skysearch.py:292
+msgid "Available aircraft-related commands and API monitoring:"
+msgstr ""
+
+#: skysearch.py:293
+msgid "Search Commands"
+msgstr ""
+
+#: skysearch.py:294
+msgid "Special Aircraft"
+msgstr ""
+
+#: skysearch.py:295
+msgid "Export"
+msgstr ""
+
+#: skysearch.py:295
+msgid "`export` - Export aircraft data to CSV, PDF, TXT, or HTML"
+msgstr ""
+
+#: skysearch.py:296
+msgid "Configuration"
+msgstr ""
+
+#: skysearch.py:297
+msgid "Custom Alerts"
+msgstr ""
+
+#: skysearch.py:300
+msgid "Custom Alert Admin"
+msgstr ""
+
+#: skysearch.py:301
+msgid "Watchlist"
+msgstr ""
+
+#: skysearch.py:302
+msgid "Geo-fence"
+msgstr ""
+
+#: skysearch.py:303
+msgid "Other"
+msgstr ""
+
+#: skysearch.py:303
+msgid "`scroll` - Scroll through available planes\n"
+"`feeder` - Parse feeder JSON data (secure modal)"
+msgstr ""
+
+#: skysearch.py:306
+msgid "Debug"
+msgstr ""
+
+#: skysearch.py:306
+msgid "`debugapi` - Debug API issues (owner only)\n"
+"`debugtoggle` - Toggle debug output for lookups (owner only)\n"
+"`debug` - Run a debug lookup (owner only)"
+msgstr ""
+
+#: skysearch.py:308
+msgid "Detailed Help"
+msgstr ""
+
+#: skysearch.py:308
+msgid "Use `*help aircraft` for detailed command information"
+msgstr ""
+
+#: skysearch.py:314
+#, docstring
+msgid "Get aircraft information by ICAO hex code."
+msgstr ""
+
+#: skysearch.py:322
+#, docstring
+msgid "Get aircraft information by callsign."
+msgstr ""
+
+#: skysearch.py:330
+#, docstring
+msgid "Get aircraft information by registration."
+msgstr ""
+
+#: skysearch.py:335
+#, docstring
+msgid "Get aircraft information by type."
+msgstr ""
+
+#: skysearch.py:340
+#, docstring
+msgid "Get aircraft information by squawk code."
+msgstr ""
+
+#: skysearch.py:348
+#, docstring
+msgid "Export aircraft data to various formats."
+msgstr ""
+
+#: skysearch.py:353
+#, docstring
+msgid "Get information about military aircraft."
+msgstr ""
+
+#: skysearch.py:358
+#, docstring
+msgid "Get information on LADD-restricted aircraft."
+msgstr ""
+
+#: skysearch.py:363
+#, docstring
+msgid "View live aircraft using private ICAO addresses."
+msgstr ""
+
+#: skysearch.py:368
+#, docstring
+msgid "Get information about aircraft within a specified radius."
+msgstr ""
+
+#: skysearch.py:373
+#, docstring
+msgid "Find the closest aircraft to specified coordinates."
+msgstr ""
+
+#: skysearch.py:378
+#, docstring
+msgid "Scroll through available planes. Optionally specify a category: mil, ladd, pia, or all."
+msgstr ""
+
+#: skysearch.py:383
+#, docstring
+msgid "Extract feeder URL from JSON data or a URL containing feeder data using secure modal."
+msgstr ""
+
+#: skysearch.py:390
+#, docstring
+msgid "Manage your personal aircraft watchlist."
+msgstr ""
+
+#: skysearch.py:396
+#, docstring
+msgid "Add an aircraft to your watchlist by ICAO code."
+msgstr ""
+
+#: skysearch.py:402
+#, docstring
+msgid "Remove an aircraft from your watchlist."
+msgstr ""
+
+#: skysearch.py:408
+#, docstring
+msgid "List all aircraft in your watchlist."
+msgstr ""
+
+#: skysearch.py:414
+#, docstring
+msgid "Get detailed status of all watched aircraft."
+msgstr ""
+
+#: skysearch.py:420
+#, docstring
+msgid "Clear your entire watchlist."
+msgstr ""
+
+#: skysearch.py:426
+#, docstring
+msgid "Set or view the watchlist notification cooldown. Accepts formats like '20m', '30s', '1h', or '15.5m'. Use without a value to check current setting."
+msgstr ""
+
+#: skysearch.py:433
+#, docstring
+msgid "Geo-fence alerts: get notified when aircraft enter or leave an area."
+msgstr ""
+
+#: skysearch.py:435
+msgid "Geo-fence Commands"
+msgstr ""
+
+#: skysearch.py:436
+msgid "Alert when aircraft enter or leave a geographic area."
+msgstr ""
+
+#: skysearch.py:439
+msgid "`geofence add <name> <lat> <lon> <radius_nm> [alert_on] [cooldown] [channel] [role]`"
+msgstr ""
+
+#: skysearch.py:440
+msgid "`geofence remove <fence_id>`"
+msgstr ""
+
+#: skysearch.py:441
+msgid "`geofence list` - List all geo-fences"
+msgstr ""
+
+#: skysearch.py:447
+#, docstring
+msgid "Add a geo-fence. Alerts when aircraft enter/leave the area. radius_nm in nautical miles. alert_on: entry, exit, or both."
+msgstr ""
+
+#: skysearch.py:453
+#, docstring
+msgid "Remove a geo-fence by ID (from geofence list)."
+msgstr ""
+
+#: skysearch.py:459
+#, docstring
+msgid "List all geo-fence alerts for this server."
+msgstr ""
+
+#: skysearch.py:467
+#, docstring
+msgid "Set or clear a channel to send emergency squawk alerts to."
+msgstr ""
+
+#: skysearch.py:472
+#, docstring
+msgid "Set or clear a role to mention when new emergency squawks occur."
+msgstr ""
+
+#: skysearch.py:477
+#, docstring
+msgid "Set or show the cooldown for emergency squawk alerts.\n"
+"        \n"
+"        Default cooldown is 5 minutes.\n"
+"        Use without a value to check current setting.\n"
+"        Accepts minutes (e.g. 5, 5m) or seconds (e.g. 30s)\n"
+"        \n"
+"        Examples:\n"
+"            [p]aircraft alertcooldown 10m  - Set cooldown to 10 minutes\n"
+"            [p]aircraft alertcooldown 30s  - Set cooldown to 30 seconds\n"
+"            [p]aircraft alertcooldown      - Show current cooldown\n"
+"        "
+msgstr ""
+
+#: skysearch.py:492
+#, docstring
+msgid "Enable or disable automatic ICAO lookup."
+msgstr ""
+
+#: skysearch.py:497
+#, docstring
+msgid "Enable or disable automatic deletion of 'not found' messages."
+msgstr ""
+
+#: skysearch.py:502
+#, docstring
+msgid "Show alert task status and output if set."
+msgstr ""
+
+#: skysearch.py:508
+#, docstring
+msgid "Debug API key and connection issues (DM only)."
+msgstr ""
+
+#: skysearch.py:514
+#, docstring
+msgid "Set which API to use globally: 'primary' or 'fallback'. (owner only)"
+msgstr ""
+
+#: skysearch.py:531
+#, docstring
+msgid "Add a custom alert for specific aircraft or squawks.\n"
+"        \n"
+"        Alert types: icao, callsign, squawk, type, reg\n"
+"        Cooldown: 1-1440 minutes (default: 5)\n"
+"        Channel: Optional channel to send alerts to (default: uses alert channel)\n"
+"        Role: Optional role to ping for this alert (overrides default alert role)\n"
+"        "
+msgstr ""
+
+#: skysearch.py:543
+#, docstring
+msgid "Remove a custom alert by its ID."
+msgstr ""
+
+#: skysearch.py:549
+#, docstring
+msgid "List all custom alerts for this server."
+msgstr ""
+
+#: skysearch.py:555
+#, docstring
+msgid "Clear all custom alerts for this server."
+msgstr ""
+
+#: skysearch.py:561
+#, docstring
+msgid "Clear cooldown for a specific custom alert."
+msgstr ""
+
+#: skysearch.py:568
+#, docstring
+msgid "Force trigger a configured custom alert immediately by its ID (owner only)."
+msgstr ""
+
+#: skysearch.py:574
+#, docstring
+msgid "Show the current global API mode. (owner only)"
+msgstr ""
+
+#: skysearch.py:581
+#, docstring
+msgid "Debug an aircraft lookup: *aircraft debug <lookup_type> <value> (lookup_type: icao, callsign, reg, type, squawk)"
+msgstr ""
+
+#: skysearch.py:594
+#, docstring
+msgid "Enable or disable aircraft debug output: *aircraft debugtoggle <on|off>"
+msgstr ""
+
+#: skysearch.py:604
+#, docstring
+msgid "Set the airplanes.live API key."
+msgstr ""
+
+#: skysearch.py:610
+#, docstring
+msgid "Show the current airplanes.live API key (partially masked)."
+msgstr ""
+
+#: skysearch.py:616
+#, docstring
+msgid "Clear the airplanes.live API key."
+msgstr ""
+
+#: skysearch.py:622
+#, docstring
+msgid "Set the User-Agent header SkySearch uses for outbound HTTP requests."
+msgstr ""
+
+#: skysearch.py:628
+#, docstring
+msgid "Show the configured User-Agent header (if any)."
+msgstr ""
+
+#: skysearch.py:634
+#, docstring
+msgid "Clear the configured User-Agent header."
+msgstr ""
+
+#: skysearch.py:640
+#, docstring
+msgid "Set a Planespotters-specific User-Agent header (must include contact)."
+msgstr ""
+
+#: skysearch.py:646
+#, docstring
+msgid "Show the configured Planespotters-specific User-Agent."
+msgstr ""
+
+#: skysearch.py:652
+#, docstring
+msgid "Clear the Planespotters-specific User-Agent."
+msgstr ""
+
+#: skysearch.py:659
+#, docstring
+msgid "Command center for airport related commands"
+msgstr ""
+
+#: skysearch.py:670
+#, docstring
+msgid "Get airport information by ICAO or IATA code."
+msgstr ""
+
+#: skysearch.py:675
+#, docstring
+msgid "Get runway information for an airport."
+msgstr ""
+
+#: skysearch.py:680
+#, docstring
+msgid "Get navigational aids for an airport."
+msgstr ""
+
+#: skysearch.py:685
+#, docstring
+msgid "Get the weather for an airport by ICAO or IATA code (US airports only)."
+msgstr ""
+
+#: skysearch.py:690
+#, docstring
+msgid "Get aviation weather conditions from AVWX for an airport code."
+msgstr ""
+
+#: skysearch.py:695
+#, docstring
+msgid "Get current METAR from AVWX for an airport code."
+msgstr ""
+
+#: skysearch.py:700
+#, docstring
+msgid "Get current TAF from AVWX for an airport code."
+msgstr ""
+
+#: skysearch.py:705
+#, docstring
+msgid "Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code (e.g., SAN, LAS)."
+msgstr ""
+
+#: skysearch.py:710
+#, docstring
+msgid "Set or clear the channel for FAA status change notifications."
+msgstr ""
+
+#: skysearch.py:715
+#, docstring
+msgid "Set or clear the role to mention when FAA status changes."
+msgstr ""
+
+#: skysearch.py:720
+#, docstring
+msgid "Set or show cooldown for FAA status change notifications."
+msgstr ""
+
+#: skysearch.py:725
+#, docstring
+msgid "Show current FAA status alert settings."
+msgstr ""
+
+#: skysearch.py:749
+#, docstring
+msgid "Set the AVWX API token."
+msgstr ""
+
+#: skysearch.py:755
+#, docstring
+msgid "Show the configured AVWX API token status."
+msgstr ""
+
+#: skysearch.py:761
+#, docstring
+msgid "Clear the AVWX API token."
+msgstr ""
+
+#: skysearch.py:969
+msgid "Aircraft landed"
+msgstr ""
+
+#: skysearch.py:970
+msgid "Aircraft {hex} has landed while squawking {squawk}."
+msgstr ""
+
+#: skysearch.py:1425
+msgid "{user} - Your watched aircraft **{icao}** has {event}!"
+msgstr ""
+
+#: skysearch.py:1696
+#, docstring
+msgid "Simulate a new emergency alert for testing callbacks (owner only).\n"
+"        \n"
+"        Usage: *aircraft simulateemergency <hex_code> [squawk_code] [callsign]\n"
+"        Examples:\n"
+"        - *aircraft simulateemergency ABC123\n"
+"        - *aircraft simulateemergency DEF456 7600 UNITED789\n"
+"        "
+msgstr ""
+
+#: skysearch.py:1706
+msgid "❌ Invalid squawk code. Valid codes are: {codes}"
+msgstr ""
+
+#: skysearch.py:1711
+msgid "❌ Invalid hex code. Must be 6 hexadecimal characters (e.g., ABC123)"
+msgstr ""
+
+#: skysearch.py:1716
+msgid "🧪 Simulating emergency alert: {hex} squawking {squawk}..."
+msgstr ""
+
+#: skysearch.py:1737
+msgid "❌ No alert channel configured. Use `*aircraft alertchannel #channel` first."
+msgstr ""
+
+#: skysearch.py:1757
+msgid "❌ Alert channel {channel_id} not found"
+msgstr ""
+
+#: skysearch.py:1881
+msgid "✅ Simulated emergency alert sent! Check #{channel} and console logs."
+msgstr ""
+
+#: skysearch.py:1886
+#, docstring
+msgid "Clear all alert cooldowns for this guild (owner only)."
+msgstr ""
+
+#: skysearch.py:1889
+msgid "✅ All alert cooldowns cleared for this guild."
+msgstr ""
+
+#: utils\add_to_watchlist_view.py:96
+msgid "❌ Invalid ICAO: {error}"
+msgstr ""
+
+#: utils\stats.py:37
+msgid "📊 Airplanes.live API Statistics"
+msgstr ""
+
+#: utils\stats.py:38
+msgid "Detailed request tracking and performance metrics"
+msgstr ""
+
+#: utils\stats.py:43
+msgid "📈 Overall Stats"
+msgstr ""
+
+#: utils\stats.py:45
+msgid "**Total Requests:** {total:,}\n"
+"**Success Rate:** {rate:.1f}%\n"
+"**Last Request:** {last}"
+msgstr ""
+
+#: utils\stats.py:48
+msgid "Never"
+msgstr ""
+
+#: utils\stats.py:55
+msgid "✅ Success/Failure"
+msgstr ""
+
+#: utils\stats.py:57
+msgid "**Successful:** {success:,}\n"
+"**Failed:** {failed:,}\n"
+"**Rate Limited:** {rate_limited:,}"
+msgstr ""
+
+#: utils\stats.py:67
+msgid "🌐 API Mode Usage"
+msgstr ""
+
+#: utils\stats.py:69
+msgid "**Primary:** {primary:,}\n"
+"**Fallback:** {fallback:,}"
+msgstr ""
+
+#: utils\stats.py:79
+msgid "⚡ Performance"
+msgstr ""
+
+#: utils\stats.py:81
+msgid "**Avg Response:** {avg:.3f}s\n"
+"**Last 24h:** {requests:,} requests"
+msgstr ""
+
+#: utils\stats.py:93
+msgid "🔗 Top Endpoints"
+msgstr ""
+
+#: utils\stats.py:101
+msgid "⚠️ Error Details"
+msgstr ""
+
+#: utils\stats.py:103
+msgid "Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save."
+msgstr ""
+
+#: utils\stats.py:131
+msgid "Success vs Failure"
+msgstr ""
+
+#: utils\stats.py:154
+msgid "API Mode Usage"
+msgstr ""
+
+#: utils\stats.py:172
+msgid "Requests"
+msgstr ""
+
+#: utils\stats.py:184
+msgid "Top Endpoints"
+msgstr ""
+
+#: utils\stats.py:219 utils\stats.py:251
+msgid "Requests per hour"
+msgstr ""
+
+#: utils\stats.py:232
+msgid "Hourly Requests (Historical: {count} hours from {start} to {end})"
+msgstr ""
+
+#: utils\stats.py:264
+msgid "Hourly Requests (no data available)"
+msgstr ""
+
+#: utils\stats.py:293 utils\stats.py:323
+msgid "Total requests per day"
+msgstr ""
+
+#: utils\stats.py:304
+msgid "Total Requests (Historical: {count} days from {start} to {end})"
+msgstr ""
+
+#: utils\stats.py:334
+msgid "Total Requests (no data available)"
+msgstr ""
+
+#: utils\stats.py:349
+msgid "⚙️ API Statistics Save Configuration"
+msgstr ""
+
+#: utils\stats.py:350
+msgid "Current configuration for automatic saving of API statistics"
+msgstr ""
+
+#: utils\stats.py:354
+msgid "📊 Batch Saving"
+msgstr ""
+
+#: utils\stats.py:356
+msgid "**Batch Size:** {batch_size} requests\n"
+"**Current Count:** {current_count} requests"
+msgstr ""
+
+#: utils\stats.py:364
+msgid "⏰ Time-Based Saving"
+msgstr ""
+
+#: utils\stats.py:366
+msgid "**Interval:** {interval} seconds\n"
+"**Time Since Last Save:** {time_since:.1f} seconds"
+msgstr ""
+
+#: utils\stats.py:374
+msgid "🔄 Save Strategy"
+msgstr ""
+
+#: utils\stats.py:376
+msgid "**Hybrid Approach:** Save when either:\n"
+"• Batch size is reached (10 requests)\n"
+"• Time interval is reached (30 seconds)\n"
+"• Whichever comes first"
+msgstr ""
+
+#: utils\stats.py:380
+msgid "This prevents config spam while ensuring data persistence"
+msgstr ""
+
