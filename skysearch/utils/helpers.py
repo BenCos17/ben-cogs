@@ -6,7 +6,8 @@ import json
 import aiohttp
 import discord
 import logging
-from urllib.parse import quote_plus, urlparse, parse_qs, urlencode, urlunparse
+from urllib.parse import quote_plus
+from yarl import URL
 import asyncio
 
 
@@ -73,10 +74,10 @@ class HelperUtils:
     def _is_allowed_feeder_url(self, url: str) -> bool:
         """Allow feeder URL fetches only over HTTPS from allowed domains and subdomains."""
         try:
-            parsed = urlparse(url)
+            parsed = URL(url)
             if parsed.scheme.lower() != "https":
                 return False
-            host = (parsed.hostname or "").lower().strip(".")
+            host = (parsed.host or "").lower().strip(".")
             for domain in self._get_allowed_feeder_domains():
                 if host == domain or host.endswith(f".{domain}"):
                     return True
@@ -608,28 +609,15 @@ class HelperUtils:
         replacement or a placeholder.
         """
         try:
-            parsed = urlparse(url)
-            qs = parse_qs(parsed.query, keep_blank_values=True)
-            changed = False
-            if 'apiToken' in qs:
-                qs['apiToken'] = ['REDACTED']
-                changed = True
-            if 'api_token' in qs:
-                qs['api_token'] = ['REDACTED']
-                changed = True
-            if changed:
-                # parse_qs produces lists; urlencode expects key->value mapping
-                safe_q = {k: v[0] for k, v in qs.items()}
-                new_q = urlencode(safe_q)
-                return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_q, parsed.fragment))
-            return url
+            parsed = URL(url)
+            query = parsed.query
+            if 'apiToken' in query:
+                parsed = parsed.update_query(apiToken='REDACTED')
+            if 'api_token' in query:
+                parsed = parsed.update_query(api_token='REDACTED')
+            return str(parsed)
         except Exception:
-            try:
-                import re
-
-                return re.sub(r'(apiToken=)[^&]+', r"\1REDACTED", url)
-            except Exception:
-                return 'REDACTED_URL'
+            return 'REDACTED_URL'
 
 
     # for feeder link command stuff
@@ -651,8 +639,8 @@ class HelperUtils:
         """
         if not url or "globe.airplanes.live" not in url:
             return url
-        parsed = urlparse(url)
-        qs = parse_qs(parsed.query)
+        parsed = URL(url)
+        qs = parsed.query
         # Prefer uuid for multi-feed, otherwise keep existing param
         feed_val = qs.get("feed", qs.get("uuid"))
         if feed_val:

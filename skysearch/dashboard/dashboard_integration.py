@@ -5,7 +5,8 @@ from redbot.core import commands
 import datetime
 import html
 import logging
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import quote_plus
+from yarl import URL
 
 
 log = logging.getLogger("red.skysearch.dashboard")
@@ -21,12 +22,12 @@ def _safe_https_url(url: typing.Any) -> str:
     if not url:
         return ""
     try:
-        parsed = urlparse(str(url).strip())
+        parsed = URL(str(url).strip())
         if parsed.scheme.lower() != "https":
             return ""
-        if not parsed.netloc:
+        if not parsed.host:
             return ""
-        return _esc(parsed.geturl())
+        return _esc(str(parsed))
     except Exception:
         return ""
 
