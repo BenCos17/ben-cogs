@@ -12,7 +12,7 @@ import json
 import urllib.parse
 import logging
 from redbot.core import commands, Config
-from redbot.core.i18n import Translator, cog_i18n, set_contextual_locales_from_guild
+from redbot.core.i18n import cog_i18n, set_contextual_locales_from_guild
 from discord.ext import tasks
 
 from .data.icao_codes import (
@@ -30,12 +30,9 @@ from .commands.admin import AdminCommands
 from .dashboard.dashboard_integration import DashboardIntegration
 from .api.squawk_api import SquawkAlertAPI
 from .api.command_api import CommandAPI
+from . import _
 
 log = logging.getLogger("red.skysearch")
-
-
-# Internationalization
-_ = Translator("Skysearch", __file__)
 
 
 @cog_i18n(_)

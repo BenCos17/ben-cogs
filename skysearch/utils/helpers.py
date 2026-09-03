@@ -9,6 +9,7 @@ import logging
 from urllib.parse import quote_plus
 from yarl import URL
 import asyncio
+from .. import _
 
 
 FEEDER_FETCH_TIMEOUT_SECONDS = 10
@@ -961,12 +962,9 @@ class HelperUtils:
         Returns:
             discord.Embed: Formatted notification embed
         """
-        from redbot.core.i18n import Translator
-        _watchlist = Translator("Skysearch", __file__)
-        
         embed = discord.Embed(
-            title=_watchlist("🟢 Aircraft Online"),
-            description=_watchlist("**{icao}** from your watchlist is now online!").format(icao=icao),
+            title=_("🟢 Aircraft Online"),
+            description=_("**{icao}** from your watchlist is now online!").format(icao=icao),
             color=0x00ff00
         )
         
@@ -1391,12 +1389,9 @@ class HelperUtils:
         Returns:
             discord.Embed: Formatted landing notification embed
         """
-        from redbot.core.i18n import Translator
-        _watchlist = Translator("Skysearch", __file__)
-        
         embed = discord.Embed(
-            title=_watchlist("🛬 Aircraft Landed"),
-            description=_watchlist("**{icao}** from your watchlist has landed!").format(icao=icao),
+            title=_("🛬 Aircraft Landed"),
+            description=_("**{icao}** from your watchlist has landed!").format(icao=icao),
             color=0x00ff00
         )
         
@@ -1406,9 +1401,9 @@ class HelperUtils:
             aircraft_data.get('lon', 'N/A')
         )
         
-        embed.add_field(name=_watchlist("Status"), value=_watchlist("On ground"), inline=True)
-        embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
-        embed.add_field(name=_watchlist("Position"), value=position, inline=False)
+        embed.add_field(name=_("Status"), value=_("On ground"), inline=True)
+        embed.add_field(name=_("Callsign"), value=callsign, inline=True)
+        embed.add_field(name=_("Position"), value=position, inline=False)
         
         return embed
     
@@ -1423,12 +1418,9 @@ class HelperUtils:
         Returns:
             discord.Embed: Formatted takeoff notification embed
         """
-        from redbot.core.i18n import Translator
-        _watchlist = Translator("Skysearch", __file__)
-        
         embed = discord.Embed(
-            title=_watchlist("✈️ Aircraft Took Off"),
-            description=_watchlist("**{icao}** from your watchlist has taken off!").format(icao=icao),
+            title=_("✈️ Aircraft Took Off"),
+            description=_("**{icao}** from your watchlist has taken off!").format(icao=icao),
             color=0x0099ff
         )
         

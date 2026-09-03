@@ -14,10 +14,8 @@ from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
 from ..utils.xml_parser import XMLParser
 from redbot.core import commands
-from redbot.core.i18n import Translator, cog_i18n
-
-# Internationalization
-_ = Translator("Skysearch", __file__)
+from redbot.core.i18n import cog_i18n
+from .. import _
 
 
 class FAAStatusRefreshButton(discord.ui.Button):

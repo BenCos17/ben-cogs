@@ -8,10 +8,9 @@ import datetime
 import aiohttp
 import re
 from discord.ext import commands
-from redbot.core.i18n import Translator, cog_i18n
+from redbot.core.i18n import cog_i18n
 from ..utils.stats import build_stats_embed, build_stats_charts, build_stats_config_embed
-
-_ = Translator("Skysearch", __file__)
+from .. import _
 
 
 @cog_i18n(_)

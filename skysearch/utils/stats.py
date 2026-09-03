@@ -3,9 +3,7 @@ import json
 import urllib.parse
 import datetime
 import time
-from redbot.core.i18n import Translator
-
-_ = Translator("Skysearch", __file__)
+from .. import _
 
 
 def _quickchart_url(chart_config: dict, width: int, height: int) -> str:

@@ -5,9 +5,7 @@ Add to Watchlist button view for aircraft embeds
 import discord
 from urllib.parse import quote_plus
 
-from redbot.core.i18n import Translator
-
-_ = Translator("Skysearch", __file__)
+from .. import _
 
 
 class AddToWatchlistView(discord.ui.View):

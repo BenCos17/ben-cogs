@@ -11,17 +11,14 @@ import logging
 import discord
 from discord.ext import commands, tasks
 from redbot.core import commands as red_commands
-from redbot.core.i18n import Translator, cog_i18n
+from redbot.core.i18n import cog_i18n
 
 from ..utils.api import APIManager
 from ..utils.helpers import HelperUtils
 from ..utils.export import ExportManager
+from .. import _
 
 log = logging.getLogger("red.skysearch")
-
-# Internationalization
-_ = Translator("Skysearch", __file__)
-
 
 @cog_i18n(_)
 class AircraftCommands:
