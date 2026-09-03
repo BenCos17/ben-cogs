@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jarvisdiscordbot\n"
 "POT-Creation-Date: 2026-09-03 12:51+0100\n"
-"PO-Revision-Date: 2026-09-03 12:19\n"
+"PO-Revision-Date: 2026-09-03 12:38\n"
 "Last-Translator: \n"
 "Language-Team: Irish\n"
 "MIME-Version: 1.0\n"
@@ -48,7 +48,7 @@ msgstr "Socraíodh an t-eatramh idir foláirimh éigeandála go {seconds} soicin
 
 #: commands\admin.py:92
 msgid "Emergency alert cooldown set to {minutes} minutes."
-msgstr ""
+msgstr "Socraíodh an tréimhse fhuaraithe do rabhadh éigeandála go {minutes} nóiméad."
 
 #: commands\admin.py:94
 msgid "Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds ('30s')"
@@ -84,7 +84,7 @@ msgstr "Socraíodh an tréimhse fhuaraithe do rabhadh FAA go {seconds} soicind."
 
 #: commands\admin.py:170
 msgid "FAA alert cooldown set to {minutes} minutes."
-msgstr ""
+msgstr "Socraíodh an tréimhse fhuaraithe do rabhadh FAA go {minutes} soicind."
 
 #: commands\admin.py:172
 msgid "Invalid duration. Use a number, '5m', or '30s'."
@@ -92,71 +92,71 @@ msgstr "Fad neamhbhailí. Bain úsáid as uimhir, '5m', nó '30s'."
 
 #: commands\admin.py:176
 msgid "Current FAA alert cooldown is {seconds} seconds."
-msgstr ""
+msgstr "Is é {seconds} soicind an t-am fuaraithe reatha le haghaidh foláirimh FAA."
 
 #: commands\admin.py:178
 msgid "Current FAA alert cooldown is {minutes} minutes."
-msgstr ""
+msgstr "Is é {minutes} soicind an t-am fuaraithe reatha le haghaidh foláirimh FAA."
 
 #: commands\admin.py:219
 msgid "Auto Settings Status"
-msgstr ""
+msgstr "Stádas na Socruithe Uathoibríocha"
 
 #: commands\admin.py:222
 msgid "ICAO Lookup"
-msgstr ""
+msgstr "Cuardach ICAO"
 
 #: commands\admin.py:222
 msgid "✅ **Enabled** - Automatic ICAO lookup is active"
-msgstr ""
+msgstr "✅ **Cumasaithe** - Tá cuardach uathoibríoch ICAO gníomhach"
 
 #: commands\aircraft.py:28
 #, docstring
 msgid "Aircraft-related commands for SkySearch."
-msgstr ""
+msgstr "Orduithe a bhaineann le haerárthaí do SkySearch."
 
 #: commands\aircraft.py:53 commands\aircraft.py:129
 msgid "No results found for your query"
-msgstr ""
+msgstr "Níor aimsíodh aon torthaí do do cheistniúchán"
 
 #: commands\aircraft.py:54 commands\aircraft.py:130
 msgid "Details"
-msgstr ""
+msgstr "Sonraí"
 
 #: commands\aircraft.py:54 commands\aircraft.py:130
 msgid "No aircraft information found or the response format is incorrect."
-msgstr ""
+msgstr "Níor aimsíodh aon fhaisnéis faoin aerárthach, nó tá formáid na freagartha mícheart."
 
 #: commands\aircraft.py:141 commands\aircraft.py:152 commands\aircraft.py:163
 #: commands\aircraft.py:181 commands\aircraft.py:186 commands\aircraft.py:197
 #: commands\aircraft.py:216 commands\aircraft.py:225 commands\aircraft.py:608
 #: commands\aircraft.py:631
 msgid "Error"
-msgstr ""
+msgstr "Earráid"
 
 #: commands\aircraft.py:141
 msgid "No aircraft found with the specified callsign."
-msgstr ""
+msgstr "Níor aimsíodh aon aerárthach leis an gcomhartha glao sonraithe."
 
 #: commands\aircraft.py:152 commands\aircraft.py:163
 msgid "Error retrieving aircraft information."
-msgstr ""
+msgstr "Earráid agus faisnéis faoin aerárthach á fáil."
 
 #: commands\aircraft.py:181
 msgid "Invalid search type specified. Use one of: icao, callsign, squawk, or type."
-msgstr ""
+msgstr "Sonraíodh cineál cuardaigh neamhbhailí. Bain úsáid as ceann de na nithe seo a leanas: icao, comhartha glaonna, squawk, nó cineál."
 
 #: commands\aircraft.py:186
 msgid "Invalid file format specified. Use one of: csv, pdf, txt, or html."
-msgstr ""
+msgstr "Sonraíodh formáid comhaid neamhbhailí. Bain úsáid as ceann de na cinn seo: csv, pdf, txt nó html."
 
 #: commands\aircraft.py:197
 msgid "No valid ICAO codes provided."
-msgstr ""
+msgstr "Níor cuireadh cóid ICAO bhailí ar fáil."
 
 #: commands\aircraft.py:216
 msgid "Invalid search type specified."
-msgstr ""
+msgstr "Sonraíodh cineál cuardaigh neamhbhailí."
 
 #: commands\aircraft.py:225
 msgid "No aircraft data found."
@@ -164,36 +164,37 @@ msgstr ""
 
 #: commands\aircraft.py:237
 msgid "Export Complete"
-msgstr ""
+msgstr "Easpórtáil Críochnaithe"
 
 #: commands\aircraft.py:237
 msgid "Successfully exported {count} aircraft to {format} format."
-msgstr ""
+msgstr "D'éirigh le heaspórtáil {count} aerárthach go dtí an fhormáid {format}."
 
 #: commands\aircraft.py:238
 msgid "Search Type"
-msgstr ""
+msgstr "Cineál Cuardaigh"
 
 #: commands\aircraft.py:239
 msgid "Search Value"
-msgstr ""
+msgstr "Luach cuardaigh"
 
 #: commands\aircraft.py:240
 msgid "File Format"
-msgstr ""
+msgstr "Formáid an chomhaid"
 
 #: commands\aircraft.py:241
 msgid "Aircraft Count"
-msgstr ""
+msgstr "Líon na nAerárthaí"
 
 #: commands\aircraft.py:242
 msgid "File Name"
-msgstr ""
+msgstr "Ainm an Chomhaid"
 
 #: commands\aircraft.py:504
 msgid "**Distance:** {distance} nautical miles\n"
 "**Direction:** {direction}° from your location"
-msgstr ""
+msgstr "**Fad:** {distance} míle mhuirí\n"
+"**Treoir:** {direction}° ó do shuíomh"
 
 #: commands\aircraft.py:605
 msgid "No Aircraft Found"
@@ -201,11 +202,11 @@ msgstr "Níor aimsíodh aon aerárthach"
 
 #: commands\aircraft.py:605
 msgid "No aircraft found within {radius} nautical miles of the specified location."
-msgstr ""
+msgstr "Níor aimsíodh aon aerárthach laistigh de {radius} míle mhuirí ón suíomh sonraithe."
 
 #: commands\aircraft.py:608
 msgid "Error retrieving closest aircraft information."
-msgstr ""
+msgstr "Earráid agus faisnéis faoin aerárthach is gaire á fáil."
 
 #: commands\aircraft.py:631
 msgid "No response from the API."
@@ -221,15 +222,15 @@ msgstr "Cuir aerárthaí nó cineálacha aerárthaí leis chun monatóireacht a 
 
 #: commands\aircraft.py:798 commands\aircraft.py:903
 msgid "Usage"
-msgstr ""
+msgstr "Úsáid"
 
 #: commands\aircraft.py:798
 msgid "`watchlist add <type> <value>`"
-msgstr ""
+msgstr "`watchlist add <type> <value>`"
 
 #: commands\aircraft.py:800 commands\aircraft.py:905
 msgid "Types"
-msgstr ""
+msgstr "Cineálacha"
 
 #: commands\aircraft.py:801
 msgid "• `icao` - Aircraft by hex code (6 hex digits)\n"
@@ -237,15 +238,19 @@ msgid "• `icao` - Aircraft by hex code (6 hex digits)\n"
 "• `callsign` - Watch flight number\n"
 "• `reg` - Watch registration/tail number\n"
 "• `squawk` - Watch squawk code"
-msgstr ""
+msgstr "• `icao` - Aerárthaí de réir cód heicsidheachúil (6 dhigit heicsidheachúla)\n"
+"• `type` - Monatóireacht ar chatagóir an aerárthaigh\n"
+"• `callsign` - Monatóireacht ar uimhir na heitilte\n"
+"• `reg` - Monatóireacht ar uimhir chlárúcháin/eireabaill\n"
+"• `squawk` - Monatóireacht ar chód 'squawk'"
 
 #: commands\aircraft.py:805
 msgid "Aircraft types"
-msgstr ""
+msgstr "Cineálacha aerárthaí"
 
 #: commands\aircraft.py:810
 msgid "Examples"
-msgstr ""
+msgstr "Samplaí"
 
 #: commands\aircraft.py:811
 msgid "• `watchlist add icao A2F41D`\n"
@@ -253,56 +258,61 @@ msgid "• `watchlist add icao A2F41D`\n"
 "• `watchlist add callsign UNITED123`\n"
 "• `watchlist add reg N814AK`\n"
 "• `watchlist add squawk 7700`"
-msgstr ""
+msgstr "• `cuir liosta faire icao A2F41D leis`\n"
+"• `cuir cineál míleata leis an liosta faire`\n"
+"• `cuir comhartha glaonna leis an liosta faire UNITED123`\n"
+"• `cuir clárú leis an liosta faire N814AK`\n"
+"• `cuir squawk 7700 leis an liosta faire`"
 
 #: commands\aircraft.py:824
 msgid "Invalid Type"
-msgstr ""
+msgstr "Cineál neamhbhailí"
 
 #: commands\aircraft.py:825
 msgid "Type must be one of: {types}"
-msgstr ""
+msgstr "Caithfidh an cineál a bheith ar cheann de na nithe seo a leanas: {types}"
 
 #: commands\aircraft.py:836
 msgid "Invalid ICAO Code"
-msgstr ""
+msgstr "Cód ICAO neamhbhailí"
 
 #: commands\aircraft.py:846
 msgid "Invalid Aircraft Type"
-msgstr ""
+msgstr "Cineál Aerárthaigh Neamhbhailí"
 
 #: commands\aircraft.py:847
 msgid "Unknown type: **{type}**\n\n"
 "Available types: {types}"
-msgstr ""
+msgstr "Cineál anaithnid: **{type}**\n\n"
+"Cineálacha ar fáil: {types}"
 
 #: commands\aircraft.py:859
 msgid "Invalid Squawk Code"
-msgstr ""
+msgstr "Cód Squawk Neamhbhailí"
 
 #: commands\aircraft.py:860
 msgid "Squawk code must be 4 digits (e.g., 7700)."
-msgstr ""
+msgstr "Caithfidh an cód 'squawk' a bheith ceithre dhigit ar fad (m.sh. 7700)."
 
 #: commands\aircraft.py:872
 msgid "✅ Watchlist Updated"
-msgstr ""
+msgstr "✅ Liosta faire nuashonraithe"
 
 #: commands\aircraft.py:872
 msgid "❌ Error"
-msgstr ""
+msgstr "❌ Earráid"
 
 #: commands\aircraft.py:899
 msgid "Remove from Watchlist"
-msgstr ""
+msgstr "Bain den liosta faire"
 
 #: commands\aircraft.py:900
 msgid "Remove aircraft or types from your watchlist."
-msgstr ""
+msgstr "Bain aerárthaí nó cineálacha aerárthaí de do liosta faire."
 
 #: commands\aircraft.py:903
 msgid "`watchlist remove <type> <value>`"
-msgstr ""
+msgstr "`bain ó liosta faire <type> <value>`"
 
 #: commands\aircraft.py:906
 msgid "• `icao` - Remove by aircraft hex code\n"
@@ -310,65 +320,71 @@ msgid "• `icao` - Remove by aircraft hex code\n"
 "• `callsign` - Remove by flight number\n"
 "• `reg` - Remove by registration\n"
 "• `squawk` - Remove by squawk code"
-msgstr ""
+msgstr "• `icao` - Bain de réir cód heicsidheachúil an aerárthaigh\n"
+"• `type` - Bain de réir chineál an aerárthaigh\n"
+"• `callsign` - Bain de réir uimhir na heitilte\n"
+"• `reg` - Bain de réir na huimhreach clárúcháin\n"
+"• `squawk` - Bain de réir an chóid 'squawk'"
 
 #: commands\aircraft.py:921
 msgid "✅ Removed"
-msgstr ""
+msgstr "✅ Bainte"
 
 #: commands\aircraft.py:921
 msgid "❌ Not Found"
-msgstr ""
+msgstr "❌ Gan aimsiú"
 
 #: commands\aircraft.py:938 commands\aircraft.py:984
 msgid "Watchlist Empty"
-msgstr ""
+msgstr "Liosta faire folamh"
 
 #: commands\aircraft.py:939
 msgid "Your watchlist is empty.\n\n"
 "Use `{prefix}aircraft watchlist add <type> <value>` to add items.\n\n"
 "Example: `{prefix}aircraft watchlist add type military`"
-msgstr ""
+msgstr "Tá do liosta faire folamh.\n\n"
+"Bain úsáid as `{prefix}aircraft watchlist add <type> <value>` chun míreanna a chur leis.\n\n"
+"Sampla: `{prefix}aircraft watchlist add type military`"
 
 #: commands\aircraft.py:947
 msgid "Your Watchlist"
-msgstr ""
+msgstr "Do Liosta Faire"
 
 #: commands\aircraft.py:948
 msgid "You are watching **{count}** items:"
-msgstr ""
+msgstr "Tá tú ag faire ar **{count}** mír:"
 
 #: commands\aircraft.py:969
 msgid "None"
-msgstr ""
+msgstr "Níl aon cheann ann"
 
 #: commands\aircraft.py:973
 msgid "Use `{prefix}aircraft watchlist status` for detailed status."
-msgstr ""
+msgstr "Úsáid `{prefix}aircraft watchlist status` chun stádas mionchruinn a fháil."
 
 #: commands\aircraft.py:985
 msgid "Your watchlist is empty."
-msgstr ""
+msgstr "Tá do liosta faire folamh."
 
 #: commands\aircraft.py:1012
 msgid "Watchlist Status"
-msgstr ""
+msgstr "Liosta faire nuashonraithe"
 
 #: commands\aircraft.py:1013
 msgid "**{total}** items in watchlist | **{online}** aircraft currently online"
-msgstr ""
+msgstr "**{total}** mír ar an liosta faire | **{online}** aerárthach ar líne faoi láthair"
 
 #: commands\aircraft.py:1050
 msgid "🟢 Aircraft Online"
-msgstr ""
+msgstr "🟢 Aerárthach Ar Líne"
 
 #: commands\aircraft.py:1065
 msgid "Watchlist Already Empty"
-msgstr ""
+msgstr "Tá an liosta faire folamh cheana féin"
 
 #: commands\aircraft.py:1066
 msgid "Your watchlist is already empty."
-msgstr ""
+msgstr "Tá do liosta faire folamh."
 
 #: commands\aircraft.py:1079
 msgid "✅ Watchlist Cleared"
@@ -586,19 +602,19 @@ msgstr ""
 
 #: skysearch.py:237
 msgid "Runway data"
-msgstr ""
+msgstr "Sonraí an rúidbhealaigh"
 
 #: skysearch.py:237
 msgid "Runway data is powered by the [airportdb.io](https://airportdb.io) API service"
-msgstr ""
+msgstr "Soláthraítear sonraí na rúidbhealaí ag seirbhís API [airportdb.io](https://airportdb.io)"
 
 #: skysearch.py:238
 msgid "Mapping and imagery"
-msgstr ""
+msgstr "Mapáil agus íomháú"
 
 #: skysearch.py:238
 msgid "Mapping and ground imagery powered by [Google Maps](https://maps.google.com) and the [Maps Static API](https://developers.google.com/maps/documentation/maps-static)"
-msgstr ""
+msgstr "Mapaí agus íomhánna talún á gcur ar fáil ag [Google Maps](https://maps.google.com) agus an [Maps Static API](https://developers.google.com/maps/documentation/maps-static)"
 
 #: skysearch.py:256
 #, docstring
