@@ -2,235 +2,234 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jarvisdiscordbot\n"
 "POT-Creation-Date: 2026-09-03 12:51+0100\n"
-"PO-Revision-Date: 2026-09-03 13:35\n"
+"PO-Revision-Date: 2026-09-03 13:48\n"
 "Last-Translator: \n"
-"Language-Team: Irish\n"
+"Language-Team: German\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: redgettext 3.4.2\n"
-"Plural-Forms: nplurals=5; plural=(n==1 ? 0 : n==2 ? 1 : n<7 ? 2 : n<11 ? 3 : 4);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: jarvisdiscordbot\n"
 "X-Crowdin-Project-ID: 786438\n"
-"X-Crowdin-Language: ga-IE\n"
+"X-Crowdin-Language: de\n"
 "X-Crowdin-File: /main/skysearch/locales/messages.pot\n"
 "X-Crowdin-File-ID: 8\n"
-"Language: ga_IE\n"
+"Language: de_DE\n"
 
 #: commands\admin.py:19
 #, docstring
 msgid "Admin-related commands for SkySearch."
-msgstr "Orduithe riaracháin do SkySearch."
+msgstr ""
 
 #: commands\admin.py:29
 msgid "Alert channel set to {channel}"
-msgstr "Cainéal foláirimh socraithe ar {channel}"
+msgstr ""
 
 #: commands\admin.py:37
 msgid "Alert channel cleared. No more alerts will be sent."
-msgstr "Tá an cainéal foláirimh ghlanta."
+msgstr ""
 
 #: commands\admin.py:48
 msgid "Alert role set to {role}"
-msgstr "Ról na foláirimhe socraithe ar {role}"
+msgstr ""
 
 #: commands\admin.py:56
 msgid "Alert role cleared. No more role mentions will be made."
-msgstr "Tá an cainéal foláirimh glanta. Ní sheolfar tuilleadh foláirimh."
+msgstr ""
 
 #: commands\admin.py:85 commands\admin.py:164
 msgid "Cooldown must be a positive number."
-msgstr "Caithfidh an t-eatramh fuaraithe a bheith ina uimhir dhearfach."
+msgstr ""
 
 #: commands\admin.py:90
 msgid "Emergency alert cooldown set to {seconds} seconds."
-msgstr "Socraíodh an t-eatramh idir foláirimh éigeandála go {seconds} soicind."
+msgstr ""
 
 #: commands\admin.py:92
 msgid "Emergency alert cooldown set to {minutes} minutes."
-msgstr "Socraíodh an tréimhse fhuaraithe do rabhadh éigeandála go {minutes} nóiméad."
+msgstr ""
 
 #: commands\admin.py:94
 msgid "Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds ('30s')"
-msgstr "Formáid neamhbhailí don ré. Bain úsáid as uimhir (m.sh. '5'), nó as nóiméid ('5m') nó soicindí ('30s')"
+msgstr ""
 
 #: commands\admin.py:98
 msgid "Current emergency alert cooldown is {seconds} seconds."
-msgstr "Socraíodh an t-eatramh idir foláirimh éigeandála go {seconds} soicind."
+msgstr ""
 
 #: commands\admin.py:100
 msgid "Current emergency alert cooldown is {minutes} minutes."
-msgstr "Is é {minutes} nóiméad an tréimhse fhuaraithe reatha le haghaidh foláirimh éigeandála."
+msgstr ""
 
 #: commands\admin.py:108
 msgid "FAA status alert channel set to {channel}"
-msgstr "An cainéal foláirimh stádais FAA socraithe d’ar {channel}"
+msgstr ""
 
 #: commands\admin.py:119
 msgid "FAA status alert channel cleared. No more FAA change notifications will be sent."
-msgstr "Tá an cainéal foláirimh maidir le stádas na FAA glanta. Ní sheolfar tuilleadh fógraí faoi athruithe ón FAA."
+msgstr ""
 
 #: commands\admin.py:133
 msgid "FAA status alert role set to {role}"
-msgstr "Ról na foláirimh stádais FAA socraithe ar {role}"
+msgstr ""
 
 #: commands\admin.py:144
 msgid "FAA status alert role cleared."
-msgstr "Ceadaíodh an ról foláirimh stádais FAA."
+msgstr ""
 
 #: commands\admin.py:168
 msgid "FAA alert cooldown set to {seconds} seconds."
-msgstr "Socraíodh an tréimhse fhuaraithe do rabhadh FAA go {seconds} soicind."
+msgstr ""
 
 #: commands\admin.py:170
 msgid "FAA alert cooldown set to {minutes} minutes."
-msgstr "Socraíodh an tréimhse fhuaraithe do rabhadh FAA go {minutes} soicind."
+msgstr ""
 
 #: commands\admin.py:172
 msgid "Invalid duration. Use a number, '5m', or '30s'."
-msgstr "Fad neamhbhailí. Bain úsáid as uimhir, '5m', nó '30s'."
+msgstr ""
 
 #: commands\admin.py:176
 msgid "Current FAA alert cooldown is {seconds} seconds."
-msgstr "Is é {seconds} soicind an t-am fuaraithe reatha le haghaidh foláirimh FAA."
+msgstr ""
 
 #: commands\admin.py:178
 msgid "Current FAA alert cooldown is {minutes} minutes."
-msgstr "Is é {minutes} soicind an t-am fuaraithe reatha le haghaidh foláirimh FAA."
+msgstr ""
 
 #: commands\admin.py:219
 msgid "Auto Settings Status"
-msgstr "Stádas na Socruithe Uathoibríocha"
+msgstr ""
 
 #: commands\admin.py:222
 msgid "ICAO Lookup"
-msgstr "Cuardach ICAO"
+msgstr ""
 
 #: commands\admin.py:222
 msgid "✅ **Enabled** - Automatic ICAO lookup is active"
-msgstr "✅ **Cumasaithe** - Tá cuardach uathoibríoch ICAO gníomhach"
+msgstr ""
 
 #: commands\aircraft.py:28
 #, docstring
 msgid "Aircraft-related commands for SkySearch."
-msgstr "Orduithe a bhaineann le haerárthaí do SkySearch."
+msgstr ""
 
 #: commands\aircraft.py:53 commands\aircraft.py:129
 msgid "No results found for your query"
-msgstr "Níor aimsíodh aon torthaí do do cheistniúchán"
+msgstr ""
 
 #: commands\aircraft.py:54 commands\aircraft.py:130
 msgid "Details"
-msgstr "Sonraí"
+msgstr ""
 
 #: commands\aircraft.py:54 commands\aircraft.py:130
 msgid "No aircraft information found or the response format is incorrect."
-msgstr "Níor aimsíodh aon fhaisnéis faoin aerárthach, nó tá formáid na freagartha mícheart."
+msgstr ""
 
 #: commands\aircraft.py:141 commands\aircraft.py:152 commands\aircraft.py:163
 #: commands\aircraft.py:181 commands\aircraft.py:186 commands\aircraft.py:197
 #: commands\aircraft.py:216 commands\aircraft.py:225 commands\aircraft.py:608
 #: commands\aircraft.py:631
 msgid "Error"
-msgstr "Earráid"
+msgstr ""
 
 #: commands\aircraft.py:141
 msgid "No aircraft found with the specified callsign."
-msgstr "Níor aimsíodh aon aerárthach leis an gcomhartha glao sonraithe."
+msgstr ""
 
 #: commands\aircraft.py:152 commands\aircraft.py:163
 msgid "Error retrieving aircraft information."
-msgstr "Earráid agus faisnéis faoin aerárthach á fáil."
+msgstr ""
 
 #: commands\aircraft.py:181
 msgid "Invalid search type specified. Use one of: icao, callsign, squawk, or type."
-msgstr "Sonraíodh cineál cuardaigh neamhbhailí. Bain úsáid as ceann de na nithe seo a leanas: icao, comhartha glaonna, squawk, nó cineál."
+msgstr ""
 
 #: commands\aircraft.py:186
 msgid "Invalid file format specified. Use one of: csv, pdf, txt, or html."
-msgstr "Sonraíodh formáid comhaid neamhbhailí. Bain úsáid as ceann de na cinn seo: csv, pdf, txt nó html."
+msgstr ""
 
 #: commands\aircraft.py:197
 msgid "No valid ICAO codes provided."
-msgstr "Níor cuireadh cóid ICAO bhailí ar fáil."
+msgstr ""
 
 #: commands\aircraft.py:216
 msgid "Invalid search type specified."
-msgstr "Sonraíodh cineál cuardaigh neamhbhailí."
+msgstr ""
 
 #: commands\aircraft.py:225
 msgid "No aircraft data found."
-msgstr "Níor aimsíodh aon sonraí aerárthaigh."
+msgstr ""
 
 #: commands\aircraft.py:237
 msgid "Export Complete"
-msgstr "Easpórtáil Críochnaithe"
+msgstr ""
 
 #: commands\aircraft.py:237
 msgid "Successfully exported {count} aircraft to {format} format."
-msgstr "D'éirigh le heaspórtáil {count} aerárthach go dtí an fhormáid {format}."
+msgstr ""
 
 #: commands\aircraft.py:238
 msgid "Search Type"
-msgstr "Cineál Cuardaigh"
+msgstr ""
 
 #: commands\aircraft.py:239
 msgid "Search Value"
-msgstr "Luach cuardaigh"
+msgstr ""
 
 #: commands\aircraft.py:240
 msgid "File Format"
-msgstr "Formáid an chomhaid"
+msgstr ""
 
 #: commands\aircraft.py:241
 msgid "Aircraft Count"
-msgstr "Líon na nAerárthaí"
+msgstr ""
 
 #: commands\aircraft.py:242
 msgid "File Name"
-msgstr "Ainm an Chomhaid"
+msgstr ""
 
 #: commands\aircraft.py:504
 msgid "**Distance:** {distance} nautical miles\n"
 "**Direction:** {direction}° from your location"
-msgstr "**Fad:** {distance} míle mhuirí\n"
-"**Treoir:** {direction}° ó do shuíomh"
+msgstr ""
 
 #: commands\aircraft.py:605
 msgid "No Aircraft Found"
-msgstr "Níor aimsíodh aon aerárthach"
+msgstr ""
 
 #: commands\aircraft.py:605
 msgid "No aircraft found within {radius} nautical miles of the specified location."
-msgstr "Níor aimsíodh aon aerárthach laistigh de {radius} míle mhuirí ón suíomh sonraithe."
+msgstr ""
 
 #: commands\aircraft.py:608
 msgid "Error retrieving closest aircraft information."
-msgstr "Earráid agus faisnéis faoin aerárthach is gaire á fáil."
+msgstr ""
 
 #: commands\aircraft.py:631
 msgid "No response from the API."
-msgstr "Gan freagra ón API."
+msgstr ""
 
 #: commands\aircraft.py:794 utils\add_to_watchlist_view.py:79
 msgid "Add to Watchlist"
-msgstr "Cuir leis an liosta faire"
+msgstr ""
 
 #: commands\aircraft.py:795
 msgid "Add aircraft or types to watch and get notified when they're active."
-msgstr "Cuir aerárthaí nó cineálacha aerárthaí leis chun monatóireacht a dhéanamh orthu, agus faigh fógra nuair a bhíonn siad i mbun oibríochta."
+msgstr ""
 
 #: commands\aircraft.py:798 commands\aircraft.py:903
 msgid "Usage"
-msgstr "Úsáid"
+msgstr ""
 
 #: commands\aircraft.py:798
 msgid "`watchlist add <type> <value>`"
-msgstr "`watchlist add <type> <value>`"
+msgstr ""
 
 #: commands\aircraft.py:800 commands\aircraft.py:905
 msgid "Types"
-msgstr "Cineálacha"
+msgstr ""
 
 #: commands\aircraft.py:801
 msgid "• `icao` - Aircraft by hex code (6 hex digits)\n"
@@ -238,19 +237,15 @@ msgid "• `icao` - Aircraft by hex code (6 hex digits)\n"
 "• `callsign` - Watch flight number\n"
 "• `reg` - Watch registration/tail number\n"
 "• `squawk` - Watch squawk code"
-msgstr "• `icao` - Aerárthaí de réir cód heicsidheachúil (6 dhigit heicsidheachúla)\n"
-"• `type` - Monatóireacht ar chatagóir an aerárthaigh\n"
-"• `callsign` - Monatóireacht ar uimhir na heitilte\n"
-"• `reg` - Monatóireacht ar uimhir chlárúcháin/eireabaill\n"
-"• `squawk` - Monatóireacht ar chód 'squawk'"
+msgstr ""
 
 #: commands\aircraft.py:805
 msgid "Aircraft types"
-msgstr "Cineálacha aerárthaí"
+msgstr ""
 
 #: commands\aircraft.py:810
 msgid "Examples"
-msgstr "Samplaí"
+msgstr ""
 
 #: commands\aircraft.py:811
 msgid "• `watchlist add icao A2F41D`\n"
@@ -258,61 +253,56 @@ msgid "• `watchlist add icao A2F41D`\n"
 "• `watchlist add callsign UNITED123`\n"
 "• `watchlist add reg N814AK`\n"
 "• `watchlist add squawk 7700`"
-msgstr "• `cuir liosta faire icao A2F41D leis`\n"
-"• `cuir cineál míleata leis an liosta faire`\n"
-"• `cuir comhartha glaonna leis an liosta faire UNITED123`\n"
-"• `cuir clárú leis an liosta faire N814AK`\n"
-"• `cuir squawk 7700 leis an liosta faire`"
+msgstr ""
 
 #: commands\aircraft.py:824
 msgid "Invalid Type"
-msgstr "Cineál neamhbhailí"
+msgstr ""
 
 #: commands\aircraft.py:825
 msgid "Type must be one of: {types}"
-msgstr "Caithfidh an cineál a bheith ar cheann de na nithe seo a leanas: {types}"
+msgstr ""
 
 #: commands\aircraft.py:836
 msgid "Invalid ICAO Code"
-msgstr "Cód ICAO neamhbhailí"
+msgstr ""
 
 #: commands\aircraft.py:846
 msgid "Invalid Aircraft Type"
-msgstr "Cineál Aerárthaigh Neamhbhailí"
+msgstr ""
 
 #: commands\aircraft.py:847
 msgid "Unknown type: **{type}**\n\n"
 "Available types: {types}"
-msgstr "Cineál anaithnid: **{type}**\n\n"
-"Cineálacha ar fáil: {types}"
+msgstr ""
 
 #: commands\aircraft.py:859
 msgid "Invalid Squawk Code"
-msgstr "Cód Squawk Neamhbhailí"
+msgstr ""
 
 #: commands\aircraft.py:860
 msgid "Squawk code must be 4 digits (e.g., 7700)."
-msgstr "Caithfidh an cód 'squawk' a bheith ceithre dhigit ar fad (m.sh. 7700)."
+msgstr ""
 
 #: commands\aircraft.py:872
 msgid "✅ Watchlist Updated"
-msgstr "✅ Liosta faire nuashonraithe"
+msgstr ""
 
 #: commands\aircraft.py:872
 msgid "❌ Error"
-msgstr "❌ Earráid"
+msgstr ""
 
 #: commands\aircraft.py:899
 msgid "Remove from Watchlist"
-msgstr "Bain den liosta faire"
+msgstr ""
 
 #: commands\aircraft.py:900
 msgid "Remove aircraft or types from your watchlist."
-msgstr "Bain aerárthaí nó cineálacha aerárthaí de do liosta faire."
+msgstr ""
 
 #: commands\aircraft.py:903
 msgid "`watchlist remove <type> <value>`"
-msgstr "`bain ó liosta faire <type> <value>`"
+msgstr ""
 
 #: commands\aircraft.py:906
 msgid "• `icao` - Remove by aircraft hex code\n"
@@ -320,146 +310,135 @@ msgid "• `icao` - Remove by aircraft hex code\n"
 "• `callsign` - Remove by flight number\n"
 "• `reg` - Remove by registration\n"
 "• `squawk` - Remove by squawk code"
-msgstr "• `icao` - Bain de réir cód heicsidheachúil an aerárthaigh\n"
-"• `type` - Bain de réir chineál an aerárthaigh\n"
-"• `callsign` - Bain de réir uimhir na heitilte\n"
-"• `reg` - Bain de réir na huimhreach clárúcháin\n"
-"• `squawk` - Bain de réir an chóid 'squawk'"
+msgstr ""
 
 #: commands\aircraft.py:921
 msgid "✅ Removed"
-msgstr "✅ Bainte"
+msgstr ""
 
 #: commands\aircraft.py:921
 msgid "❌ Not Found"
-msgstr "❌ Gan aimsiú"
+msgstr ""
 
 #: commands\aircraft.py:938 commands\aircraft.py:984
 msgid "Watchlist Empty"
-msgstr "Liosta faire folamh"
+msgstr ""
 
 #: commands\aircraft.py:939
 msgid "Your watchlist is empty.\n\n"
 "Use `{prefix}aircraft watchlist add <type> <value>` to add items.\n\n"
 "Example: `{prefix}aircraft watchlist add type military`"
-msgstr "Tá do liosta faire folamh.\n\n"
-"Bain úsáid as `{prefix}aircraft watchlist add <type> <value>` chun míreanna a chur leis.\n\n"
-"Sampla: `{prefix}aircraft watchlist add type military`"
+msgstr ""
 
 #: commands\aircraft.py:947
 msgid "Your Watchlist"
-msgstr "Do Liosta Faire"
+msgstr ""
 
 #: commands\aircraft.py:948
 msgid "You are watching **{count}** items:"
-msgstr "Tá tú ag faire ar **{count}** mír:"
+msgstr ""
 
 #: commands\aircraft.py:969
 msgid "None"
-msgstr "Níl aon cheann ann"
+msgstr ""
 
 #: commands\aircraft.py:973
 msgid "Use `{prefix}aircraft watchlist status` for detailed status."
-msgstr "Úsáid `{prefix}aircraft watchlist status` chun stádas mionchruinn a fháil."
+msgstr ""
 
 #: commands\aircraft.py:985
 msgid "Your watchlist is empty."
-msgstr "Tá do liosta faire folamh."
+msgstr ""
 
 #: commands\aircraft.py:1012
 msgid "Watchlist Status"
-msgstr "Liosta faire nuashonraithe"
+msgstr ""
 
 #: commands\aircraft.py:1013
 msgid "**{total}** items in watchlist | **{online}** aircraft currently online"
-msgstr "**{total}** mír ar an liosta faire | **{online}** aerárthach ar líne faoi láthair"
+msgstr ""
 
 #: commands\aircraft.py:1050
 msgid "🟢 Aircraft Online"
-msgstr "🟢 Aerárthach Ar Líne"
+msgstr ""
 
 #: commands\aircraft.py:1065
 msgid "Watchlist Already Empty"
-msgstr "Tá an liosta faire folamh cheana féin"
+msgstr ""
 
 #: commands\aircraft.py:1066
 msgid "Your watchlist is already empty."
-msgstr "Tá do liosta faire folamh."
+msgstr ""
 
 #: commands\aircraft.py:1079
 msgid "✅ Watchlist Cleared"
-msgstr "✅ Liosta Faire Glanta"
+msgstr ""
 
 #: commands\aircraft.py:1080
 msgid "Removed **{count}** items from your watchlist."
-msgstr "Baineadh **{count}** mír de do liosta faire."
+msgstr ""
 
 #: commands\aircraft.py:1099 commands\aircraft.py:1170
 msgid "{seconds} seconds"
-msgstr "{seconds} soicind"
+msgstr ""
 
 #: commands\aircraft.py:1101 commands\aircraft.py:1103
 #: commands\aircraft.py:1172 commands\aircraft.py:1174
 msgid "{minutes} minutes"
-msgstr "{minutes} nóiméad"
+msgstr ""
 
 #: commands\aircraft.py:1106
 msgid "Watchlist Cooldown"
-msgstr "Eatramh Fuaraithe an Liosta Faire"
+msgstr ""
 
 #: commands\aircraft.py:1107
 msgid "Current notification cooldown: **{cooldown}**\n\n"
 "Use `{prefix}aircraft watchlist cooldown <duration>` to change it.\n\n"
 "Examples: `20m`, `30s`, `1h`, `15.5m`"
-msgstr "An tréimhse fhuaraithe reatha d’fhógraí: **{cooldown}**\n\n"
-"Úsáid `{prefix}aircraft watchlist cooldown <duration>` chun é a athrú.\n\n"
-"Samplaí: `20m`, `30s`, `1h`, `15.5m`"
+msgstr ""
 
 #: commands\aircraft.py:1114
 msgid "How it works"
-msgstr "Conas a oibríonn sé"
+msgstr ""
 
 #: commands\aircraft.py:1115
 msgid "After you receive a notification for a watched aircraft, you won't receive another notification for the same aircraft until the cooldown period expires."
-msgstr "Tar éis duit fógra a fháil faoi aerárthach a bhfuil tú ag déanamh monatóireachta air, ní bhfaighidh tú fógra eile faoin aerárthach céanna go dtí go mbeidh an tréimhse fhuaraithe thart."
+msgstr ""
 
 #: commands\aircraft.py:1119
 msgid "Time formats"
-msgstr "Formáidí ama"
+msgstr ""
 
 #: commands\aircraft.py:1120
 msgid "You can use:\n"
 "• Minutes: `20`, `20m`, `20.5m`\n"
 "• Seconds: `30s`, `120s`\n"
 "• Hours: `1h`, `2.5h`"
-msgstr "Is féidir leat na formáidí seo a leanas a úsáid:\n"
-"• Nóiméid: `20`, `20m`, `20.5m`\n"
-"• Soicindí: `30s`, `120s`\n"
-"• Uaireanta: `1h`, `2.5h`"
+msgstr ""
 
 #: commands\aircraft.py:1149 commands\aircraft.py:1158
 msgid "Invalid Cooldown"
-msgstr "Eatramh Fuaraithe Neamhbhailí"
+msgstr ""
 
 #: commands\aircraft.py:1150
 msgid "Cooldown must be at least 1 second."
-msgstr "Caithfidh an t-eatramh fuaraithe a bheith 1 soicind ar a laghad."
+msgstr ""
 
 #: commands\aircraft.py:1159
 msgid "Cooldown cannot exceed 1440 minutes (24 hours)."
-msgstr "Ní féidir leis an eatramh fuaraithe dul thar 1440 nóiméad (24 uair an chloig)."
+msgstr ""
 
 #: commands\aircraft.py:1177
 msgid "✅ Cooldown Updated"
-msgstr "✅ Eatramh Fuaraithe Nuashonraithe"
+msgstr ""
 
 #: commands\aircraft.py:1178
 msgid "Watchlist notification cooldown set to **{cooldown}**."
-msgstr "Socraíodh tréimhse fhuaraithe fógraí an liosta faire go **{cooldown}**."
+msgstr ""
 
 #: commands\aircraft.py:1185
 msgid "Invalid Duration Format"
-msgstr "Formáid Ré Neamhbhailí"
+msgstr ""
 
 #: commands\aircraft.py:1186
 msgid "Invalid duration format. Use a number (e.g. '20'), minutes ('20m'), seconds ('30s'), or hours ('1h').\n\n"
@@ -468,417 +447,409 @@ msgid "Invalid duration format. Use a number (e.g. '20'), minutes ('20m'), secon
 "• `30s` - 30 seconds\n"
 "• `1h` - 1 hour\n"
 "• `15.5m` - 15.5 minutes"
-msgstr "Formáid neamhbhailí don ré. Bain úsáid as uimhir (m.sh. '20'), nóiméid ('20m'), soicindí ('30s'), nó uaireanta ('1h').\n\n"
-"Samplaí:\n"
-"• `20m` - 20 nóiméad\n"
-"• `30s` - 30 soicind\n"
-"• `1h` - 1 uair\n"
-"• `15.5m` - 15.5 nóiméad"
+msgstr ""
 
 #: commands\airport.py:528
 #, docstring
 msgid "Airport-related commands for SkySearch."
-msgstr "Orduithe a bhaineann le haerfoirt do SkySearch."
+msgstr ""
 
 #: commands\airport.py:1040 skysearch.py:731
 #, docstring
 msgid "Set the OpenWeatherMap API key."
-msgstr "Socraigh eochair API OpenWeatherMap."
+msgstr ""
 
 #: commands\airport.py:1047 skysearch.py:737
 #, docstring
 msgid "Show the current OpenWeatherMap API key (partially masked)."
-msgstr "Taispeáin eochair API reatha OpenWeatherMap (i bhfolach go páirteach)."
+msgstr ""
 
 #: commands\airport.py:1057 skysearch.py:743
 #, docstring
 msgid "Clear the OpenWeatherMap API key."
-msgstr "Glan eochair API OpenWeatherMap."
+msgstr ""
 
 #: skysearch.py:43
 #, docstring
 msgid "SkySearch - Aircraft tracking and information cog."
-msgstr "SkySearch - Cog le haghaidh rianú agus faisnéise aerárthaí."
+msgstr ""
 
 #: skysearch.py:194
 #, docstring
 msgid "SkySearch command group"
-msgstr "Grúpa orduithe SkySearch"
+msgstr ""
 
 #: skysearch.py:195
 msgid "Thanks for using SkySearch"
-msgstr "Go raibh maith agat as SkySearch a úsáid"
+msgstr ""
 
 #: skysearch.py:195
 msgid "SkySearch is a powerful, easy-to-use OSINT tool for tracking aircraft."
-msgstr "Is uirlis chumhachtach, éasca le húsáid OSINT é SkySearch chun aerárthaí a rianú."
+msgstr ""
 
 #: skysearch.py:196
 msgid "Use `aircraft` to show available commands to fetch information about live aircraft and configure emergency squawk alerts."
-msgstr "Úsáid `aircraft` chun na horduithe atá ar fáil a thaispeáint chun faisnéis a fháil faoi aerárthaí beo agus foláirimh éigeandála squawk a chumrú."
+msgstr ""
 
 #: skysearch.py:197
 msgid "Use `airport` to show available commands to fetch information and imagery of airports around the world."
-msgstr "Úsáid `airport` chun na horduithe atá ar fáil a thaispeáint chun faisnéis agus íomhánna d’aerfoirt ar fud an domhain a fháil."
+msgstr ""
 
 #: skysearch.py:198 skysearch.py:307
 msgid "Use `skysearch apistats` to view API performance and usage statistics"
-msgstr "Úsáid `skysearch apistats` chun staitisticí feidhmíochta agus úsáide API a fheiceáil"
+msgstr ""
 
 #: skysearch.py:204
 #, docstring
 msgid "Get SkySearch statistics."
-msgstr "Faigh staitisticí SkySearch."
+msgstr ""
 
 #: skysearch.py:207
 msgid "SkySearch Statistics"
-msgstr "Staitisticí SkySearch"
+msgstr ""
 
 #: skysearch.py:207
 msgid "Consolidated statistics and data sources for SkySearch."
-msgstr "Staitisticí comhdhlúite agus foinsí sonraí do SkySearch."
+msgstr ""
 
 #: skysearch.py:222 skysearch.py:232
 msgid "This data appears in the following commands"
-msgstr "Tá na sonraí seo le fáil sna horduithe seo a leanas"
+msgstr ""
 
 #: skysearch.py:223
 msgid "Law enforcement aircraft"
-msgstr "Aerárthaí forfheidhmithe dlí"
+msgstr ""
 
 #: skysearch.py:224
 msgid "Military & government aircraft"
-msgstr "Aerárthaí míleata agus rialtais"
+msgstr ""
 
 #: skysearch.py:225
 msgid "Medical aircraft"
-msgstr "Aerárthaí leighis"
+msgstr ""
 
 #: skysearch.py:226
 msgid "Media aircraft"
-msgstr "Aerárthaí meán"
+msgstr ""
 
 #: skysearch.py:227
 msgid "Damaged aircraft"
-msgstr "Aerárthaí damáistithe"
+msgstr ""
 
 #: skysearch.py:228
 msgid "Wartime aircraft"
-msgstr "Aerárthaí aimsir chogaidh"
+msgstr ""
 
 #: skysearch.py:229
 msgid "Utility aircraft"
-msgstr "Aerárthaí fóntais"
+msgstr ""
 
 #: skysearch.py:230
 msgid "Balloons"
-msgstr "Balúin"
+msgstr ""
 
 #: skysearch.py:231
 msgid "Suspicious aircraft"
-msgstr "Aerárthaí amhrasacha"
+msgstr ""
 
 #: skysearch.py:233
 msgid "Other services"
-msgstr "Seirbhísí eile"
+msgstr ""
 
 #: skysearch.py:233
 msgid "Additional data used in this cog is shown below"
-msgstr "Taispeántar thíos na sonraí breise a úsáidtear sa chog seo"
+msgstr ""
 
 #: skysearch.py:234
 msgid "ADSB-B Data"
-msgstr "Sonraí ADSB-B"
+msgstr ""
 
 #: skysearch.py:234
 msgid "ADSB tracking data is powered by [airplanes.live](https://airplanes.live)"
-msgstr "Soláthraíonn [airplanes.live](https://airplanes.live) na sonraí rianaithe ADS-B"
+msgstr ""
 
 #: skysearch.py:235
 msgid "Photography"
-msgstr "Grianghrafadóireacht"
+msgstr ""
 
 #: skysearch.py:235
 msgid "Photos are powered by community contributions at [planespotters.net](https://www.planespotters.net/)"
-msgstr "Is iad ranníocaíochtaí an phobail ag [planespotters.net](https://www.planespotters.net/) a sholáthraíonn na grianghraif"
+msgstr ""
 
 #: skysearch.py:236
 msgid "Airport data"
-msgstr "Sonraí aerfoirt"
+msgstr ""
 
 #: skysearch.py:236
 msgid "Airport data is powered by the [airport-data.com](https://airport-data.com/) API service"
-msgstr "Soláthraíonn seirbhís API [airport-data.com](https://airport-data.com/) na sonraí aerfoirt"
+msgstr ""
 
 #: skysearch.py:237
 msgid "Runway data"
-msgstr "Sonraí an rúidbhealaigh"
+msgstr ""
 
 #: skysearch.py:237
 msgid "Runway data is powered by the [airportdb.io](https://airportdb.io) API service"
-msgstr "Soláthraítear sonraí na rúidbhealaí ag seirbhís API [airportdb.io](https://airportdb.io)"
+msgstr ""
 
 #: skysearch.py:238
 msgid "Mapping and imagery"
-msgstr "Mapáil agus íomháú"
+msgstr ""
 
 #: skysearch.py:238
 msgid "Mapping and ground imagery powered by [Google Maps](https://maps.google.com) and the [Maps Static API](https://developers.google.com/maps/documentation/maps-static)"
-msgstr "Mapaí agus íomhánna talún á gcur ar fáil ag [Google Maps](https://maps.google.com) agus an [Maps Static API](https://developers.google.com/maps/documentation/maps-static)"
+msgstr ""
 
 #: skysearch.py:256
 #, docstring
 msgid "Get detailed API request statistics (delegates to AdminCommands)."
-msgstr "Faigh staitisticí mionsonraithe ar iarratais API (tarmligtear chuig AdminCommands iad)."
+msgstr ""
 
 #: skysearch.py:263
 #, docstring
 msgid "Reset API request statistics (delegates to AdminCommands)."
-msgstr "Athshocraigh staitisticí iarratas API (tarmligtear chuig AdminCommands iad)."
+msgstr ""
 
 #: skysearch.py:270
 #, docstring
 msgid "Manually save API statistics to config (delegates to AdminCommands)."
-msgstr "Sábháil staitisticí API de láimh sa chumraíocht (tarmligtear chuig AdminCommands iad)."
+msgstr ""
 
 #: skysearch.py:277
 #, docstring
 msgid "View API statistics saving configuration (delegates to AdminCommands)."
-msgstr "Féach ar chumraíocht shábháil staitisticí API (tarmligtear chuig AdminCommands é)."
+msgstr ""
 
 #: skysearch.py:284
 #, docstring
 msgid "Debug API statistics data structure (delegates to AdminCommands)."
-msgstr "Dífhabhtaigh struchtúr sonraí staitisticí API (tarmligtear chuig AdminCommands é)."
+msgstr ""
 
 #: skysearch.py:291
 #, docstring
 msgid "Command center for aircraft related commands and API monitoring"
-msgstr "Ionad orduithe le haghaidh orduithe a bhaineann le haerárthaí agus monatóireacht API"
+msgstr ""
 
 #: skysearch.py:292
 msgid "Aircraft Commands"
-msgstr "Orduithe Aerárthaí"
+msgstr ""
 
 #: skysearch.py:292
 msgid "Available aircraft-related commands and API monitoring:"
-msgstr "Orduithe atá ar fáil a bhaineann le haerárthaí agus monatóireacht API:"
+msgstr ""
 
 #: skysearch.py:293
 msgid "Search Commands"
-msgstr "Orduithe Cuardaigh"
+msgstr ""
 
 #: skysearch.py:294
 msgid "Special Aircraft"
-msgstr "Aerárthaí Speisialta"
+msgstr ""
 
 #: skysearch.py:295
 msgid "Export"
-msgstr "Easpórtáil"
+msgstr ""
 
 #: skysearch.py:295
 msgid "`export` - Export aircraft data to CSV, PDF, TXT, or HTML"
-msgstr "`export` - Easpórtáil sonraí aerárthaí go CSV, PDF, TXT, nó HTML"
+msgstr ""
 
 #: skysearch.py:296
 msgid "Configuration"
-msgstr "Cumraíocht"
+msgstr ""
 
 #: skysearch.py:297
 msgid "Custom Alerts"
-msgstr "Foláirimh Saincheaptha"
+msgstr ""
 
 #: skysearch.py:300
 msgid "Custom Alert Admin"
-msgstr "Riarachán Foláireamh Saincheaptha"
+msgstr ""
 
 #: skysearch.py:301
 msgid "Watchlist"
-msgstr "Liosta Faire"
+msgstr ""
 
 #: skysearch.py:302
 msgid "Geo-fence"
-msgstr "Geo-fhál"
+msgstr ""
 
 #: skysearch.py:303
 msgid "Other"
-msgstr "Eile"
+msgstr ""
 
 #: skysearch.py:303
 msgid "`scroll` - Scroll through available planes\n"
 "`feeder` - Parse feeder JSON data (secure modal)"
-msgstr "`scroll` - Scrollaigh trí na haerárthaí atá ar fáil\n"
-"`feeder` - Parsáil sonraí JSON an fheodóra (módail shlán)"
+msgstr ""
 
 #: skysearch.py:306
 msgid "Debug"
-msgstr "Dífhabhtú"
+msgstr ""
 
 #: skysearch.py:306
 msgid "`debugapi` - Debug API issues (owner only)\n"
 "`debugtoggle` - Toggle debug output for lookups (owner only)\n"
 "`debug` - Run a debug lookup (owner only)"
-msgstr "`debugapi` - Dífhabhtaigh fadhbanna API (úinéir amháin)\n"
-"`debugtoggle` - Cas aschur dífhabhtaithe do chuardaigh air/as (úinéir amháin)\n"
-"`debug` - Rith cuardach dífhabhtaithe (úinéir amháin)"
+msgstr ""
 
 #: skysearch.py:308
 msgid "Detailed Help"
-msgstr "Cabhair Mhionsonraithe"
+msgstr ""
 
 #: skysearch.py:308
 msgid "Use `*help aircraft` for detailed command information"
-msgstr "Úsáid `*help aircraft` chun faisnéis mhionsonraithe faoi na horduithe a fháil"
+msgstr ""
 
 #: skysearch.py:314
 #, docstring
 msgid "Get aircraft information by ICAO hex code."
-msgstr "Faigh faisnéis faoin aerárthach de réir chód heicsidheachúil ICAO."
+msgstr ""
 
 #: skysearch.py:322
 #, docstring
 msgid "Get aircraft information by callsign."
-msgstr "Faigh faisnéis faoin aerárthach de réir an chomhartha glao."
+msgstr ""
 
 #: skysearch.py:330
 #, docstring
 msgid "Get aircraft information by registration."
-msgstr "Faigh faisnéis faoin aerárthach de réir na huimhreach clárúcháin."
+msgstr ""
 
 #: skysearch.py:335
 #, docstring
 msgid "Get aircraft information by type."
-msgstr "Faigh faisnéis faoin aerárthach de réir cineáil."
+msgstr ""
 
 #: skysearch.py:340
 #, docstring
 msgid "Get aircraft information by squawk code."
-msgstr "Faigh faisnéis faoin aerárthach de réir an chóid squawk."
+msgstr ""
 
 #: skysearch.py:348
 #, docstring
 msgid "Export aircraft data to various formats."
-msgstr "Easpórtáil sonraí aerárthaí i bhformáidí éagsúla."
+msgstr ""
 
 #: skysearch.py:353
 #, docstring
 msgid "Get information about military aircraft."
-msgstr "Faigh faisnéis faoi aerárthaí míleata."
+msgstr ""
 
 #: skysearch.py:358
 #, docstring
 msgid "Get information on LADD-restricted aircraft."
-msgstr "Faigh faisnéis faoi aerárthaí atá srianta ag LADD."
+msgstr ""
 
 #: skysearch.py:363
 #, docstring
 msgid "View live aircraft using private ICAO addresses."
-msgstr "Féach ar aerárthaí beo a úsáideann seoltaí príobháideacha ICAO."
+msgstr ""
 
 #: skysearch.py:368
 #, docstring
 msgid "Get information about aircraft within a specified radius."
-msgstr "Faigh faisnéis faoi aerárthaí laistigh de gha sonraithe."
+msgstr ""
 
 #: skysearch.py:373
 #, docstring
 msgid "Find the closest aircraft to specified coordinates."
-msgstr "Aimsigh an t-aerárthach is gaire do na comhordanáidí sonraithe."
+msgstr ""
 
 #: skysearch.py:378
 #, docstring
 msgid "Scroll through available planes. Optionally specify a category: mil, ladd, pia, or all."
-msgstr "Scrollaigh trí na haerárthaí atá ar fáil. Is féidir catagóir a shonrú: mil, ladd, pia, nó all."
+msgstr ""
 
 #: skysearch.py:383
 #, docstring
 msgid "Extract feeder URL from JSON data or a URL containing feeder data using secure modal."
-msgstr "Bain URL an fheodóra as sonraí JSON nó as URL ina bhfuil sonraí feodóra, ag úsáid módail shlán."
+msgstr ""
 
 #: skysearch.py:390
 #, docstring
 msgid "Manage your personal aircraft watchlist."
-msgstr "Bainistigh do liosta faire pearsanta aerárthaí."
+msgstr ""
 
 #: skysearch.py:396
 #, docstring
 msgid "Add an aircraft to your watchlist by ICAO code."
-msgstr "Cuir aerárthach le do liosta faire de réir cód ICAO."
+msgstr ""
 
 #: skysearch.py:402
 #, docstring
 msgid "Remove an aircraft from your watchlist."
-msgstr "Bain aerárthach de do liosta faire."
+msgstr ""
 
 #: skysearch.py:408
 #, docstring
 msgid "List all aircraft in your watchlist."
-msgstr "Liostaigh na haerárthaí go léir i do liosta faire."
+msgstr ""
 
 #: skysearch.py:414
 #, docstring
 msgid "Get detailed status of all watched aircraft."
-msgstr "Faigh stádas mionsonraithe na n-aerárthaí go léir a bhfuil tú ag déanamh monatóireachta orthu."
+msgstr ""
 
 #: skysearch.py:420
 #, docstring
 msgid "Clear your entire watchlist."
-msgstr "Glan do liosta faire iomlán."
+msgstr ""
 
 #: skysearch.py:426
 #, docstring
 msgid "Set or view the watchlist notification cooldown. Accepts formats like '20m', '30s', '1h', or '15.5m'. Use without a value to check current setting."
-msgstr "Socraigh nó féach ar eatramh fógraí an liosta faire. Glacann sé le formáidí cosúil le '20m', '30s', '1h', nó '15.5m'. Úsáid gan luach chun an socrú reatha a sheiceáil."
+msgstr ""
 
 #: skysearch.py:433
 #, docstring
 msgid "Geo-fence alerts: get notified when aircraft enter or leave an area."
-msgstr "Foláirimh geo-fhálaithe: faigh fógra nuair a théann aerárthaí isteach i limistéar nó amach as."
+msgstr ""
 
 #: skysearch.py:435
 msgid "Geo-fence Commands"
-msgstr "Orduithe Geo-fhálaithe"
+msgstr ""
 
 #: skysearch.py:436
 msgid "Alert when aircraft enter or leave a geographic area."
-msgstr "Tabhair foláireamh nuair a théann aerárthaí isteach i limistéar geografach nó amach as."
+msgstr ""
 
 #: skysearch.py:439
 msgid "`geofence add <name> <lat> <lon> <radius_nm> [alert_on] [cooldown] [channel] [role]`"
-msgstr "`geofence add <name> <lat> <lon> <radius_nm> [alert_on] [cooldown] [channel] [role]`"
+msgstr ""
 
 #: skysearch.py:440
 msgid "`geofence remove <fence_id>`"
-msgstr "`geofence remove <fence_id>`"
+msgstr ""
 
 #: skysearch.py:441
 msgid "`geofence list` - List all geo-fences"
-msgstr "`geofence list` - Liostaigh na geo-fhálta go léir"
+msgstr ""
 
 #: skysearch.py:447
 #, docstring
 msgid "Add a geo-fence. Alerts when aircraft enter/leave the area. radius_nm in nautical miles. alert_on: entry, exit, or both."
-msgstr "Cuir geo-fhál leis. Seoltar foláirimh nuair a théann aerárthaí isteach sa limistéar nó amach as. Tá radius_nm i míle farraige. alert_on: iontráil, imeacht, nó an dá cheann."
+msgstr ""
 
 #: skysearch.py:453
 #, docstring
 msgid "Remove a geo-fence by ID (from geofence list)."
-msgstr "Bain geo-fhál de réir a aitheantais (ón liosta geo-fhálta)."
+msgstr ""
 
 #: skysearch.py:459
 #, docstring
 msgid "List all geo-fence alerts for this server."
-msgstr "Liostaigh na foláirimh geo-fhálaithe go léir don fhreastalaí seo."
+msgstr ""
 
 #: skysearch.py:467
 #, docstring
 msgid "Set or clear a channel to send emergency squawk alerts to."
-msgstr "Socraigh nó glan cainéal chun foláirimh éigeandála squawk a sheoladh chuige."
+msgstr ""
 
 #: skysearch.py:472
 #, docstring
 msgid "Set or clear a role to mention when new emergency squawks occur."
-msgstr "Socraigh nó glan ról le tagairt dó nuair a tharlaíonn squawks éigeandála nua."
+msgstr ""
 
 #: skysearch.py:477
 #, docstring
@@ -893,42 +864,32 @@ msgid "Set or show the cooldown for emergency squawk alerts.\n"
 "            [p]aircraft alertcooldown 30s  - Set cooldown to 30 seconds\n"
 "            [p]aircraft alertcooldown      - Show current cooldown\n"
 "        "
-msgstr "Socraigh nó taispeáin an t-eatramh fuaraithe le haghaidh foláirimh éigeandála squawk.\n"
-"        \n"
-"        Is é 5 nóiméad an t-eatramh réamhshocraithe.\n"
-"        Úsáid gan luach chun an socrú reatha a sheiceáil.\n"
-"        Glacann sé le nóiméid (m.sh. 5, 5m) nó soicindí (m.sh. 30s).\n"
-"        \n"
-"        Samplaí:\n"
-"            [p]aircraft alertcooldown 10m  - Socraigh an t-eatramh go 10 nóiméad\n"
-"            [p]aircraft alertcooldown 30s  - Socraigh an t-eatramh go 30 soicind\n"
-"            [p]aircraft alertcooldown      - Taispeáin an t-eatramh reatha\n"
-"        "
+msgstr ""
 
 #: skysearch.py:492
 #, docstring
 msgid "Enable or disable automatic ICAO lookup."
-msgstr "Cumasaigh nó díchumasaigh cuardach uathoibríoch ICAO."
+msgstr ""
 
 #: skysearch.py:497
 #, docstring
 msgid "Enable or disable automatic deletion of 'not found' messages."
-msgstr "Cumasaigh nó díchumasaigh scriosadh uathoibríoch teachtaireachtaí 'níor aimsíodh'."
+msgstr ""
 
 #: skysearch.py:502
 #, docstring
 msgid "Show alert task status and output if set."
-msgstr "Taispeáin stádas an tasc foláirimh agus an t-aschur má tá sé socraithe."
+msgstr ""
 
 #: skysearch.py:508
 #, docstring
 msgid "Debug API key and connection issues (DM only)."
-msgstr "Dífhabhtaigh fadhbanna eochrach API agus ceangail (DM amháin)."
+msgstr ""
 
 #: skysearch.py:514
 #, docstring
 msgid "Set which API to use globally: 'primary' or 'fallback'. (owner only)"
-msgstr "Socraigh cén API atá le húsáid go domhanda: 'primary' nó 'fallback'. (úinéir amháin)"
+msgstr ""
 
 #: skysearch.py:531
 #, docstring
@@ -939,190 +900,184 @@ msgid "Add a custom alert for specific aircraft or squawks.\n"
 "        Channel: Optional channel to send alerts to (default: uses alert channel)\n"
 "        Role: Optional role to ping for this alert (overrides default alert role)\n"
 "        "
-msgstr "Cuir foláireamh saincheaptha leis le haghaidh aerárthaí nó squawks sonracha.\n"
-"        \n"
-"        Cineálacha foláirimh: icao, callsign, squawk, type, reg\n"
-"        Eatramh fuaraithe: 1-1440 nóiméad (réamhshocrú: 5)\n"
-"        Cainéal: Cainéal roghnach chun foláirimh a sheoladh chuige (úsáideann an cainéal foláirimh de réir réamhshocraithe)\n"
-"        Ról: Ról roghnach le pingeadh don foláireamh seo (sáraíonn sé an ról réamhshocraithe foláirimh)\n"
-"        "
+msgstr ""
 
 #: skysearch.py:543
 #, docstring
 msgid "Remove a custom alert by its ID."
-msgstr "Bain foláireamh saincheaptha de réir a aitheantais."
+msgstr ""
 
 #: skysearch.py:549
 #, docstring
 msgid "List all custom alerts for this server."
-msgstr "Liostaigh na foláirimh saincheaptha go léir don fhreastalaí seo."
+msgstr ""
 
 #: skysearch.py:555
 #, docstring
 msgid "Clear all custom alerts for this server."
-msgstr "Glan na foláirimh saincheaptha go léir don fhreastalaí seo."
+msgstr ""
 
 #: skysearch.py:561
 #, docstring
 msgid "Clear cooldown for a specific custom alert."
-msgstr "Glan an t-eatramh fuaraithe le haghaidh foláirimh saincheaptha ar leith."
+msgstr ""
 
 #: skysearch.py:568
 #, docstring
 msgid "Force trigger a configured custom alert immediately by its ID (owner only)."
-msgstr "Spreag foláireamh saincheaptha cumraithe láithreach de réir a aitheantais (úinéir amháin)."
+msgstr ""
 
 #: skysearch.py:574
 #, docstring
 msgid "Show the current global API mode. (owner only)"
-msgstr "Taispeáin an mód API domhanda reatha. (úinéir amháin)"
+msgstr ""
 
 #: skysearch.py:581
 #, docstring
 msgid "Debug an aircraft lookup: *aircraft debug <lookup_type> <value> (lookup_type: icao, callsign, reg, type, squawk)"
-msgstr "Dífhabhtaigh cuardach aerárthaigh: *aircraft debug <lookup_type> <value> (lookup_type: icao, callsign, reg, type, squawk)"
+msgstr ""
 
 #: skysearch.py:594
 #, docstring
 msgid "Enable or disable aircraft debug output: *aircraft debugtoggle <on|off>"
-msgstr "Cumasaigh nó díchumasaigh aschur dífhabhtaithe aerárthaí: *aircraft debugtoggle <on|off>"
+msgstr ""
 
 #: skysearch.py:604
 #, docstring
 msgid "Set the airplanes.live API key."
-msgstr "Socraigh eochair API airplanes.live."
+msgstr ""
 
 #: skysearch.py:610
 #, docstring
 msgid "Show the current airplanes.live API key (partially masked)."
-msgstr "Taispeáin eochair API reatha airplanes.live (i bhfolach go páirteach)."
+msgstr ""
 
 #: skysearch.py:616
 #, docstring
 msgid "Clear the airplanes.live API key."
-msgstr "Glan eochair API airplanes.live."
+msgstr ""
 
 #: skysearch.py:622
 #, docstring
 msgid "Set the User-Agent header SkySearch uses for outbound HTTP requests."
-msgstr "Socraigh ceanntásc User-Agent a úsáideann SkySearch le haghaidh iarratas HTTP amach."
+msgstr ""
 
 #: skysearch.py:628
 #, docstring
 msgid "Show the configured User-Agent header (if any)."
-msgstr "Taispeáin an ceanntásc User-Agent cumraithe (más ann dó)."
+msgstr ""
 
 #: skysearch.py:634
 #, docstring
 msgid "Clear the configured User-Agent header."
-msgstr "Glan an ceanntásc User-Agent cumraithe."
+msgstr ""
 
 #: skysearch.py:640
 #, docstring
 msgid "Set a Planespotters-specific User-Agent header (must include contact)."
-msgstr "Socraigh ceanntásc User-Agent sonrach do Planespotters (ní mór faisnéis teagmhála a bheith ann)."
+msgstr ""
 
 #: skysearch.py:646
 #, docstring
 msgid "Show the configured Planespotters-specific User-Agent."
-msgstr "Taispeáin an User-Agent sonrach do Planespotters atá cumraithe."
+msgstr ""
 
 #: skysearch.py:652
 #, docstring
 msgid "Clear the Planespotters-specific User-Agent."
-msgstr "Glan an User-Agent sonrach do Planespotters."
+msgstr ""
 
 #: skysearch.py:659
 #, docstring
 msgid "Command center for airport related commands"
-msgstr "Ionad orduithe le haghaidh orduithe a bhaineann le haerfoirt"
+msgstr ""
 
 #: skysearch.py:670
 #, docstring
 msgid "Get airport information by ICAO or IATA code."
-msgstr "Faigh faisnéis faoin aerfort de réir cód ICAO nó IATA."
+msgstr ""
 
 #: skysearch.py:675
 #, docstring
 msgid "Get runway information for an airport."
-msgstr "Faigh faisnéis faoi rúidbhealaí aerfoirt."
+msgstr ""
 
 #: skysearch.py:680
 #, docstring
 msgid "Get navigational aids for an airport."
-msgstr "Faigh áiseanna loingseoireachta d’aerfort."
+msgstr ""
 
 #: skysearch.py:685
 #, docstring
 msgid "Get the weather for an airport by ICAO or IATA code (US airports only)."
-msgstr "Faigh an aimsir d’aerfort de réir cód ICAO nó IATA (aerfoirt SAM amháin)."
+msgstr ""
 
 #: skysearch.py:690
 #, docstring
 msgid "Get aviation weather conditions from AVWX for an airport code."
-msgstr "Faigh dálaí aimsire eitlíochta ó AVWX le haghaidh cód aerfoirt."
+msgstr ""
 
 #: skysearch.py:695
 #, docstring
 msgid "Get current METAR from AVWX for an airport code."
-msgstr "Faigh an METAR reatha ó AVWX le haghaidh cód aerfoirt."
+msgstr ""
 
 #: skysearch.py:700
 #, docstring
 msgid "Get current TAF from AVWX for an airport code."
-msgstr "Faigh an TAF reatha ó AVWX le haghaidh cód aerfoirt."
+msgstr ""
 
 #: skysearch.py:705
 #, docstring
 msgid "Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code (e.g., SAN, LAS)."
-msgstr "Faigh Stádas Náisiúnta Aerspáis an FAA d’aerfoirt a bhfuil moilleanna nó dúnadh i gceist leo. Is féidir scagadh de réir cód aerfoirt (m.sh. SAN, LAS)."
+msgstr ""
 
 #: skysearch.py:710
 #, docstring
 msgid "Set or clear the channel for FAA status change notifications."
-msgstr "Socraigh nó glan an cainéal le haghaidh fógraí faoi athruithe ar stádas an FAA."
+msgstr ""
 
 #: skysearch.py:715
 #, docstring
 msgid "Set or clear the role to mention when FAA status changes."
-msgstr "Socraigh nó glan an ról le tagairt dó nuair a athraíonn stádas an FAA."
+msgstr ""
 
 #: skysearch.py:720
 #, docstring
 msgid "Set or show cooldown for FAA status change notifications."
-msgstr "Socraigh nó taispeáin an t-eatramh fuaraithe le haghaidh fógraí faoi athruithe ar stádas an FAA."
+msgstr ""
 
 #: skysearch.py:725
 #, docstring
 msgid "Show current FAA status alert settings."
-msgstr "Taispeáin socruithe reatha foláirimh stádais an FAA."
+msgstr ""
 
 #: skysearch.py:749
 #, docstring
 msgid "Set the AVWX API token."
-msgstr "Socraigh comhartha API AVWX."
+msgstr ""
 
 #: skysearch.py:755
 #, docstring
 msgid "Show the configured AVWX API token status."
-msgstr "Taispeáin stádas an chomhartha API AVWX atá cumraithe."
+msgstr ""
 
 #: skysearch.py:761
 #, docstring
 msgid "Clear the AVWX API token."
-msgstr "Glan comhartha API AVWX."
+msgstr ""
 
 #: skysearch.py:969
 msgid "Aircraft landed"
-msgstr "Thuirling an t-aerárthach"
+msgstr ""
 
 #: skysearch.py:970
 msgid "Aircraft {hex} has landed while squawking {squawk}."
-msgstr "Tá aerárthach {hex} tar éis tuirlingt agus é ag craoladh squawk {squawk}."
+msgstr ""
 
 #: skysearch.py:1425
 msgid "{user} - Your watched aircraft **{icao}** has {event}!"
-msgstr "{user} - Tá {event} tarlaithe do d’aerárthach faire **{icao}**!"
+msgstr ""
 
 #: skysearch.py:1696
 #, docstring
@@ -1133,202 +1088,185 @@ msgid "Simulate a new emergency alert for testing callbacks (owner only).\n"
 "        - *aircraft simulateemergency ABC123\n"
 "        - *aircraft simulateemergency DEF456 7600 UNITED789\n"
 "        "
-msgstr "Insamhail foláireamh éigeandála nua chun glaonna aisghlao a thástáil (úinéir amháin).\n"
-"        \n"
-"        Úsáid: *aircraft simulateemergency <hex_code> [squawk_code] [callsign]\n"
-"        Samplaí:\n"
-"        - *aircraft simulateemergency ABC123\n"
-"        - *aircraft simulateemergency DEF456 7600 UNITED789\n"
-"        "
+msgstr ""
 
 #: skysearch.py:1706
 msgid "❌ Invalid squawk code. Valid codes are: {codes}"
-msgstr "❌ Cód squawk neamhbhailí. Is iad na cóid bhailí: {codes}"
+msgstr ""
 
 #: skysearch.py:1711
 msgid "❌ Invalid hex code. Must be 6 hexadecimal characters (e.g., ABC123)"
-msgstr "❌ Cód heicsidheachúil neamhbhailí. Caithfidh 6 charachtar heicsidheachúil a bheith ann (m.sh. ABC123)"
+msgstr ""
 
 #: skysearch.py:1716
 msgid "🧪 Simulating emergency alert: {hex} squawking {squawk}..."
-msgstr "🧪 Foláireamh éigeandála á insamhladh: tá {hex} ag craoladh squawk {squawk}..."
+msgstr ""
 
 #: skysearch.py:1737
 msgid "❌ No alert channel configured. Use `*aircraft alertchannel #channel` first."
-msgstr "❌ Níl aon chainéal foláirimh cumraithe. Úsáid `*aircraft alertchannel #channel` ar dtús."
+msgstr ""
 
 #: skysearch.py:1757
 msgid "❌ Alert channel {channel_id} not found"
-msgstr "❌ Níor aimsíodh cainéal foláirimh {channel_id}"
+msgstr ""
 
 #: skysearch.py:1881
 msgid "✅ Simulated emergency alert sent! Check #{channel} and console logs."
-msgstr "✅ Seoladh an foláireamh éigeandála insamhlaithe! Seiceáil #{channel} agus logaí an chonsóil."
+msgstr ""
 
 #: skysearch.py:1886
 #, docstring
 msgid "Clear all alert cooldowns for this guild (owner only)."
-msgstr "Glan na heatraimh fuaraithe foláirimh go léir don fhreastalaí seo (úinéir amháin)."
+msgstr ""
 
 #: skysearch.py:1889
 msgid "✅ All alert cooldowns cleared for this guild."
-msgstr "✅ Glanadh na heatraimh fuaraithe foláirimh go léir don fhreastalaí seo."
+msgstr ""
 
 #: utils\add_to_watchlist_view.py:96
 msgid "❌ Invalid ICAO: {error}"
-msgstr "❌ ICAO neamhbhailí: {error}"
+msgstr ""
 
 #: utils\stats.py:37
 msgid "📊 Airplanes.live API Statistics"
-msgstr "📊 Staitisticí API Airplanes.live"
+msgstr ""
 
 #: utils\stats.py:38
 msgid "Detailed request tracking and performance metrics"
-msgstr "Rianú mionsonraithe iarratas agus méadrachtaí feidhmíochta"
+msgstr ""
 
 #: utils\stats.py:43
 msgid "📈 Overall Stats"
-msgstr "📈 Staitisticí Foriomlána"
+msgstr ""
 
 #: utils\stats.py:45
 msgid "**Total Requests:** {total:,}\n"
 "**Success Rate:** {rate:.1f}%\n"
 "**Last Request:** {last}"
-msgstr "**Iarratais Iomlána:** {total:,}\n"
-"**Ráta Ratha:** {rate:.1f}%\n"
-"**Iarratas Deireanach:** {last}"
+msgstr ""
 
 #: utils\stats.py:48
 msgid "Never"
-msgstr "Riamh"
+msgstr ""
 
 #: utils\stats.py:55
 msgid "✅ Success/Failure"
-msgstr "✅ Rath/Teip"
+msgstr ""
 
 #: utils\stats.py:57
 msgid "**Successful:** {success:,}\n"
 "**Failed:** {failed:,}\n"
 "**Rate Limited:** {rate_limited:,}"
-msgstr "**Rathúil:** {success:,}\n"
-"**Theipthe:** {failed:,}\n"
-"**Teoranta de réir Ráta:** {rate_limited:,}"
+msgstr ""
 
 #: utils\stats.py:67
 msgid "🌐 API Mode Usage"
-msgstr "🌐 Úsáid Mhód API"
+msgstr ""
 
 #: utils\stats.py:69
 msgid "**Primary:** {primary:,}\n"
 "**Fallback:** {fallback:,}"
-msgstr "**Príomha:** {primary:,}\n"
-"**Cúltaca:** {fallback:,}"
+msgstr ""
 
 #: utils\stats.py:79
 msgid "⚡ Performance"
-msgstr "⚡ Feidhmíocht"
+msgstr ""
 
 #: utils\stats.py:81
 msgid "**Avg Response:** {avg:.3f}s\n"
 "**Last 24h:** {requests:,} requests"
-msgstr "**Meánfhreagra:** {avg:.3f}s\n"
-"**24 Uair Dheireanacha:** {requests:,} iarratas"
+msgstr ""
 
 #: utils\stats.py:93
 msgid "🔗 Top Endpoints"
-msgstr "🔗 Príomhphointí Deiridh"
+msgstr ""
 
 #: utils\stats.py:101
 msgid "⚠️ Error Details"
-msgstr "⚠️ Sonraí Earráide"
+msgstr ""
 
 #: utils\stats.py:103
 msgid "Use 'skysearch apistats_reset' to reset statistics | 'skysearch apistats_save' to manually save."
-msgstr "Úsáid 'skysearch apistats_reset' chun na staitisticí a athshocrú | 'skysearch apistats_save' chun iad a shábháil de láimh."
+msgstr ""
 
 #: utils\stats.py:131
 msgid "Success vs Failure"
-msgstr "Rath i gcoinne Teipe"
+msgstr ""
 
 #: utils\stats.py:154
 msgid "API Mode Usage"
-msgstr "Úsáid Mhód API"
+msgstr ""
 
 #: utils\stats.py:172
 msgid "Requests"
-msgstr "Iarratais"
+msgstr ""
 
 #: utils\stats.py:184
 msgid "Top Endpoints"
-msgstr "Príomhphointí Deiridh"
+msgstr ""
 
 #: utils\stats.py:219 utils\stats.py:251
 msgid "Requests per hour"
-msgstr "Iarratais in aghaidh na huaire"
+msgstr ""
 
 #: utils\stats.py:232
 msgid "Hourly Requests (Historical: {count} hours from {start} to {end})"
-msgstr "Iarratais in aghaidh na huaire (Stairiúil: {count} uair ó {start} go {end})"
+msgstr ""
 
 #: utils\stats.py:264
 msgid "Hourly Requests (no data available)"
-msgstr "Iarratais in aghaidh na huaire (níl aon sonraí ar fáil)"
+msgstr ""
 
 #: utils\stats.py:293 utils\stats.py:323
 msgid "Total requests per day"
-msgstr "Iarratais iomlána in aghaidh an lae"
+msgstr ""
 
 #: utils\stats.py:304
 msgid "Total Requests (Historical: {count} days from {start} to {end})"
-msgstr "Iarratais Iomlána (Stairiúil: {count} lá ó {start} go {end})"
+msgstr ""
 
 #: utils\stats.py:334
 msgid "Total Requests (no data available)"
-msgstr "Iarratais Iomlána (níl aon sonraí ar fáil)"
+msgstr ""
 
 #: utils\stats.py:349
 msgid "⚙️ API Statistics Save Configuration"
-msgstr "⚙️ Cumraíocht Shábháil Staitisticí API"
+msgstr ""
 
 #: utils\stats.py:350
 msgid "Current configuration for automatic saving of API statistics"
-msgstr "Cumraíocht reatha chun staitisticí API a shábháil go huathoibríoch"
+msgstr ""
 
 #: utils\stats.py:354
 msgid "📊 Batch Saving"
-msgstr "📊 Sábháil i mbaisceanna"
+msgstr ""
 
 #: utils\stats.py:356
 msgid "**Batch Size:** {batch_size} requests\n"
 "**Current Count:** {current_count} requests"
-msgstr "**Méid na Baisce:** {batch_size} iarratas\n"
-"**Líon Reatha:** {current_count} iarratas"
+msgstr ""
 
 #: utils\stats.py:364
 msgid "⏰ Time-Based Saving"
-msgstr "⏰ Sábháil Bunaithe ar Am"
+msgstr ""
 
 #: utils\stats.py:366
 msgid "**Interval:** {interval} seconds\n"
 "**Time Since Last Save:** {time_since:.1f} seconds"
-msgstr "**Eatramh:** {interval} soicind\n"
-"**Am ón Sábháil Dheireanach:** {time_since:.1f} soicind"
+msgstr ""
 
 #: utils\stats.py:374
 msgid "🔄 Save Strategy"
-msgstr "🔄 Straitéis Sábhála"
+msgstr ""
 
 #: utils\stats.py:376
 msgid "**Hybrid Approach:** Save when either:\n"
 "• Batch size is reached (10 requests)\n"
 "• Time interval is reached (30 seconds)\n"
 "• Whichever comes first"
-msgstr "**Cur Chuige Hibrideach:** Sábháil nuair a tharlaíonn ceachtar acu:\n"
-"• Sroichtear méid na baisce (10 n-iarratas)\n"
-"• Sroichtear an t-eatramh ama (30 soicind)\n"
-"• Cibé acu a tharlaíonn ar dtús"
+msgstr ""
 
 #: utils\stats.py:380
 msgid "This prevents config spam while ensuring data persistence"
-msgstr "Cuireann sé seo cosc ar thurscar cumraíochta agus cinntíonn sé go bhfanann na sonraí sábháilte."
+msgstr ""
 
