@@ -4,47 +4,47 @@ msgstr ""
 "POT-Creation-Date: 2026-09-03 12:51+0100\n"
 "PO-Revision-Date: 2026-09-03 12:19\n"
 "Last-Translator: \n"
-"Language-Team: Irish\n"
+"Language-Team: Pirate English\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: redgettext 3.4.2\n"
-"Plural-Forms: nplurals=5; plural=(n==1 ? 0 : n==2 ? 1 : n<7 ? 2 : n<11 ? 3 : 4);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: jarvisdiscordbot\n"
 "X-Crowdin-Project-ID: 786438\n"
-"X-Crowdin-Language: ga-IE\n"
+"X-Crowdin-Language: en-PT\n"
 "X-Crowdin-File: /main/skysearch/locales/messages.pot\n"
 "X-Crowdin-File-ID: 8\n"
-"Language: ga_IE\n"
+"Language: en_PT\n"
 
 #: commands\admin.py:19
 #, docstring
 msgid "Admin-related commands for SkySearch."
-msgstr "Orduithe riaracháin do SkySearch."
+msgstr ""
 
 #: commands\admin.py:29
 msgid "Alert channel set to {channel}"
-msgstr "Cainéal foláirimh socraithe ar {channel}"
+msgstr ""
 
 #: commands\admin.py:37
 msgid "Alert channel cleared. No more alerts will be sent."
-msgstr "Tá an cainéal foláirimh ghlanta."
+msgstr ""
 
 #: commands\admin.py:48
 msgid "Alert role set to {role}"
-msgstr "Ról na foláirimhe socraithe ar {role}"
+msgstr ""
 
 #: commands\admin.py:56
 msgid "Alert role cleared. No more role mentions will be made."
-msgstr "Tá an cainéal foláirimh glanta. Ní sheolfar tuilleadh foláirimh."
+msgstr ""
 
 #: commands\admin.py:85 commands\admin.py:164
 msgid "Cooldown must be a positive number."
-msgstr "Caithfidh an t-eatramh fuaraithe a bheith ina uimhir dhearfach."
+msgstr ""
 
 #: commands\admin.py:90
 msgid "Emergency alert cooldown set to {seconds} seconds."
-msgstr "Socraíodh an t-eatramh idir foláirimh éigeandála go {seconds} soicind."
+msgstr ""
 
 #: commands\admin.py:92
 msgid "Emergency alert cooldown set to {minutes} minutes."
@@ -52,35 +52,35 @@ msgstr ""
 
 #: commands\admin.py:94
 msgid "Invalid duration format. Use a number (e.g. '5'), minutes ('5m'), or seconds ('30s')"
-msgstr "Formáid neamhbhailí don ré. Bain úsáid as uimhir (m.sh. '5'), nó as nóiméid ('5m') nó soicindí ('30s')"
+msgstr ""
 
 #: commands\admin.py:98
 msgid "Current emergency alert cooldown is {seconds} seconds."
-msgstr "Socraíodh an t-eatramh idir foláirimh éigeandála go {seconds} soicind."
+msgstr ""
 
 #: commands\admin.py:100
 msgid "Current emergency alert cooldown is {minutes} minutes."
-msgstr "Is é {minutes} nóiméad an tréimhse fhuaraithe reatha le haghaidh foláirimh éigeandála."
+msgstr ""
 
 #: commands\admin.py:108
 msgid "FAA status alert channel set to {channel}"
-msgstr "An cainéal foláirimh stádais FAA socraithe d’ar {channel}"
+msgstr ""
 
 #: commands\admin.py:119
 msgid "FAA status alert channel cleared. No more FAA change notifications will be sent."
-msgstr "Tá an cainéal foláirimh maidir le stádas na FAA glanta. Ní sheolfar tuilleadh fógraí faoi athruithe ón FAA."
+msgstr ""
 
 #: commands\admin.py:133
 msgid "FAA status alert role set to {role}"
-msgstr "Ról na foláirimh stádais FAA socraithe ar {role}"
+msgstr ""
 
 #: commands\admin.py:144
 msgid "FAA status alert role cleared."
-msgstr "Ceadaíodh an ról foláirimh stádais FAA."
+msgstr ""
 
 #: commands\admin.py:168
 msgid "FAA alert cooldown set to {seconds} seconds."
-msgstr "Socraíodh an tréimhse fhuaraithe do rabhadh FAA go {seconds} soicind."
+msgstr ""
 
 #: commands\admin.py:170
 msgid "FAA alert cooldown set to {minutes} minutes."
@@ -88,7 +88,7 @@ msgstr ""
 
 #: commands\admin.py:172
 msgid "Invalid duration. Use a number, '5m', or '30s'."
-msgstr "Fad neamhbhailí. Bain úsáid as uimhir, '5m', nó '30s'."
+msgstr ""
 
 #: commands\admin.py:176
 msgid "Current FAA alert cooldown is {seconds} seconds."
@@ -197,7 +197,7 @@ msgstr ""
 
 #: commands\aircraft.py:605
 msgid "No Aircraft Found"
-msgstr "Níor aimsíodh aon aerárthach"
+msgstr ""
 
 #: commands\aircraft.py:605
 msgid "No aircraft found within {radius} nautical miles of the specified location."
@@ -209,15 +209,15 @@ msgstr ""
 
 #: commands\aircraft.py:631
 msgid "No response from the API."
-msgstr "Gan freagra ón API."
+msgstr ""
 
 #: commands\aircraft.py:794 utils\add_to_watchlist_view.py:79
 msgid "Add to Watchlist"
-msgstr "Cuir leis an liosta faire"
+msgstr ""
 
 #: commands\aircraft.py:795
 msgid "Add aircraft or types to watch and get notified when they're active."
-msgstr "Cuir aerárthaí nó cineálacha aerárthaí leis chun monatóireacht a dhéanamh orthu, agus faigh fógra nuair a bhíonn siad i mbun oibríochta."
+msgstr ""
 
 #: commands\aircraft.py:798 commands\aircraft.py:903
 msgid "Usage"
