@@ -16,3 +16,4 @@ To add the cogs to your instance please do: [p]repo add ben-cogs https://github.
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=bencos17/ben-cogs&type=date&legend=top-left&sealed_token=fiG6kqTMS6FjUTKJ9Sk0FmpkJAYcJ4MygDBva1HAkXU5bUSxlLxg-AuhQPO-mj3YyNLt0mWUvo3pMAo1XseKgW0wNC9fuxmbztLoOmB-Kffgu8DVeaMrqg" />
  </picture>
 </a>
+[![Crowdin](https://badges.crowdin.net/jarvisdiscordbot/localized.svg)](https://crowdin.com/project/jarvisdiscordbot)
