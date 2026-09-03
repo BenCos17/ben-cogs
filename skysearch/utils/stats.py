@@ -17,6 +17,17 @@ def _quickchart_url(chart_config: dict, width: int, height: int) -> str:
     )
 
 
+def _normalize_history(history: dict) -> dict[int, int]:
+    """Normalize config-loaded history keys and values for chart lookups."""
+    normalized = {}
+    for key, value in history.items():
+        try:
+            normalized[int(key)] = int(value)
+        except (TypeError, ValueError):
+            continue
+    return normalized
+
+
 def build_stats_embed(api_stats: dict, _=None) -> discord.Embed:
     # Fallback function if no translator provided
     if _ is None:
@@ -181,6 +192,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
         hourly = api_stats.get("hourly_requests", {}) or {}
         if not isinstance(hourly, dict):
             hourly = {}
+        hourly = _normalize_history(hourly)
         
         # Get all available hours and sort them
         available_hours = sorted([int(h) for h in hourly.keys() if hourly.get(h, 0) > 0])
@@ -256,6 +268,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
         daily = api_stats.get("daily_requests", {}) or {}
         if not isinstance(daily, dict):
             daily = {}
+        daily = _normalize_history(daily)
         
         # Get all available days and sort them
         available_days = sorted([int(d) for d in daily.keys() if daily.get(d, 0) > 0])
