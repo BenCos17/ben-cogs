@@ -17,8 +17,7 @@ class Contact(commands.Cog, ContactDashboard):
     def __init__(self, bot: Red):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=9182736450)
-        self.config.register_guild(staff_channel=None)
-        self.config.register_global(tickets={})
+        self.config.register_guild(staff_channel=None, tickets={})
 
     @staticmethod
     def _timestamp() -> str:
@@ -31,6 +30,13 @@ class Contact(commands.Cog, ContactDashboard):
     async def _configured_guild(self) -> Optional[discord.Guild]:
         for guild in self.bot.guilds:
             if await self.config.guild(guild).staff_channel():
+                return guild
+        return None
+
+    async def _ticket_guild(self, user_id: int) -> Optional[discord.Guild]:
+        for guild in self.bot.guilds:
+            tickets = await self.config.guild(guild).tickets()
+            if str(user_id) in tickets:
                 return guild
         return None
 
@@ -54,7 +60,7 @@ class Contact(commands.Cog, ContactDashboard):
             thread = await self._create_thread(guild, message.author)
             if thread is None:
                 return
-            async with self.config.tickets() as tickets:
+            async with self.config.guild(guild).tickets() as tickets:
                 tickets[str(message.author.id)]["thread_id"] = thread.id
 
         embed = discord.Embed(
@@ -73,8 +79,10 @@ class Contact(commands.Cog, ContactDashboard):
             )
         await thread.send(embed=embed)
 
-    async def _append_message(self, user_id: int, author: str, content: str, direction: str):
-        async with self.config.tickets() as tickets:
+    async def _append_message(
+        self, guild: discord.Guild, user_id: int, author: str, content: str, direction: str
+    ):
+        async with self.config.guild(guild).tickets() as tickets:
             ticket = tickets.setdefault(str(user_id), {"status": "open", "messages": []})
             ticket["status"] = "open"
             ticket["messages"].append(
@@ -128,7 +136,7 @@ class Contact(commands.Cog, ContactDashboard):
 
     async def _support_reply(self, ctx: commands.Context, user: discord.User, message: str):
         """Reply to a user through their DM."""
-        tickets = await self.config.tickets()
+        tickets = await self.config.guild(ctx.guild).tickets()
         ticket = tickets.get(str(user.id))
         if ticket is None:
             await ctx.send("No conversation exists for that user.")
@@ -144,12 +152,12 @@ class Contact(commands.Cog, ContactDashboard):
             await ctx.send("I could not DM that user.")
             return
 
-        await self._append_message(user.id, str(ctx.author), message, "staff")
+        await self._append_message(ctx.guild, user.id, str(ctx.author), message, "staff")
         await ctx.send("Reply sent.", delete_after=5)
 
     async def _support_open(self, ctx: commands.Context, user: discord.User, message: str):
         """Open a staff thread and start a two-way DM with a user."""
-        tickets = await self.config.tickets()
+        tickets = await self.config.guild(ctx.guild).tickets()
         ticket = tickets.get(str(user.id))
         if ticket and ticket.get("thread_id"):
             thread = ctx.guild.get_thread(ticket["thread_id"])
@@ -161,7 +169,7 @@ class Contact(commands.Cog, ContactDashboard):
         if thread is None:
             await ctx.send("The configured support channel is missing or is not a text channel.")
             return
-        async with self.config.tickets() as all_tickets:
+        async with self.config.guild(ctx.guild).tickets() as all_tickets:
             all_tickets[str(user.id)] = {
                 "status": "open",
                 "thread_id": thread.id,
@@ -178,7 +186,7 @@ class Contact(commands.Cog, ContactDashboard):
             await ctx.send("The thread was opened, but I could not DM that user.")
             return
 
-        await self._append_message(user.id, str(ctx.author), message, "staff")
+        await self._append_message(ctx.guild, user.id, str(ctx.author), message, "staff")
         await thread.send(
             embed=self._conversation_embed(
                 f"Message from {ctx.author}", message, discord.Color.green()
@@ -188,7 +196,7 @@ class Contact(commands.Cog, ContactDashboard):
 
     async def _support_close(self, ctx: commands.Context, user: discord.User):
         """Close a support conversation and send its transcript."""
-        async with self.config.tickets() as tickets:
+        async with self.config.guild(ctx.guild).tickets() as tickets:
             ticket = tickets.get(str(user.id))
             if ticket is None:
                 await ctx.send("No conversation exists for that user.")
@@ -219,7 +227,7 @@ class Contact(commands.Cog, ContactDashboard):
 
     async def _support_list(self, ctx: commands.Context):
         """List open support conversations."""
-        tickets = await self.config.tickets()
+        tickets = await self.config.guild(ctx.guild).tickets()
         open_tickets = [user_id for user_id, ticket in tickets.items() if ticket.get("status") == "open"]
         await ctx.send("Open conversations: " + (", ".join(open_tickets) if open_tickets else "none"))
 
@@ -229,15 +237,19 @@ class Contact(commands.Cog, ContactDashboard):
             return
 
         if message.guild is None:
-            guild = await self._configured_guild()
+            guild = await self._ticket_guild(message.author.id)
+            if guild is None:
+                guild = await self._configured_guild()
             if guild is None:
                 return
 
-            ticket = await self._append_message(message.author.id, str(message.author), message.content, "user")
+            ticket = await self._append_message(
+                guild, message.author.id, str(message.author), message.content, "user"
+            )
             await self._send_staff_message(guild, ticket, message)
             return
 
-        tickets = await self.config.tickets()
+        tickets = await self.config.guild(message.guild).tickets()
         ticket = next(
             (candidate for candidate in tickets.values() if candidate.get("thread_id") == message.channel.id),
             None,
@@ -271,4 +283,4 @@ class Contact(commands.Cog, ContactDashboard):
             await message.channel.send("I could not deliver that reply to the user.")
             return
 
-        await self._append_message(int(user_id), str(message.author), content, "staff")
+        await self._append_message(message.guild, int(user_id), str(message.author), content, "staff")

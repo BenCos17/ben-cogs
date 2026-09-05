@@ -39,7 +39,7 @@ class ContactDashboard:
         context_ids=["guild_id"],
     )
     async def dashboard_support(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        tickets = await self.config.tickets()
+        tickets = await self.config.guild(guild).tickets()
         open_tickets = [ticket for ticket in tickets.values() if ticket.get("status") == "open"]
         configured_channel = await self.config.guild(guild).staff_channel()
         channel = guild.get_channel(configured_channel) if configured_channel else None
@@ -73,7 +73,7 @@ class ContactDashboard:
         return {"status": 0, "web_content": {"source": page}}
 
     async def dashboard_embed(self, guild: discord.Guild) -> discord.Embed:
-        tickets = await self.config.tickets()
+        tickets = await self.config.guild(guild).tickets()
         open_tickets = [ticket for ticket in tickets.values() if ticket.get("status") == "open"]
         configured = await self.config.guild(guild).staff_channel()
 
