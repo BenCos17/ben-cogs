@@ -98,7 +98,7 @@ class Contact(ContactDashboard, commands.Cog):
         """Show the support dashboard and open conversation count."""
         await ctx.send(embed=await self.dashboard_embed(ctx.guild))
 
-    @commands.group(name="contact", invoke_without_command=True)
+    @commands.group(name="support", invoke_without_command=True)
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def contact(self, ctx: commands.Context):
@@ -106,7 +106,7 @@ class Contact(ContactDashboard, commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @contact.command(name="reply")
+    @support.command(name="reply")
     async def contact_reply(self, ctx: commands.Context, user: discord.User, *, message: str):
         """Reply to a user through their DM."""
         tickets = await self.config.tickets()
@@ -124,7 +124,7 @@ class Contact(ContactDashboard, commands.Cog):
         await self._append_message(user.id, str(ctx.author), message, "staff")
         await ctx.send("Reply sent.", delete_after=5)
 
-    @contact.command(name="open")
+    @support.command(name="open")
     async def contact_open(self, ctx: commands.Context, user: discord.User, *, message: str = "Hello, how can we help you?"):
         """Open a staff thread and start a two-way DM with a user."""
         tickets = await self.config.tickets()
@@ -156,7 +156,7 @@ class Contact(ContactDashboard, commands.Cog):
         await thread.send(f"Staff DM sent by **{ctx.author}**:\n{message}")
         await ctx.send(f"Conversation opened: {thread.mention}")
 
-    @contact.command(name="close")
+    @support.command(name="close")
     async def contact_close(self, ctx: commands.Context, user: discord.User):
         """Close a support conversation and send its transcript."""
         async with self.config.tickets() as tickets:
@@ -182,7 +182,7 @@ class Contact(ContactDashboard, commands.Cog):
         except discord.Forbidden:
             pass
 
-    @contact.command(name="list")
+    @support.command(name="list")
     async def contact_list(self, ctx: commands.Context):
         """List open support conversations."""
         tickets = await self.config.tickets()
