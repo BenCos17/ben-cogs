@@ -24,6 +24,10 @@ class Contact(ContactDashboard, commands.Cog):
     def _timestamp() -> str:
         return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
+    @staticmethod
+    def _conversation_embed(title: str, content: str, color: discord.Color) -> discord.Embed:
+        return discord.Embed(title=title, description=content or "(attachment only)", color=color)
+
     async def _configured_guild(self) -> Optional[discord.Guild]:
         for guild in self.bot.guilds:
             if await self.config.guild(guild).staff_channel():
@@ -131,7 +135,11 @@ class Contact(ContactDashboard, commands.Cog):
             return
 
         try:
-            await user.send(message)
+            await user.send(
+                embed=self._conversation_embed(
+                    "Message from staff", message, discord.Color.blurple()
+                )
+            )
         except discord.Forbidden:
             await ctx.send("I could not DM that user.")
             return
@@ -161,13 +169,21 @@ class Contact(ContactDashboard, commands.Cog):
             }
 
         try:
-            await user.send(message)
+            await user.send(
+                embed=self._conversation_embed(
+                    "Support conversation opened", message, discord.Color.green()
+                )
+            )
         except discord.Forbidden:
             await ctx.send("The thread was opened, but I could not DM that user.")
             return
 
         await self._append_message(user.id, str(ctx.author), message, "staff")
-        await thread.send(f"Staff DM sent by **{ctx.author}**:\n{message}")
+        await thread.send(
+            embed=self._conversation_embed(
+                f"Message from {ctx.author}", message, discord.Color.green()
+            )
+        )
         await ctx.send(f"Conversation opened: {thread.mention}")
 
     async def _support_close(self, ctx: commands.Context, user: discord.User):
@@ -191,7 +207,13 @@ class Contact(ContactDashboard, commands.Cog):
             ),
         )
         try:
-            await user.send("This conversation has ended. Please contact staff again if you need further assistance.")
+            await user.send(
+                embed=self._conversation_embed(
+                    "Conversation ended",
+                    "This conversation has ended. Please contact staff again if you need further assistance.",
+                    discord.Color.red(),
+                )
+            )
         except discord.Forbidden:
             pass
 
@@ -240,7 +262,11 @@ class Contact(ContactDashboard, commands.Cog):
 
         try:
             user = await self.bot.fetch_user(int(user_id))
-            await user.send(content)
+            await user.send(
+                embed=self._conversation_embed(
+                    f"Message from {message.author}", content, discord.Color.blurple()
+                )
+            )
         except (discord.Forbidden, discord.HTTPException, StopAsyncIteration):
             await message.channel.send("I could not deliver that reply to the user.")
             return
