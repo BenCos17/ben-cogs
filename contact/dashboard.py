@@ -17,9 +17,20 @@ def dashboard_page(*args, **kwargs):
 class ContactDashboard:
     """Red Dashboard integration for the contact cog."""
 
+    async def _register_dashboard(self, dashboard_cog: commands.Cog) -> None:
+        rpc = getattr(dashboard_cog, "rpc", None)
+        handler = getattr(rpc, "third_parties_handler", None)
+        if handler is not None:
+            handler.add_third_party(self)
+
+    async def cog_load(self) -> None:
+        dashboard_cog = self.bot.get_cog("Dashboard")
+        if dashboard_cog is not None:
+            await self._register_dashboard(dashboard_cog)
+
     @commands.Cog.listener()
     async def on_dashboard_cog_add(self, dashboard_cog: commands.Cog) -> None:
-        dashboard_cog.rpc.third_parties_handler.add_third_party(self)
+        await self._register_dashboard(dashboard_cog)
 
     @dashboard_page(
         name=None,

@@ -11,7 +11,7 @@ from redbot.core.bot import Red
 from .dashboard import ContactDashboard
 
 
-class Contact(ContactDashboard, commands.Cog):
+class Contact(commands.Cog, ContactDashboard):
     """A small DM-based support inbox for staff."""
 
     def __init__(self, bot: Red):
