@@ -83,7 +83,7 @@ Close a ticket by member or exact ticket ID:
 [p]support close <ticket-id>
 ```
 
-Replies are delivered to the member and mirrored in the ticket thread. Successful staff replies receive a checkmark reaction when the bot has permission to add reactions.
+Closing a ticket creates an HTML transcript and sends it to the configured staff channel and the member who owns the ticket. Replies are delivered to the member and mirrored in the ticket thread. Successful staff replies receive a checkmark reaction when the bot has permission to add reactions.
 
 ## Web Dashboard
 
@@ -98,6 +98,8 @@ The dashboard provides:
 - CSRF-protected reply forms.
 - Dashboard ticket replies sent directly to the member.
 - Ticket closing controls.
+- Separate open and closed ticket lists.
+- HTML transcript delivery when a ticket is closed.
 - Success notifications and a cleared reply field after sending.
 
 Refresh the selected ticket page to see new messages.

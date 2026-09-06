@@ -34,10 +34,10 @@ class ContactDashboard:
         return str(value)
 
     @staticmethod
-    def _ticket_rows(guild: discord.Guild, tickets: dict) -> str:
+    def _ticket_rows(guild: discord.Guild, tickets: dict, status: str = "open") -> str:
         rows = []
         for ticket_id, ticket in tickets.items():
-            if ticket.get("status") != "open":
+            if ticket.get("status") != status:
                 continue
 
             messages = ticket.get("messages", [])
@@ -56,6 +56,8 @@ class ContactDashboard:
             )
             reply_link = (
                 f'<a class="button" aria-label="Reply to ticket {html.escape(str(ticket_id), quote=True)}" href="?ticket_id={html.escape(str(ticket_id), quote=True)}">Reply in dashboard</a>'
+                if status == "open"
+                else f'<a href="?ticket_id={html.escape(str(ticket_id), quote=True)}">View transcript</a>'
             )
             rows.append(
                 "<tr>"
@@ -68,7 +70,8 @@ class ContactDashboard:
                 f"<td>{reply_link}<br>{thread_link}</td>"
                 "</tr>"
             )
-        return "".join(rows) or '<tr><td colspan="4" class="empty">No open conversations.</td></tr>'
+        empty_text = "No open conversations." if status == "open" else "No closed conversations."
+        return "".join(rows) or f'<tr><td colspan="4" class="empty">{empty_text}</td></tr>'
 
     @staticmethod
     def _ticket_detail(
@@ -94,10 +97,12 @@ class ContactDashboard:
         user_id_text = str(user_id)
         member = guild.get_member(int(user_id_text)) if user_id_text.isdigit() else None
         member_name = member.display_name if member else f"User {user_id}"
-        reply_form_html = str(reply_form) if reply_form is not None else (
+        reply_form_html = str(reply_form) if ticket.get("status") == "open" and reply_form is not None else (
             f'<p class="muted">Reply form unavailable. Use <code>support reply {html.escape(ticket_id)} &lt;message&gt;</code>.</p>'
+            if ticket.get("status") == "open"
+            else '<p class="muted">This ticket is closed.</p>'
         )
-        close_form_html = str(close_form) if close_form is not None else ""
+        close_form_html = str(close_form) if ticket.get("status") == "open" and close_form is not None else ""
         return f"""
         <section class="ticket-detail">
             <h3>Ticket {html.escape(ticket_id)} <span class="muted">for {html.escape(member_name)} (ID {html.escape(str(user_id))})</span></h3>
@@ -150,7 +155,7 @@ class ContactDashboard:
             class CloseForm(form_base):
                 ticket_id = wtforms.HiddenField()
                 action = wtforms.HiddenField(default="close")
-                submit = wtforms.SubmitField("Close ticket")
+                submit = wtforms.SubmitField("Close ticket", render_kw={"class": "danger"})
 
             reply_form = ReplyForm(prefix="contact_reply_")
             close_form = CloseForm(prefix="contact_close_")
@@ -180,6 +185,8 @@ class ContactDashboard:
             tickets = await self._migrate_tickets(guild)
         elif action == "close" and ticket_id:
             closed = await self._close_ticket(guild, ticket_id)
+            if closed is not None:
+                await self._send_close_transcript(guild, ticket_id, closed)
             notice = "Ticket closed." if closed else "Ticket not found."
             action_completed = closed is not None
             tickets = await self._migrate_tickets(guild)
@@ -203,6 +210,7 @@ class ContactDashboard:
         channel_name = f"#{channel.name}" if channel else "Not configured"
 
         rows = self._ticket_rows(guild, tickets)
+        closed_rows = self._ticket_rows(guild, tickets, status="closed")
         selected_ticket = tickets.get(ticket_id)
         if reply_form is not None:
             reply_form.ticket_id.data = ticket_id
@@ -230,7 +238,7 @@ class ContactDashboard:
             .contact-dashboard a {{ color: #8ea1e1; }}
             .contact-dashboard textarea {{ width: 100%; box-sizing: border-box; margin: 8px 0; padding: 10px; color: #ffffff; background: #1e1f22; border: 1px solid #4e5058; border-radius: 4px; resize: vertical; }}
             .contact-dashboard button {{ padding: 8px 14px; color: #ffffff; background: #5865f2; border: 0; border-radius: 4px; cursor: pointer; }}
-            .contact-dashboard button.danger {{ background: #da373c; }}
+            .contact-dashboard button.danger, .contact-dashboard input.danger {{ color: #ffffff; background: #da373c; }}
             .contact-dashboard .ticket-detail {{ margin-top: 24px; padding: 16px; background: #2b2d31; border: 1px solid #3f4147; border-radius: 6px; }}
             .contact-dashboard .message {{ margin: 10px 0; padding: 10px; background: #1e1f22; border-left: 3px solid #5865f2; }}
             .contact-dashboard time {{ display: block; color: #b5bac1; font-size: 11px; }}
@@ -253,6 +261,11 @@ class ContactDashboard:
             <table>
                 <thead><tr><th>User</th><th>Latest message</th><th>Last activity</th><th>Actions</th></tr></thead>
                 <tbody>{rows}</tbody>
+            </table>
+            <h3>Closed conversations</h3>
+            <table>
+                <thead><tr><th>User</th><th>Latest message</th><th>Last activity</th><th>Ticket</th></tr></thead>
+                <tbody>{closed_rows}</tbody>
             </table>
             {detail}
         </section>

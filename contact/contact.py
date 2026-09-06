@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Optional
@@ -203,6 +204,55 @@ class Contact(commands.Cog, ContactDashboard):
                 choices.pop(str(closed_ticket.get("user_id")), None)
         return closed_ticket
 
+    @staticmethod
+    def _transcript_html(ticket_id: str, ticket: dict) -> str:
+        messages = []
+        for entry in ticket.get("messages", []):
+            messages.append(
+                "<article>"
+                f"<h2>{html.escape(str(entry.get('author', 'Unknown')))}</h2>"
+                f"<time>{html.escape(str(entry.get('timestamp', '')))}</time>"
+                f"<p>{html.escape(str(entry.get('content') or '(attachment only)'))}</p>"
+                "</article>"
+            )
+        body = "".join(messages) or "<p>No messages recorded.</p>"
+        return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ticket {html.escape(ticket_id)}</title>
+<style>body {{ font-family: sans-serif; max-width: 800px; margin: 2rem auto; color: #222; }} article {{ margin: 1rem 0; padding: 1rem; border-left: 4px solid #5865f2; background: #f4f5f7; }} h2 {{ margin: 0; font-size: 1rem; }} time {{ color: #666; font-size: .85rem; }} p {{ white-space: pre-wrap; }}</style>
+</head>
+<body><h1>Support ticket {html.escape(ticket_id)}</h1>{body}</body>
+</html>"""
+
+    async def _send_close_transcript(self, guild: discord.Guild, ticket_id: str, ticket: dict):
+        transcript = self._transcript_html(ticket_id, ticket)
+        filename = f"conversation-{ticket_id}.html"
+        channel_id = await self.config.guild(guild).staff_channel()
+        channel = guild.get_channel(channel_id) if channel_id else None
+        if isinstance(channel, discord.TextChannel):
+            try:
+                await channel.send(
+                    f"Transcript for closed ticket `{ticket_id}`.",
+                    file=discord.File(BytesIO(transcript.encode("utf-8")), filename=filename),
+                )
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+
+        try:
+            user = await self.bot.fetch_user(int(ticket["user_id"]))
+            await user.send(
+                embed=self._conversation_embed(
+                    "Conversation ended",
+                    f"Ticket `{ticket_id}` is closed. The transcript is attached.",
+                    discord.Color.red(),
+                ),
+                file=discord.File(BytesIO(transcript.encode("utf-8")), filename=filename),
+            )
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -378,28 +428,8 @@ class Contact(commands.Cog, ContactDashboard):
         if closed_ticket is None:
             await ctx.send("No conversation exists for that user.")
             return
-        transcript = "\n".join(
-            f"[{entry['timestamp']}] {entry['author']}: {entry['content']}"
-            for entry in closed_ticket["messages"]
-        )
-
-        await ctx.send(
-            f"Conversation with {user.mention} closed.",
-            file=discord.File(
-                BytesIO(transcript.encode("utf-8")),
-                filename=f"conversation-{ticket_id}.txt",
-            ),
-        )
-        try:
-            await user.send(
-                embed=self._conversation_embed(
-                    "Conversation ended",
-                    "This conversation has ended. Please contact staff again if you need further assistance.",
-                    discord.Color.red(),
-                )
-            )
-        except discord.Forbidden:
-            pass
+        await self._send_close_transcript(ctx.guild, ticket_id, closed_ticket)
+        await ctx.send(f"Conversation with {user.mention} closed. Transcript sent to staff and the user.")
 
     async def _support_list(self, ctx: commands.Context):
         """List open support conversations."""
