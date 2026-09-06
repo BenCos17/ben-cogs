@@ -1,5 +1,6 @@
 import html
 import typing
+from urllib.parse import parse_qs, urlparse
 
 import discord
 from redbot.core import commands
@@ -27,6 +28,10 @@ class ContactDashboard:
             request_data = kwargs.get("data", {})
             form_data = request_data.get("form", {}) if isinstance(request_data, dict) else {}
             value = form_data.get(name)
+        if value is None:
+            request_url = kwargs.get("request_url", "")
+            query_values = parse_qs(urlparse(str(request_url)).query).get(name, [])
+            value = query_values[-1] if query_values else ""
         if value is None:
             value = ""
         if isinstance(value, (list, tuple)):
