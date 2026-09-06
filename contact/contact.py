@@ -93,14 +93,16 @@ class Contact(commands.Cog, ContactDashboard):
                 return guild, ticket
         return None, None
 
-    async def _create_thread(self, guild: discord.Guild, user: discord.abc.User) -> Optional[discord.Thread]:
+    async def _create_thread(
+        self, guild: discord.Guild, user: discord.abc.User, ticket_id: str
+    ) -> Optional[discord.Thread]:
         channel_id = await self.config.guild(guild).staff_channel()
         channel = guild.get_channel(channel_id) if channel_id else None
         if not isinstance(channel, discord.TextChannel):
             return None
 
         return await channel.create_thread(
-            name=f"contact-{user.name}"[:100],
+            name=f"ticket-{ticket_id}-{user.name}"[:100],
             type=discord.ChannelType.public_thread,
             auto_archive_duration=1440,
             reason="New DM support conversation",
@@ -110,7 +112,7 @@ class Contact(commands.Cog, ContactDashboard):
         thread_id = ticket.get("thread_id")
         thread = guild.get_thread(thread_id) if isinstance(thread_id, int) else None
         if thread is None:
-            thread = await self._create_thread(guild, message.author)
+            thread = await self._create_thread(guild, message.author, ticket["ticket_id"])
             if thread is None:
                 return
             async with self.config.guild(guild).tickets() as tickets:
@@ -335,12 +337,13 @@ class Contact(commands.Cog, ContactDashboard):
 
     async def _support_open(self, ctx: commands.Context, user: discord.User, message: str):
         """Open a staff thread and start a two-way DM with a user."""
-        thread = await self._create_thread(ctx.guild, user)
-        if thread is None:
-            await ctx.send("The configured support channel is missing or is not a text channel.")
-            return
         ticket = await self._new_ticket(ctx.guild, user.id)
         ticket_id = ticket["ticket_id"]
+        thread = await self._create_thread(ctx.guild, user, ticket_id)
+        if thread is None:
+            await self._close_ticket(ctx.guild, ticket_id)
+            await ctx.send("The configured support channel is missing or is not a text channel.")
+            return
         async with self.config.guild(ctx.guild).tickets() as all_tickets:
             all_tickets[ticket_id]["thread_id"] = thread.id
 
