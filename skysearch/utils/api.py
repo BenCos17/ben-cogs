@@ -4,6 +4,7 @@ API utilities for SkySearch cog
 
 import aiohttp
 import discord
+from yarl import URL
 from discord.ext import commands
 import time
 import asyncio
@@ -235,6 +236,24 @@ class APIManager:
         else:
             return endpoint or 'unknown'
 
+    def _get_url_parameter(self, url: str, parameter: str):
+        """Get a parameter from either the query string or a path segment."""
+        try:
+            parsed_url = URL(url)
+        except ValueError:
+            return None
+
+        value = parsed_url.query.get(parameter)
+        if value is not None:
+            return value
+
+        prefix = f"{parameter}="
+        for segment in parsed_url.path.split('/'):
+            if segment.startswith(prefix):
+                return segment[len(prefix):]
+
+        return None
+
     async def _save_stats_to_config(self):
         """Save statistics to Red-DiscordBot config."""
         try:
@@ -262,33 +281,26 @@ class APIManager:
         original_url = url
         endpoint = self._extract_endpoint(url)
 
-        # Rewrite URL for ICAO hex search if using fallback
-        import re
         if api_mode == "fallback":
             # Rewrite to /v2/ endpoints for all supported aircraft lookups
-            match = re.search(r"[?&/]find_hex=([0-9a-fA-F]+)", url)
-            if match:
-                hex_code = match.group(1)
+            hex_code = self._get_url_parameter(url, "find_hex")
+            if hex_code:
                 url = f"{self.fallback_api_url}/v2/hex/{hex_code}"
             else:
-                match = re.search(r"[?&/]find_callsign=([A-Za-z0-9]+)", url)
-                if match:
-                    callsign = match.group(1)
+                callsign = self._get_url_parameter(url, "find_callsign")
+                if callsign:
                     url = f"{self.fallback_api_url}/v2/callsign/{callsign}"
                 else:
-                    match = re.search(r"[?&/]find_reg=([A-Za-z0-9]+)", url)
-                    if match:
-                        reg = match.group(1)
+                    reg = self._get_url_parameter(url, "find_reg")
+                    if reg:
                         url = f"{self.fallback_api_url}/v2/reg/{reg}"
                     else:
-                        match = re.search(r"[?&/]find_type=([A-Za-z0-9]+)", url)
-                        if match:
-                            typecode = match.group(1)
+                        typecode = self._get_url_parameter(url, "find_type")
+                        if typecode:
                             url = f"{self.fallback_api_url}/v2/type/{typecode}"
                         else:
-                            match = re.search(r"[?&/]filter_squawk=([0-9]+)", url)
-                            if match:
-                                squawk = match.group(1)
+                            squawk = self._get_url_parameter(url, "filter_squawk")
+                            if squawk:
                                 url = f"{self.fallback_api_url}/v2/squawk/{squawk}"
                             elif "filter_mil" in url:
                                 url = f"{self.fallback_api_url}/v2/mil"

@@ -228,6 +228,24 @@ Commands:
 *aircraft clearuseragent
 ```
 
+Planespotters-specific User-Agent
+
+Planespotters.net requires server-side User-Agent strings to include a contact URL or email address. SkySearch supports a planespotters-specific override so you can provide a UA that meets their policy without changing the global UA used for other services.
+
+Commands:
+```
+*aircraft setplanespottersuseragent <value>
+*aircraft checkplanespottersuseragent
+*aircraft clearplanespottersuseragent
+```
+
+Example valid UA:
+```
+MyFlightTracker/1.2 (+https://example.com/contact)
+```
+
+After setting a Planespotters UA, run `*aircraft debugapi` (owner-only) to verify Planespotters connectivity — the debug output uses `N625UP` when checking the Planespotters sample endpoint.
+
 ## Aircraft Watchlist
 
 ### Personal Watchlist

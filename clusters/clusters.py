@@ -1,12 +1,18 @@
-﻿import discord
+import discord
 from redbot.core import commands, Config
 import psutil, datetime, json, aiohttp
 from aiohttp import web
+import asyncio
+import platform
+import os
+from pathlib import Path
 
 MARVEL_NAMES = [
     "IronMan", "Thor", "Hulk", "BlackWidow", "CaptainAmerica", "Loki",
     "DoctorStrange", "SpiderMan", "BlackPanther", "ScarletWitch"
 ]
+
+COG_VERSION = "1.0.1"
 
 class Clusters(commands.Cog):
     """Shows dynamic Marvel-themed cluster status with customizable names and uptime, plus a web endpoint."""
@@ -16,6 +22,8 @@ class Clusters(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567890)
         self.config.register_global(custom_names={})
         self.shard_names = {}
+        self.runner = None
+        self.site = None
 
         # Start aiohttp web server
         self.app = web.Application()
@@ -24,9 +32,40 @@ class Clusters(commands.Cog):
         self.bot.loop.create_task(self.start_webserver())
 
     async def start_webserver(self):
+        if self.runner is None:
+            self.runner = web.AppRunner(self.app)
+
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)  # Change IP/port if needed
-        await self.site.start()
+
+        last_error = None
+        for _ in range(10):
+            try:
+                self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)  # Change IP/port if needed
+                await self.site.start()
+                return
+            except OSError as error:
+                last_error = error
+                if error.errno != 98:
+                    raise
+                await asyncio.sleep(0.5)
+
+        if last_error is not None:
+            raise last_error
+
+        raise RuntimeError("Failed to start the clusters webserver for an unknown reason.")
+
+    async def shutdown_webserver(self):
+        if self.site is not None:
+            await self.site.stop()
+            self.site = None
+
+        if self.runner is not None:
+            await self.runner.cleanup()
+            self.runner = None
+
+    def cog_unload(self):
+        if self.bot and self.bot.loop.is_running():
+            self.bot.loop.create_task(self.shutdown_webserver())
 
     async def initialize_shard_names(self):
         """Load names from config or assign defaults based on shard ID."""
@@ -50,6 +89,56 @@ class Clusters(commands.Cog):
         boot_timestamp = psutil.boot_time()
         return datetime.datetime.utcnow() - datetime.datetime.utcfromtimestamp(boot_timestamp)
 
+    def get_system_snapshot(self):
+        """Return a reusable snapshot of host and process stats."""
+        virt_mem = psutil.virtual_memory()
+        swap_mem = psutil.swap_memory()
+        proc = psutil.Process()
+        cpu_count_logical = psutil.cpu_count(logical=True) or os.cpu_count()
+        cpu_count_physical = psutil.cpu_count(logical=False)
+        cpu_count_affinity = None
+        try:
+            cpu_count_affinity = len(proc.cpu_affinity())
+        except (AttributeError, NotImplementedError, psutil.Error):
+            cpu_count_affinity = None
+
+        cpu_count_display = cpu_count_physical or cpu_count_affinity or cpu_count_logical
+        disk_root = Path.cwd().anchor or Path.cwd().drive or "/"
+
+        try:
+            disk_usage = psutil.disk_usage(disk_root)
+        except Exception:
+            disk_usage = None
+
+        return {
+            "os": platform.system(),
+            "os_release": platform.release(),
+            "os_version": platform.version(),
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "processor": platform.processor() or "Unknown",
+            "python_version": platform.python_version(),
+            "cpu_logical": cpu_count_logical,
+            "cpu_physical": cpu_count_physical,
+            "cpu_count": cpu_count_display,
+            "cpu_affinity": cpu_count_affinity,
+            "cpu_usage_percent": psutil.cpu_percent(interval=None),
+            "load_average": list(psutil.getloadavg()) if hasattr(psutil, "getloadavg") else None,
+            "ram_used_gb": round(virt_mem.used / 1024**3, 2),
+            "ram_total_gb": round(virt_mem.total / 1024**3, 2),
+            "ram_percent": virt_mem.percent,
+            "swap_used_gb": round(swap_mem.used / 1024**3, 2),
+            "swap_total_gb": round(swap_mem.total / 1024**3, 2),
+            "swap_percent": swap_mem.percent,
+            "disk_used_gb": round(disk_usage.used / 1024**3, 2) if disk_usage else None,
+            "disk_total_gb": round(disk_usage.total / 1024**3, 2) if disk_usage else None,
+            "disk_percent": disk_usage.percent if disk_usage else None,
+            "process_rss_gb": round(proc.memory_info().rss / 1024**3, 2),
+            "process_cpu_percent": proc.cpu_percent(interval=None),
+            "process_threads": proc.num_threads(),
+            "process_open_files": None,
+        }
+
     @commands.command()
     async def clusters(self, ctx):
         """Shows the status of all clusters using an embed."""
@@ -63,11 +152,60 @@ class Clusters(commands.Cog):
             bot_uptime_str = self.format_timedelta(td)
 
         server_uptime = self.format_timedelta(self.get_server_uptime())
+        system = self.get_system_snapshot()
+
+        description = (
+            f"**Bot uptime:** {bot_uptime_str}\n"
+            f"**Server uptime:** {server_uptime}"
+        )
+        if ctx.guild is not None:
+            shard_id = ctx.guild.shard_id
+            cluster_name = self.shard_names.get(
+                shard_id, MARVEL_NAMES[shard_id % len(MARVEL_NAMES)]
+            )
+            description += f"\n**This server:** Cluster #{cluster_name} (shard {shard_id})"
 
         embed = discord.Embed(
             title="Cluster Status",
-            description=f"**Bot uptime:** {bot_uptime_str}\n**Server uptime:** {server_uptime}",
+            description=description,
             color=discord.Color.blue()
+        )
+
+        embed.add_field(
+            name="System",
+            value=(
+                f"**OS:** {system['platform']}\n"
+                f"**CPU:** {system['cpu_usage_percent']}% ({system['cpu_count']} cores"
+                + (
+                    f", {system['cpu_physical']} physical / {system['cpu_logical']} logical"
+                    if system['cpu_physical'] is not None and system['cpu_logical'] is not None
+                    else ""
+                )
+                + ")\n"
+                f"**RAM:** {system['ram_used_gb']} / {system['ram_total_gb']} GB ({system['ram_percent']}%)\n"
+                f"**Swap:** {system['swap_used_gb']} / {system['swap_total_gb']} GB ({system['swap_percent']}%)"
+            ),
+            inline=False,
+        )
+
+        if system["disk_used_gb"] is not None:
+            embed.add_field(
+                name="Storage",
+                value=(
+                    f"**Root:** {system['disk_used_gb']} / {system['disk_total_gb']} GB ({system['disk_percent']}%)\n"
+                    f"**Python:** {system['python_version']}"
+                ),
+                inline=False,
+            )
+
+        embed.add_field(
+            name="Process",
+            value=(
+                f"**Bot RAM:** {system['process_rss_gb']} GB\n"
+                f"**Bot CPU:** {system['process_cpu_percent']}%\n"
+                f"**Threads:** {system['process_threads']}"
+            ),
+            inline=False,
         )
 
         for shard_id, name in self.shard_names.items():
@@ -103,27 +241,22 @@ class Clusters(commands.Cog):
     async def web_clusters(self, request):
         """Return cluster data as JSON for web endpoint."""
         await self.initialize_shard_names()
-        
-        virt_mem = psutil.virtual_memory()
-        swap_mem = psutil.swap_memory()
-        proc = psutil.Process()
-        bot_ram_gb = proc.memory_info().rss / 1024**3
+
+        system = self.get_system_snapshot()
 
         bot_start_time = getattr(self.bot, "uptime", None)
         bot_uptime_str = self.format_timedelta(datetime.datetime.utcnow() - bot_start_time) if bot_start_time else "Unknown"
         server_uptime_str = self.format_timedelta(self.get_server_uptime())
 
         data = {
+            "version": COG_VERSION,
             "bot_uptime": bot_uptime_str,
             "server_uptime": server_uptime_str,
             "system_stats": {
-                "cpu_total_percent": psutil.cpu_percent(interval=None),
-                "ram_used_gb": round(virt_mem.used / 1024**3, 2),
-                "ram_total_gb": round(virt_mem.total / 1024**3, 2),
-                "bot_ram_gb": round(bot_ram_gb, 2),
+                **system,
+                "cpu_total_percent": system["cpu_usage_percent"],
+                "bot_ram_gb": system["process_rss_gb"],
                 "bot_ram_limit_gb": 10.0,
-                "swap_used_gb": round(swap_mem.used / 1024**3, 2),
-                "swap_total_gb": round(swap_mem.total / 1024**3, 2)
             },
             "clusters": []
         }

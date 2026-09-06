@@ -5,8 +5,21 @@ Helper utilities for SkySearch cog
 import json
 import aiohttp
 import discord
-from urllib.parse import quote_plus, urlparse, parse_qs, urlencode, urlunparse
+import logging
+from urllib.parse import quote_plus
+from yarl import URL
 import asyncio
+from .. import _
+
+
+FEEDER_FETCH_TIMEOUT_SECONDS = 10
+FEEDER_MAX_RESPONSE_BYTES = 1_000_000
+FEEDER_ALLOWED_DOMAINS: tuple[str, ...] = (
+    "airplanes.live",
+)
+
+
+log = logging.getLogger("red.skysearch.helpers")
 
 
 class HelperUtils:
@@ -14,22 +27,89 @@ class HelperUtils:
     
     def __init__(self, cog):
         self.cog = cog
+
+    def get_default_airplane_file(self):
+        """Return the local default airplane image as a Discord file when available."""
+        try:
+            icon_path = self.cog.get_airplane_icon_path()
+            if icon_path.exists():
+                return discord.File(str(icon_path), filename="defaultairplane.png")
+        except Exception:
+            return None
+        return None
+
+    async def send_embed_with_default_thumbnail(self, ctx, embed: discord.Embed, **kwargs):
+        """Send an embed and attach the local default thumbnail image when needed."""
+        if "file" in kwargs or "files" in kwargs:
+            return await ctx.send(embed=embed, **kwargs)
+
+        thumbnail_url = embed.to_dict().get("thumbnail", {}).get("url")
+        if thumbnail_url == "attachment://defaultairplane.png":
+            icon_file = self.get_default_airplane_file()
+            if icon_file is not None:
+                return await ctx.send(embed=embed, file=icon_file, **kwargs)
+        return await ctx.send(embed=embed, **kwargs)
     
     def _ensure_http_client(self):
         """Ensure HTTP client is initialized."""
         if not hasattr(self.cog, '_http_client'):
             self.cog._http_client = aiohttp.ClientSession()
 
-    async def _get_http_headers(self) -> dict:
-        """Get outbound HTTP headers (includes configured User-Agent if set)."""
+    def _get_allowed_feeder_domains(self) -> tuple[str, ...]:
+        """Return normalized feeder URL allowlist domains."""
+        domains = list(FEEDER_ALLOWED_DOMAINS)
+
+        # Optional runtime extension point for additional allowed domains.
+        extra_domains = getattr(self.cog, "feeder_allowed_domains", None)
+        if isinstance(extra_domains, (list, tuple, set)):
+            domains.extend(str(domain) for domain in extra_domains if domain)
+
+        normalized = []
+        for domain in domains:
+            cleaned = str(domain).lower().strip().strip(".")
+            if cleaned and cleaned not in normalized:
+                normalized.append(cleaned)
+
+        return tuple(normalized)
+
+    def _is_allowed_feeder_url(self, url: str) -> bool:
+        """Allow feeder URL fetches only over HTTPS from allowed domains and subdomains."""
+        try:
+            parsed = URL(url)
+            if parsed.scheme.lower() != "https":
+                return False
+            host = (parsed.host or "").lower().strip(".")
+            for domain in self._get_allowed_feeder_domains():
+                if host == domain or host.endswith(f".{domain}"):
+                    return True
+            return False
+        except Exception:
+            return False
+
+    async def _get_http_headers(self, service: str | None = None) -> dict:
+        """Get outbound HTTP headers (includes configured User-Agent if set).
+
+        If `service` is "planespotters", prefer a planespotters-specific User-Agent
+        if configured via `planespotters_user_agent`.
+        """
         headers = {}
         try:
+            # Service-specific override for Planespotters
+            if service == "planespotters":
+                ua = await self.cog.config.planespotters_user_agent()
+                if ua:
+                    headers["User-Agent"] = ua
+                    return headers
+
+            # Fall back to the general configured user agent
             user_agent = await self.cog.config.user_agent()
             if user_agent:
                 headers["User-Agent"] = user_agent
+            else:
+                # Default descriptive User-Agent with contact URL
+                headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/ben-cogs/skysearch)"
         except Exception:
-            # In case config isn't available for some reason, fall back to aiohttp defaults.
-            pass
+            headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/ben-cogs/skysearch)"
         return headers
     
     async def get_photo_by_hex(self, hex_id, registration=None):
@@ -44,42 +124,68 @@ class HelperUtils:
             tuple: (image_url, photographer) or (None, None) if no photo found
         """
         self._ensure_http_client()
+        log.debug("get_photo_by_hex called: hex=%s registration=%s", hex_id, registration)
+        error_msg = None
         
         # First try to get photo by hex ICAO directly
         if hex_id:
             try:
+                url_req = f'https://api.planespotters.net/pub/photos/hex/{hex_id}'
                 async with self.cog._http_client.get(
-                    f'https://api.planespotters.net/pub/photos/hex/{hex_id}',
-                    headers=await self._get_http_headers(),
+                    url_req,
+                    headers=await self._get_http_headers(service="planespotters"),
                 ) as response:
-                    if response.status == 200:
+                    if response.status != 200:
+                        log.debug("Planespotters hex request %s returned status %s", url_req, response.status)
+                        error_msg = f"planespotters returned HTTP {response.status}"
+                    else:
                         json_out = await response.json()
-                        if 'photos' in json_out and json_out['photos']:
-                            photo = json_out['photos'][0]
+                        photos = json_out.get('photos') if isinstance(json_out, dict) else None
+                        if not photos:
+                            log.debug("Planespotters hex %s returned no photos", url_req)
+                            error_msg = "no photos found"
+                        else:
+                            photo = photos[0]
                             url = photo.get('thumbnail_large', {}).get('src', '')
                             photographer = photo.get('photographer', '')
-                            if url:  # Only return if we got a valid URL
-                                return url, photographer
-            except (KeyError, IndexError, aiohttp.ClientError):
-                pass
+                            if not url:
+                                log.debug("Planespotters hex %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
+                                error_msg = "photos found but no usable thumbnail"
+                            else:
+                                return url, photographer, None
+            except Exception as e:
+                log.debug("Exception fetching planespotters hex %s: %s", hex_id, e, exc_info=True)
+                error_msg = str(e)
 
         # If no photo found by hex, try by registration if provided
         if registration:
             try:
+                url_req = f'https://api.planespotters.net/pub/photos/reg/{registration}'
                 async with self.cog._http_client.get(
-                    f'https://api.planespotters.net/pub/photos/reg/{registration}',
-                    headers=await self._get_http_headers(),
+                    url_req,
+                    headers=await self._get_http_headers(service="planespotters"),
                 ) as response:
-                    if response.status == 200:
+                    if response.status != 200:
+                        log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
+                        error_msg = f"planespotters returned HTTP {response.status}"
+                    else:
                         json_out = await response.json()
-                        if 'photos' in json_out and json_out['photos']:
-                            photo = json_out['photos'][0]
+                        photos = json_out.get('photos') if isinstance(json_out, dict) else None
+                        if not photos:
+                            log.debug("Planespotters reg %s returned no photos", url_req)
+                            error_msg = "no photos found"
+                        else:
+                            photo = photos[0]
                             url = photo.get('thumbnail_large', {}).get('src', '')
                             photographer = photo.get('photographer', '')
-                            if url:  # Only return if we got a valid URL
-                                return url, photographer
-            except (KeyError, IndexError, aiohttp.ClientError):
-                pass
+                            if not url:
+                                log.debug("Planespotters reg %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
+                                error_msg = "photos found but no usable thumbnail"
+                            else:
+                                return url, photographer, None
+            except Exception as e:
+                log.debug("Exception fetching planespotters reg %s: %s", registration, e, exc_info=True)
+                error_msg = str(e)
 
         # If still no photo found, try to get aircraft data to find registration and try again
         if hex_id:
@@ -92,28 +198,40 @@ class HelperUtils:
                 if response and 'aircraft' in response and response['aircraft']:
                     aircraft_data = response['aircraft'][0]
                     reg = aircraft_data.get('reg')
-                    
+
                     if reg and reg != registration:  # Only try if we haven't already tried this registration
                         # try to get photo using the registration
                         try:
+                            url_req = f'https://api.planespotters.net/pub/photos/reg/{reg}'
                             async with self.cog._http_client.get(
-                                f'https://api.planespotters.net/pub/photos/reg/{reg}',
-                                headers=await self._get_http_headers(),
+                                url_req,
+                                headers=await self._get_http_headers(service="planespotters"),
                             ) as response:
-                                if response.status == 200:
-                                    json_out = await response.json()
-                                    if 'photos' in json_out and json_out['photos']:
-                                        photo = json_out['photos'][0]
-                                        url = photo.get('thumbnail_large', {}).get('src', '')
-                                        photographer = photo.get('photographer', '')
-                                        if url:  # Only return if we got a valid URL
-                                            return url, photographer
-                        except (KeyError, IndexError, aiohttp.ClientError):
-                            pass
+                                    if response.status != 200:
+                                        log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
+                                        error_msg = f"planespotters returned HTTP {response.status}"
+                                    else:
+                                        json_out = await response.json()
+                                        photos = json_out.get('photos') if isinstance(json_out, dict) else None
+                                        if not photos:
+                                            log.debug("Planespotters reg %s returned no photos", url_req)
+                                            error_msg = "no photos found"
+                                        else:
+                                            photo = photos[0]
+                                            url = photo.get('thumbnail_large', {}).get('src', '')
+                                            photographer = photo.get('photographer', '')
+                                            if not url:
+                                                log.debug("Planespotters reg %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
+                                                error_msg = "photos found but no usable thumbnail"
+                                            else:
+                                                return url, photographer, None
+                        except Exception as e:
+                            log.debug("Exception fetching planespotters reg %s: %s", reg, e, exc_info=True)
+                            error_msg = str(e)
             except Exception:
                 pass
 
-        return None, None  # Return None if no photo found
+        return None, None, error_msg  # Return None if no photo found
 
     async def get_photo_by_aircraft_data(self, aircraft_data):
         """
@@ -138,7 +256,7 @@ class HelperUtils:
             
         return await self.get_photo_by_hex(hex_id, registration)
     
-    def create_aircraft_embed(self, aircraft_data, image_url=None, photographer=None):
+    def create_aircraft_embed(self, aircraft_data, image_url=None, photographer=None, photo_error: str | None = None):
         """
         Create a Discord embed for aircraft information.
         
@@ -152,7 +270,7 @@ class HelperUtils:
         """
         emergency_squawk_codes = ['7500', '7600', '7700']
         hex_id = aircraft_data.get('hex', '')
-        registration = aircraft_data.get('reg', '')
+        registration = aircraft_data.get('r') or aircraft_data.get('reg', '')
         link = f"https://globe.airplanes.live/?icao={hex_id}"
         squawk_code = aircraft_data.get('squawk', 'N/A')
         description = f"{aircraft_data.get('desc', 'N/A')}"
@@ -315,23 +433,21 @@ class HelperUtils:
             embed.add_field(name="Asset intelligence", value=":corn: Used for **agriculture surveys, easement validation, or land inspection**", inline=False)
 
         # Add photo if available
-        if image_url and photographer:
+        if image_url:
             embed.set_thumbnail(url=image_url)
-            embed.set_footer(text=f"Photo by {photographer}")
+            if photographer:
+                embed.set_footer(text=f"Photo by {photographer}")
+            else:
+                embed.set_footer(text="Photo available")
         else:
-            # Set default aircraft image when no photo is available
-            try:
-                # Try to use local icon first
-                icon_path = self.cog.get_airplane_icon_path()
-                if icon_path.exists():
-                    embed.set_thumbnail(url=f"attachment://defaultairplane.png")
-                else:
-                    # Fallback to external URL
-                    embed.set_thumbnail(url="https://raw.githubusercontent.com/BenCos17/ben-cogs/main/skysearch/data/defaultairplane.png")
-            except Exception:
-                # Fallback to external URL
-                embed.set_thumbnail(url="https://raw.githubusercontent.com/BenCos17/ben-cogs/main/skysearch/data/defaultairplane.png")
-            embed.set_footer(text="No photo available")
+            # Attachment-based fallback is resolved by send_embed_with_default_thumbnail.
+            embed.set_thumbnail(url="attachment://defaultairplane.png")
+            if photo_error:
+                # Shorten lengthy error messages for display
+                short = photo_error if len(photo_error) <= 120 else photo_error[:117] + '...'
+                embed.set_footer(text=f"No photo available — {short}")
+            else:
+                embed.set_footer(text="No photo available")
 
         return embed
 
@@ -494,28 +610,15 @@ class HelperUtils:
         replacement or a placeholder.
         """
         try:
-            parsed = urlparse(url)
-            qs = parse_qs(parsed.query, keep_blank_values=True)
-            changed = False
-            if 'apiToken' in qs:
-                qs['apiToken'] = ['REDACTED']
-                changed = True
-            if 'api_token' in qs:
-                qs['api_token'] = ['REDACTED']
-                changed = True
-            if changed:
-                # parse_qs produces lists; urlencode expects key->value mapping
-                safe_q = {k: v[0] for k, v in qs.items()}
-                new_q = urlencode(safe_q)
-                return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_q, parsed.fragment))
-            return url
+            parsed = URL(url)
+            query = parsed.query
+            if 'apiToken' in query:
+                parsed = parsed.update_query(apiToken='REDACTED')
+            if 'api_token' in query:
+                parsed = parsed.update_query(api_token='REDACTED')
+            return str(parsed)
         except Exception:
-            try:
-                import re
-
-                return re.sub(r'(apiToken=)[^&]+', r"\1REDACTED", url)
-            except Exception:
-                return 'REDACTED_URL'
+            return 'REDACTED_URL'
 
 
     # for feeder link command stuff
@@ -537,8 +640,8 @@ class HelperUtils:
         """
         if not url or "globe.airplanes.live" not in url:
             return url
-        parsed = urlparse(url)
-        qs = parse_qs(parsed.query)
+        parsed = URL(url)
+        qs = parsed.query
         # Prefer uuid for multi-feed, otherwise keep existing param
         feed_val = qs.get("feed", qs.get("uuid"))
         if feed_val:
@@ -582,14 +685,47 @@ class HelperUtils:
         """
         # Check if input looks like a URL
         if json_input.startswith(('http://', 'https://')):
+            if not self._is_allowed_feeder_url(json_input):
+                allowed_domains = ", ".join(self._get_allowed_feeder_domains())
+                raise ValueError(
+                    f"Only HTTPS URLs from approved domains are allowed ({allowed_domains}). "
+                    "If you need another site, ask the bot owner to whitelist that domain."
+                )
+
             # Fetch the JSON data from the URL
             self._ensure_http_client()
-            
-            async with self.cog._http_client.get(json_input, headers=await self._get_http_headers()) as response:
+
+            timeout = aiohttp.ClientTimeout(total=FEEDER_FETCH_TIMEOUT_SECONDS)
+            async with self.cog._http_client.get(
+                json_input,
+                headers=await self._get_http_headers(),
+                allow_redirects=False,
+                timeout=timeout,
+            ) as response:
                 if response.status != 200:
                     raise ValueError(f"Failed to fetch JSON data. Status: {response.status}")
-                
-                return await response.json()
+
+                # Enforce response size limits to avoid abuse.
+                content_length = response.headers.get("Content-Length")
+                if content_length:
+                    try:
+                        content_length_int = int(content_length)
+                    except ValueError:
+                        # Ignore malformed Content-Length and fall back to bounded read.
+                        content_length_int = None
+                    if content_length_int is not None and content_length_int > FEEDER_MAX_RESPONSE_BYTES:
+                        raise ValueError("JSON payload is too large.")
+
+                body = await response.content.read(FEEDER_MAX_RESPONSE_BYTES + 1)
+                if len(body) > FEEDER_MAX_RESPONSE_BYTES:
+                    raise ValueError("JSON payload is too large.")
+
+                try:
+                    return json.loads(body.decode("utf-8"))
+                except UnicodeDecodeError:
+                    raise ValueError("Response is not valid UTF-8 JSON.")
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"Invalid JSON format from URL: {str(e)}")
         else:
             # Try to parse as direct JSON
             try:
@@ -826,12 +962,9 @@ class HelperUtils:
         Returns:
             discord.Embed: Formatted notification embed
         """
-        from redbot.core.i18n import Translator
-        _watchlist = Translator("Skysearch", __file__)
-        
         embed = discord.Embed(
-            title=_watchlist("🟢 Aircraft Online"),
-            description=_watchlist("**{icao}** from your watchlist is now online!").format(icao=icao),
+            title=_("🟢 Aircraft Online"),
+            description=_("**{icao}** from your watchlist is now online!").format(icao=icao),
             color=0x00ff00
         )
         
@@ -929,6 +1062,322 @@ class HelperUtils:
                 return False
         return False
     
+    def get_aircraft_types(self, icao: str) -> list:
+        """
+        Get all aircraft types/categories for a given ICAO code.
+        
+        REUSED BY: watchlist type matching, aircraft classification, type-based notifications
+        
+        This method centralizes type detection logic to avoid duplication across the codebase.
+        It checks the aircraft against all available ICAO type sets defined in data/icao_codes.py.
+        
+        Args:
+            icao (str): Aircraft ICAO hex code (will be normalized to uppercase)
+            
+        Returns:
+            list: List of type names (e.g., ['military', 'law_enforcement']) or empty list if no types
+            
+        Example:
+            >>> types = self.get_aircraft_types('AE152C')
+            >>> # Returns: ['military']
+        """
+        if not icao:
+            return []
+        
+        icao = icao.upper().strip()
+        types = []
+        
+        # Check against each aircraft type set
+        # Maps type name to cog attribute
+        type_mapping = {
+            'law_enforcement': self.cog.law_enforcement_icao_set,
+            'military': self.cog.military_icao_set,
+            'medical': self.cog.medical_icao_set,
+            'suspicious': self.cog.suspicious_icao_set,
+            'newsagency': self.cog.newsagency_icao_set,
+            'balloons': self.cog.balloons_icao_set,
+            'agri_utility': self.cog.agri_utility_set,
+            'ukr_conflict': self.cog.ukr_conflict_set,
+            'global_prior_known_accident': self.cog.global_prior_known_accident_set,
+        }
+        
+        # Check if trainer_educational_set exists (may not in all versions)
+        if hasattr(self.cog, 'trainer_educational_set'):
+            type_mapping['trainer_educational'] = self.cog.trainer_educational_set
+        
+        for type_name, icao_set in type_mapping.items():
+            if icao in icao_set:
+                types.append(type_name)
+        
+        return types
+    
+    def get_all_aircraft_type_names(self) -> list:
+        """
+        Get all available aircraft type category names.
+        
+        REUSED BY: watchlist validation, type selection UI, help text
+        
+        Returns:
+            list: Sorted list of all available type names
+            
+        Example:
+            >>> types = self.get_all_aircraft_type_names()
+            >>> # Returns: ['agri_utility', 'balloons', 'global_prior_known_accident', ...]
+        """
+        type_names = [
+            'law_enforcement',
+            'military', 
+            'medical',
+            'suspicious',
+            'newsagency',
+            'balloons',
+            'agri_utility',
+            'ukr_conflict',
+            'global_prior_known_accident',
+        ]
+        
+        # Add trainer_educational if it exists
+        if hasattr(self.cog, 'trainer_educational_set'):
+            type_names.append('trainer_educational')
+        
+        return sorted(type_names)
+    
+    def get_readable_aircraft_type_name(self, type_name: str) -> str:
+        """
+        Convert type name to readable format for display.
+        
+        REUSED BY: watchlist notifications, help text, embeds
+        
+        Args:
+            type_name (str): Internal type name (e.g., 'law_enforcement', 'agri_utility')
+            
+        Returns:
+            str: Readable display name (e.g., 'Law Enforcement', 'Agriculture & Utility')
+        """
+        readable_names = {
+            'law_enforcement': 'Law Enforcement',
+            'military': 'Military',
+            'medical': 'Medical',
+            'suspicious': 'Suspicious',
+            'newsagency': 'News Agency',
+            'balloons': 'Balloons',
+            'agri_utility': 'Agriculture & Utility',
+            'ukr_conflict': 'Ukrainian Conflict',
+            'global_prior_known_accident': 'Prior Known Accident',
+            'trainer_educational': 'Trainer & Educational',
+        }
+        return readable_names.get(type_name, type_name)
+    
+    def aircraft_matches_type_filter(self, icao: str, type_filter: str | list) -> bool:
+        """
+        Check if aircraft matches one or more type filters.
+        
+        REUSED BY: watchlist filtering, search queries, notifications
+        
+        This method supports both single type strings and lists of types, providing
+        flexible filtering for watchlist checks and aircraft queries.
+        
+        Args:
+            icao (str): Aircraft ICAO hex code
+            type_filter (str or list): Single type name or list of type names to check against
+            
+        Returns:
+            bool: True if aircraft matches any of the specified types, False otherwise
+            
+        Example:
+            >>> if self.aircraft_matches_type_filter('AE152C', 'military'):
+            >>>     print("Military aircraft!")
+            >>> if self.aircraft_matches_type_filter(icao, ['military', 'law_enforcement']):
+            >>>     print("Military or law enforcement!")
+        """
+        aircraft_types = self.get_aircraft_types(icao)
+        
+        if isinstance(type_filter, str):
+            return type_filter in aircraft_types
+        elif isinstance(type_filter, (list, tuple)):
+            return any(t in aircraft_types for t in type_filter)
+        
+        return False
+
+    async def normalize_watchlist(self, user_config) -> dict:
+        """
+        Normalize watchlist from old format (list of ICAO codes) to new format (dict by type).
+        
+        REUSED BY: watchlist commands, background task initialization
+        
+        This method provides backward compatibility by automatically converting watchlists
+        from the old list-based format to the new type-based dictionary format on first run.
+        
+        Old format: ["A2F41D", "B3E52C", ...]
+        New format: {"icao": ["A2F41D", "B3E52C"], "type": [...], ...}
+        
+        Args:
+            user_config: User config object from self.cog.config.user(user)
+            
+        Returns:
+            dict: Normalized watchlist in new format
+            
+        Example:
+            >>> watchlist = await self.normalize_watchlist(user_config)
+            >>> # Returns: {"icao": ["A2F41D"], "type": ["military"]}
+        """
+        watchlist = await user_config.watchlist()
+        
+        # If already in new format (dict), return as-is
+        if isinstance(watchlist, dict):
+            return watchlist
+        
+        # If in old format (list), convert to new format
+        if isinstance(watchlist, list):
+            normalized = {
+                'icao': [item.upper() for item in watchlist if item],
+                'type': [],
+                'callsign': [],
+                'reg': [],
+                'squawk': [],
+            }
+            # Save the normalized version
+            await user_config.watchlist.set(normalized)
+            return normalized
+        
+        # Empty or invalid format - return empty new format
+        return {'icao': [], 'type': [], 'callsign': [], 'reg': [], 'squawk': []}
+
+    async def watchlist_add_item(self, user_config, item_type: str, value: str):
+        """
+        Add an item to the user's watchlist (reuses normalize_watchlist).
+        
+        REUSED BY: watchlist add command, button callback
+        
+        Args:
+            user_config: User config object from self.cog.config.user(user)
+            item_type (str): Type of item ('icao', 'type', 'callsign', 'reg', 'squawk')
+            value (str): Value of the item to add
+            
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        # Normalize first
+        watchlist = await self.normalize_watchlist(user_config)
+        
+        # Validate item_type
+        if item_type not in watchlist:
+            return False, f"Invalid item type. Must be one of: {', '.join(watchlist.keys())}"
+        
+        # Normalize value
+        normalized_value = value.upper().strip() if item_type == 'icao' else value.lower().strip()
+        
+        # Check if already in watchlist
+        if normalized_value in watchlist[item_type]:
+            return False, f"**{value}** is already in your watchlist."
+        
+        # Add to watchlist
+        watchlist[item_type].append(normalized_value)
+        await user_config.watchlist.set(watchlist)
+        
+        return True, f"Added **{value}** ({item_type}) to your watchlist."
+
+    async def watchlist_remove_item(self, user_config, item_type: str, value: str):
+        """
+        Remove an item from the user's watchlist (reuses normalize_watchlist).
+        
+        REUSED BY: watchlist remove command
+        
+        Args:
+            user_config: User config object from self.cog.config.user(user)
+            item_type (str): Type of item ('icao', 'type', 'callsign', 'reg', 'squawk')
+            value (str): Value of the item to remove
+            
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        # Normalize first
+        watchlist = await self.normalize_watchlist(user_config)
+        
+        # Validate item_type
+        if item_type not in watchlist:
+            return False, f"Invalid item type. Must be one of: {', '.join(watchlist.keys())}"
+        
+        # Normalize value
+        normalized_value = value.upper().strip() if item_type == 'icao' else value.lower().strip()
+        
+        # Check if in watchlist
+        if normalized_value not in watchlist[item_type]:
+            return False, f"**{value}** is not in your watchlist."
+        
+        # Remove from watchlist
+        watchlist[item_type].remove(normalized_value)
+        await user_config.watchlist.set(watchlist)
+        
+        return True, f"Removed **{value}** ({item_type}) from your watchlist."
+
+    async def get_all_watchlist_items(self, user_config) -> dict:
+        """
+        Get all watchlist items for a user (reuses normalize_watchlist).
+        
+        REUSED BY: watchlist list/status commands, background task
+        
+        Args:
+            user_config: User config object from self.cog.config.user(user)
+            
+        Returns:
+            dict: All watchlist items organized by type
+            
+        Example:
+            >>> items = await self.get_all_watchlist_items(user_config)
+            >>> # Returns: {"icao": ["A2F41D"], "type": ["military"], ...}
+        """
+        return await self.normalize_watchlist(user_config)
+
+    def aircraft_matches_watchlist(self, aircraft_data: dict, watchlist: dict) -> bool:
+        """
+        Check if an aircraft matches any item in the user's watchlist.
+        
+        REUSED BY: check_watched_aircraft background task, status checking
+        
+        This method checks against all watchlist entry types (ICAO, type, callsign, registration, squawk).
+        It provides centralized matching logic to avoid duplication in the background task.
+        
+        Args:
+            aircraft_data (dict): Aircraft data from API
+            watchlist (dict): Watchlist structure from normalize_watchlist()
+            
+        Returns:
+            bool: True if aircraft matches any watchlist entry, False otherwise
+            
+        Example:
+            >>> watchlist = {"icao": ["A2F41D"], "type": ["military"], "callsign": [], ...}
+            >>> aircraft = {"hex": "A2F41D", "flight": "TEST123", ...}
+            >>> if self.aircraft_matches_watchlist(aircraft, watchlist):
+            >>>     print("Aircraft is in watchlist!")
+        """
+        # Check ICAO hex code
+        aircraft_icao = (aircraft_data.get('hex') or '').upper()
+        if aircraft_icao in watchlist.get('icao', []):
+            return True
+        
+        # Check aircraft types
+        aircraft_types = self.get_aircraft_types(aircraft_icao)
+        if any(t in watchlist.get('type', []) for t in aircraft_types):
+            return True
+        
+        # Check callsign (flight number)
+        aircraft_callsign = (aircraft_data.get('flight') or '').lower().strip()
+        if aircraft_callsign and aircraft_callsign in watchlist.get('callsign', []):
+            return True
+        
+        # Check registration (tail number)
+        aircraft_reg = (aircraft_data.get('reg') or '').lower().strip()
+        if aircraft_reg and aircraft_reg in watchlist.get('reg', []):
+            return True
+        
+        # Check squawk code
+        aircraft_squawk = aircraft_data.get('squawk', '')
+        if aircraft_squawk and aircraft_squawk in watchlist.get('squawk', []):
+            return True
+        
+        return False
+
     def create_watchlist_landing_embed(self, icao, aircraft_data):
         """
         Create a landing notification embed for watchlist aircraft.
@@ -940,12 +1389,9 @@ class HelperUtils:
         Returns:
             discord.Embed: Formatted landing notification embed
         """
-        from redbot.core.i18n import Translator
-        _watchlist = Translator("Skysearch", __file__)
-        
         embed = discord.Embed(
-            title=_watchlist("🛬 Aircraft Landed"),
-            description=_watchlist("**{icao}** from your watchlist has landed!").format(icao=icao),
+            title=_("🛬 Aircraft Landed"),
+            description=_("**{icao}** from your watchlist has landed!").format(icao=icao),
             color=0x00ff00
         )
         
@@ -955,9 +1401,9 @@ class HelperUtils:
             aircraft_data.get('lon', 'N/A')
         )
         
-        embed.add_field(name=_watchlist("Status"), value=_watchlist("On ground"), inline=True)
-        embed.add_field(name=_watchlist("Callsign"), value=callsign, inline=True)
-        embed.add_field(name=_watchlist("Position"), value=position, inline=False)
+        embed.add_field(name=_("Status"), value=_("On ground"), inline=True)
+        embed.add_field(name=_("Callsign"), value=callsign, inline=True)
+        embed.add_field(name=_("Position"), value=position, inline=False)
         
         return embed
     
@@ -972,12 +1418,9 @@ class HelperUtils:
         Returns:
             discord.Embed: Formatted takeoff notification embed
         """
-        from redbot.core.i18n import Translator
-        _watchlist = Translator("Skysearch", __file__)
-        
         embed = discord.Embed(
-            title=_watchlist("✈️ Aircraft Took Off"),
-            description=_watchlist("**{icao}** from your watchlist has taken off!").format(icao=icao),
+            title=_("✈️ Aircraft Took Off"),
+            description=_("**{icao}** from your watchlist has taken off!").format(icao=icao),
             color=0x0099ff
         )
         

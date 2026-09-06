@@ -6,11 +6,11 @@ import discord
 import asyncio
 import datetime
 import aiohttp
+import re
 from discord.ext import commands
-from redbot.core.i18n import Translator, cog_i18n
+from redbot.core.i18n import cog_i18n
 from ..utils.stats import build_stats_embed, build_stats_charts, build_stats_config_embed
-
-_ = Translator("Skysearch", __file__)
+from .. import _
 
 
 @cog_i18n(_)
@@ -387,6 +387,133 @@ class AdminCommands:
         )
         await ctx.send(embed=embed)
 
+    async def set_planespotters_user_agent(self, ctx, user_agent: str):
+        """Set the User-Agent header specifically used for Planespotters requests."""
+        user_agent = (user_agent or "").strip()
+        if not user_agent:
+            embed = discord.Embed(
+                title="Planespotters User-Agent Error",
+                description="User-Agent cannot be empty. Use `clearplanespottersuseragent` to clear it.",
+                color=0xff4545,
+            )
+            await ctx.send(embed=embed)
+            return
+
+        # Validate contact info as required by planespotters
+        # Normalize whitespace to handle multi-line or oddly separated inputs
+        contact_ok = False
+        auto_fixed = None
+        try:
+            normalized = re.sub(r"\s+", " ", user_agent).strip()
+            # parenthesized contact (preferred)
+            m = re.search(r"\(([^)]+)\)", normalized)
+            if m:
+                inner = m.group(1)
+                if re.search(r"https?://", inner) or re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", inner):
+                    contact_ok = True
+            # fallback: accept simple indicators (contains '@' or 'http') for robustness
+            if not contact_ok:
+                url_match = re.search(r"https?://[\w./?&=#%+-]+", normalized)
+                email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", normalized)
+                if url_match or email_match:
+                    contact = (url_match.group(0) if url_match else email_match.group(0))
+                    auto_fixed = f"{normalized} (+{contact})"
+                    contact_ok = True
+                else:
+                    # Very permissive fallback: any '@' or 'http' substring counts; try to extract token
+                    if "@" in normalized or "http" in normalized:
+                        # Extract first token that looks like an email or url, falling back to the whole UA
+                        tokens = normalized.split()
+                        found = None
+                        for t in tokens:
+                            if "@" in t or t.startswith("http"):
+                                found = t
+                                break
+                        contact = found if found else (tokens[-1] if tokens else normalized)
+                        auto_fixed = f"{normalized} (+{contact})"
+                        contact_ok = True
+        except Exception:
+            contact_ok = False
+
+        if not contact_ok:
+            # Provide diagnostic info to help owners troubleshoot why their UA was rejected
+            desc = (
+                "Planespotters requires server User-Agent strings to include a contact URL or email. "
+                "Example: `MyFlightTracker/1.2 (+https://example.com/contact)`"
+            )
+            embed = discord.Embed(title="User-Agent Error: Contact Required", description=desc, color=0xff4545)
+            try:
+                norm = normalized if 'normalized' in locals() else user_agent
+                embed.add_field(name="Normalized input", value=norm, inline=False)
+                # Show whether a URL/email regex matched (for debugging)
+                urlm = url_match.group(0) if 'url_match' in locals() and url_match else None
+                mailm = email_match.group(0) if 'email_match' in locals() and email_match else None
+                embed.add_field(name="Detected URL", value=urlm or "(none)", inline=True)
+                embed.add_field(name="Detected Email", value=mailm or "(none)", inline=True)
+            except Exception:
+                pass
+            await ctx.send(embed=embed)
+            return
+
+        # If we auto-fixed the UA to parenthesize the contact, save that corrected value instead
+        if auto_fixed:
+            user_agent = auto_fixed
+
+        await self.cog.config.planespotters_user_agent.set(user_agent)
+        embed = discord.Embed(
+            title="Planespotters User-Agent Updated",
+            description="Planespotters-specific User-Agent has been configured.",
+            color=0x2BBD8E,
+        )
+        embed.add_field(name="User-Agent", value=f"`{user_agent}`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def check_planespotters_user_agent(self, ctx):
+        """Show the currently configured Planespotters User-Agent."""
+        ua = await self.cog.config.planespotters_user_agent()
+        if ua:
+            embed = discord.Embed(
+                title="Planespotters User-Agent",
+                description="✅ Planespotters-specific User-Agent is configured.",
+                color=0x2BBD8E,
+            )
+            embed.add_field(name="User-Agent", value=f"`{ua}`", inline=False)
+            # warn if missing contact info
+            try:
+                normalized = re.sub(r"\s+", " ", ua).strip()
+                has_contact = False
+                m = re.search(r"\(([^)]+)\)", normalized)
+                if m:
+                    inner = m.group(1)
+                    if re.search(r"https?://", inner) or re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", inner):
+                        has_contact = True
+                if not has_contact and re.search(r"https?://[\w./?&=#%+-]+", normalized):
+                    has_contact = True
+                if not has_contact and re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", normalized):
+                    has_contact = True
+                if not has_contact:
+                    embed.add_field(name="Warning", value="Configured User-Agent has no contact URL or email; Planespotters may reject it (403).", inline=False)
+            except Exception:
+                pass
+        else:
+            embed = discord.Embed(
+                title="Planespotters User-Agent",
+                description="ℹ️ No Planespotters-specific User-Agent is configured. The general User-Agent or a default will be used.",
+                color=0xfffffe,
+            )
+            embed.add_field(name="Set", value="Use `*aircraft setplanespottersuseragent <value>`", inline=False)
+        await ctx.send(embed=embed)
+
+    async def clear_planespotters_user_agent(self, ctx):
+        """Clear the Planespotters-specific User-Agent."""
+        await self.cog.config.planespotters_user_agent.clear()
+        embed = discord.Embed(
+            title="Planespotters User-Agent Cleared",
+            description="Planespotters-specific User-Agent cleared.",
+            color=0xff4545,
+        )
+        await ctx.send(embed=embed)
+
     async def debug_api(self, ctx):
         """Debug API key and connection issues - sends detailed info via DM."""
         try:
@@ -492,6 +619,39 @@ class AdminCommands:
                                 pass
                 except Exception as e:
                     debug_info += f"❌ **{endpoint_name}:** Error - {str(e)}\n"
+
+            # Test Planespotters API connectivity and headers (use example identifiers)
+            debug_info += f"\n**Planespotters API Tests:**\n"
+            try:
+                # Get headers the cog would send to planespotters
+                try:
+                    ps_headers = await self.cog.helpers._get_http_headers(service="planespotters")
+                except Exception:
+                    ps_headers = {}
+                debug_info += f"**Headers to Planespotters:**\n```{ps_headers}```\n"
+
+                planespotters_tests = [
+                    ("Planespotters hex example", "https://api.planespotters.net/pub/photos/hex/ABC123"),
+                    ("Planespotters reg N625UP", "https://api.planespotters.net/pub/photos/reg/N625UP"),
+                ]
+
+                for name, url in planespotters_tests:
+                    try:
+                        if not self.cog.api._http_client:
+                            self.cog.api._http_client = aiohttp.ClientSession()
+                        async with self.cog.api._http_client.get(url, headers=ps_headers) as resp:
+                            debug_info += f"🔗 **{name}:** Status {resp.status}\n"
+                            try:
+                                body = await resp.text()
+                                short = body[:800] + ('...' if len(body) > 800 else '')
+                                debug_info += f"📋 **Response Headers:** `{dict(resp.headers)}`\n"
+                                debug_info += f"📄 **Body (truncated):**\n```\n{short}\n```\n"
+                            except Exception as e:
+                                debug_info += f"📄 **Error reading body:** {e}\n"
+                    except Exception as e:
+                        debug_info += f"❌ **{name}:** Error - {str(e)}\n"
+            except Exception as e:
+                debug_info += f"❌ **Planespotters tests failed:** {str(e)}\n"
 
             # Test both API modes with comprehensive endpoints
             debug_info += f"\n**Testing both API modes...**\n"

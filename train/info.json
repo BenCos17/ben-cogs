@@ -1,0 +1,15 @@
+{
+    "author": [
+        "bencos18 (492089091320446976)"
+    ],
+    "install_msg": "(this is a WIP - not ready for public use yet, but you can try it it if you want just lmk about any bugs)\nThank you for adding my repo!\nFeelB free to message me on discord or create a github issue if you need support or help with anything.",
+    "short": "some random cogs I made for my own use and decided to make public.",
+    "description": "Irish Rail lookup cog.",
+    "tags": [
+        "rail",
+        "lookup"
+    ],
+    "end_user_data_statement": "This cog does not store any end user data.",
+    "type": "COG",
+    "hidden": true
+}

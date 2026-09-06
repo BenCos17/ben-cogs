@@ -3,9 +3,7 @@ import json
 import urllib.parse
 import datetime
 import time
-from redbot.core.i18n import Translator
-
-_ = Translator("StatsUtils", __file__)
+from .. import _
 
 
 def _quickchart_url(chart_config: dict, width: int, height: int) -> str:
@@ -15,6 +13,17 @@ def _quickchart_url(chart_config: dict, width: int, height: int) -> str:
         + f"width={width}&height={height}&format=png&backgroundColor=transparent&devicePixelRatio=2&c="
         + urllib.parse.quote(config_json)
     )
+
+
+def _normalize_history(history: dict) -> dict[int, int]:
+    """Normalize config-loaded history keys and values for chart lookups."""
+    normalized = {}
+    for key, value in history.items():
+        try:
+            normalized[int(key)] = int(value)
+        except (TypeError, ValueError):
+            continue
+    return normalized
 
 
 def build_stats_embed(api_stats: dict, _=None) -> discord.Embed:
@@ -117,7 +126,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 "options": {"plugins": {"legend": {"position": "bottom"}}},
             }
             url = _quickchart_url(chart, 600, 300)
-            e = discord.Embed(title="Success vs Failure")
+            e = discord.Embed(title=_("Success vs Failure"))
             e.set_image(url=url)
             chart_embeds.append(e)
     except Exception:
@@ -140,7 +149,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 "options": {"plugins": {"legend": {"position": "bottom"}}},
             }
             url = _quickchart_url(chart, 600, 300)
-            e = discord.Embed(title="API Mode Usage")
+            e = discord.Embed(title=_("API Mode Usage"))
             e.set_image(url=url)
             chart_embeds.append(e)
     except Exception:
@@ -158,7 +167,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 "data": {
                     "labels": labels,
                     "datasets": [{
-                        "label": "Requests",
+                        "label": _("Requests"),
                         "data": data_vals,
                         "backgroundColor": "#f1c40f",
                     }],
@@ -170,7 +179,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 },
             }
             url = _quickchart_url(chart, 800, 300)
-            e = discord.Embed(title="Top Endpoints")
+            e = discord.Embed(title=_("Top Endpoints"))
             e.set_image(url=url)
             chart_embeds.append(e)
     except Exception:
@@ -181,6 +190,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
         hourly = api_stats.get("hourly_requests", {}) or {}
         if not isinstance(hourly, dict):
             hourly = {}
+        hourly = _normalize_history(hourly)
         
         # Get all available hours and sort them
         available_hours = sorted([int(h) for h in hourly.keys() if hourly.get(h, 0) > 0])
@@ -196,7 +206,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 hours_to_show = [h for h in available_hours if h >= (current_hour - 50)]
             
             if hours_to_show:
-                labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%m/%d %H:%M") for h in hours_to_show]
+                labels = [datetime.datetime.fromtimestamp(h * 3600).strftime("%d/%m %H:%M") for h in hours_to_show]
                 data_vals = [int(hourly.get(h, 0)) for h in hours_to_show]
                 
                 chart = {
@@ -204,7 +214,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                     "data": {
                         "labels": labels,
                         "datasets": [{
-                            "label": "Requests per hour",
+                            "label": _("Requests per hour"),
                             "data": data_vals,
                             "fill": False,
                             "borderColor": "#1abc9c",
@@ -217,7 +227,11 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                     },
                 }
                 url = _quickchart_url(chart, 800, 300)
-                e = discord.Embed(title=f"Hourly Requests (Historical: {len(hours_to_show)} hours from {datetime.datetime.fromtimestamp(hours_to_show[0] * 3600).strftime('%m/%d')} to {datetime.datetime.fromtimestamp(hours_to_show[-1] * 3600).strftime('%m/%d')})")
+                e = discord.Embed(title=_("Hourly Requests (Historical: {count} hours from {start} to {end})").format(
+                    count=len(hours_to_show),
+                    start=datetime.datetime.fromtimestamp(hours_to_show[0] * 3600).strftime('%d/%m'),
+                    end=datetime.datetime.fromtimestamp(hours_to_show[-1] * 3600).strftime('%d/%m')
+                ))
                 e.set_image(url=url)
                 chart_embeds.append(e)
         else:
@@ -232,7 +246,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 "data": {
                     "labels": labels,
                     "datasets": [{
-                        "label": "Requests per hour",
+                        "label": _("Requests per hour"),
                         "data": data_vals,
                         "fill": False,
                         "borderColor": "#1abc9c",
@@ -245,7 +259,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 },
             }
             url = _quickchart_url(chart, 800, 300)
-            e = discord.Embed(title="Hourly Requests (no data available)")
+            e = discord.Embed(title=_("Hourly Requests (no data available)"))
             e.set_image(url=url)
             chart_embeds.append(e)
     except Exception:
@@ -256,6 +270,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
         daily = api_stats.get("daily_requests", {}) or {}
         if not isinstance(daily, dict):
             daily = {}
+        daily = _normalize_history(daily)
         
         # Get all available days and sort them
         available_days = sorted([int(d) for d in daily.keys() if daily.get(d, 0) > 0])
@@ -265,7 +280,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
             days_to_show = available_days
             
             if days_to_show:
-                labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%m/%d") for d in days_to_show]
+                labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%d/%m") for d in days_to_show]
                 data_vals = [int(daily.get(d, 0)) for d in days_to_show]
                 
                 chart = {
@@ -273,7 +288,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                     "data": {
                         "labels": labels,
                         "datasets": [{
-                            "label": "Total requests per day",
+                            "label": _("Total requests per day"),
                             "data": data_vals,
                             "backgroundColor": "#2c3e50",
                         }],
@@ -284,14 +299,18 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                     },
                 }
                 url = _quickchart_url(chart, 800, 300)
-                e = discord.Embed(title=f"Total Requests (Historical: {len(days_to_show)} days from {datetime.datetime.fromtimestamp(days_to_show[0] * 86400).strftime('%m/%d')} to {datetime.datetime.fromtimestamp(days_to_show[-1] * 86400).strftime('%m/%d')})")
+                e = discord.Embed(title=_("Total Requests (Historical: {count} days from {start} to {end})").format(
+                    count=len(days_to_show),
+                    start=datetime.datetime.fromtimestamp(days_to_show[0] * 86400).strftime('%d/%m'),
+                    end=datetime.datetime.fromtimestamp(days_to_show[-1] * 86400).strftime('%d/%m')
+                ))
                 e.set_image(url=url)
                 chart_embeds.append(e)
         else:
             # No data available, show empty chart
             current_day = int(time.time() // 86400)
             days = [current_day - i for i in reversed(range(30))]
-            labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%b %d") for d in days]
+            labels = [datetime.datetime.fromtimestamp(d * 86400).strftime("%d/%m") for d in days]
             data_vals = [0] * 30
             
             chart = {
@@ -299,7 +318,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 "data": {
                     "labels": labels,
                     "datasets": [{
-                        "label": "Total requests per day",
+                        "label": _("Total requests per day"),
                         "data": data_vals,
                         "backgroundColor": "#2c3e50",
                     }],
@@ -310,7 +329,7 @@ def build_stats_charts(api_stats: dict, _=None) -> list[discord.Embed]:
                 },
             }
             url = _quickchart_url(chart, 800, 300)
-            e = discord.Embed(title="Total Requests (no data available)")
+            e = discord.Embed(title=_("Total Requests (no data available)"))
             e.set_image(url=url)
             chart_embeds.append(e)
     except Exception:

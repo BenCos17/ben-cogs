@@ -2,7 +2,7 @@
 
 
 
-This documentation covers the setup, operation, and troubleshooting of the ISS-Mimic Discord Cog. This system bridges NASA's public Lightstreamer telemetry feed directly into your Discord server.
+This documentation covers the setup, operation, and troubleshooting of the ISS Cog. This system bridges NASA's public Lightstreamer telemetry feed directly into your Discord server.
 
 
 

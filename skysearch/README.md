@@ -13,6 +13,8 @@ To use the SkySearch cog, follow these steps:
    - Set up airplanes.live API key: `[p]setapikey <your-api-key>`
    - Optional: Set up AVWX token for aviation weather: `[p]airport setavwxtoken <your-token>`
    - Optional: Set a custom User-Agent for outbound HTTP (useful for APIs that require it): `[p]setuseragent <user-agent>`
+   - Optional: Set a custom User-Agent for outbound HTTP (useful for APIs that require it): `[p]setuseragent <user-agent>`
+   - Optional: Set a Planespotters-specific User-Agent (required by planespotters.net to include contact info): `[p]aircraft setplanespottersuseragent <user-agent>`
    - Optional: Configure Google Maps API for airport imagery
    - Optional: Configure OpenAI API for airport summaries
    - Optional: Configure airportdb.io API for runway data
@@ -95,6 +97,9 @@ Notes:
 - `[p]aircraft setuseragent <value>` - Set a custom User-Agent header for outbound HTTP requests
 - `[p]aircraft useragent` - Show current User-Agent setting
 - `[p]aircraft clearuseragent` - Clear User-Agent setting (use aiohttp default)
+- `[p]aircraft setplanespottersuseragent <value>` - Set a Planespotters-specific User-Agent header (must include contact URL/email)
+- `[p]aircraft checkplanespottersuseragent` - Show the configured Planespotters User-Agent
+- `[p]aircraft clearplanespottersuseragent` - Clear the Planespotters-specific User-Agent
 - `[p]airport setavwxtoken <token>` - Set AVWX API token
 - `[p]airport avwxtoken` - Check AVWX token status
 - `[p]airport clearavwxtoken` - Clear AVWX token
