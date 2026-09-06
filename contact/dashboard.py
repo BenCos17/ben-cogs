@@ -133,6 +133,7 @@ class ContactDashboard:
         description="Contact Support Dashboard",
         methods=("GET", "POST"),
         context_ids=["guild_id"],
+        optional_kwargs=["ticket_id", "action", "message"],
     )
     async def dashboard_support(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
         import wtforms
