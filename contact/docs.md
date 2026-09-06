@@ -104,6 +104,16 @@ The dashboard provides:
 
 Refresh the selected ticket page to see new messages.
 
+## Retention
+
+Closed tickets are retained for 30 days by default. Staff with `Manage Server` can change the period:
+
+```text
+[p]contactretention <days>
+```
+
+Use `0` to keep closed tickets indefinitely. Run `[p]contactretention` without a value to view the current setting. Open tickets are never removed by retention cleanup.
+
 ## Permissions
 
 - `Manage Server`: configure the staff channel and post the support panel.

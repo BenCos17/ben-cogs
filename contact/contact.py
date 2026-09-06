@@ -9,6 +9,7 @@ from typing import Optional
 import discord
 from redbot.core import Config, commands
 from redbot.core.bot import Red
+from redbot.core import tasks
 
 from .dashboard import ContactDashboard
 
@@ -21,8 +22,24 @@ class Contact(commands.Cog, ContactDashboard):
         self._ticket_id_lock = asyncio.Lock()
         self.config = Config.get_conf(self, identifier=9182736450)
         self.config.register_guild(
-            staff_channel=None, tickets={}, next_ticket_id=1, pending_ticket_choices={}
+            staff_channel=None,
+            tickets={},
+            next_ticket_id=1,
+            pending_ticket_choices={},
+            retention_days=30,
         )
+
+    async def cog_load(self) -> None:
+        await ContactDashboard.cog_load(self)
+        self._retention_cleanup.start()
+
+    def cog_unload(self) -> None:
+        self._retention_cleanup.cancel()
+
+    @tasks.loop(hours=1)
+    async def _retention_cleanup(self):
+        for guild in self.bot.guilds:
+            await self._purge_expired_tickets(guild)
 
     @staticmethod
     def _timestamp() -> str:
@@ -56,6 +73,23 @@ class Contact(commands.Cog, ContactDashboard):
         if changed:
             await self.config.guild(guild).next_ticket_id.set(next_id)
         return await self.config.guild(guild).tickets()
+
+    async def _purge_expired_tickets(self, guild: discord.Guild) -> None:
+        retention_days = await self.config.guild(guild).retention_days()
+        if not isinstance(retention_days, int) or retention_days <= 0:
+            return
+        cutoff = datetime.now(timezone.utc).timestamp() - retention_days * 86400
+        async with self.config.guild(guild).tickets() as tickets:
+            for ticket_id, ticket in list(tickets.items()):
+                closed_at = ticket.get("closed_at")
+                if ticket.get("status") != "closed" or not closed_at:
+                    continue
+                try:
+                    closed_timestamp = datetime.fromisoformat(closed_at).timestamp()
+                except (TypeError, ValueError):
+                    continue
+                if closed_timestamp <= cutoff:
+                    del tickets[ticket_id]
 
     async def _new_ticket(self, guild: discord.Guild, user_id: int) -> dict:
         async with self._ticket_id_lock:
@@ -192,12 +226,29 @@ class Contact(commands.Cog, ContactDashboard):
                 pass
         return True
 
+    async def _member_reply_to_ticket(
+        self, guild: discord.Guild, ticket_id: str, user_id: int, author: str, message: str
+    ) -> bool:
+        tickets = await self._migrate_tickets(guild)
+        ticket = self._find_ticket(tickets, ticket_id)
+        if ticket is None or ticket.get("status") != "open" or ticket.get("user_id") != user_id:
+            return False
+        await self._append_message(guild, ticket_id, author, message, "user")
+        thread_id = ticket.get("thread_id")
+        thread = guild.get_thread(thread_id) if isinstance(thread_id, int) else None
+        if thread is not None:
+            await thread.send(
+                embed=self._conversation_embed("New message from member", message, discord.Color.green())
+            )
+        return True
+
     async def _close_ticket(self, guild: discord.Guild, ticket_id: str) -> Optional[dict]:
         async with self.config.guild(guild).tickets() as tickets:
             ticket = tickets.get(ticket_id)
             if ticket is None:
                 return None
             ticket["status"] = "closed"
+            ticket["closed_at"] = self._timestamp()
             closed_ticket = dict(ticket)
         async with self.config.guild(guild).pending_ticket_choices() as choices:
             if choices.get(str(closed_ticket.get("user_id"))) == ticket_id:
@@ -260,6 +311,27 @@ class Contact(commands.Cog, ContactDashboard):
         """Set the channel where support DMs are delivered."""
         await self.config.guild(ctx.guild).staff_channel.set(channel.id)
         await ctx.send(f"Support messages will be delivered to {channel.mention}.")
+
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def contactretention(self, ctx: commands.Context, days: Optional[int] = None):
+        """Set or show closed-ticket retention in days; zero keeps tickets forever."""
+        if days is None:
+            current_days = await self.config.guild(ctx.guild).retention_days()
+            if current_days == 0:
+                await ctx.send("Closed tickets are kept indefinitely.")
+            else:
+                await ctx.send(f"Closed tickets are kept for {current_days} days.")
+            return
+        if days < 0:
+            await ctx.send("Retention must be zero or greater.")
+            return
+        await self.config.guild(ctx.guild).retention_days.set(days)
+        if days == 0:
+            await ctx.send("Closed tickets will be kept indefinitely.")
+        else:
+            await ctx.send(f"Closed tickets will be deleted after {days} days.")
 
     @commands.command()
     @commands.guild_only()

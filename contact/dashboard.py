@@ -137,16 +137,33 @@ class ContactDashboard:
         name=None,
         description="Contact Support Dashboard",
         methods=("GET", "POST"),
-        context_ids=["guild_id"],
-        optional_kwargs=["ticket_id", "action", "message"],
+        context_ids=["guild_id", "user_id"],
+        optional_kwargs=["ticket_id", "action", "message", "retention_days"],
     )
-    async def dashboard_support(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
+    async def dashboard_support(
+        self, guild: discord.Guild, user: discord.User, **kwargs
+    ) -> typing.Dict[str, typing.Any]:
+        requested_ticket_id = self._request_value(kwargs, "ticket_id")
+        tickets = await self._migrate_tickets(guild)
+        member = guild.get_member(user.id)
+        is_staff = member is not None and (
+            member.guild_permissions.manage_messages or member.guild_permissions.manage_guild
+        )
+        requested_ticket = tickets.get(requested_ticket_id)
+        is_ticket_owner = requested_ticket is not None and requested_ticket.get("user_id") == user.id
+        if not is_staff and not is_ticket_owner:
+            return {
+                "status": 0,
+                "error_code": 403,
+                "error_message": "This dashboard is available to support staff or the member who owns the selected ticket.",
+            }
         import wtforms
-        from wtforms.validators import InputRequired, Length
+        from wtforms.validators import InputRequired, Length, NumberRange
 
         form_base = kwargs.get("Form")
         reply_form = None
         close_form = None
+        retention_form = None
         if form_base is not None:
             class ReplyForm(form_base):
                 ticket_id = wtforms.HiddenField()
@@ -163,10 +180,21 @@ class ContactDashboard:
                 action = wtforms.HiddenField(default="close")
                 submit = wtforms.SubmitField("Close ticket", render_kw={"class": "danger"})
 
+            class RetentionForm(form_base):
+                retention_days = wtforms.IntegerField(
+                    "Closed ticket retention (days)",
+                    validators=[InputRequired(), NumberRange(min=0, max=3650)],
+                )
+                submit = wtforms.SubmitField("Save retention")
+
             reply_form = ReplyForm(prefix="contact_reply_")
             close_form = CloseForm(prefix="contact_close_")
+            if member.guild_permissions.manage_guild:
+                retention_form = RetentionForm(prefix="contact_retention_")
 
-        tickets = await self._migrate_tickets(guild)
+        if not is_staff:
+            tickets = {requested_ticket_id: requested_ticket}
+        retention_days = await self.config.guild(guild).retention_days()
         action = self._request_value(kwargs, "action")
         ticket_id = self._request_value(kwargs, "ticket_id")
         notice = ""
@@ -179,11 +207,23 @@ class ContactDashboard:
         elif close_form is not None and close_form.validate_on_submit():
             action = "close"
             ticket_id = str(close_form.ticket_id.data)
+        elif retention_form is not None and retention_form.validate_on_submit():
+            retention_days = int(retention_form.retention_days.data)
+            await self.config.guild(guild).retention_days.set(retention_days)
+            notice = (
+                "Closed tickets will be kept indefinitely."
+                if retention_days == 0
+                else f"Closed tickets will be deleted after {retention_days} days."
+            )
+            action_completed = True
         if action == "reply" and ticket_id and message:
             try:
-                success = await self._reply_to_ticket(
-                    guild, ticket_id, "Dashboard staff", message
-                )
+                if is_staff:
+                    success = await self._reply_to_ticket(guild, ticket_id, "Dashboard staff", message)
+                else:
+                    success = await self._member_reply_to_ticket(
+                        guild, ticket_id, user.id, str(user), message
+                    )
                 notice = "Reply sent." if success else "That ticket is no longer open."
                 action_completed = success
             except (discord.Forbidden, discord.HTTPException):
@@ -222,6 +262,8 @@ class ContactDashboard:
             reply_form.ticket_id.data = ticket_id
         if close_form is not None:
             close_form.ticket_id.data = ticket_id
+        if retention_form is not None:
+            retention_form.retention_days.data = retention_days
         detail = (
             self._ticket_detail(guild, ticket_id, selected_ticket, reply_form, close_form)
             if selected_ticket
@@ -252,6 +294,8 @@ class ContactDashboard:
             .contact-dashboard .latest {{ margin-bottom: 16px; padding: 12px; background: #313338; border: 1px solid #5865f2; border-radius: 4px; }}
             .contact-dashboard .latest p {{ white-space: pre-wrap; margin-bottom: 0; }}
             .contact-dashboard .close-form {{ display: inline-block; margin-top: 10px; }}
+            .contact-dashboard .retention-settings {{ margin: 24px 0; padding: 16px; background: #2b2d31; border: 1px solid #3f4147; border-radius: 6px; }}
+            .contact-dashboard input[type="number"] {{ max-width: 180px; padding: 8px; color: #ffffff; background: #1e1f22; border: 1px solid #4e5058; border-radius: 4px; }}
             @media (max-width: 700px) {{ .contact-dashboard {{ padding: 16px; }} .contact-dashboard table, .contact-dashboard thead, .contact-dashboard tbody, .contact-dashboard th, .contact-dashboard td, .contact-dashboard tr {{ display: block; }} .contact-dashboard thead {{ display: none; }} .contact-dashboard tr {{ padding: 12px 0; border-bottom: 1px solid #3f4147; }} .contact-dashboard td {{ border: 0; padding: 4px 0; }} }}
         </style>
         <section class="contact-dashboard">
@@ -261,6 +305,11 @@ class ContactDashboard:
                 <div class="stat"><strong>{len(open_tickets)}</strong>Open conversations</div>
                 <div class="stat"><strong>{len(closed_tickets)}</strong>Closed conversations</div>
                 <div class="stat"><strong>{html.escape(str(channel_name))}</strong>Staff channel</div>
+            </div>
+            <div class="retention-settings">
+                <h3>Ticket retention</h3>
+                <p class="muted">Closed tickets are deleted after the selected number of days. Use 0 to keep them indefinitely.</p>
+                {str(retention_form) if retention_form is not None else '<p class="muted">Retention settings require Manage Server.</p>'}
             </div>
             <h3>Open conversations</h3>
             {f'<p class="notice">{html.escape(notice)}</p>' if notice else ''}
