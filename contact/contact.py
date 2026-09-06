@@ -175,7 +175,11 @@ class Contact(commands.Cog, ContactDashboard):
             if ticket is None:
                 return None
             ticket["status"] = "closed"
-            return dict(ticket)
+            closed_ticket = dict(ticket)
+        async with self.config.guild(guild).pending_ticket_choices() as choices:
+            if choices.get(str(closed_ticket.get("user_id"))) == ticket_id:
+                choices.pop(str(closed_ticket.get("user_id")), None)
+        return closed_ticket
 
     @commands.command()
     @commands.guild_only()
@@ -302,15 +306,17 @@ class Contact(commands.Cog, ContactDashboard):
         """Close a support conversation and send its transcript."""
         tickets = await self._migrate_tickets(ctx.guild)
         ticket_id, ticket = self._find_open_ticket(tickets, user.id)
-        async with self.config.guild(ctx.guild).tickets() as tickets:
-            if ticket is None:
-                await ctx.send("No conversation exists for that user.")
-                return
-            ticket["status"] = "closed"
-            transcript = "\n".join(
-                f"[{entry['timestamp']}] {entry['author']}: {entry['content']}"
-                for entry in ticket["messages"]
-            )
+        if ticket is None or ticket_id is None:
+            await ctx.send("No conversation exists for that user.")
+            return
+        closed_ticket = await self._close_ticket(ctx.guild, ticket_id)
+        if closed_ticket is None:
+            await ctx.send("No conversation exists for that user.")
+            return
+        transcript = "\n".join(
+            f"[{entry['timestamp']}] {entry['author']}: {entry['content']}"
+            for entry in closed_ticket["messages"]
+        )
 
         await ctx.send(
             f"Conversation with {user.mention} closed.",
@@ -393,7 +399,11 @@ class Contact(commands.Cog, ContactDashboard):
 
         tickets = await self._migrate_tickets(message.guild)
         ticket = next(
-            (candidate for candidate in tickets.values() if candidate.get("thread_id") == message.channel.id),
+            (
+                candidate
+                for candidate in tickets.values()
+                if candidate.get("thread_id") == message.channel.id and candidate.get("status") == "open"
+            ),
             None,
         )
         if ticket is None or not isinstance(message.channel, discord.Thread):
