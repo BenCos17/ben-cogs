@@ -178,11 +178,15 @@ class Contact(commands.Cog, ContactDashboard):
         thread_id = ticket.get("thread_id")
         thread = guild.get_thread(thread_id) if isinstance(thread_id, int) else None
         if thread is not None:
-            await thread.send(
+            thread_message = await thread.send(
                 embed=self._conversation_embed(
                     f"Message from {author}", message, discord.Color.blurple()
                 )
             )
+            try:
+                await thread_message.add_reaction("✅")
+            except (discord.Forbidden, discord.HTTPException):
+                pass
         return True
 
     async def _close_ticket(self, guild: discord.Guild, ticket_id: str) -> Optional[dict]:
@@ -495,3 +499,7 @@ class Contact(commands.Cog, ContactDashboard):
             return
 
         await self._append_message(message.guild, ticket_id, str(message.author), content, "staff")
+        try:
+            await message.add_reaction("✅")
+        except (discord.Forbidden, discord.HTTPException):
+            pass

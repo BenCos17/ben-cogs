@@ -159,6 +159,7 @@ class ContactDashboard:
         action = self._request_value(kwargs, "action")
         ticket_id = self._request_value(kwargs, "ticket_id")
         notice = ""
+        action_completed = False
         message = self._request_value(kwargs, "message").strip()
         if reply_form is not None and reply_form.validate_on_submit():
             action = "reply"
@@ -173,13 +174,28 @@ class ContactDashboard:
                     guild, ticket_id, "Dashboard staff", message
                 )
                 notice = "Reply sent." if success else "That ticket is no longer open."
+                action_completed = success
             except (discord.Forbidden, discord.HTTPException):
                 notice = "The reply could not be delivered to the user."
             tickets = await self._migrate_tickets(guild)
         elif action == "close" and ticket_id:
             closed = await self._close_ticket(guild, ticket_id)
             notice = "Ticket closed." if closed else "Ticket not found."
+            action_completed = closed is not None
             tickets = await self._migrate_tickets(guild)
+
+        request_url = kwargs.get("request_url")
+        if action_completed and isinstance(request_url, str):
+            return {
+                "status": 0,
+                "notifications": [
+                    {
+                        "message": f"✅ {notice}",
+                        "category": "success",
+                    }
+                ],
+                "redirect_url": request_url,
+            }
         open_tickets = [ticket for ticket in tickets.values() if ticket.get("status") == "open"]
         closed_tickets = [ticket for ticket in tickets.values() if ticket.get("status") == "closed"]
         configured_channel = await self.config.guild(guild).staff_channel()
