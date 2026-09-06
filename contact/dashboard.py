@@ -209,7 +209,7 @@ class ContactDashboard:
             .contact-dashboard th {{ color: #b5bac1; font-size: 12px; text-transform: uppercase; }}
             .contact-dashboard .muted {{ color: #b5bac1; font-size: 12px; }}
             .contact-dashboard .empty {{ padding: 24px; text-align: center; color: #b5bac1; }}
-            .contact-dashboard .button {{ display: inline-block; margin-bottom: 6px; padding: 6px 10px; color: #ffffff; background: #5865f2; border-radius: 4px; text-decoration: none; }}
+            .contact-dashboard a.button {{ display: inline-block; margin-bottom: 6px; padding: 6px 10px; color: #ffffff !important; background: #5865f2 !important; border-radius: 4px; text-decoration: none; font-weight: 600; }}
             .contact-dashboard code {{ color: #dbdee1; font-size: 11px; }}
             .contact-dashboard a {{ color: #8ea1e1; }}
             .contact-dashboard textarea {{ width: 100%; box-sizing: border-box; margin: 8px 0; padding: 10px; color: #ffffff; background: #1e1f22; border: 1px solid #4e5058; border-radius: 4px; resize: vertical; }}
