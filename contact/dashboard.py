@@ -17,6 +17,71 @@ def dashboard_page(*args, **kwargs):
 class ContactDashboard:
     """Red Dashboard integration for the contact cog."""
 
+    @staticmethod
+    def _ticket_rows(guild: discord.Guild, tickets: dict) -> str:
+        rows = []
+        for ticket_id, ticket in tickets.items():
+            if ticket.get("status") != "open":
+                continue
+
+            messages = ticket.get("messages", [])
+            last_message = messages[-1] if messages else {}
+            last_content = last_message.get("content", "No messages yet")
+            last_author = last_message.get("author", "Unknown")
+            user_id = ticket.get("user_id")
+            member = guild.get_member(int(user_id)) if str(user_id).isdigit() else None
+            user_label = member.display_name if member else f"User {user_id}"
+            thread_id = ticket.get("thread_id")
+            thread = guild.get_thread(thread_id) if isinstance(thread_id, int) else None
+            thread_link = (
+                f'<a class="button" href="https://discord.com/channels/{guild.id}/{thread.id}">Open thread</a>'
+                if thread
+                else '<span class="muted">Thread unavailable</span>'
+            )
+            rows.append(
+                "<tr>"
+                f"<td><a href=\"?ticket_id={html.escape(str(ticket_id), quote=True)}\"><strong>{html.escape(user_label)}</strong></a><br>"
+                f"<span class=\"muted\">Ticket {html.escape(str(ticket_id))}</span><br>"
+                f"<span class=\"muted\">ID {html.escape(str(user_id))}</span><br>"
+                f"<span class=\"muted\">{html.escape(str(len(messages)))} messages</span></td>"
+                f"<td>{html.escape(last_author)}<br>{html.escape(last_content[:240])}</td>"
+                f"<td>{html.escape(last_message.get('timestamp', 'Unknown'))}</td>"
+                f"<td>{thread_link}<br><a href=\"?ticket_id={html.escape(str(ticket_id), quote=True)}\">View messages and reply</a></td>"
+                "</tr>"
+            )
+        return "".join(rows) or '<tr><td colspan="4" class="empty">No open conversations.</td></tr>'
+
+    @staticmethod
+    def _ticket_detail(ticket_id: str, ticket: dict) -> str:
+        entries = []
+        for entry in ticket.get("messages", []):
+            direction = "Staff" if entry.get("direction") == "staff" else "User"
+            entries.append(
+                f'<article class="message"><strong>{html.escape(direction)}: '
+                f'{html.escape(entry.get("author", "Unknown"))}</strong>'
+                f'<time>{html.escape(entry.get("timestamp", ""))}</time>'
+                f'<p>{html.escape(entry.get("content", "(attachment only)"))}</p></article>'
+            )
+        transcript = "".join(entries) or '<p class="muted">No messages yet.</p>'
+        return f"""
+        <section class="ticket-detail">
+            <h3>Ticket {html.escape(ticket_id)}</h3>
+            <div class="messages">{transcript}</div>
+            <form method="get">
+                <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
+                <input type="hidden" name="action" value="reply">
+                <label for="reply">Reply to the user</label>
+                <textarea id="reply" name="message" rows="4" required placeholder="Write a reply..."></textarea>
+                <button type="submit">Send reply</button>
+            </form>
+            <form method="get" class="close-form">
+                <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
+                <input type="hidden" name="action" value="close">
+                <button type="submit" class="danger">Close ticket</button>
+            </form>
+        </section>
+        """
+
     async def _register_dashboard(self, dashboard_cog: commands.Cog) -> None:
         rpc = getattr(dashboard_cog, "rpc", None)
         handler = getattr(rpc, "third_parties_handler", None)
@@ -39,36 +104,73 @@ class ContactDashboard:
         context_ids=["guild_id"],
     )
     async def dashboard_support(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
-        tickets = await self.config.guild(guild).tickets()
+        tickets = await self._migrate_tickets(guild)
+        action = kwargs.get("action")
+        ticket_id = str(kwargs.get("ticket_id", ""))
+        notice = ""
+        if action == "reply" and ticket_id and kwargs.get("message", "").strip():
+            try:
+                success = await self._reply_to_ticket(
+                    guild, ticket_id, "Dashboard staff", kwargs["message"].strip()
+                )
+                notice = "Reply sent." if success else "That ticket is no longer open."
+            except (discord.Forbidden, discord.HTTPException):
+                notice = "The reply could not be delivered to the user."
+            tickets = await self._migrate_tickets(guild)
+        elif action == "close" and ticket_id:
+            closed = await self._close_ticket(guild, ticket_id)
+            notice = "Ticket closed." if closed else "Ticket not found."
+            tickets = await self._migrate_tickets(guild)
         open_tickets = [ticket for ticket in tickets.values() if ticket.get("status") == "open"]
+        closed_tickets = [ticket for ticket in tickets.values() if ticket.get("status") == "closed"]
         configured_channel = await self.config.guild(guild).staff_channel()
         channel = guild.get_channel(configured_channel) if configured_channel else None
-        channel_name = channel.mention if channel else "Not configured"
+        channel_name = f"#{channel.name}" if channel else "Not configured"
 
-        rows = []
-        for user_id, ticket in tickets.items():
-            if ticket.get("status") != "open":
-                continue
-            messages = ticket.get("messages", [])
-            last_message = messages[-1].get("content", "") if messages else "No messages yet"
-            rows.append(
-                "<li><strong>User "
-                + html.escape(str(user_id))
-                + "</strong>: "
-                + html.escape(last_message[:200])
-                + "</li>"
-            )
-
-        conversation_list = "".join(rows) or "<li>No open conversations.</li>"
+        rows = self._ticket_rows(guild, tickets)
+        selected_ticket = tickets.get(ticket_id)
+        detail = self._ticket_detail(ticket_id, selected_ticket) if selected_ticket else ""
         page = f"""
-        <div style="padding: 24px; color: #e6e6e6; background: #1e1f22; border-radius: 8px;">
-            <h2 style="color: #ffffff;">Contact Support</h2>
-            <p>Live support conversation overview for <strong>{html.escape(guild.name)}</strong>.</p>
-            <p><strong>Staff channel:</strong> {html.escape(str(channel_name))}</p>
-            <p><strong>Open conversations:</strong> {len(open_tickets)}</p>
-            <h3 style="color: #ffffff;">Conversations</h3>
-            <ul>{conversation_list}</ul>
-        </div>
+        <style>
+            .contact-dashboard {{ max-width: 1100px; padding: 24px; color: #e6e6e6; background: #1e1f22; }}
+            .contact-dashboard h2, .contact-dashboard h3 {{ color: #ffffff; margin-top: 0; }}
+            .contact-dashboard .stats {{ display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }}
+            .contact-dashboard .stat {{ min-width: 150px; padding: 14px; background: #2b2d31; border: 1px solid #3f4147; border-radius: 6px; }}
+            .contact-dashboard .stat strong {{ display: block; font-size: 24px; color: #ffffff; }}
+            .contact-dashboard table {{ width: 100%; border-collapse: collapse; background: #2b2d31; }}
+            .contact-dashboard th, .contact-dashboard td {{ padding: 12px; border-bottom: 1px solid #3f4147; text-align: left; vertical-align: top; }}
+            .contact-dashboard th {{ color: #b5bac1; font-size: 12px; text-transform: uppercase; }}
+            .contact-dashboard .muted {{ color: #b5bac1; font-size: 12px; }}
+            .contact-dashboard .empty {{ padding: 24px; text-align: center; color: #b5bac1; }}
+            .contact-dashboard .button {{ display: inline-block; margin-bottom: 6px; padding: 6px 10px; color: #ffffff; background: #5865f2; border-radius: 4px; text-decoration: none; }}
+            .contact-dashboard code {{ color: #dbdee1; font-size: 11px; }}
+            .contact-dashboard a {{ color: #8ea1e1; }}
+            .contact-dashboard textarea {{ width: 100%; box-sizing: border-box; margin: 8px 0; padding: 10px; color: #ffffff; background: #1e1f22; border: 1px solid #4e5058; border-radius: 4px; resize: vertical; }}
+            .contact-dashboard button {{ padding: 8px 14px; color: #ffffff; background: #5865f2; border: 0; border-radius: 4px; cursor: pointer; }}
+            .contact-dashboard button.danger {{ background: #da373c; }}
+            .contact-dashboard .ticket-detail {{ margin-top: 24px; padding: 16px; background: #2b2d31; border: 1px solid #3f4147; border-radius: 6px; }}
+            .contact-dashboard .message {{ margin: 10px 0; padding: 10px; background: #1e1f22; border-left: 3px solid #5865f2; }}
+            .contact-dashboard time {{ display: block; color: #b5bac1; font-size: 11px; }}
+            .contact-dashboard .message p {{ white-space: pre-wrap; margin-bottom: 0; }}
+            .contact-dashboard .close-form {{ display: inline-block; margin-top: 10px; }}
+            @media (max-width: 700px) {{ .contact-dashboard {{ padding: 16px; }} .contact-dashboard table, .contact-dashboard thead, .contact-dashboard tbody, .contact-dashboard th, .contact-dashboard td, .contact-dashboard tr {{ display: block; }} .contact-dashboard thead {{ display: none; }} .contact-dashboard tr {{ padding: 12px 0; border-bottom: 1px solid #3f4147; }} .contact-dashboard td {{ border: 0; padding: 4px 0; }} }}
+        </style>
+        <section class="contact-dashboard">
+            <h2>Contact Support</h2>
+            <p>Staff inbox for <strong>{html.escape(guild.name)}</strong>. Refresh this page for the latest messages.</p>
+            <div class="stats">
+                <div class="stat"><strong>{len(open_tickets)}</strong>Open conversations</div>
+                <div class="stat"><strong>{len(closed_tickets)}</strong>Closed conversations</div>
+                <div class="stat"><strong>{html.escape(str(channel_name))}</strong>Staff channel</div>
+            </div>
+            <h3>Open conversations</h3>
+            {f'<p class="notice">{html.escape(notice)}</p>' if notice else ''}
+            <table>
+                <thead><tr><th>User</th><th>Latest message</th><th>Last activity</th><th>Actions</th></tr></thead>
+                <tbody>{rows}</tbody>
+            </table>
+            {detail}
+        </section>
         """
         return {"status": 0, "web_content": {"source": page}}
 
@@ -78,6 +180,18 @@ class ContactDashboard:
         configured = await self.config.guild(guild).staff_channel()
 
         embed = discord.Embed(title="Contact Dashboard", color=discord.Color.blurple())
-        embed.add_field(name="Open conversations", value=str(len(open_tickets)))
+        embed.add_field(name="Open conversations", value=str(len(open_tickets)), inline=True)
         embed.add_field(name="Configured channel", value="yes" if configured else "no")
+        for ticket_id, ticket in list(tickets.items()):
+            if ticket.get("status") != "open":
+                continue
+            messages = ticket.get("messages", [])
+            latest = messages[-1].get("content", "No messages yet") if messages else "No messages yet"
+            embed.add_field(
+                name=f"Ticket {ticket_id} ({len(messages)} messages)",
+                value=latest[:180],
+                inline=False,
+            )
+            if len(embed.fields) >= 25:
+                break
         return embed

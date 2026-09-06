@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Optional
@@ -16,8 +17,9 @@ class Contact(commands.Cog, ContactDashboard):
 
     def __init__(self, bot: Red):
         self.bot = bot
+        self._ticket_id_lock = asyncio.Lock()
         self.config = Config.get_conf(self, identifier=9182736450)
-        self.config.register_guild(staff_channel=None, tickets={})
+        self.config.register_guild(staff_channel=None, tickets={}, next_ticket_id=1)
 
     @staticmethod
     def _timestamp() -> str:
@@ -33,10 +35,51 @@ class Contact(commands.Cog, ContactDashboard):
                 return guild
         return None
 
+    async def _migrate_tickets(self, guild: discord.Guild) -> dict:
+        """Convert the original user-keyed storage to ticket-keyed storage."""
+        async with self.config.guild(guild).tickets() as tickets:
+            next_id = await self.config.guild(guild).next_ticket_id()
+            changed = False
+            for key, ticket in list(tickets.items()):
+                if "ticket_id" in ticket:
+                    continue
+                ticket_id = f"{guild.id}-{next_id:04d}"
+                next_id += 1
+                ticket["ticket_id"] = ticket_id
+                ticket["user_id"] = int(key) if str(key).isdigit() else ticket.get("user_id")
+                tickets[ticket_id] = ticket
+                del tickets[key]
+                changed = True
+        if changed:
+            await self.config.guild(guild).next_ticket_id.set(next_id)
+        return await self.config.guild(guild).tickets()
+
+    async def _new_ticket(self, guild: discord.Guild, user_id: int) -> dict:
+        async with self._ticket_id_lock:
+            next_id = await self.config.guild(guild).next_ticket_id()
+            ticket_id = f"{guild.id}-{next_id:04d}"
+            await self.config.guild(guild).next_ticket_id.set(next_id + 1)
+        ticket = {"ticket_id": ticket_id, "user_id": user_id, "status": "open", "messages": []}
+        async with self.config.guild(guild).tickets() as tickets:
+            tickets[ticket_id] = ticket
+        return ticket
+
+    @staticmethod
+    def _find_ticket(tickets: dict, ticket_id: str) -> Optional[dict]:
+        ticket = tickets.get(ticket_id)
+        return ticket if ticket and ticket.get("ticket_id") == ticket_id else None
+
+    @staticmethod
+    def _find_open_ticket(tickets: dict, user_id: int) -> tuple[Optional[str], Optional[dict]]:
+        for ticket_id, ticket in reversed(list(tickets.items())):
+            if ticket.get("user_id") == user_id and ticket.get("status") == "open":
+                return ticket_id, ticket
+        return None, None
+
     async def _ticket_guild(self, user_id: int) -> Optional[discord.Guild]:
         for guild in self.bot.guilds:
-            tickets = await self.config.guild(guild).tickets()
-            if str(user_id) in tickets:
+            tickets = await self._migrate_tickets(guild)
+            if any(ticket.get("user_id") == user_id and ticket.get("status") == "open" for ticket in tickets.values()):
                 return guild
         return None
 
@@ -61,7 +104,7 @@ class Contact(commands.Cog, ContactDashboard):
             if thread is None:
                 return
             async with self.config.guild(guild).tickets() as tickets:
-                tickets[str(message.author.id)]["thread_id"] = thread.id
+                tickets[ticket["ticket_id"]]["thread_id"] = thread.id
 
         embed = discord.Embed(
             title="New support message",
@@ -80,11 +123,12 @@ class Contact(commands.Cog, ContactDashboard):
         await thread.send(embed=embed)
 
     async def _append_message(
-        self, guild: discord.Guild, user_id: int, author: str, content: str, direction: str
+        self, guild: discord.Guild, ticket_id: str, author: str, content: str, direction: str
     ):
         async with self.config.guild(guild).tickets() as tickets:
-            ticket = tickets.setdefault(str(user_id), {"status": "open", "messages": []})
-            ticket["status"] = "open"
+            ticket = tickets.get(ticket_id)
+            if ticket is None:
+                return None
             ticket["messages"].append(
                 {
                     "author": author,
@@ -93,6 +137,24 @@ class Contact(commands.Cog, ContactDashboard):
                     "timestamp": self._timestamp(),
                 }
             )
+            return dict(ticket)
+
+    async def _reply_to_ticket(self, guild: discord.Guild, ticket_id: str, author: str, message: str) -> bool:
+        tickets = await self._migrate_tickets(guild)
+        ticket = self._find_ticket(tickets, ticket_id)
+        if ticket is None or ticket.get("status") != "open":
+            return False
+        user = await self.bot.fetch_user(int(ticket["user_id"]))
+        await user.send(embed=self._conversation_embed("Message from staff", message, discord.Color.blurple()))
+        await self._append_message(guild, ticket_id, author, message, "staff")
+        return True
+
+    async def _close_ticket(self, guild: discord.Guild, ticket_id: str) -> Optional[dict]:
+        async with self.config.guild(guild).tickets() as tickets:
+            ticket = tickets.get(ticket_id)
+            if ticket is None:
+                return None
+            ticket["status"] = "closed"
             return dict(ticket)
 
     @commands.command()
@@ -136,45 +198,30 @@ class Contact(commands.Cog, ContactDashboard):
 
     async def _support_reply(self, ctx: commands.Context, user: discord.User, message: str):
         """Reply to a user through their DM."""
-        tickets = await self.config.guild(ctx.guild).tickets()
-        ticket = tickets.get(str(user.id))
-        if ticket is None:
+        tickets = await self._migrate_tickets(ctx.guild)
+        ticket_id, ticket = self._find_open_ticket(tickets, user.id)
+        if ticket is None or ticket_id is None:
             await ctx.send("No conversation exists for that user.")
             return
 
         try:
-            await user.send(
-                embed=self._conversation_embed(
-                    "Message from staff", message, discord.Color.blurple()
-                )
-            )
+            await self._reply_to_ticket(ctx.guild, ticket_id, str(ctx.author), message)
         except discord.Forbidden:
             await ctx.send("I could not DM that user.")
             return
 
-        await self._append_message(ctx.guild, user.id, str(ctx.author), message, "staff")
         await ctx.send("Reply sent.", delete_after=5)
 
     async def _support_open(self, ctx: commands.Context, user: discord.User, message: str):
         """Open a staff thread and start a two-way DM with a user."""
-        tickets = await self.config.guild(ctx.guild).tickets()
-        ticket = tickets.get(str(user.id))
-        if ticket and ticket.get("thread_id"):
-            thread = ctx.guild.get_thread(ticket["thread_id"])
-            if thread:
-                await ctx.send(f"Conversation already open: {thread.mention}")
-                return
-
         thread = await self._create_thread(ctx.guild, user)
         if thread is None:
             await ctx.send("The configured support channel is missing or is not a text channel.")
             return
+        ticket = await self._new_ticket(ctx.guild, user.id)
+        ticket_id = ticket["ticket_id"]
         async with self.config.guild(ctx.guild).tickets() as all_tickets:
-            all_tickets[str(user.id)] = {
-                "status": "open",
-                "thread_id": thread.id,
-                "messages": [],
-            }
+            all_tickets[ticket_id]["thread_id"] = thread.id
 
         try:
             await user.send(
@@ -186,7 +233,7 @@ class Contact(commands.Cog, ContactDashboard):
             await ctx.send("The thread was opened, but I could not DM that user.")
             return
 
-        await self._append_message(ctx.guild, user.id, str(ctx.author), message, "staff")
+        await self._append_message(ctx.guild, ticket_id, str(ctx.author), message, "staff")
         await thread.send(
             embed=self._conversation_embed(
                 f"Message from {ctx.author}", message, discord.Color.green()
@@ -196,8 +243,9 @@ class Contact(commands.Cog, ContactDashboard):
 
     async def _support_close(self, ctx: commands.Context, user: discord.User):
         """Close a support conversation and send its transcript."""
+        tickets = await self._migrate_tickets(ctx.guild)
+        ticket_id, ticket = self._find_open_ticket(tickets, user.id)
         async with self.config.guild(ctx.guild).tickets() as tickets:
-            ticket = tickets.get(str(user.id))
             if ticket is None:
                 await ctx.send("No conversation exists for that user.")
                 return
@@ -211,7 +259,7 @@ class Contact(commands.Cog, ContactDashboard):
             f"Conversation with {user.mention} closed.",
             file=discord.File(
                 BytesIO(transcript.encode("utf-8")),
-                filename=f"conversation-{user.id}.txt",
+                filename=f"conversation-{ticket_id}.txt",
             ),
         )
         try:
@@ -227,9 +275,9 @@ class Contact(commands.Cog, ContactDashboard):
 
     async def _support_list(self, ctx: commands.Context):
         """List open support conversations."""
-        tickets = await self.config.guild(ctx.guild).tickets()
-        open_tickets = [user_id for user_id, ticket in tickets.items() if ticket.get("status") == "open"]
-        await ctx.send("Open conversations: " + (", ".join(open_tickets) if open_tickets else "none"))
+        tickets = await self._migrate_tickets(ctx.guild)
+        open_tickets = [ticket_id for ticket_id, ticket in tickets.items() if ticket.get("status") == "open"]
+        await ctx.send("Open tickets: " + (", ".join(open_tickets) if open_tickets else "none"))
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -243,13 +291,20 @@ class Contact(commands.Cog, ContactDashboard):
             if guild is None:
                 return
 
+            tickets = await self._migrate_tickets(guild)
+            ticket_id, ticket = self._find_open_ticket(tickets, message.author.id)
+            if ticket is None or ticket_id is None:
+                ticket = await self._new_ticket(guild, message.author.id)
+                ticket_id = ticket["ticket_id"]
             ticket = await self._append_message(
-                guild, message.author.id, str(message.author), message.content, "user"
+                guild, ticket_id, str(message.author), message.content, "user"
             )
+            if ticket is None:
+                return
             await self._send_staff_message(guild, ticket, message)
             return
 
-        tickets = await self.config.guild(message.guild).tickets()
+        tickets = await self._migrate_tickets(message.guild)
         ticket = next(
             (candidate for candidate in tickets.values() if candidate.get("thread_id") == message.channel.id),
             None,
@@ -261,12 +316,13 @@ class Contact(commands.Cog, ContactDashboard):
         if context.valid:
             return
 
-        user_id = next(
-            (user_id for user_id, value in tickets.items() if value.get("thread_id") == message.channel.id),
+        ticket_id = next(
+            (ticket_id for ticket_id, value in tickets.items() if value.get("thread_id") == message.channel.id),
             None,
         )
-        if user_id is None:
+        if ticket_id is None:
             return
+        user_id = tickets[ticket_id].get("user_id")
 
         content = message.content or "(attachment only)"
         if message.attachments:
@@ -283,4 +339,4 @@ class Contact(commands.Cog, ContactDashboard):
             await message.channel.send("I could not deliver that reply to the user.")
             return
 
-        await self._append_message(message.guild, int(user_id), str(message.author), content, "staff")
+        await self._append_message(message.guild, ticket_id, str(message.author), content, "staff")

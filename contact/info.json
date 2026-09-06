@@ -2,7 +2,7 @@
     "author": [
         "BenCos18"
     ],
-    "install_msg": "Configure a staff channel with `[p]contactsetup #channel`, then use `[p]support open @user` to start a conversation.",
+    "install_msg": "Configure a staff channel with `[p]contactsetup #channel`. Open the Contact Support dashboard to view unique ticket IDs, read full transcripts, reply, and close tickets. `[p]support open @user` can create additional tickets for the same user.",
     "name": "Contact",
     "short": "DM-based staff support conversations.",
     "description": "Forwards user DMs to a configured staff channel and provides staff reply, close, and transcript commands.",
