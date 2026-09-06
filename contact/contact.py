@@ -19,7 +19,9 @@ class Contact(commands.Cog, ContactDashboard):
         self.bot = bot
         self._ticket_id_lock = asyncio.Lock()
         self.config = Config.get_conf(self, identifier=9182736450)
-        self.config.register_guild(staff_channel=None, tickets={}, next_ticket_id=1)
+        self.config.register_guild(
+            staff_channel=None, tickets={}, next_ticket_id=1, pending_ticket_choices={}
+        )
 
     @staticmethod
     def _timestamp() -> str:
@@ -139,6 +141,24 @@ class Contact(commands.Cog, ContactDashboard):
             )
             return dict(ticket)
 
+    async def _open_tickets_for_user(self, guild: discord.Guild, user_id: int) -> dict:
+        tickets = await self._migrate_tickets(guild)
+        return {
+            ticket_id: ticket
+            for ticket_id, ticket in tickets.items()
+            if ticket.get("user_id") == user_id and ticket.get("status") == "open"
+        }
+
+    async def _ask_for_ticket(self, guild: discord.Guild, user: discord.abc.User, ticket_ids: list[str]):
+        choices = ", ".join(ticket_ids)
+        await user.send(
+            embed=self._conversation_embed(
+                "Which ticket should receive this message?",
+                f"You have multiple open tickets: {choices}\nReply with one ticket ID.",
+                discord.Color.orange(),
+            )
+        )
+
     async def _reply_to_ticket(self, guild: discord.Guild, ticket_id: str, author: str, message: str) -> bool:
         tickets = await self._migrate_tickets(guild)
         ticket = self._find_ticket(tickets, ticket_id)
@@ -179,22 +199,57 @@ class Contact(commands.Cog, ContactDashboard):
         self,
         ctx: commands.Context,
         action: str,
-        user: Optional[discord.User] = None,
+        target: Optional[str] = None,
         *,
         message: str = "Hello, how can we help you?",
     ):
-        """Open, reply to, close, or list support conversations."""
+        """Open, reply to, close, or list support conversations by user or ticket ID."""
         action = action.lower()
         if action == "list":
             await self._support_list(ctx)
-        elif action == "open" and user is not None:
+        elif action == "open" and target is not None:
+            try:
+                user = await commands.UserConverter().convert(ctx, target)
+            except commands.BadArgument:
+                await ctx.send("I could not find that user.")
+                return
             await self._support_open(ctx, user, message)
-        elif action == "reply" and user is not None:
-            await self._support_reply(ctx, user, message)
-        elif action == "close" and user is not None:
-            await self._support_close(ctx, user)
+        elif action in {"reply", "close"} and target is not None:
+            tickets = await self._migrate_tickets(ctx.guild)
+            ticket = self._find_ticket(tickets, target)
+            if ticket is not None:
+                if action == "reply":
+                    await self._support_ticket_reply(ctx, target, message)
+                else:
+                    await self._support_ticket_close(ctx, target)
+                return
+            try:
+                user = await commands.UserConverter().convert(ctx, target)
+            except commands.BadArgument:
+                await ctx.send("I could not find that user or ticket ID.")
+                return
+            if action == "reply":
+                await self._support_reply(ctx, user, message)
+            else:
+                await self._support_close(ctx, user)
         else:
             await ctx.send_help(ctx.command)
+
+    async def _support_ticket_reply(self, ctx: commands.Context, ticket_id: str, message: str):
+        try:
+            if await self._reply_to_ticket(ctx.guild, ticket_id, str(ctx.author), message):
+                await ctx.send("Reply sent.", delete_after=5)
+            else:
+                await ctx.send("That ticket is not open.")
+        except discord.Forbidden:
+            await ctx.send("I could not DM that user.")
+
+    async def _support_ticket_close(self, ctx: commands.Context, ticket_id: str):
+        ticket = await self._close_ticket(ctx.guild, ticket_id)
+        if ticket is None:
+            await ctx.send("Ticket not found.")
+            return
+        await ctx.send(f"Ticket {ticket_id} closed.", delete_after=5)
 
     async def _support_reply(self, ctx: commands.Context, user: discord.User, message: str):
         """Reply to a user through their DM."""
@@ -226,7 +281,9 @@ class Contact(commands.Cog, ContactDashboard):
         try:
             await user.send(
                 embed=self._conversation_embed(
-                    "Support conversation opened", message, discord.Color.green()
+                    f"Support ticket {ticket_id} opened",
+                    f"Your ticket ID is `{ticket_id}`.\n\n{message}",
+                    discord.Color.green(),
                 )
             )
         except discord.Forbidden:
@@ -291,11 +348,41 @@ class Contact(commands.Cog, ContactDashboard):
             if guild is None:
                 return
 
-            tickets = await self._migrate_tickets(guild)
-            ticket_id, ticket = self._find_open_ticket(tickets, message.author.id)
-            if ticket is None or ticket_id is None:
+            open_tickets = await self._open_tickets_for_user(guild, message.author.id)
+            pending_choices = await self.config.guild(guild).pending_ticket_choices()
+            pending_ticket_id = pending_choices.get(str(message.author.id))
+            content = message.content.strip()
+
+            if pending_ticket_id not in open_tickets:
+                pending_ticket_id = None
+                async with self.config.guild(guild).pending_ticket_choices() as choices:
+                    choices.pop(str(message.author.id), None)
+
+            if len(open_tickets) > 1 and content in open_tickets:
+                async with self.config.guild(guild).pending_ticket_choices() as choices:
+                    choices[str(message.author.id)] = content
+                await message.author.send(
+                    f"Ticket {content} selected. Your next message will be sent to that ticket."
+                )
+                return
+            if len(open_tickets) > 1 and pending_ticket_id is None:
+                await self._ask_for_ticket(guild, message.author, list(open_tickets))
+                return
+
+            ticket_id = pending_ticket_id or next(iter(open_tickets), None)
+            if ticket_id is None:
                 ticket = await self._new_ticket(guild, message.author.id)
                 ticket_id = ticket["ticket_id"]
+                await message.author.send(
+                    embed=self._conversation_embed(
+                        f"Support ticket {ticket_id} created",
+                        f"Your ticket ID is `{ticket_id}`. Keep it to select this ticket when you have multiple open tickets.",
+                        discord.Color.green(),
+                    )
+                )
+            else:
+                ticket = open_tickets[ticket_id]
+
             ticket = await self._append_message(
                 guild, ticket_id, str(message.author), message.content, "user"
             )
