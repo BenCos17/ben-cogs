@@ -50,12 +50,12 @@ class ContactDashboard:
             thread_id = ticket.get("thread_id")
             thread = guild.get_thread(thread_id) if isinstance(thread_id, int) else None
             thread_link = (
-                f'<a href="https://discord.com/channels/{guild.id}/{thread.id}">Open Discord thread</a>'
+                f'<a aria-label="Open Discord thread for ticket {html.escape(str(ticket_id), quote=True)}" href="https://discord.com/channels/{guild.id}/{thread.id}">Open Discord thread</a>'
                 if thread
                 else '<span class="muted">Thread unavailable</span>'
             )
             reply_link = (
-                f'<a class="button" href="?ticket_id={html.escape(str(ticket_id), quote=True)}">Reply in dashboard</a>'
+                f'<a class="button" aria-label="Reply to ticket {html.escape(str(ticket_id), quote=True)}" href="?ticket_id={html.escape(str(ticket_id), quote=True)}">Reply in dashboard</a>'
             )
             rows.append(
                 "<tr>"
@@ -98,12 +98,12 @@ class ContactDashboard:
                 <input type="hidden" name="action" value="reply">
                 <label for="reply">Reply to the user</label>
                 <textarea id="reply" name="message" rows="4" required placeholder="Write a reply..."></textarea>
-                <button type="submit">Send reply to member</button>
+                <button type="submit" aria-label="Send reply to member for ticket {html.escape(ticket_id, quote=True)}">Send reply to member</button>
             </form>
             <form method="post" class="close-form">
                 <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
                 <input type="hidden" name="action" value="close">
-                <button type="submit" class="danger">Close ticket</button>
+                <button type="submit" class="danger" aria-label="Close ticket {html.escape(ticket_id, quote=True)}">Close ticket</button>
             </form>
         </section>
         """

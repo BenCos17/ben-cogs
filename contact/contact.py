@@ -226,7 +226,7 @@ class Contact(commands.Cog, ContactDashboard):
         view = discord.ui.View()
         view.add_item(
             discord.ui.Button(
-                label="Message Support",
+                label="Open a Support Ticket",
                 style=discord.ButtonStyle.link,
                 url=f"https://discord.com/users/{bot_user.id}",
             )
