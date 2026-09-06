@@ -26,7 +26,7 @@ class ContactDashboard:
 
             messages = ticket.get("messages", [])
             last_message = messages[-1] if messages else {}
-            last_content = last_message.get("content", "No messages yet")
+            last_content = last_message.get("content") or "(attachment only)"
             last_author = last_message.get("author", "Unknown")
             user_id = ticket.get("user_id")
             member = guild.get_member(int(user_id)) if str(user_id).isdigit() else None
@@ -63,9 +63,12 @@ class ContactDashboard:
                 f'<p>{html.escape(entry.get("content", "(attachment only)"))}</p></article>'
             )
         transcript = "".join(entries) or '<p class="muted">No messages yet.</p>'
+        latest = ticket.get("messages", [])[-1] if ticket.get("messages") else {}
+        latest_content = latest.get("content") or "(attachment only)"
         return f"""
         <section class="ticket-detail">
             <h3>Ticket {html.escape(ticket_id)}</h3>
+            <div class="latest"><strong>Latest message</strong><time>{html.escape(latest.get("timestamp", ""))}</time><p>{html.escape(latest_content)}</p></div>
             <div class="messages">{transcript}</div>
             <form method="get">
                 <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
@@ -152,12 +155,14 @@ class ContactDashboard:
             .contact-dashboard .message {{ margin: 10px 0; padding: 10px; background: #1e1f22; border-left: 3px solid #5865f2; }}
             .contact-dashboard time {{ display: block; color: #b5bac1; font-size: 11px; }}
             .contact-dashboard .message p {{ white-space: pre-wrap; margin-bottom: 0; }}
+            .contact-dashboard .latest {{ margin-bottom: 16px; padding: 12px; background: #313338; border: 1px solid #5865f2; border-radius: 4px; }}
+            .contact-dashboard .latest p {{ white-space: pre-wrap; margin-bottom: 0; }}
             .contact-dashboard .close-form {{ display: inline-block; margin-top: 10px; }}
             @media (max-width: 700px) {{ .contact-dashboard {{ padding: 16px; }} .contact-dashboard table, .contact-dashboard thead, .contact-dashboard tbody, .contact-dashboard th, .contact-dashboard td, .contact-dashboard tr {{ display: block; }} .contact-dashboard thead {{ display: none; }} .contact-dashboard tr {{ padding: 12px 0; border-bottom: 1px solid #3f4147; }} .contact-dashboard td {{ border: 0; padding: 4px 0; }} }}
         </style>
         <section class="contact-dashboard">
             <h2>Contact Support</h2>
-            <p>Staff inbox for <strong>{html.escape(guild.name)}</strong>. Refresh this page for the latest messages.</p>
+            <p>Staff inbox for <strong>{html.escape(guild.name)}</strong>. <a href="?ticket_id={html.escape(ticket_id, quote=True)}">Refresh latest messages</a></p>
             <div class="stats">
                 <div class="stat"><strong>{len(open_tickets)}</strong>Open conversations</div>
                 <div class="stat"><strong>{len(closed_tickets)}</strong>Closed conversations</div>
@@ -186,7 +191,7 @@ class ContactDashboard:
             if ticket.get("status") != "open":
                 continue
             messages = ticket.get("messages", [])
-            latest = messages[-1].get("content", "No messages yet") if messages else "No messages yet"
+            latest = messages[-1].get("content") or "(attachment only)" if messages else "No messages yet"
             embed.add_field(
                 name=f"Ticket {ticket_id} ({len(messages)} messages)",
                 value=latest[:180],

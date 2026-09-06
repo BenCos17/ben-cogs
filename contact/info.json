@@ -2,7 +2,7 @@
     "author": [
         "BenCos18"
     ],
-    "install_msg": "Configure a staff channel with `[p]contactsetup #channel`. Open the Contact Support dashboard to view unique ticket IDs, read full transcripts, reply, and close tickets. `[p]support open @user` can create additional tickets for the same user.",
+    "install_msg": "Configure a staff channel with `[p]contactsetup #channel`, then post a user panel with `[p]contactpanel #channel`. Users can close their own tickets with `[p]contactclose <ticket-id>`. The dashboard supports full transcripts, replies, and staff closure. `[p]support open @user` can create additional tickets for the same user.",
     "name": "Contact",
     "short": "DM-based staff support conversations.",
     "description": "Forwards user DMs to a configured staff channel and provides staff reply, close, and transcript commands.",

@@ -85,6 +85,14 @@ class Contact(commands.Cog, ContactDashboard):
                 return guild
         return None
 
+    async def _find_user_ticket(self, user_id: int, ticket_id: str) -> tuple[Optional[discord.Guild], Optional[dict]]:
+        for guild in self.bot.guilds:
+            tickets = await self._migrate_tickets(guild)
+            ticket = self._find_ticket(tickets, ticket_id)
+            if ticket is not None and ticket.get("user_id") == user_id:
+                return guild, ticket
+        return None, None
+
     async def _create_thread(self, guild: discord.Guild, user: discord.abc.User) -> Optional[discord.Thread]:
         channel_id = await self.config.guild(guild).staff_channel()
         channel = guild.get_channel(channel_id) if channel_id else None
@@ -192,6 +200,48 @@ class Contact(commands.Cog, ContactDashboard):
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    async def contactpanel(self, ctx: commands.Context, channel: discord.TextChannel):
+        """Post a user-facing support panel in a channel."""
+        bot_user = self.bot.user
+        if bot_user is None:
+            await ctx.send("I cannot create the panel until the bot is ready.")
+            return
+        embed = discord.Embed(
+            title="Contact Support",
+            description=(
+                "Need help? Click **Message Support** to start a private support ticket.\n\n"
+                "You will receive a ticket ID. Keep it if you have more than one open ticket."
+            ),
+            color=discord.Color.blurple(),
+        )
+        embed.set_footer(text="You can close your ticket with contactclose <ticket-id>.")
+        view = discord.ui.View()
+        view.add_item(
+            discord.ui.Button(
+                label="Message Support",
+                style=discord.ButtonStyle.link,
+                url=f"https://discord.com/users/{bot_user.id}",
+            )
+        )
+        await channel.send(embed=embed, view=view)
+        await ctx.send(f"Support panel posted in {channel.mention}.", delete_after=5)
+
+    @commands.command()
+    async def contactclose(self, ctx: commands.Context, ticket_id: str):
+        """Let a ticket owner close their own ticket from Discord or DM."""
+        guild, ticket = await self._find_user_ticket(ctx.author.id, ticket_id)
+        if guild is None or ticket is None:
+            await ctx.send("That ticket was not found, or it does not belong to you.")
+            return
+        if ticket.get("status") != "open":
+            await ctx.send("That ticket is already closed.")
+            return
+        await self._close_ticket(guild, ticket_id)
+        await ctx.send(f"Ticket {ticket_id} is now closed. You can start a new ticket any time.")
+
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     async def contactdashboard(self, ctx: commands.Context):
         """Show the support dashboard and open conversation count."""
         await ctx.send(embed=await self.dashboard_embed(ctx.guild))
@@ -286,7 +336,7 @@ class Contact(commands.Cog, ContactDashboard):
             await user.send(
                 embed=self._conversation_embed(
                     f"Support ticket {ticket_id} opened",
-                    f"Your ticket ID is `{ticket_id}`.\n\n{message}",
+                    f"Your ticket ID is `{ticket_id}`. Use `contactclose {ticket_id}` when you are finished.\n\n{message}",
                     discord.Color.green(),
                 )
             )
@@ -382,7 +432,7 @@ class Contact(commands.Cog, ContactDashboard):
                 await message.author.send(
                     embed=self._conversation_embed(
                         f"Support ticket {ticket_id} created",
-                        f"Your ticket ID is `{ticket_id}`. Keep it to select this ticket when you have multiple open tickets.",
+                        f"Your ticket ID is `{ticket_id}`. Keep it to select this ticket when you have multiple open tickets.\n\nTo close it, use `contactclose {ticket_id}`.",
                         discord.Color.green(),
                     )
                 )
