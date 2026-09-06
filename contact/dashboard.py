@@ -52,7 +52,7 @@ class ContactDashboard:
         return "".join(rows) or '<tr><td colspan="4" class="empty">No open conversations.</td></tr>'
 
     @staticmethod
-    def _ticket_detail(ticket_id: str, ticket: dict) -> str:
+    def _ticket_detail(guild: discord.Guild, ticket_id: str, ticket: dict) -> str:
         entries = []
         for entry in ticket.get("messages", []):
             direction = "Staff" if entry.get("direction") == "staff" else "User"
@@ -65,9 +65,13 @@ class ContactDashboard:
         transcript = "".join(entries) or '<p class="muted">No messages yet.</p>'
         latest = ticket.get("messages", [])[-1] if ticket.get("messages") else {}
         latest_content = latest.get("content") or "(attachment only)"
+        user_id = ticket.get("user_id")
+        user_id_text = str(user_id)
+        member = guild.get_member(int(user_id_text)) if user_id_text.isdigit() else None
+        member_name = member.display_name if member else f"User {user_id}"
         return f"""
         <section class="ticket-detail">
-            <h3>Ticket {html.escape(ticket_id)}</h3>
+            <h3>Ticket {html.escape(ticket_id)} <span class="muted">for {html.escape(member_name)} (ID {html.escape(str(user_id))})</span></h3>
             <div class="latest"><strong>Latest message</strong><time>{html.escape(latest.get("timestamp", ""))}</time><p>{html.escape(latest_content)}</p></div>
             <div class="messages">{transcript}</div>
             <form method="get">
@@ -132,7 +136,7 @@ class ContactDashboard:
 
         rows = self._ticket_rows(guild, tickets)
         selected_ticket = tickets.get(ticket_id)
-        detail = self._ticket_detail(ticket_id, selected_ticket) if selected_ticket else ""
+        detail = self._ticket_detail(guild, ticket_id, selected_ticket) if selected_ticket else ""
         page = f"""
         <style>
             .contact-dashboard {{ max-width: 1100px; padding: 24px; color: #e6e6e6; background: #1e1f22; }}

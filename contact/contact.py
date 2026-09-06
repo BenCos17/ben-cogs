@@ -175,6 +175,14 @@ class Contact(commands.Cog, ContactDashboard):
         user = await self.bot.fetch_user(int(ticket["user_id"]))
         await user.send(embed=self._conversation_embed("Message from staff", message, discord.Color.blurple()))
         await self._append_message(guild, ticket_id, author, message, "staff")
+        thread_id = ticket.get("thread_id")
+        thread = guild.get_thread(thread_id) if isinstance(thread_id, int) else None
+        if thread is not None:
+            await thread.send(
+                embed=self._conversation_embed(
+                    f"Message from {author}", message, discord.Color.blurple()
+                )
+            )
         return True
 
     async def _close_ticket(self, guild: discord.Guild, ticket_id: str) -> Optional[dict]:
