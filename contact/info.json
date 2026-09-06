@@ -11,6 +11,8 @@
         "tickets",
         "dm"
     ],
-    "requirements": [],
+    "requirements": [
+        "WTForms"
+    ],
     "min_bot_version": "3.5.0"
 }
