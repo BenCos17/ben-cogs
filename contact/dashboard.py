@@ -34,9 +34,12 @@ class ContactDashboard:
             thread_id = ticket.get("thread_id")
             thread = guild.get_thread(thread_id) if isinstance(thread_id, int) else None
             thread_link = (
-                f'<a class="button" href="https://discord.com/channels/{guild.id}/{thread.id}">Open thread</a>'
+                f'<a href="https://discord.com/channels/{guild.id}/{thread.id}">Open Discord thread</a>'
                 if thread
                 else '<span class="muted">Thread unavailable</span>'
+            )
+            reply_link = (
+                f'<a class="button" href="?ticket_id={html.escape(str(ticket_id), quote=True)}">Reply in dashboard</a>'
             )
             rows.append(
                 "<tr>"
@@ -46,7 +49,7 @@ class ContactDashboard:
                 f"<span class=\"muted\">{html.escape(str(len(messages)))} messages</span></td>"
                 f"<td>{html.escape(last_author)}<br>{html.escape(last_content[:240])}</td>"
                 f"<td>{html.escape(last_message.get('timestamp', 'Unknown'))}</td>"
-                f"<td>{thread_link}<br><a href=\"?ticket_id={html.escape(str(ticket_id), quote=True)}\">View messages and reply</a></td>"
+                f"<td>{reply_link}<br>{thread_link}</td>"
                 "</tr>"
             )
         return "".join(rows) or '<tr><td colspan="4" class="empty">No open conversations.</td></tr>'
@@ -79,7 +82,7 @@ class ContactDashboard:
                 <input type="hidden" name="action" value="reply">
                 <label for="reply">Reply to the user</label>
                 <textarea id="reply" name="message" rows="4" required placeholder="Write a reply..."></textarea>
-                <button type="submit">Send reply</button>
+                <button type="submit">Send reply to member</button>
             </form>
             <form method="get" class="close-form">
                 <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
