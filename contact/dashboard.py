@@ -71,7 +71,13 @@ class ContactDashboard:
         return "".join(rows) or '<tr><td colspan="4" class="empty">No open conversations.</td></tr>'
 
     @staticmethod
-    def _ticket_detail(guild: discord.Guild, ticket_id: str, ticket: dict) -> str:
+    def _ticket_detail(
+        guild: discord.Guild,
+        ticket_id: str,
+        ticket: dict,
+        reply_form: object,
+        close_form: object,
+    ) -> str:
         entries = []
         for entry in ticket.get("messages", []):
             direction = "Staff" if entry.get("direction") == "staff" else "User"
@@ -88,23 +94,17 @@ class ContactDashboard:
         user_id_text = str(user_id)
         member = guild.get_member(int(user_id_text)) if user_id_text.isdigit() else None
         member_name = member.display_name if member else f"User {user_id}"
+        reply_form_html = str(reply_form) if reply_form is not None else (
+            f'<p class="muted">Reply form unavailable. Use <code>support reply {html.escape(ticket_id)} &lt;message&gt;</code>.</p>'
+        )
+        close_form_html = str(close_form) if close_form is not None else ""
         return f"""
         <section class="ticket-detail">
             <h3>Ticket {html.escape(ticket_id)} <span class="muted">for {html.escape(member_name)} (ID {html.escape(str(user_id))})</span></h3>
             <div class="latest"><strong>Latest message</strong><time>{html.escape(latest.get("timestamp", ""))}</time><p>{html.escape(latest_content)}</p></div>
             <div class="messages">{transcript}</div>
-            <form method="post">
-                <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
-                <input type="hidden" name="action" value="reply">
-                <label for="reply">Reply to the user</label>
-                <textarea id="reply" name="message" rows="4" required placeholder="Write a reply..."></textarea>
-                <button type="submit" aria-label="Send reply to member for ticket {html.escape(ticket_id, quote=True)}">Send reply to member</button>
-            </form>
-            <form method="post" class="close-form">
-                <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
-                <input type="hidden" name="action" value="close">
-                <button type="submit" class="danger" aria-label="Close ticket {html.escape(ticket_id, quote=True)}">Close ticket</button>
-            </form>
+            {reply_form_html}
+            <div class="close-form">{close_form_html}</div>
         </section>
         """
 
@@ -130,11 +130,43 @@ class ContactDashboard:
         context_ids=["guild_id"],
     )
     async def dashboard_support(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
+        import wtforms
+        from wtforms.validators import InputRequired, Length
+
+        form_base = kwargs.get("Form")
+        reply_form = None
+        close_form = None
+        if form_base is not None:
+            class ReplyForm(form_base):
+                ticket_id = wtforms.HiddenField()
+                action = wtforms.HiddenField(default="reply")
+                message = wtforms.TextAreaField(
+                    "Reply to the member",
+                    validators=[InputRequired(), Length(max=2000)],
+                    render_kw={"rows": 4, "placeholder": "Write a reply..."},
+                )
+                submit = wtforms.SubmitField("Send reply to member")
+
+            class CloseForm(form_base):
+                ticket_id = wtforms.HiddenField()
+                action = wtforms.HiddenField(default="close")
+                submit = wtforms.SubmitField("Close ticket")
+
+            reply_form = ReplyForm(prefix="contact_reply_")
+            close_form = CloseForm(prefix="contact_close_")
+
         tickets = await self._migrate_tickets(guild)
         action = self._request_value(kwargs, "action")
         ticket_id = self._request_value(kwargs, "ticket_id")
         notice = ""
         message = self._request_value(kwargs, "message").strip()
+        if reply_form is not None and reply_form.validate_on_submit():
+            action = "reply"
+            ticket_id = str(reply_form.ticket_id.data)
+            message = str(reply_form.message.data).strip()
+        elif close_form is not None and close_form.validate_on_submit():
+            action = "close"
+            ticket_id = str(close_form.ticket_id.data)
         if action == "reply" and ticket_id and message:
             try:
                 success = await self._reply_to_ticket(
@@ -156,7 +188,15 @@ class ContactDashboard:
 
         rows = self._ticket_rows(guild, tickets)
         selected_ticket = tickets.get(ticket_id)
-        detail = self._ticket_detail(guild, ticket_id, selected_ticket) if selected_ticket else ""
+        if reply_form is not None:
+            reply_form.ticket_id.data = ticket_id
+        if close_form is not None:
+            close_form.ticket_id.data = ticket_id
+        detail = (
+            self._ticket_detail(guild, ticket_id, selected_ticket, reply_form, close_form)
+            if selected_ticket
+            else ""
+        )
         page = f"""
         <style>
             .contact-dashboard {{ max-width: 1100px; padding: 24px; color: #e6e6e6; background: #1e1f22; }}
