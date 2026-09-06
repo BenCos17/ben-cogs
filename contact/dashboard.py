@@ -18,6 +18,22 @@ class ContactDashboard:
     """Red Dashboard integration for the contact cog."""
 
     @staticmethod
+    def _request_value(kwargs: dict, name: str) -> str:
+        value = kwargs.get(name)
+        if value is None:
+            extra_kwargs = kwargs.get("extra_kwargs", {})
+            value = extra_kwargs.get(name)
+        if value is None:
+            request_data = kwargs.get("data", {})
+            form_data = request_data.get("form", {}) if isinstance(request_data, dict) else {}
+            value = form_data.get(name)
+        if value is None:
+            value = ""
+        if isinstance(value, (list, tuple)):
+            value = value[-1] if value else ""
+        return str(value)
+
+    @staticmethod
     def _ticket_rows(guild: discord.Guild, tickets: dict) -> str:
         rows = []
         for ticket_id, ticket in tickets.items():
@@ -77,14 +93,14 @@ class ContactDashboard:
             <h3>Ticket {html.escape(ticket_id)} <span class="muted">for {html.escape(member_name)} (ID {html.escape(str(user_id))})</span></h3>
             <div class="latest"><strong>Latest message</strong><time>{html.escape(latest.get("timestamp", ""))}</time><p>{html.escape(latest_content)}</p></div>
             <div class="messages">{transcript}</div>
-            <form method="get">
+            <form method="post">
                 <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
                 <input type="hidden" name="action" value="reply">
                 <label for="reply">Reply to the user</label>
                 <textarea id="reply" name="message" rows="4" required placeholder="Write a reply..."></textarea>
                 <button type="submit">Send reply to member</button>
             </form>
-            <form method="get" class="close-form">
+            <form method="post" class="close-form">
                 <input type="hidden" name="ticket_id" value="{html.escape(ticket_id, quote=True)}">
                 <input type="hidden" name="action" value="close">
                 <button type="submit" class="danger">Close ticket</button>
@@ -110,18 +126,19 @@ class ContactDashboard:
     @dashboard_page(
         name=None,
         description="Contact Support Dashboard",
-        methods=("GET",),
+        methods=("GET", "POST"),
         context_ids=["guild_id"],
     )
     async def dashboard_support(self, guild: discord.Guild, **kwargs) -> typing.Dict[str, typing.Any]:
         tickets = await self._migrate_tickets(guild)
-        action = kwargs.get("action")
-        ticket_id = str(kwargs.get("ticket_id", ""))
+        action = self._request_value(kwargs, "action")
+        ticket_id = self._request_value(kwargs, "ticket_id")
         notice = ""
-        if action == "reply" and ticket_id and kwargs.get("message", "").strip():
+        message = self._request_value(kwargs, "message").strip()
+        if action == "reply" and ticket_id and message:
             try:
                 success = await self._reply_to_ticket(
-                    guild, ticket_id, "Dashboard staff", kwargs["message"].strip()
+                    guild, ticket_id, "Dashboard staff", message
                 )
                 notice = "Reply sent." if success else "That ticket is no longer open."
             except (discord.Forbidden, discord.HTTPException):
