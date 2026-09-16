@@ -67,6 +67,7 @@ class AddToWatchlistView(discord.ui.View):
         # Add to Watchlist button (interactive)
         if include_watchlist and icao:
             self.add_item(AddToWatchlistButton(cog=cog, icao=icao))
+            self.add_item(RemoveFromWatchlistButton(cog=cog, icao=icao))
 
 
 class AddToWatchlistButton(discord.ui.Button):
@@ -102,5 +103,30 @@ class AddToWatchlistButton(discord.ui.Button):
         color = "✅" if success else "❌"
         await interaction.response.send_message(
             f"{color} {message}\n\nYou'll be notified when it comes online, takes off, or lands.",
+            ephemeral=True,
+        )
+
+
+class RemoveFromWatchlistButton(discord.ui.Button):
+    """Button that removes aircraft from the user's watchlist when clicked."""
+
+    def __init__(self, *, cog, icao: str):
+        super().__init__(
+            label=_("Remove from Watchlist"),
+            emoji="➖",
+            style=discord.ButtonStyle.secondary,
+            custom_id=None,
+        )
+        self.cog = cog
+        self.icao = icao
+
+    async def callback(self, interaction: discord.Interaction):
+        """Handle button click - remove aircraft ICAO from the user's watchlist."""
+        user_config = self.cog.config.user(interaction.user)
+        success, message = await self.cog.helpers.watchlist_remove_item(user_config, "icao", self.icao)
+
+        color = "✅" if success else "❌"
+        await interaction.response.send_message(
+            f"{color} {message}",
             ephemeral=True,
         )
