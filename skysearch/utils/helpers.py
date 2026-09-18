@@ -107,9 +107,9 @@ class HelperUtils:
                 headers["User-Agent"] = user_agent
             else:
                 # Default descriptive User-Agent with contact URL
-                headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/ben-cogs/skysearch)"
+                headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/BenCos17/ben-cogs/tree/main/skysearch)"
         except Exception:
-            headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/ben-cogs/skysearch)"
+            headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/BenCos17/ben-cogs/tree/main/skysearch)"
         return headers
 
 
