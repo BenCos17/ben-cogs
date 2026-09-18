@@ -111,7 +111,24 @@ class HelperUtils:
         except Exception:
             headers["User-Agent"] = "SkySearchBot/1.0 (+https://github.com/ben-cogs/skysearch)"
         return headers
-    
+
+
+
+
+# Dear programmer:
+# When I wrote this code, only god and
+# I knew how it worked.
+# Now, only God knows it!
+
+# Therefore, if you are trying to optimize
+# this routine and it fails (most surely),
+# please increase this counter as a
+# warning for the next person:
+#
+# total_hours_wasted_here = 1
+#
+#
+
     async def get_photo_by_hex(self, hex_id, registration=None):
         """
         Get aircraft photo by hex ICAO or registration.
