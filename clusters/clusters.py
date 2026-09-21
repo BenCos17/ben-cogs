@@ -33,8 +33,8 @@ class Clusters(commands.Cog):
         # Start aiohttp web server
         self.app = web.Application()
         self.app.add_routes([
-            web.get('/clusters', self.web_clusters),
-            web.get('/clusters/dashboard', self.web_dashboard),
+            web.get('/clusters', self.web_dashboard),
+            web.get('/clusters/api', self.web_clusters),
         ])
         self.runner = web.AppRunner(self.app)
         self.bot.loop.create_task(self.start_webserver())

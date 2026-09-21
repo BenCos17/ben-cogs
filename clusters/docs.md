@@ -23,12 +23,11 @@
 
 The cog exposes web endpoints on port `8080`.
 
-`GET http://<your-host>:8080/clusters`
+`GET http://<your-host>:8080/clusters` serves the main web dashboard directly,
+including cluster status and the bot/server uptime graph.
 
-`GET http://<your-host>:8080/clusters/dashboard` serves the web dashboard directly,
-including cluster status and the bot/server uptime graph. The main API at
-`GET http://<your-host>:8080/clusters` includes the same uptime samples for the
-main web UI or other consumers.
+`GET http://<your-host>:8080/clusters/api` returns the dashboard data as JSON,
+including the same uptime samples for other consumers.
 
 ### Response Shape
 
