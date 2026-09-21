@@ -27,8 +27,15 @@ class Clusters(commands.Cog):
         self.shard_names = {}
         self.runner = None
         self.site = None
-        self.uptime_history = deque(maxlen=UPTIME_HISTORY_LIMIT)
-        self.cluster_uptime_started = {}
+        uptime_state = getattr(self.bot, "_clusters_uptime_state", None)
+        if uptime_state is None:
+            uptime_state = {
+                "history": deque(maxlen=UPTIME_HISTORY_LIMIT),
+                "cluster_started": {},
+            }
+            self.bot._clusters_uptime_state = uptime_state
+        self.uptime_history = uptime_state["history"]
+        self.cluster_uptime_started = uptime_state["cluster_started"]
         self.uptime_task = self.bot.loop.create_task(self.collect_uptime())
 
         # Start aiohttp web server
