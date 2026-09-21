@@ -33,8 +33,7 @@ class Clusters(commands.Cog):
         # Start aiohttp web server
         self.app = web.Application()
         self.app.add_routes([
-            web.get('/clusters', self.web_dashboard),
-            web.get('/clusters/api', self.web_clusters),
+            web.get('/clusters', self.web_clusters),
         ])
         self.runner = web.AppRunner(self.app)
         self.bot.loop.create_task(self.start_webserver())
@@ -329,45 +328,3 @@ class Clusters(commands.Cog):
     async def web_clusters(self, request):
         """Return cluster data as JSON for web endpoint."""
         return web.json_response(await self.get_web_data())
-
-    async def web_dashboard(self, request):
-        """Return a standalone dashboard without requiring API calls from the client."""
-        data = await self.get_web_data()
-        data_json = json.dumps(data).replace("<", "\\u003c")
-        return web.Response(text=f"""<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="60"><title>Cluster Dashboard</title>
-<style>
-body{{font:16px system-ui,sans-serif;margin:0;padding:2rem;background:#101827;color:#e5e7eb}}
-main{{max-width:1100px;margin:auto}} h1{{margin-top:0}} .summary{{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0 1.5rem}}
-.card{{background:#182235;border:1px solid #334155;padding:1rem;min-width:180px}} .label{{color:#94a3b8;font-size:.85rem}}
-.clusters{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem}}
-.online{{color:#4ade80}} .offline{{color:#f87171}} canvas{{width:100%;height:360px;background:#182235;border:1px solid #334155}}
-</style></head><body><main><h1>Cluster Dashboard</h1>
-<div class="summary" id="summary"></div><div class="clusters" id="clusters"></div>
-<canvas id="chart" width="1100" height="360"></canvas></main>
-<script id="dashboard-data" type="application/json">{data_json}</script>
-<script>
-const data = JSON.parse(document.getElementById('dashboard-data').textContent);
-const formatUptime = value => value == null ? 'Unknown' : value;
-document.getElementById('summary').innerHTML = [
-    ['Bot uptime', formatUptime(data.bot_uptime)], ['Server uptime', data.server_uptime],
-    ['Clusters', data.clusters.length], ['Version', data.version]
-].map(([label, value]) => `<div class="card"><div class="label">${{label}}</div><strong>${{value}}</strong></div>`).join('');
-document.getElementById('clusters').innerHTML = data.clusters.map(cluster =>
-    `<div class="card"><strong>${{cluster.name}}</strong><div class="${{cluster.status.toLowerCase()}}">${{cluster.status}}</div><div>${{cluster.servers}} servers, ${{cluster.users}} users</div><div>${{cluster.latency_ms}} ms latency</div></div>`).join('');
-const samples = data.uptime_history, canvas = document.getElementById('chart'), ctx = canvas.getContext('2d');
-const width = canvas.width, height = canvas.height, padding = 45;
-const values = samples.flatMap(sample => [sample.bot_uptime_seconds, sample.server_uptime_seconds].filter(Number.isFinite));
-if (values.length) {{
-    const max = Math.max(...values, 1), x = index => padding + index * (width - padding * 2) / Math.max(samples.length - 1, 1);
-    const y = value => height - padding - value * (height - padding * 2) / max;
-    ctx.strokeStyle = '#475569'; ctx.beginPath(); ctx.moveTo(padding, padding); ctx.lineTo(padding, height - padding); ctx.lineTo(width - padding, height - padding); ctx.stroke();
-    [['server_uptime_seconds','#38bdf8'],['bot_uptime_seconds','#fbbf24']].forEach(([key, color]) => {{
-        ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath();
-        samples.forEach((sample, index) => {{ if (!Number.isFinite(sample[key])) return; const point = [x(index), y(sample[key])]; index ? ctx.lineTo(...point) : ctx.moveTo(...point); }}); ctx.stroke();
-    }});
-    ctx.fillStyle = '#38bdf8'; ctx.fillText('Server', padding, 20); ctx.fillStyle = '#fbbf24'; ctx.fillText('Bot', padding + 70, 20);
-}}
-</script></body></html>""", content_type="text/html")
