@@ -28,6 +28,7 @@ class Clusters(commands.Cog):
         self.runner = None
         self.site = None
         self.uptime_history = deque(maxlen=UPTIME_HISTORY_LIMIT)
+        self.cluster_uptime_started = {}
         self.uptime_task = self.bot.loop.create_task(self.collect_uptime())
 
         # Start aiohttp web server
@@ -93,7 +94,7 @@ class Clusters(commands.Cog):
         weeks, remainder = divmod(total_seconds, 604800)
         days, remainder = divmod(remainder, 86400)
         hours, _ = divmod(remainder, 3600)
-        return f"{weeks} weeks and {days} days and {hours} hours ago"
+        return f"{weeks} weeks, {days} days, {hours} hours"
 
     def get_server_uptime(self):
         """Return server uptime as timedelta."""
@@ -111,15 +112,38 @@ class Clusters(commands.Cog):
             return datetime.datetime.utcnow() - bot_start_time
         return None
 
+    def get_cluster_uptimes(self):
+        """Return the current uptime in seconds for each online cluster."""
+        now = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        total_shards = self.bot.shard_count or len(self.bot.shards) or 1
+        uptimes = {}
+
+        for shard_id in range(total_shards):
+            shard = self.bot.get_shard(shard_id)
+            is_online = shard is not None and not shard.is_closed()
+            shard_key = str(shard_id)
+
+            if not is_online:
+                self.cluster_uptime_started.pop(shard_key, None)
+                uptimes[shard_key] = None
+                continue
+
+            started_at = self.cluster_uptime_started.setdefault(shard_key, now)
+            uptimes[shard_key] = round(now - started_at, 1)
+
+        return uptimes
+
     async def collect_uptime(self):
         """Keep a bounded history for the uptime graph."""
         try:
             while True:
                 bot_uptime = self.get_bot_uptime()
+                cluster_uptimes = self.get_cluster_uptimes()
                 self.uptime_history.append({
                     "timestamp": datetime.datetime.now(datetime.timezone.utc).timestamp(),
                     "bot_uptime_seconds": round(bot_uptime.total_seconds(), 1) if bot_uptime else None,
                     "server_uptime_seconds": round(self.get_server_uptime().total_seconds(), 1),
+                    "cluster_uptime_seconds": cluster_uptimes,
                 })
                 await asyncio.sleep(UPTIME_SAMPLE_INTERVAL)
         except asyncio.CancelledError:
@@ -282,6 +306,7 @@ class Clusters(commands.Cog):
         bot_uptime = self.get_bot_uptime()
         bot_uptime_str = self.format_timedelta(bot_uptime) if bot_uptime else "Unknown"
         server_uptime_str = self.format_timedelta(self.get_server_uptime())
+        cluster_uptimes = self.get_cluster_uptimes()
 
         data = {
             "version": COG_VERSION,
@@ -320,6 +345,11 @@ class Clusters(commands.Cog):
                 "servers": len(guilds),
                 "users": sum(g.member_count or 0 for g in guilds),
                 "latency_ms": latency,
+                "uptime_seconds": cluster_uptimes.get(str(shard_id)),
+                "uptime": (
+                    self.format_timedelta(datetime.timedelta(seconds=cluster_uptimes[str(shard_id)]))
+                    if cluster_uptimes.get(str(shard_id)) is not None else "Offline"
+                ),
                 "status": "Online" if is_online else "Offline"
             })
 

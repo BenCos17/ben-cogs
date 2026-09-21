@@ -79,6 +79,8 @@ Each object in `clusters` includes:
 | `servers` | Guild count on the shard |
 | `users` | Total member count on the shard |
 | `latency_ms` | Shard latency in milliseconds |
+| `uptime_seconds` | Seconds this cluster has remained online |
+| `uptime` | Human-readable uptime for this cluster |
 | `status` | `Online` or `Offline` |
 
 ```json
@@ -122,7 +124,10 @@ The `uptime_history` field in the main API has this shape:
 		{
 			"timestamp": 1760000000.0,
 			"bot_uptime_seconds": 3600.0,
-			"server_uptime_seconds": 86400.0
+			"server_uptime_seconds": 86400.0,
+			"cluster_uptime_seconds": {
+				"0": 3600.0
+			}
 		}
 	]
 }
