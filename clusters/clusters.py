@@ -1,4 +1,4 @@
-import discord
+﻿import discord
 from redbot.core import commands, Config
 import psutil, datetime, json, aiohttp
 from aiohttp import web
@@ -6,6 +6,7 @@ import asyncio
 import platform
 import os
 from pathlib import Path
+from collections import deque
 
 MARVEL_NAMES = [
     "IronMan", "Thor", "Hulk", "BlackWidow", "CaptainAmerica", "Loki",
@@ -13,6 +14,8 @@ MARVEL_NAMES = [
 ]
 
 COG_VERSION = "1.0.1"
+UPTIME_SAMPLE_INTERVAL = 60
+UPTIME_HISTORY_LIMIT = 1440
 
 class Clusters(commands.Cog):
     """Shows dynamic Marvel-themed cluster status with customizable names and uptime, plus a web endpoint."""
@@ -24,10 +27,16 @@ class Clusters(commands.Cog):
         self.shard_names = {}
         self.runner = None
         self.site = None
+        self.uptime_history = deque(maxlen=UPTIME_HISTORY_LIMIT)
+        self.uptime_task = self.bot.loop.create_task(self.collect_uptime())
 
         # Start aiohttp web server
         self.app = web.Application()
-        self.app.add_routes([web.get('/clusters', self.web_clusters)])
+        self.app.add_routes([
+            web.get('/clusters', self.web_clusters),
+            web.get('/clusters/uptime', self.web_uptime),
+            web.get('/clusters/uptime/graph', self.web_uptime_graph),
+        ])
         self.runner = web.AppRunner(self.app)
         self.bot.loop.create_task(self.start_webserver())
 
@@ -55,6 +64,10 @@ class Clusters(commands.Cog):
         raise RuntimeError("Failed to start the clusters webserver for an unknown reason.")
 
     async def shutdown_webserver(self):
+        if self.uptime_task is not None:
+            self.uptime_task.cancel()
+            self.uptime_task = None
+
         if self.site is not None:
             await self.site.stop()
             self.site = None
@@ -88,6 +101,65 @@ class Clusters(commands.Cog):
         """Return server uptime as timedelta."""
         boot_timestamp = psutil.boot_time()
         return datetime.datetime.utcnow() - datetime.datetime.utcfromtimestamp(boot_timestamp)
+
+    def get_bot_uptime(self):
+        """Return bot uptime as a timedelta when Red provides it."""
+        bot_start_time = getattr(self.bot, "uptime", None)
+        if bot_start_time is None:
+            return None
+        if isinstance(bot_start_time, datetime.timedelta):
+            return bot_start_time
+        if isinstance(bot_start_time, datetime.datetime):
+            return datetime.datetime.utcnow() - bot_start_time
+        return None
+
+    async def collect_uptime(self):
+        """Keep a bounded history for the uptime graph."""
+        try:
+            while True:
+                bot_uptime = self.get_bot_uptime()
+                self.uptime_history.append({
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).timestamp(),
+                    "bot_uptime_seconds": round(bot_uptime.total_seconds(), 1) if bot_uptime else None,
+                    "server_uptime_seconds": round(self.get_server_uptime().total_seconds(), 1),
+                })
+                await asyncio.sleep(UPTIME_SAMPLE_INTERVAL)
+        except asyncio.CancelledError:
+            raise
+
+    async def web_uptime(self, request):
+        """Return uptime samples for dashboards and graph consumers."""
+        return web.json_response({
+            "interval_seconds": UPTIME_SAMPLE_INTERVAL,
+            "samples": list(self.uptime_history),
+        })
+
+    async def web_uptime_graph(self, request):
+        """Return a small standalone graph for the collected uptime history."""
+        return web.Response(text="""<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cluster Uptime</title>
+<style>body{font:16px system-ui,sans-serif;margin:2rem;background:#101827;color:#e5e7eb}canvas{width:100%;max-width:1100px;height:420px;background:#182235;border:1px solid #334155}</style>
+</head>
+<body><h1>Cluster uptime</h1><canvas id="chart" width="1100" height="420"></canvas>
+<script>
+fetch('/clusters/uptime').then(response => response.json()).then(({samples}) => {
+  const canvas = document.getElementById('chart'), ctx = canvas.getContext('2d');
+  const width = canvas.width, height = canvas.height, padding = 45;
+  const values = samples.flatMap(sample => [sample.bot_uptime_seconds, sample.server_uptime_seconds].filter(Number.isFinite));
+  if (!values.length) { ctx.fillStyle = '#94a3b8'; ctx.fillText('Collecting uptime samples...', padding, height / 2); return; }
+  const max = Math.max(...values, 1), x = index => padding + index * (width - padding * 2) / Math.max(samples.length - 1, 1);
+  const y = value => height - padding - value * (height - padding * 2) / max;
+  ctx.strokeStyle = '#475569'; ctx.beginPath(); ctx.moveTo(padding, padding); ctx.lineTo(padding, height - padding); ctx.lineTo(width - padding, height - padding); ctx.stroke();
+  [['server_uptime_seconds','#38bdf8'],['bot_uptime_seconds','#fbbf24']].forEach(([key, color]) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath();
+    samples.forEach((sample, index) => { if (!Number.isFinite(sample[key])) return; const point = [x(index), y(sample[key])]; index ? ctx.lineTo(...point) : ctx.moveTo(...point); });
+    ctx.stroke();
+  });
+  ctx.fillStyle = '#38bdf8'; ctx.fillText('Server', padding, 20); ctx.fillStyle = '#fbbf24'; ctx.fillText('Bot', padding + 70, 20);
+}).catch(() => document.body.insertAdjacentText('beforeend', 'Unable to load uptime data.'));
+</script></body></html>""", content_type="text/html")
 
     def get_system_snapshot(self):
         """Return a reusable snapshot of host and process stats."""
@@ -144,12 +216,11 @@ class Clusters(commands.Cog):
         """Shows the status of all clusters using an embed."""
         await self.initialize_shard_names()
 
-        bot_start_time = getattr(self.bot, "uptime", None)
-        if bot_start_time is None:
+        bot_uptime = self.get_bot_uptime()
+        if bot_uptime is None:
             bot_uptime_str = "Unknown"
         else:
-            td = datetime.datetime.utcnow() - bot_start_time if isinstance(bot_start_time, datetime.datetime) else bot_start_time
-            bot_uptime_str = self.format_timedelta(td)
+            bot_uptime_str = self.format_timedelta(bot_uptime)
 
         server_uptime = self.format_timedelta(self.get_server_uptime())
         system = self.get_system_snapshot()
@@ -244,14 +315,15 @@ class Clusters(commands.Cog):
 
         system = self.get_system_snapshot()
 
-        bot_start_time = getattr(self.bot, "uptime", None)
-        bot_uptime_str = self.format_timedelta(datetime.datetime.utcnow() - bot_start_time) if bot_start_time else "Unknown"
+        bot_uptime = self.get_bot_uptime()
+        bot_uptime_str = self.format_timedelta(bot_uptime) if bot_uptime else "Unknown"
         server_uptime_str = self.format_timedelta(self.get_server_uptime())
 
         data = {
             "version": COG_VERSION,
             "bot_uptime": bot_uptime_str,
             "server_uptime": server_uptime_str,
+            "uptime_history": list(self.uptime_history),
             "system_stats": {
                 **system,
                 "cpu_total_percent": system["cpu_usage_percent"],

@@ -21,9 +21,14 @@
 
 ### API
 
-The cog exposes a single web endpoint on port `8080`.
+The cog exposes web endpoints on port `8080`.
 
 `GET http://<your-host>:8080/clusters`
+
+`GET http://<your-host>:8080/clusters/uptime` returns uptime samples collected every
+minute, with a maximum history of 24 hours. Open
+`http://<your-host>:8080/clusters/uptime/graph` in a browser for a standalone graph
+of bot and server uptime.
 
 ### Response Shape
 
@@ -34,6 +39,7 @@ Top-level keys:
 | `version` | API version for the payload |
 | `bot_uptime` | Bot uptime as a formatted string |
 | `server_uptime` | Host uptime as a formatted string |
+| `uptime_history` | Recent bot and host uptime samples in seconds |
 | `system_stats` | Host and process statistics |
 | `clusters` | Per-shard status information |
 
@@ -106,6 +112,21 @@ Each object in `clusters` includes:
 			"users": 1200,
 			"latency_ms": 85,
 			"status": "Online"
+		}
+	]
+}
+```
+
+The uptime endpoint has this shape:
+
+```json
+{
+	"interval_seconds": 60,
+	"samples": [
+		{
+			"timestamp": 1760000000.0,
+			"bot_uptime_seconds": 3600.0,
+			"server_uptime_seconds": 86400.0
 		}
 	]
 }
