@@ -26,6 +26,30 @@ The cog exposes web endpoints on port `8080`.
 `GET http://<your-host>:8080/clusters` returns the data used by the existing web
 dashboard, including bot and server uptime samples for its graph.
 
+`GET http://<your-host>:8080/clusters?server_id=<server_id>` looks up which
+shard contains the server with the given Discord ID. It returns only the
+requested server's shard mapping and does not expose a server list. Calling
+`GET /clusters` without `server_id` continues to return the full cluster
+dashboard payload.
+
+Successful response:
+
+```json
+{
+	"server_id": 123456789012345678,
+	"shard_id": 0
+}
+```
+
+Server lookup fields:
+
+| Field | Description |
+| --- | --- |
+| `server_id` | Discord server ID |
+| `shard_id` | Shard hosting the server |
+
+Invalid IDs return `400`, and servers the bot cannot find return `404`.
+
 ### Response Shape
 
 Top-level keys:

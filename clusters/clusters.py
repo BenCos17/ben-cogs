@@ -364,4 +364,23 @@ class Clusters(commands.Cog):
 
     async def web_clusters(self, request):
         """Return cluster data as JSON for web endpoint."""
+        if "server_id" in request.query:
+            return await self.web_server(request)
+
         return web.json_response(await self.get_web_data())
+
+    async def web_server(self, request):
+        """Return one server by ID without exposing the full server list."""
+        try:
+            server_id = int(request.query["server_id"])
+        except (TypeError, ValueError):
+            return web.json_response({"error": "server_id must be an integer"}, status=400)
+
+        guild = self.bot.get_guild(server_id)
+        if guild is None:
+            return web.json_response({"error": "Server not found"}, status=404)
+
+        return web.json_response({
+            "server_id": guild.id,
+            "shard_id": guild.shard_id,
+        })
