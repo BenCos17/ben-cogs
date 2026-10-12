@@ -14,6 +14,7 @@ from .. import _
 
 FEEDER_FETCH_TIMEOUT_SECONDS = 10
 FEEDER_MAX_RESPONSE_BYTES = 1_000_000
+IMAGE_FETCH_TIMEOUT_SECONDS = 10
 FEEDER_ALLOWED_DOMAINS: tuple[str, ...] = (
     "airplanes.live",
 )
@@ -86,6 +87,53 @@ class HelperUtils:
         except Exception:
             return False
 
+    @staticmethod
+    def _get_photo_url(photo: dict) -> str | None:
+        """Return the first usable HTTPS image URL from a Planespotters photo."""
+        for field in ("thumbnail_large", "thumbnail", "image"):
+            value = photo.get(field)
+            candidate = value.get("src") if isinstance(value, dict) else value
+            if not isinstance(candidate, str) or not candidate.strip():
+                continue
+            try:
+                parsed = URL(candidate.strip())
+                if parsed.scheme.lower() == "https" and parsed.host:
+                    return str(parsed)
+            except Exception:
+                continue
+        return None
+
+    async def _get_planespotters_photo(self, lookup_type: str, lookup_value: str):
+        """Fetch and normalize the first usable Planespotters photo."""
+        url_req = f"https://api.planespotters.net/pub/photos/{lookup_type}/{quote_plus(lookup_value)}"
+        try:
+            timeout = aiohttp.ClientTimeout(total=IMAGE_FETCH_TIMEOUT_SECONDS)
+            async with self.cog._http_client.get(
+                url_req,
+                headers=await self._get_http_headers(service="planespotters"),
+                timeout=timeout,
+            ) as response:
+                if response.status != 200:
+                    log.debug("Planespotters %s request returned status %s", url_req, response.status)
+                    return None, None, f"planespotters returned HTTP {response.status}"
+
+                payload = await response.json()
+                photos = payload.get("photos") if isinstance(payload, dict) else None
+                if not isinstance(photos, list) or not photos:
+                    return None, None, "no photos found"
+
+                for photo in photos:
+                    if not isinstance(photo, dict):
+                        continue
+                    image_url = self._get_photo_url(photo)
+                    if image_url:
+                        return image_url, photo.get("photographer", ""), None
+
+                return None, None, "photos found but no usable thumbnail"
+        except Exception as error:
+            log.debug("Exception fetching Planespotters photo %s: %s", url_req, error, exc_info=True)
+            return None, None, str(error)
+
     async def _get_http_headers(self, service: str | None = None) -> dict:
         """Get outbound HTTP headers (includes configured User-Agent if set).
 
@@ -125,7 +173,7 @@ class HelperUtils:
 # please increase this counter as a
 # warning for the next person:
 #
-# total_hours_wasted_here = 1
+# total_hours_wasted_here = 2
 #
 #
 
@@ -146,63 +194,16 @@ class HelperUtils:
         
         # First try to get photo by hex ICAO directly
         if hex_id:
-            try:
-                url_req = f'https://api.planespotters.net/pub/photos/hex/{hex_id}'
-                async with self.cog._http_client.get(
-                    url_req,
-                    headers=await self._get_http_headers(service="planespotters"),
-                ) as response:
-                    if response.status != 200:
-                        log.debug("Planespotters hex request %s returned status %s", url_req, response.status)
-                        error_msg = f"planespotters returned HTTP {response.status}"
-                    else:
-                        json_out = await response.json()
-                        photos = json_out.get('photos') if isinstance(json_out, dict) else None
-                        if not photos:
-                            log.debug("Planespotters hex %s returned no photos", url_req)
-                            error_msg = "no photos found"
-                        else:
-                            photo = photos[0]
-                            url = photo.get('thumbnail_large', {}).get('src', '')
-                            photographer = photo.get('photographer', '')
-                            if not url:
-                                log.debug("Planespotters hex %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
-                                error_msg = "photos found but no usable thumbnail"
-                            else:
-                                return url, photographer, None
-            except Exception as e:
-                log.debug("Exception fetching planespotters hex %s: %s", hex_id, e, exc_info=True)
-                error_msg = str(e)
+            image_url, photographer, error_msg = await self._get_planespotters_photo("hex", hex_id)
+            if image_url:
+                return image_url, photographer, None
 
         # If no photo found by hex, try by registration if provided
         if registration:
-            try:
-                url_req = f'https://api.planespotters.net/pub/photos/reg/{registration}'
-                async with self.cog._http_client.get(
-                    url_req,
-                    headers=await self._get_http_headers(service="planespotters"),
-                ) as response:
-                    if response.status != 200:
-                        log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
-                        error_msg = f"planespotters returned HTTP {response.status}"
-                    else:
-                        json_out = await response.json()
-                        photos = json_out.get('photos') if isinstance(json_out, dict) else None
-                        if not photos:
-                            log.debug("Planespotters reg %s returned no photos", url_req)
-                            error_msg = "no photos found"
-                        else:
-                            photo = photos[0]
-                            url = photo.get('thumbnail_large', {}).get('src', '')
-                            photographer = photo.get('photographer', '')
-                            if not url:
-                                log.debug("Planespotters reg %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
-                                error_msg = "photos found but no usable thumbnail"
-                            else:
-                                return url, photographer, None
-            except Exception as e:
-                log.debug("Exception fetching planespotters reg %s: %s", registration, e, exc_info=True)
-                error_msg = str(e)
+            image_url, photographer, registration_error = await self._get_planespotters_photo("reg", registration)
+            if image_url:
+                return image_url, photographer, None
+            error_msg = registration_error or error_msg
 
         # If still no photo found, try to get aircraft data to find registration and try again
         if hex_id:
@@ -217,34 +218,10 @@ class HelperUtils:
                     reg = aircraft_data.get('reg')
 
                     if reg and reg != registration:  # Only try if we haven't already tried this registration
-                        # try to get photo using the registration
-                        try:
-                            url_req = f'https://api.planespotters.net/pub/photos/reg/{reg}'
-                            async with self.cog._http_client.get(
-                                url_req,
-                                headers=await self._get_http_headers(service="planespotters"),
-                            ) as response:
-                                    if response.status != 200:
-                                        log.debug("Planespotters reg request %s returned status %s", url_req, response.status)
-                                        error_msg = f"planespotters returned HTTP {response.status}"
-                                    else:
-                                        json_out = await response.json()
-                                        photos = json_out.get('photos') if isinstance(json_out, dict) else None
-                                        if not photos:
-                                            log.debug("Planespotters reg %s returned no photos", url_req)
-                                            error_msg = "no photos found"
-                                        else:
-                                            photo = photos[0]
-                                            url = photo.get('thumbnail_large', {}).get('src', '')
-                                            photographer = photo.get('photographer', '')
-                                            if not url:
-                                                log.debug("Planespotters reg %s photo missing thumbnail_large.src; photo keys: %s", url_req, list(photo.keys()))
-                                                error_msg = "photos found but no usable thumbnail"
-                                            else:
-                                                return url, photographer, None
-                        except Exception as e:
-                            log.debug("Exception fetching planespotters reg %s: %s", reg, e, exc_info=True)
-                            error_msg = str(e)
+                        image_url, photographer, registration_error = await self._get_planespotters_photo("reg", reg)
+                        if image_url:
+                            return image_url, photographer, None
+                        error_msg = registration_error or error_msg
             except Exception:
                 pass
 
