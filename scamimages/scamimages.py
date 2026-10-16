@@ -12,6 +12,7 @@ from redbot.core import Config, commands
 
 API_URL = "https://api.excessive.space/v1/scamscore"
 DEFAULT_THRESHOLD = 4
+DEFAULT_USER_AGENT = "ScamImages/1.0.0"
 
 
 class ScamImages(commands.Cog):
@@ -26,6 +27,8 @@ class ScamImages(commands.Cog):
             enabled=False,
             threshold=DEFAULT_THRESHOLD,
             delete_matches=False,
+            ignored_channels=[],
+            user_agent=DEFAULT_USER_AGENT,
         )
         self.session: aiohttp.ClientSession | None = None
 
@@ -62,9 +65,12 @@ class ScamImages(commands.Cog):
         settings = await self.config.guild(ctx.guild).all()
         action = "delete and report" if settings["delete_matches"] else "report only"
         state = "enabled" if settings["enabled"] else "disabled"
+        user_agent = settings["user_agent"]
         await ctx.send(
             f"Scam image detection is **{state}**. "
-            f"Hit threshold: **{settings['threshold']}**. Action: **{action}**."
+            f"Hit threshold: **{settings['threshold']}**. Action: **{action}**. "
+            f"Hidden channels: **{len(settings['ignored_channels'])}**. "
+            f"User-Agent: `{user_agent}`."
         )
 
     @scamimages.command(name="threshold")
@@ -83,11 +89,57 @@ class ScamImages(commands.Cog):
         state = "will be deleted" if enabled else "will only be reported"
         await ctx.send(f"Detected scam images {state}.")
 
+    @scamimages.command(name="useragent")
+    async def scamimages_useragent(self, ctx, *, user_agent: str = ""):
+        """Set the API User-Agent, or reset it by omitting the value."""
+        user_agent = user_agent.strip()
+        if "\r" in user_agent or "\n" in user_agent:
+            await ctx.send("The User-Agent cannot contain line breaks.")
+            return
+        if len(user_agent) > 256:
+            await ctx.send("The User-Agent must be 256 characters or fewer.")
+            return
+        if not user_agent:
+            user_agent = DEFAULT_USER_AGENT
+        await self.config.guild(ctx.guild).user_agent.set(user_agent)
+        await ctx.send(f"API User-Agent set to `{user_agent}`.")
+
+    @scamimages.command(name="hide")
+    async def scamimages_hide(self, ctx, channel: discord.TextChannel):
+        """Hide a channel from scam image detection."""
+        ignored_channels = await self.config.guild(ctx.guild).ignored_channels()
+        if channel.id not in ignored_channels:
+            ignored_channels.append(channel.id)
+            await self.config.guild(ctx.guild).ignored_channels.set(ignored_channels)
+        await ctx.send(f"Scam image detection is hidden in {channel.mention}.")
+
+    @scamimages.command(name="unhide")
+    async def scamimages_unhide(self, ctx, channel: discord.TextChannel):
+        """Allow scam image detection in a previously hidden channel."""
+        ignored_channels = await self.config.guild(ctx.guild).ignored_channels()
+        if channel.id in ignored_channels:
+            ignored_channels.remove(channel.id)
+            await self.config.guild(ctx.guild).ignored_channels.set(ignored_channels)
+        await ctx.send(f"Scam image detection is enabled in {channel.mention}.")
+
+    @scamimages.command(name="hidden")
+    async def scamimages_hidden(self, ctx):
+        """List channels hidden from scam image detection."""
+        ignored_channels = await self.config.guild(ctx.guild).ignored_channels()
+        channels = [ctx.guild.get_channel(channel_id) for channel_id in ignored_channels]
+        mentions = [channel.mention for channel in channels if channel is not None]
+        await ctx.send(
+            "Hidden channels: " + (", ".join(mentions) if mentions else "none.")
+        )
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.guild is None or message.author.bot:
             return
-        if not await self.config.guild(message.guild).enabled():
+        guild_config = self.config.guild(message.guild)
+        if not await guild_config.enabled():
+            return
+        if message.channel.id in await guild_config.ignored_channels():
             return
 
         image_attachments = [
@@ -99,7 +151,7 @@ class ScamImages(commands.Cog):
             return
 
         for attachment in image_attachments:
-            result = await self._check_attachment(attachment)
+            result = await self._check_attachment(attachment, message.guild)
             if result is None:
                 continue
             score, error = result
@@ -120,7 +172,7 @@ class ScamImages(commands.Cog):
         )
 
     async def _check_attachment(
-        self, attachment: discord.Attachment
+        self, attachment: discord.Attachment, guild: discord.Guild
     ) -> tuple[int | None, str | None] | None:
         try:
             image_data = await attachment.read()
@@ -136,6 +188,7 @@ class ScamImages(commands.Cog):
             async with self.session.get(
                 API_URL,
                 params={"hash": image_hash, "dimensions": f"{image.width},{image.height}"},
+                headers={"User-Agent": await self.config.guild(guild).user_agent()},
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
                 payload: dict[str, Any] = await response.json(content_type=None)
