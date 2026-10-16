@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import io
+import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import aiohttp
 import discord
 import imagehash
 from PIL import Image
-from redbot.core import Config, commands
+from redbot.core import Config, commands, modlog
 
 
 API_URL = "https://api.excessive.space/v1/scamscore"
 DEFAULT_THRESHOLD = 4
 DEFAULT_USER_AGENT = "ScamImages/1.0.0"
+DEFAULT_TIMEOUT_SECONDS = 3600
+MAX_TIMEOUT_SECONDS = 28 * 24 * 60 * 60
+log = logging.getLogger("red.ScamImages")
 
 
 class ScamImages(commands.Cog):
@@ -26,7 +31,11 @@ class ScamImages(commands.Cog):
         self.config.register_guild(
             enabled=False,
             threshold=DEFAULT_THRESHOLD,
-            delete_matches=False,
+            delete_matches=True,
+            timeout_members=True,
+            timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
+            modlog_enabled=True,
+            notify_channel=False,
             ignored_channels=[],
             user_agent=DEFAULT_USER_AGENT,
         )
@@ -63,12 +72,16 @@ class ScamImages(commands.Cog):
     async def scamimages_status(self, ctx):
         """Show this server's scam image settings."""
         settings = await self.config.guild(ctx.guild).all()
-        action = "delete and report" if settings["delete_matches"] else "report only"
         state = "enabled" if settings["enabled"] else "disabled"
         user_agent = settings["user_agent"]
         await ctx.send(
             f"Scam image detection is **{state}**. "
-            f"Hit threshold: **{settings['threshold']}**. Action: **{action}**. "
+            f"Threshold: **{settings['threshold']}**. "
+            f"Delete: **{settings['delete_matches']}**. "
+            f"Timeout: **{settings['timeout_members']}** "
+            f"({settings['timeout_seconds']}s). "
+            f"Modlog: **{settings['modlog_enabled']}**. "
+            f"Channel notice: **{settings['notify_channel']}**. "
             f"Hidden channels: **{len(settings['ignored_channels'])}**. "
             f"User-Agent: `{user_agent}`."
         )
@@ -86,8 +99,40 @@ class ScamImages(commands.Cog):
     async def scamimages_delete(self, ctx, enabled: bool):
         """Choose whether detected scam images should be deleted."""
         await self.config.guild(ctx.guild).delete_matches.set(enabled)
-        state = "will be deleted" if enabled else "will only be reported"
-        await ctx.send(f"Detected scam images {state}.")
+        state = "will" if enabled else "will not"
+        await ctx.send(f"Detected scam image messages {state} be deleted.")
+
+    @scamimages.command(name="timeout")
+    async def scamimages_timeout(self, ctx, enabled: bool):
+        """Choose whether users should be timed out for detected images."""
+        await self.config.guild(ctx.guild).timeout_members.set(enabled)
+        state = "will" if enabled else "will not"
+        await ctx.send(f"Users who post detected scam images {state} be timed out.")
+
+    @scamimages.command(name="timeoutduration")
+    async def scamimages_timeoutduration(self, ctx, seconds: int):
+        """Set the timeout duration in seconds (60 seconds to 28 days)."""
+        if not 60 <= seconds <= MAX_TIMEOUT_SECONDS:
+            await ctx.send(
+                f"The timeout duration must be between 60 and {MAX_TIMEOUT_SECONDS} seconds."
+            )
+            return
+        await self.config.guild(ctx.guild).timeout_seconds.set(seconds)
+        await ctx.send(f"Scam image timeout duration set to **{seconds} seconds**.")
+
+    @scamimages.command(name="modlog")
+    async def scamimages_modlog(self, ctx, enabled: bool):
+        """Choose whether detections create Redbot modlog cases."""
+        await self.config.guild(ctx.guild).modlog_enabled.set(enabled)
+        state = "will" if enabled else "will not"
+        await ctx.send(f"Detections {state} be sent to the Redbot modlog.")
+
+    @scamimages.command(name="notify")
+    async def scamimages_notify(self, ctx, enabled: bool):
+        """Choose whether detections also post in the source channel."""
+        await self.config.guild(ctx.guild).notify_channel.set(enabled)
+        state = "will" if enabled else "will not"
+        await ctx.send(f"Detections {state} post a notice in the source channel.")
 
     @scamimages.command(name="useragent")
     async def scamimages_useragent(self, ctx, *, user_agent: str = ""):
@@ -205,19 +250,51 @@ class ScamImages(commands.Cog):
     async def _handle_match(
         self, message: discord.Message, attachment: discord.Attachment, score: int
     ):
+        settings = await self.config.guild(message.guild).all()
+        reason = f"Scam image detected (score {score}/10): {attachment.url}"
         deleted = False
-        if await self.config.guild(message.guild).delete_matches():
+        if settings["delete_matches"]:
             try:
                 await message.delete()
                 deleted = True
             except discord.HTTPException:
                 pass
 
-        action = "deleted" if deleted else "flagged"
-        await message.channel.send(
-            f"Scam image {action} (score **{score}/10**): {attachment.url}",
-            delete_after=30,
-        )
+        timed_out = False
+        if settings["timeout_members"] and isinstance(message.author, discord.Member):
+            try:
+                await message.author.timeout(
+                    timedelta(seconds=settings["timeout_seconds"]), reason=reason
+                )
+                timed_out = True
+            except discord.HTTPException:
+                log.exception("Failed to timeout %s for a scam image", message.author)
+
+        if settings["modlog_enabled"]:
+            try:
+                await modlog.create_case(
+                    self.bot,
+                    message.guild,
+                    datetime.now(timezone.utc),
+                    "warning",
+                    message.author,
+                    self.bot.user,
+                    reason,
+                    message.channel,
+                )
+            except (discord.HTTPException, RuntimeError):
+                log.exception("Failed to create a modlog case for a scam image")
+
+        if settings["notify_channel"]:
+            actions = []
+            if deleted:
+                actions.append("deleted")
+            if timed_out:
+                actions.append("user timed out")
+            action = " and ".join(actions) or "flagged"
+            await message.channel.send(
+                f"Scam image {action} (score **{score}/10**).", delete_after=30
+            )
 
     @staticmethod
     async def _report_error(message: discord.Message, error: str):
