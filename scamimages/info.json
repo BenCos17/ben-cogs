@@ -1,0 +1,19 @@
+{
+    "author": [
+        "ben-cogs"
+    ],
+    "name": "ScamImages",
+    "short": "Detect likely scam images using perceptual image matching.",
+    "description": "Checks image attachments against the Excessive Space scam image API in servers that opt in.",
+    "install_msg": "Use [p]scamimages enable in a server to opt in. The default behavior reports matches without deleting them.",
+    "requirements": [
+        "Pillow",
+        "ImageHash"
+    ],
+    "tags": [
+        "moderation",
+        "scam",
+        "images"
+    ],
+    "min_bot_version": "3.5.0"
+}
