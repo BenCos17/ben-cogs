@@ -187,11 +187,7 @@ class ScamImages(commands.Cog):
         if message.channel.id in await guild_config.ignored_channels():
             return
 
-        image_attachments = [
-            attachment
-            for attachment in message.attachments
-            if self._is_image_attachment(attachment)
-        ]
+        image_attachments = self._collect_image_attachments(message)
         if not image_attachments:
             return
 
@@ -208,23 +204,66 @@ class ScamImages(commands.Cog):
                 await self._handle_match(message, attachment, score)
 
     @staticmethod
-    def _is_image_attachment(attachment: discord.Attachment) -> bool:
-        content_type = (attachment.content_type or "").lower()
+    def _is_image_attachment(attachment: Any) -> bool:
+        content_type = str(getattr(attachment, "content_type", "") or "").lower()
         if content_type.startswith("image/"):
             return True
-        return attachment.filename.lower().endswith(
+        filename = str(getattr(attachment, "filename", "") or "").lower()
+        return filename.endswith(
             (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp")
         )
 
+    def _collect_image_attachments(self, message: discord.Message) -> list[Any]:
+        image_attachments: list[Any] = []
+        seen_attachments: set[tuple[Any, ...]] = set()
+
+        for attachment in getattr(message, "attachments", ()) or ():
+            self._add_image_attachment(attachment, image_attachments, seen_attachments)
+
+        try:
+            snapshots = getattr(message, "message_snapshots", ()) or ()
+            for snapshot in snapshots:
+                for attachment in getattr(snapshot, "attachments", ()) or ():
+                    self._add_image_attachment(attachment, image_attachments, seen_attachments)
+        except TypeError:
+            pass
+
+        return image_attachments
+
+    def _add_image_attachment(
+        self, attachment: Any, image_attachments: list[Any], seen_attachments: set[tuple[Any, ...]]
+    ) -> None:
+        if not self._is_image_attachment(attachment):
+            return
+        key = self._attachment_dedupe_key(attachment)
+        if key in seen_attachments:
+            return
+        seen_attachments.add(key)
+        image_attachments.append(attachment)
+
+    @staticmethod
+    def _attachment_dedupe_key(attachment: Any) -> tuple[Any, ...]:
+        attachment_id = getattr(attachment, "id", None)
+        if attachment_id is not None:
+            return ("id", attachment_id)
+        return (
+            "fallback",
+            getattr(attachment, "url", None),
+            getattr(attachment, "filename", None),
+            getattr(attachment, "size", None),
+            getattr(attachment, "content_type", None),
+        )
+
     async def _check_attachment(
-        self, attachment: discord.Attachment, guild: discord.Guild
+        self, attachment: Any, guild: discord.Guild
     ) -> tuple[int | None, str | None] | None:
+        filename = str(getattr(attachment, "filename", "attachment"))
         try:
             image_data = await attachment.read()
             with Image.open(io.BytesIO(image_data)) as image:
                 image_hash = str(imagehash.phash(image, hash_size=16))
-        except (discord.HTTPException, OSError, ValueError) as exc:
-            return None, f"could not read `{attachment.filename}` ({exc})"
+        except (AttributeError, TypeError, discord.HTTPException, OSError, ValueError) as exc:
+            return None, f"could not read `{filename}` ({exc})"
 
         if self.session is None:
             return None
@@ -248,10 +287,11 @@ class ScamImages(commands.Cog):
             return None, "the scam image service returned an invalid response"
 
     async def _handle_match(
-        self, message: discord.Message, attachment: discord.Attachment, score: int
+        self, message: discord.Message, attachment: Any, score: int
     ):
         settings = await self.config.guild(message.guild).all()
-        reason = f"Scam image detected (score {score}/10): {attachment.url}"
+        attachment_url = getattr(attachment, "url", "unknown-url")
+        reason = f"Scam image detected (score {score}/10): {attachment_url}"
         deleted = False
         if settings["delete_matches"]:
             try:
