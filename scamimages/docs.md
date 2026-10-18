@@ -20,9 +20,9 @@ The bot needs permission to read message history and attachments. If deletion is
 - `[p]scamimages timeoutduration <seconds>` sets the timeout duration from 60 seconds to 28 days; the default is 3600 seconds.
 - `[p]scamimages modlog true|false` controls whether detections create Redbot warning cases; the default is `true`.
 - `[p]scamimages notify true|false` controls whether detections also post in the source channel; the default is `false`.
-- `[p]scamimages useragent <value>` sets the API User-Agent; omit the value to reset it.
+- `[p]scamimages useragent <value>` sets the global API User-Agent; omit the value to reset it (bot owner only).
 - `[p]scamimages hide #channel` hides a channel from detection.
 - `[p]scamimages unhide #channel` restores detection in a hidden channel.
 - `[p]scamimages hidden` lists hidden channels.
 
-All commands require Manage Server or administrator permission.
+All server configuration commands require Manage Server or administrator permission. The `useragent` command is restricted to the bot owner.

@@ -28,6 +28,7 @@ class ScamImages(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=492089091320446976, force_registration=True)
+        self.config.register_global(user_agent=DEFAULT_USER_AGENT)
         self.config.register_guild(
             enabled=False,
             threshold=DEFAULT_THRESHOLD,
@@ -37,7 +38,6 @@ class ScamImages(commands.Cog):
             modlog_enabled=True,
             notify_channel=False,
             ignored_channels=[],
-            user_agent=DEFAULT_USER_AGENT,
         )
         self.session: aiohttp.ClientSession | None = None
 
@@ -73,7 +73,7 @@ class ScamImages(commands.Cog):
         """Show this server's scam image settings."""
         settings = await self.config.guild(ctx.guild).all()
         state = "enabled" if settings["enabled"] else "disabled"
-        user_agent = settings["user_agent"]
+        user_agent = await self.config.user_agent()
         await ctx.send(
             f"Scam image detection is **{state}**. "
             f"Threshold: **{settings['threshold']}**. "
@@ -135,8 +135,9 @@ class ScamImages(commands.Cog):
         await ctx.send(f"Detections {state} post a notice in the source channel.")
 
     @scamimages.command(name="useragent")
+    @commands.is_owner()
     async def scamimages_useragent(self, ctx, *, user_agent: str = ""):
-        """Set the API User-Agent, or reset it by omitting the value."""
+        """Set the global API User-Agent, or reset it by omitting the value."""
         user_agent = user_agent.strip()
         if "\r" in user_agent or "\n" in user_agent:
             await ctx.send("The User-Agent cannot contain line breaks.")
@@ -146,8 +147,8 @@ class ScamImages(commands.Cog):
             return
         if not user_agent:
             user_agent = DEFAULT_USER_AGENT
-        await self.config.guild(ctx.guild).user_agent.set(user_agent)
-        await ctx.send(f"API User-Agent set to `{user_agent}`.")
+        await self.config.user_agent.set(user_agent)
+        await ctx.send(f"Global API User-Agent set to `{user_agent}`.")
 
     @scamimages.command(name="hide")
     async def scamimages_hide(self, ctx, channel: discord.TextChannel):
@@ -272,7 +273,7 @@ class ScamImages(commands.Cog):
             async with self.session.get(
                 API_URL,
                 params={"hash": image_hash, "dimensions": f"{image.width},{image.height}"},
-                headers={"User-Agent": await self.config.guild(guild).user_agent()},
+                headers={"User-Agent": await self.config.user_agent()},
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
                 payload: dict[str, Any] = await response.json(content_type=None)
