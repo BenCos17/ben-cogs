@@ -27,6 +27,7 @@ This cog uses Red Config and stores:
 Guild scope:
 - auto_reactions: dictionary keyed as channel_id-user_id with emoji value
 - spotify_autoclean: boolean, default false
+- invite_filter_excluded_channels: list of channel IDs excluded from invite filtering
 
 User scope:
 - online_notifications: list of tracked user IDs
@@ -154,6 +155,16 @@ Runtime behavior:
 - It removes only the si query parameter.
 - If a cleaned URL differs from original, it posts the cleaned link to the channel.
 - Original messages are not edited or deleted.
+
+### 11) invitefilter command group
+- Name: invitefilter
+- Permission required: Manage Server
+- Usage:
+  - [p]invitefilter exclude <channel>
+  - [p]invitefilter include <channel>
+- What it does:
+  - Excludes a channel from invite filtering without disabling the filter elsewhere
+  - Re-enables filtering in a previously excluded channel
 
 ### 11) spotifycleandm command group
 - Name: spotifycleandm
