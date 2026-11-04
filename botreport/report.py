@@ -158,13 +158,40 @@ class BotReport(commands.Cog):
             if first_attachment.content_type and first_attachment.content_type.startswith("image/"):
                 embed.set_image(url=first_attachment.url)
 
+        confirmation = await ctx.send(
+            "React with ✅ to send this report to the bot owner, or ❌ to cancel."
+        )
+        try:
+            await confirmation.add_reaction("✅")
+            await confirmation.add_reaction("❌")
+        except discord.Forbidden:
+            await ctx.send("I need permission to add reactions before I can ask for report confirmation.")
+            return
+
+        def confirmation_check(reaction: discord.Reaction, user: discord.User) -> bool:
+            return (
+                user.id == ctx.author.id
+                and reaction.message.id == confirmation.id
+                and str(reaction.emoji) in {"✅", "❌"}
+            )
+
+        try:
+            reaction, _ = await self.bot.wait_for("reaction_add", timeout=60, check=confirmation_check)
+        except TimeoutError:
+            await confirmation.edit(content="Report cancelled because confirmation timed out.")
+            return
+
+        if str(reaction.emoji) == "❌":
+            await confirmation.edit(content="Report cancelled.")
+            return
+
         try:
             await report_channel.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
         except discord.Forbidden:
-            await ctx.send("I cannot send reports to the configured channel. Ask a moderator to check my permissions.")
+            await confirmation.edit(content="I cannot send reports to the configured channel. Ask the bot owner to check my permissions.")
             return
 
-        await ctx.send("Your report was sent to the moderators.")
+        await confirmation.edit(content="Your report was sent to the bot owner.")
 
     @commands.group(name="botreportset", invoke_without_command=True)
     @commands.guild_only()
