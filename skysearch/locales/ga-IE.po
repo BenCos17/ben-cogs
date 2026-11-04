@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jarvisdiscordbot\n"
 "POT-Creation-Date: 2026-09-03 12:51+0100\n"
-"PO-Revision-Date: 2026-11-04 22:41\n"
+"PO-Revision-Date: 2026-11-04 22:45\n"
 "Last-Translator: \n"
 "Language-Team: Irish\n"
 "MIME-Version: 1.0\n"
@@ -357,6 +357,18 @@ msgstr "Liosta faire nuashonraithe"
 #: commands\aircraft.py:1013
 msgid "**{total}** items in watchlist | **{online}** aircraft currently online"
 msgstr "**{total}** mír ar an liosta faire | **{online}** aerárthach ar líne faoi láthair"
+
+#: commands\aircraft.py:1050
+msgid "🟢 Aircraft Online"
+msgstr "🟢 Aerárthach Ar Líne"
+
+#: commands\aircraft.py:1065
+msgid "Watchlist Already Empty"
+msgstr "Tá an liosta faire folamh cheana féin"
+
+#: commands\aircraft.py:1066
+msgid "Your watchlist is already empty."
+msgstr "Tá do liosta faire folamh."
 
 #: commands\aircraft.py:1079
 msgid "✅ Watchlist Cleared"
