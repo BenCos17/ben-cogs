@@ -2,9 +2,9 @@
     "author": [
         "bencos18"
     ],
-    "install_msg": "Thank you for installing the BotReport cog. The bot owner can configure it globally with [p]botreportset channel #channel, then members can reply to a message with [p]botreport <reason>.",
+    "install_msg": "Thank you for installing the BotReport cog. The bot owner can configure it globally with [p]botreportset channel #channel, then members can reply to a message or use a message ID/link with [p]botreport.",
     "short": "Bot-wide message reporting.",
-    "description": "Allows members in every server to report messages, including bot-generated memes and images, to one bot-owner-configured channel.",
+    "description": "Allows members in servers and DMs to report messages, including bot-generated memes and images, by reply, message ID, or Discord message link to one bot-owner-configured channel.",
     "tags": [
         "moderation",
         "reports",

@@ -1,6 +1,7 @@
 import discord
 from redbot.core import Config, commands
 from redbot.core.bot import Red
+from urllib.parse import urlsplit
 
 
 class BotReport(commands.Cog):
@@ -16,7 +17,42 @@ class BotReport(commands.Cog):
         value = value or ""
         return value if len(value) <= limit else f"{value[: limit - 3]}..."
 
-    async def _get_reported_message(self, ctx: commands.Context) -> discord.Message | None:
+    @staticmethod
+    def _parse_message_reference(value: str) -> tuple[int, int | None] | None:
+        value = value.strip().strip("<>")
+        if value.isdigit():
+            return int(value), None
+
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"http", "https"} or parsed.netloc not in {
+            "discord.com",
+            "discordapp.com",
+            "canary.discord.com",
+            "ptb.discord.com",
+        }:
+            return None
+
+        parts = [part for part in parsed.path.split("/") if part]
+        if len(parts) != 4 or parts[0] != "channels":
+            return None
+        try:
+            return int(parts[3]), int(parts[2])
+        except ValueError:
+            return None
+
+    async def _fetch_message(self, channel_id: int, message_id: int) -> discord.Message | None:
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            try:
+                channel = await self.bot.fetch_channel(channel_id)
+            except (discord.Forbidden, discord.HTTPException, discord.NotFound):
+                return None
+        try:
+            return await channel.fetch_message(message_id)
+        except (discord.Forbidden, discord.HTTPException, discord.NotFound, AttributeError):
+            return None
+
+    async def _get_reply_message(self, ctx: commands.Context) -> discord.Message | None:
         reference = ctx.message.reference
         if reference is None or reference.message_id is None:
             return None
@@ -27,22 +63,54 @@ class BotReport(commands.Cog):
         except (discord.Forbidden, discord.HTTPException, discord.NotFound):
             return None
 
+    async def _get_reply_context(self, message: discord.Message) -> discord.Message | None:
+        reference = message.reference
+        if reference is None or reference.message_id is None:
+            return None
+        if isinstance(reference.resolved, discord.Message):
+            return reference.resolved
+        try:
+            return await message.channel.fetch_message(reference.message_id)
+        except (discord.Forbidden, discord.HTTPException, discord.NotFound, AttributeError):
+            return None
+
     @commands.command(name="botreport")
-    @commands.guild_only()
     @commands.cooldown(1, 30, commands.BucketType.user)
-    async def report(self, ctx: commands.Context, *, reason: str = "No reason provided."):
-        """Report the message this command is replying to."""
+    async def report(self, ctx: commands.Context, *, report_input: str = ""):
+        """Report a replied-to message, message ID, or Discord message link."""
         channel_id = await self.config.report_channel()
         report_channel = self.bot.get_channel(channel_id) if channel_id else None
         if not isinstance(report_channel, discord.TextChannel):
             await ctx.send("Reports are not configured. Ask the bot owner to run `[p]botreportset channel #channel`.")
             return
 
-        message = await self._get_reported_message(ctx)
+        parts = report_input.strip().split(maxsplit=1)
+        message = None
+        reason = report_input.strip() or "No reason provided."
+        if parts:
+            reference = self._parse_message_reference(parts[0])
+            if reference is not None:
+                message_id, source_channel_id = reference
+                if source_channel_id is None:
+                    try:
+                        message = await ctx.channel.fetch_message(message_id)
+                    except (discord.Forbidden, discord.HTTPException, discord.NotFound):
+                        message = None
+                else:
+                    message = await self._fetch_message(source_channel_id, message_id)
+                reason = parts[1] if len(parts) > 1 else "No reason provided."
+            else:
+                message = await self._get_reply_message(ctx)
+        else:
+            message = await self._get_reply_message(ctx)
+
         if message is None:
-            await ctx.send("Reply to the message you want to report, then run `[p]botreport <reason>`.")
+            await ctx.send("Reply to a message, or provide a message ID/link: `[p]botreport <message ID or link> <reason>`." )
             return
 
+        reply_context = await self._get_reply_context(message)
+        source = message.guild.name if message.guild else "Direct message"
+        channel_name = getattr(message.channel, "mention", str(message.channel))
         embed = discord.Embed(
             title="Message reported",
             description=self._truncate(message.content, 4096) or "(no text content)",
@@ -53,7 +121,19 @@ class BotReport(commands.Cog):
         embed.add_field(name="Reported by", value=f"{ctx.author.mention} (`{ctx.author.id}`)", inline=True)
         embed.add_field(name="Original author", value=f"{message.author.mention} (`{message.author.id}`)", inline=True)
         embed.add_field(name="Reason", value=self._truncate(reason, 1024), inline=False)
+        embed.add_field(
+            name="Source",
+            value=self._truncate(f"{source}\n{channel_name}\nMessage ID: `{message.id}`", 1024),
+            inline=False,
+        )
         embed.add_field(name="Message", value=f"[Jump to message]({message.jump_url})", inline=False)
+        if reply_context is not None:
+            context_text = self._truncate(reply_context.content, 700) or "(no text content)"
+            embed.add_field(
+                name="Reply context",
+                value=f"{context_text}\n[Jump to replied message]({reply_context.jump_url})",
+                inline=False,
+            )
         if message.attachments:
             attachments = "\n".join(attachment.url for attachment in message.attachments)
             embed.add_field(name="Attachments", value=self._truncate(attachments, 1024), inline=False)
