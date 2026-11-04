@@ -1,6 +1,6 @@
 from redbot.core.bot import Red
 
-from .report import Report
+from .report import BotReport
 
 __red_end_user_data_statement__ = (
     "This cog processes and forwards Discord user IDs, usernames, message content, attachment URLs, "
@@ -9,4 +9,4 @@ __red_end_user_data_statement__ = (
 
 
 async def setup(bot: Red):
-    await bot.add_cog(Report(bot))
+    await bot.add_cog(BotReport(bot))

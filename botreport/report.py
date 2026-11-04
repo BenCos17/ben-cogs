@@ -3,7 +3,7 @@ from redbot.core import Config, commands
 from redbot.core.bot import Red
 
 
-class Report(commands.Cog):
+class BotReport(commands.Cog):
     """Let members report messages to a moderator channel."""
 
     def __init__(self, bot: Red):
@@ -27,7 +27,7 @@ class Report(commands.Cog):
         except (discord.Forbidden, discord.HTTPException, discord.NotFound):
             return None
 
-    @commands.command(name="report")
+    @commands.command(name="botreport")
     @commands.guild_only()
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def report(self, ctx: commands.Context, *, reason: str = "No reason provided."):
@@ -35,12 +35,12 @@ class Report(commands.Cog):
         channel_id = await self.config.report_channel()
         report_channel = self.bot.get_channel(channel_id) if channel_id else None
         if not isinstance(report_channel, discord.TextChannel):
-            await ctx.send("Reports are not configured. Ask the bot owner to run `[p]reportset channel #channel`.")
+            await ctx.send("Reports are not configured. Ask the bot owner to run `[p]botreportset channel #channel`.")
             return
 
         message = await self._get_reported_message(ctx)
         if message is None:
-            await ctx.send("Reply to the message you want to report, then run `[p]report <reason>`.")
+            await ctx.send("Reply to the message you want to report, then run `[p]botreport <reason>`.")
             return
 
         embed = discord.Embed(
@@ -69,7 +69,7 @@ class Report(commands.Cog):
 
         await ctx.send("Your report was sent to the moderators.")
 
-    @commands.group(name="reportset", invoke_without_command=True)
+    @commands.group(name="botreportset", invoke_without_command=True)
     @commands.guild_only()
     @commands.is_owner()
     async def reportset(self, ctx: commands.Context):
