@@ -110,10 +110,6 @@ msgstr "ICAO-opzoeking"
 msgid "✅ **Enabled** - Automatic ICAO lookup is active"
 msgstr "✅ **Ingeschakeld** - Automatische ICAO-opzoeking is actief"
 
-#: commands\aircraft.py:28
-#, docstring
-msgid "Aircraft-related commands for SkySearch."
-msgstr "Gerelateerde vliegtuigcommando's voor SkySearch."
 
 #: commands\aircraft.py:53 commands\aircraft.py:129
 msgid "No results found for your query"
@@ -224,10 +220,6 @@ msgstr "Voeg vliegtuigen of typen toe om te volgen en ontvang een melding wannee
 msgid "Usage"
 msgstr "Gebruik"
 
-#: commands\aircraft.py:798
-msgid "`watchlist add <type> <value>`"
-msgstr "`watchlist add <type> <waarde>`"
-
 #: commands\aircraft.py:800 commands\aircraft.py:905
 msgid "Types"
 msgstr "Typen"
@@ -251,14 +243,6 @@ msgstr "Vliegtuigtypen"
 #: commands\aircraft.py:810
 msgid "Examples"
 msgstr "Voorbeelden"
-
-#: commands\aircraft.py:811
-msgid "• `watchlist add icao A2F41D`\n"
-"• `watchlist add type military`\n"
-"• `watchlist add callsign UNITED123`\n"
-"• `watchlist add reg N814AK`\n"
-"• `watchlist add squawk 7700`"
-msgstr ""
 
 #: commands\aircraft.py:824
 msgid "Invalid Type"

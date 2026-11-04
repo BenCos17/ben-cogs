@@ -651,7 +651,7 @@ class Skysearch(commands.Cog, DashboardIntegration):
 
     # Airport commands
     @commands.guild_only()
-    @commands.group(name='airport', help='Command center for airport related commands', invoke_without_command=True)
+    @commands.group(name='airport', help=_('Command center for airport related commands'), invoke_without_command=True)
     async def airport_group(self, ctx):
         """Command center for airport related commands"""
         embed = discord.Embed(title="Airport Commands", description="Available airport-related commands:", color=0xfffffe)
@@ -677,47 +677,47 @@ class Skysearch(commands.Cog, DashboardIntegration):
         """Get navigational aids for an airport."""
         await self.airport_commands.navaid_info(ctx, airport_code)
 
-    @airport_group.command(name='forecast', help='Get the weather for an airport by ICAO or IATA code (US airports only).')
+    @airport_group.command(name='forecast', help=_('Get the weather for an airport by ICAO or IATA code (US airports only).'))
     async def airport_forecast(self, ctx, code: str):
         """Get the weather for an airport by ICAO or IATA code (US airports only)."""
         await self.airport_commands.forecast(ctx, code)
 
-    @airport_group.command(name='avwx', aliases=['wx'], help='Get aviation weather conditions from AVWX for an airport code.')
+    @airport_group.command(name='avwx', aliases=['wx'], help=_('Get aviation weather conditions from AVWX for an airport code.'))
     async def airport_avwx(self, ctx, code: str):
         """Get aviation weather conditions from AVWX for an airport code."""
         await self.airport_commands.avwx_conditions(ctx, code)
 
-    @airport_group.command(name='metar', help='Get current METAR from AVWX for an airport code.')
+    @airport_group.command(name='metar', help=_('Get current METAR from AVWX for an airport code.'))
     async def airport_metar(self, ctx, code: str):
         """Get current METAR from AVWX for an airport code."""
         await self.airport_commands.avwx_metar(ctx, code)
 
-    @airport_group.command(name='taf', help='Get current TAF from AVWX for an airport code.')
+    @airport_group.command(name='taf', help=_('Get current TAF from AVWX for an airport code.'))
     async def airport_taf(self, ctx, code: str):
         """Get current TAF from AVWX for an airport code."""
         await self.airport_commands.avwx_taf(ctx, code)
 
-    @airport_group.command(name='faastatus', aliases=['faa'], help='Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code.')
+    @airport_group.command(name='faastatus', aliases=['faa'], help=_('Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code.'))
     async def airport_faa_status(self, ctx, airport_code: str = None):
         """Get FAA National Airspace Status for airports with delays or closures. Optionally filter by airport code (e.g., SAN, LAS)."""
         await self.airport_commands.faa_status(ctx, airport_code)
 
-    @airport_group.command(name='faaalertchannel', help='Set or clear the channel for FAA status change notifications.')
+    @airport_group.command(name='faaalertchannel', help=_('Set or clear the channel for FAA status change notifications.'))
     async def airport_faa_alert_channel(self, ctx, channel: discord.TextChannel = None):
         """Set or clear the channel for FAA status change notifications."""
         await self.admin_commands.set_faa_alert_channel(ctx, channel)
 
-    @airport_group.command(name='faaalertrole', help='Set or clear the role to mention when FAA status changes.')
+    @airport_group.command(name='faaalertrole', help=_('Set or clear the role to mention when FAA status changes.'))
     async def airport_faa_alert_role(self, ctx, role: discord.Role = None):
         """Set or clear the role to mention when FAA status changes."""
         await self.admin_commands.set_faa_alert_role(ctx, role)
 
-    @airport_group.command(name='faaalertcooldown', help='Set or show cooldown for FAA status change notifications (minutes).')
+    @airport_group.command(name='faaalertcooldown', help=_('Set or show cooldown for FAA status change notifications (minutes).'))
     async def airport_faa_alert_cooldown(self, ctx, duration: str = None):
         """Set or show cooldown for FAA status change notifications."""
         await self.admin_commands.set_faa_alert_cooldown(ctx, duration)
 
-    @airport_group.command(name='showfaaalerts', help='Show current FAA status alert channel and role.')
+    @airport_group.command(name='showfaaalerts', help=_('Show current FAA status alert channel and role.'))
     async def airport_show_faa_alerts(self, ctx):
         """Show current FAA status alert settings."""
         await self.admin_commands.list_faa_alert_channels(ctx)

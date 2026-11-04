@@ -224,10 +224,6 @@ msgstr "Cuir aerárthaí nó cineálacha aerárthaí leis chun monatóireacht a 
 msgid "Usage"
 msgstr "Úsáid"
 
-#: commands\aircraft.py:798
-msgid "`watchlist add <type> <value>`"
-msgstr "`watchlist add <type> <value>`"
-
 #: commands\aircraft.py:800 commands\aircraft.py:905
 msgid "Types"
 msgstr "Cineálacha"
@@ -251,18 +247,6 @@ msgstr "Cineálacha aerárthaí"
 #: commands\aircraft.py:810
 msgid "Examples"
 msgstr "Samplaí"
-
-#: commands\aircraft.py:811
-msgid "• `watchlist add icao A2F41D`\n"
-"• `watchlist add type military`\n"
-"• `watchlist add callsign UNITED123`\n"
-"• `watchlist add reg N814AK`\n"
-"• `watchlist add squawk 7700`"
-msgstr "• `watchlist add icao A2F41D`\n"
-"• `watchlist add type military`\n"
-"• `watchlist add callsign UNITED123`\n"
-"• `watchlist add reg N814AK`\n"
-"• `watchlist add squawk 7700`"
 
 #: commands\aircraft.py:824
 msgid "Invalid Type"
@@ -373,18 +357,6 @@ msgstr "Liosta faire nuashonraithe"
 #: commands\aircraft.py:1013
 msgid "**{total}** items in watchlist | **{online}** aircraft currently online"
 msgstr "**{total}** mír ar an liosta faire | **{online}** aerárthach ar líne faoi láthair"
-
-#: commands\aircraft.py:1050
-msgid "🟢 Aircraft Online"
-msgstr "🟢 Aerárthach Ar Líne"
-
-#: commands\aircraft.py:1065
-msgid "Watchlist Already Empty"
-msgstr "Tá an liosta faire folamh cheana féin"
-
-#: commands\aircraft.py:1066
-msgid "Your watchlist is already empty."
-msgstr "Tá do liosta faire folamh."
 
 #: commands\aircraft.py:1079
 msgid "✅ Watchlist Cleared"

@@ -224,10 +224,6 @@ msgstr "Adde aircrafta aut genera ad observandum et notificationes accipe cum ac
 msgid "Usage"
 msgstr "Usus"
 
-#: commands\aircraft.py:798
-msgid "`watchlist add <type> <value>`"
-msgstr ""
-
 #: commands\aircraft.py:800 commands\aircraft.py:905
 msgid "Types"
 msgstr "Genera"
@@ -251,14 +247,6 @@ msgstr "Genera aircraftorum"
 #: commands\aircraft.py:810
 msgid "Examples"
 msgstr "Exempla"
-
-#: commands\aircraft.py:811
-msgid "• `watchlist add icao A2F41D`\n"
-"• `watchlist add type military`\n"
-"• `watchlist add callsign UNITED123`\n"
-"• `watchlist add reg N814AK`\n"
-"• `watchlist add squawk 7700`"
-msgstr ""
 
 #: commands\aircraft.py:824
 msgid "Invalid Type"
