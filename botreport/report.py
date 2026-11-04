@@ -170,20 +170,20 @@ class BotReport(commands.Cog):
             await ctx.send("I need permission to add reactions before I can ask for report confirmation.")
             return
 
-        def confirmation_check(reaction: discord.Reaction, user: discord.User) -> bool:
+        def confirmation_check(payload: discord.RawReactionActionEvent) -> bool:
             return (
-                user.id == ctx.author.id
-                and reaction.message.id == confirmation.id
-                and str(reaction.emoji) in {"✅", "❌"}
+                payload.user_id == ctx.author.id
+                and payload.message_id == confirmation.id
+                and payload.emoji.name in {"✅", "❌"}
             )
 
         try:
-            reaction, _ = await self.bot.wait_for("reaction_add", timeout=60, check=confirmation_check)
+            reaction = await self.bot.wait_for("raw_reaction_add", timeout=60, check=confirmation_check)
         except TimeoutError:
             await confirmation.edit(content="Report cancelled because confirmation timed out.", embed=None)
             return
 
-        if str(reaction.emoji) == "❌":
+        if reaction.emoji.name == "❌":
             await confirmation.edit(content="Report cancelled.", embed=None)
             return
 
