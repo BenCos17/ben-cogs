@@ -74,6 +74,15 @@ class BotReport(commands.Cog):
         except (discord.Forbidden, discord.HTTPException, discord.NotFound, AttributeError):
             return None
 
+    async def _get_following_bot_response(self, message: discord.Message) -> discord.Message | None:
+        try:
+            async for candidate in message.channel.history(limit=50, after=message, oldest_first=True):
+                if candidate.author.bot:
+                    return candidate
+        except (discord.Forbidden, discord.HTTPException, discord.NotFound, AttributeError):
+            return None
+        return None
+
     @commands.command(name="botreport")
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def report(self, ctx: commands.Context, *, report_input: str = ""):
@@ -109,6 +118,7 @@ class BotReport(commands.Cog):
             return
 
         reply_context = await self._get_reply_context(message)
+        following_bot_response = await self._get_following_bot_response(message)
         source = message.guild.name if message.guild else "Direct message"
         channel_name = getattr(message.channel, "mention", str(message.channel))
         embed = discord.Embed(
@@ -132,6 +142,13 @@ class BotReport(commands.Cog):
             embed.add_field(
                 name="Reply context",
                 value=f"{context_text}\n[Jump to replied message]({reply_context.jump_url})",
+                inline=False,
+            )
+        if following_bot_response is not None:
+            response_text = self._truncate(following_bot_response.content, 850) or "(no text content)"
+            embed.add_field(
+                name="Following bot response",
+                value=f"{response_text}\n[Jump to bot response]({following_bot_response.jump_url})",
                 inline=False,
             )
         if message.attachments:
