@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jarvisdiscordbot\n"
 "POT-Creation-Date: 2026-09-03 12:51+0100\n"
-"PO-Revision-Date: 2026-11-04 22:41\n"
+"PO-Revision-Date: 2026-11-04 22:45\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "MIME-Version: 1.0\n"
@@ -110,6 +110,10 @@ msgstr "ICAO-opzoeking"
 msgid "✅ **Enabled** - Automatic ICAO lookup is active"
 msgstr "✅ **Ingeschakeld** - Automatische ICAO-opzoeking is actief"
 
+#: commands\aircraft.py:28
+#, docstring
+msgid "Aircraft-related commands for SkySearch."
+msgstr "Gerelateerde vliegtuigcommando's voor SkySearch."
 
 #: commands\aircraft.py:53 commands\aircraft.py:129
 msgid "No results found for your query"
