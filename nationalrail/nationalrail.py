@@ -216,6 +216,11 @@ class NationalRail(commands.Cog):
     self._cache: Dict[Tuple[str, str, str], Tuple[float, object]] = {}
     self._inflight: Dict[Tuple[str, str, str], asyncio.Task] = {}
     self._recent_calls: List[float] = []
+    # API stats since the cog loaded: plain counters plus 24 hourly buckets, so memory stays tiny.
+    self._api = {
+        "total": 0, "ok": 0, "failed": 0, "rate_limited": 0, "auth_failed": 0, "cache_hits": 0,
+        "total_time": 0.0, "last": None, "endpoints": {}, "hours": {}, "since": time.time(),
+    }
     self.stations: List[dict] = []
     self._by_crs: Dict[str, dict] = {}
 
@@ -265,6 +270,7 @@ class NationalRail(commands.Cog):
     if not self._under_cap():
       raise NationalRailError(f"National Rail: {MAX_PER_MINUTE} calls a minute reached, try again shortly.")
     self._recent_calls.append(time.monotonic())
+    t0 = time.monotonic()
 
     params = {"numRows": str(NUM_ROWS), "timeWindow": str(TIME_WINDOW_MINS)}
     if filter_crs:
@@ -278,7 +284,9 @@ class NationalRail(commands.Cog):
         text = await resp.text()
         status = resp.status
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+      self._note_api(op, 0, time.monotonic() - t0)
       raise NationalRailError(f"National Rail is unreachable right now ({type(e).__name__}).")
+    self._note_api(op, status, time.monotonic() - t0)
     if status == 429:
       raise NationalRailError("National Rail rate limit reached, try again in a minute.")
     if status in (401, 403):
@@ -299,11 +307,96 @@ class NationalRail(commands.Cog):
     except (ValueError, TypeError):
       raise NationalRailError("National Rail sent a reply that isn't JSON.")
 
+  def _note_api(self, op: str, status: int, secs: float):
+    a = self._api
+    a["total"] += 1
+    a["total_time"] += secs
+    a["last"] = time.time()
+    if 200 <= status < 400:
+      a["ok"] += 1
+    else:
+      a["failed"] += 1
+    if status == 429:
+      a["rate_limited"] += 1
+    elif status in (401, 403):
+      a["auth_failed"] += 1
+    a["endpoints"][op] = a["endpoints"].get(op, 0) + 1
+    hour = int(time.time() // 3600)
+    a["hours"][hour] = a["hours"].get(hour, 0) + 1
+    for h in [h for h in a["hours"] if h < hour - 23]:
+      del a["hours"][h]
+
+  def get_api_stats(self) -> dict:
+    """National Rail API stats since the cog loaded (used by `nrset apistats` and SkySearch's apistats)."""
+    a = self._api
+    hour = int(time.time() // 3600)
+    return {
+        "total_requests": a["total"],
+        "successful_requests": a["ok"],
+        "failed_requests": a["failed"],
+        "rate_limited_requests": a["rate_limited"],
+        "auth_failed_requests": a["auth_failed"],
+        "cache_hits": a["cache_hits"],
+        "success_rate": (a["ok"] * 100 / a["total"]) if a["total"] else 0.0,
+        "avg_response_time": (a["total_time"] / a["total"]) if a["total"] else 0.0,
+        "requests_last_24h": sum(c for h, c in a["hours"].items() if h > hour - 24),
+        "requests_last_minute": len([t for t in self._recent_calls if t >= time.monotonic() - 60]),
+        "max_per_minute": MAX_PER_MINUTE,
+        "endpoint_usage": dict(a["endpoints"]),
+        "last_request": a["last"],
+        "since": a["since"],
+    }
+
+  def api_stats_embed(self) -> discord.Embed:
+    s = self.get_api_stats()
+    served = s["total_requests"] + s["cache_hits"]
+    hit_rate = f"{s['cache_hits'] * 100 / served:.1f}%" if served else "-"
+    e = discord.Embed(
+        title="🚆 National Rail API Statistics",
+        description=f"Darwin LDBWS via the Rail Data Marketplace · since <t:{int(s['since'])}:R>",
+        color=NRE_RED,
+    )
+    last = f"<t:{int(s['last_request'])}:R>" if s["last_request"] else "Never"
+    e.add_field(
+        name="📈 Overall Stats",
+        value=f"**Total Requests:** {s['total_requests']:,}\n**Success Rate:** {s['success_rate']:.1f}%\n**Last Request:** {last}",
+        inline=True,
+    )
+    e.add_field(
+        name="✅ Success/Failure",
+        value=f"**Successful:** {s['successful_requests']:,}\n**Failed:** {s['failed_requests']:,}\n**Rate Limited:** {s['rate_limited_requests']:,}",
+        inline=True,
+    )
+    e.add_field(
+        name="🗄️ Cache",
+        value=f"**Cache Hits:** {s['cache_hits']:,}\n**Hit Rate:** {hit_rate}",
+        inline=True,
+    )
+    e.add_field(
+        name="⚡ Performance",
+        value=(
+            f"**Avg Response:** {s['avg_response_time']:.3f}s\n**Last 24h:** {s['requests_last_24h']:,} requests\n"
+            f"**Last minute:** {s['requests_last_minute']}/{s['max_per_minute']}"
+        ),
+        inline=True,
+    )
+    if s["endpoint_usage"]:
+      e.add_field(
+          name="🔗 Endpoints",
+          value="\n".join(f"**{k}:** {v:,}" for k, v in sorted(s["endpoint_usage"].items(), key=lambda kv: -kv[1])),
+          inline=True,
+      )
+    if s["auth_failed_requests"]:
+      e.add_field(name="⚠️ Error Details", value=f"**Auth Failed:** {s['auth_failed_requests']:,}", inline=True)
+    e.set_footer(text="Powered by National Rail Enquiries · counts reset when the cog reloads")
+    return e
+
   async def fetch_board(self, crs: str, filter_crs: Optional[str] = None, arr: bool = False) -> dict:
     """One board, cached for a minute per board type + station + filter."""
     cache_key = ("arr" if arr else "dep", crs, filter_crs or "")
     hit = self._cache.get(cache_key)
     if hit and hit[0] > time.monotonic():
+      self._api["cache_hits"] += 1
       if isinstance(hit[1], NationalRailError):
         raise hit[1]
       return hit[1]
@@ -577,6 +670,11 @@ class NationalRail(commands.Cog):
       return
     await self.config.user_agent.set(user_agent)
     await ctx.send(embed=_embed("✅ User-Agent updated", f"`{user_agent}`", discord.Color.green()), ephemeral=True)
+
+  @nrset.command(name="apistats")
+  async def nrset_apistats(self, ctx: commands.Context):
+    """National Rail API request stats since the cog loaded."""
+    await ctx.send(embed=self.api_stats_embed(), ephemeral=True)
 
   @nrset.command(name="clearcache")
   async def nrset_clearcache(self, ctx: commands.Context):

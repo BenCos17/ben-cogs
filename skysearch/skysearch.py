@@ -11,7 +11,7 @@ import time
 import json
 import urllib.parse
 import logging
-from redbot.core import commands, Config
+from redbot.core import app_commands, commands, Config
 from redbot.core.i18n import cog_i18n, set_contextual_locales_from_guild
 from discord.ext import tasks
 
@@ -251,6 +251,14 @@ class Skysearch(commands.Cog, DashboardIntegration):
     @skysearch.command(name='apistats', help=_('View comprehensive API request statistics, performance metrics, and usage analytics'))
     async def apistats(self, ctx):
         """Get detailed API request statistics (delegates to AdminCommands)."""
+        await self.admin_commands.apistats(ctx)
+
+    @app_commands.command(name="apistats", description="View API request statistics for airplanes.live and National Rail")
+    @app_commands.guild_only()
+    async def apistats_slash(self, interaction: discord.Interaction):
+        """Slash version of `skysearch apistats`."""
+        ctx = await commands.Context.from_interaction(interaction)
+        await ctx.defer()
         await self.admin_commands.apistats(ctx)
 
     @commands.guild_only()
