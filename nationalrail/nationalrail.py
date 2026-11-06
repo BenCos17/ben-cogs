@@ -13,8 +13,16 @@ import asyncio
 import html
 import json
 import re
+import datetime
 import time
 from typing import Dict, List, Optional, Tuple
+
+try:
+  from zoneinfo import ZoneInfo
+
+  LONDON = ZoneInfo("Europe/London")
+except Exception:  # Python 3.8 or no tz data: fall back to UTC (only off by an hour in summer)
+  LONDON = datetime.timezone.utc
 
 import aiohttp
 import discord
@@ -161,6 +169,56 @@ def _formation_summary(svc: dict) -> str:
   return " · ".join(parts)
 
 
+DIAGRAM_KEY = "-# ◀ front of train · 🟩 quiet · 🟨 busy · 🟥 very busy · 🟦 first class · ⬜ standard / no busy data"
+RTT_BASE = "https://www.realtimetrains.co.uk/search/detailed/gb-nr:"
+
+
+def _diagram(svc: dict) -> str:
+  """One block per coach, front first: coloured by how busy it is when the operator shares that."""
+  coaches = _coach_list(svc)
+  blocks = []
+  for c in coaches[:16]:
+    if c.get("loadingSpecified") and isinstance(c.get("loading"), (int, float)):
+      pct = c["loading"]
+      blocks.append("🟩" if pct < 40 else "🟨" if pct < 70 else "🟥")
+    elif str(c.get("coachClass") or "").lower().startswith("first"):
+      blocks.append("🟦")
+    else:
+      blocks.append("⬜")
+  if not blocks:
+    blocks = ["⬜"] * min(_length(svc), 16)
+  return ("◀ " + "".join(blocks)) if blocks else ""
+
+
+def _rtt_url(board: dict, svc: dict) -> str:
+  """Realtime Trains search that lists this train first (LDBWS has no RTT service UID)."""
+  arr = _is_arr(board)
+  crs = str(board.get("crs") or "").upper()
+  sched = _clock(_sched(svc, arr)) or "00:00"
+  now = datetime.datetime.now(LONDON)
+  day = now.date()
+  hhmm = int(sched[:2]) * 60 + int(sched[3:])
+  now_m = now.hour * 60 + now.minute
+  if hhmm < now_m - 12 * 60:
+    day += datetime.timedelta(days=1)  # just after midnight on the board
+  elif hhmm > now_m + 12 * 60:
+    day -= datetime.timedelta(days=1)
+  stamp = f"{day.isoformat()}/{sched.replace(':', '')}"
+  if arr:
+    return f"{RTT_BASE}{crs}/{stamp}/arrivals"
+  dests = svc.get("destination") or []
+  to = str((dests[0] or {}).get("crs") or "").upper() if dests else ""
+  if to and to != crs:
+    return f"{RTT_BASE}{crs}/to/gb-nr:{to}/{stamp}"
+  return f"{RTT_BASE}{crs}/{stamp}"
+
+
+def _rtt_view(board: dict, svc: dict) -> discord.ui.View:
+  view = discord.ui.View()
+  view.add_item(discord.ui.Button(label="View on Realtime Trains", emoji="🔗", url=_rtt_url(board, svc)))
+  return view
+
+
 def _services(board: dict) -> List[dict]:
   out = []
   for key in ("trainServices", "busServices", "ferryServices"):
@@ -187,7 +245,7 @@ class ServiceSelect(discord.ui.Select):
   async def callback(self, interaction: discord.Interaction):
     svc = self.board_view.services[int(self.values[0])]
     embed = self.board_view.cog.service_embed(self.board_view.board, svc)
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.response.send_message(embed=embed, view=_rtt_view(self.board_view.board, svc), ephemeral=True)
 
 
 class BoardView(discord.ui.View):
@@ -587,6 +645,7 @@ class NationalRail(commands.Cog):
     title = f"{_sched(svc, arr)} {origin} → {here}" if arr else f"{_sched(svc, arr)} {here} → {dest}"
     embed = discord.Embed(
         title=_fit(title, 256),
+        url=_rtt_url(board, svc),
         color=discord.Color.dark_grey() if cancelled else NRE_RED,
     )
     late = _delay(svc, arr)
@@ -606,6 +665,9 @@ class NationalRail(commands.Cog):
         notes.append("reverse formation")
       embed.add_field(name="Coaches", value=str(coaches) + (f" ({', '.join(notes)})" if notes else ""), inline=True)
     embed.add_field(name="Going to" if arr else "From", value=dest if arr else origin, inline=True)
+    diagram = _diagram(svc)
+    if diagram:
+      embed.add_field(name="Formation", value=diagram + "\n" + DIAGRAM_KEY, inline=False)
     coach_lines = []
     for c in _coach_list(svc):
       cls = "1st" if str(c.get("coachClass") or "").lower().startswith("first") else "Std"
@@ -662,14 +724,30 @@ class NationalRail(commands.Cog):
     arr = _is_arr(board)
     lines = []
     for svc in services:
-      summary = _formation_summary(svc) or "No coach info from National Rail"
-      lines.append(f"**{_sched(svc, arr)} {'from ' if arr else ''}{_far_end(svc, arr)}** — {summary}")
+      summary = _formation_summary(svc) or "no coach info"
+      est = _est(svc, arr)
+      late = _delay(svc, arr)
+      if late > 0 and not svc.get("isCancelled"):
+        est += f" (+{late})"
+      extra = [f"Plat {svc.get('platform') or '-'}", est, str(svc.get("operator") or "")]
+      lines.append(
+          f"**[{_sched(svc, arr)} {'from ' if arr else ''}{_far_end(svc, arr)}]({_rtt_url(board, svc)})** — {summary}\n"
+          + (f"{_diagram(svc)}\n" if _diagram(svc) else "")
+          + f"-# {' · '.join(x for x in extra if x)}"
+      )
     e = discord.Embed(
         title=_fit(f"🚃 Train formations — {board.get('locationName', '')}", 256),
         description=_fit("\n".join(lines) or "No trains on this board.", 4096),
         color=NRE_RED,
     )
-    e.add_field(name="Busy key", value="🟢 quiet (under 40%) · 🟡 busy (40–69%) · 🔴 very busy (70%+)", inline=False)
+    if any(_avg_load(svc) is not None for svc in services):
+      e.add_field(name="Key", value=DIAGRAM_KEY, inline=False)
+    elif services:
+      e.add_field(
+          name="How busy?",
+          value="The train companies at this station only share coach counts, not how full each coach is.\n" + DIAGRAM_KEY,
+          inline=False,
+      )
     e.set_footer(text=CREDIT)
     return e
 
@@ -769,7 +847,7 @@ class NationalRail(commands.Cog):
         return
     for svc in _services(board):
       if _sched(svc, False) == want:
-        await ctx.send(embed=self.service_embed(board, svc))
+        await ctx.send(embed=self.service_embed(board, svc), view=_rtt_view(board, svc))
         return
     await ctx.send(embed=_error(f"No train scheduled at **{want}** from {self.station_name(crs)} in the next two hours."))
 
