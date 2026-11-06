@@ -1,0 +1,19 @@
+{
+    "author": [
+        "bencos18 (492089091320446976)"
+    ],
+    "name": "UsageStats",
+    "short": "See how many people use your bot and which commands they run.",
+    "description": "Logs every prefix and slash command from every cog to a small SQLite file and shows usage by day, week, month, year or all time: commands run, unique users, servers, top commands, cogs and servers.",
+    "install_msg": "Thanks for installing UsageStats! It starts counting straight away. Owners can run `[p]usage` (or `/usage overview`) to see the numbers.",
+    "requirements": [],
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "stats",
+        "usage",
+        "analytics",
+        "owner"
+    ],
+    "end_user_data_statement": "This cog logs which commands are used: the time, the Discord user ID, the server ID and the command name. It is only used for usage counts, kept for about 400 days, and deleted on a data deletion request.",
+    "type": "COG"
+}
