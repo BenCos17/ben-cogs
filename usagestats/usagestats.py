@@ -155,10 +155,6 @@ class UsageStats(commands.Cog):
 
   # ---- commands
 
-  async def cog_check(self, ctx: commands.Context) -> bool:
-    # Owner only, for prefix and slash (slash subcommands don't run the group's own checks).
-    return await self.bot.is_owner(ctx.author)
-
   @commands.hybrid_group(name="usage", invoke_without_command=True, fallback="overview")
   @app_commands.describe(period="How far back to look (default: week)")
   async def usage(self, ctx: commands.Context, period: Period = "week"):
@@ -192,9 +188,14 @@ class UsageStats(commands.Cog):
     )
     e.add_field(name="Top commands", value=self._top(top_cmds, lambda n, c: f"`{n}` — {c:,}"), inline=True)
     e.add_field(name="Top cogs", value=self._top(top_cogs, lambda n, c, u: f"**{n}** — {c:,} ({u:,} people)"), inline=True)
+    # Server names are only shown to the bot owner; everyone else sees server IDs.
+    if await self.bot.is_owner(ctx.author):
+      label = lambda g: discord.utils.escape_markdown(self._guild_name(g))[:40]
+    else:
+      label = lambda g: "Direct messages" if g is None else f"`{g}`"
     e.add_field(
         name="Busiest servers",
-        value=self._top(top_guilds, lambda g, c: f"{discord.utils.escape_markdown(self._guild_name(g))[:40]} — {c:,}"),
+        value=self._top(top_guilds, lambda g, c: f"{label(g)} — {c:,}"),
         inline=False,
     )
     await ctx.send(embed=e, ephemeral=True)
@@ -236,6 +237,7 @@ class UsageStats(commands.Cog):
     await ctx.send(embed=e, ephemeral=True)
 
   @usage.command(name="reset")
+  @commands.is_owner()
   async def usage_reset(self, ctx: commands.Context, confirm: bool = False):
     """Delete all recorded usage. Run with `True` to confirm."""
     if not confirm:
