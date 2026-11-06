@@ -56,6 +56,10 @@ jobs:
         with:
           artifact_name: ${{ env.BUILD_ARTIFACT_NAME }}  # same artifact name used for build
 
+      - name: Enable Red task compatibility shim
+        shell: bash
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/.github/workflows/redbot_compat${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
+
       # Configure Red-DiscordBot with instance name "tinkerer".
       # The reusable setup action also runs a dry-run that fails during Red's
       # shutdown on the current dependency versions, while the RPC action
