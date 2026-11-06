@@ -327,7 +327,7 @@ class NationalRail(commands.Cog):
       del a["hours"][h]
 
   def get_api_stats(self) -> dict:
-    """National Rail API stats since the cog loaded (used by `nrset apistats` and SkySearch's apistats)."""
+    """National Rail API stats since the cog loaded (used by `nationalrail apistats`; other cogs can call it too)."""
     a = self._api
     hour = int(time.time() // 3600)
     return {
@@ -619,6 +619,11 @@ class NationalRail(commands.Cog):
     """
     await self._send_board(ctx, station, coming_from, arr=True)
 
+  @nationalrail.command(name="apistats")
+  async def nr_apistats(self, ctx: commands.Context):
+    """National Rail API request stats: requests, success rate, cache hits and response times."""
+    await ctx.send(embed=self.api_stats_embed())
+
   @nationalrail.command(name="search", aliases=["lookup", "crs"])
   @app_commands.describe(query="Part of a station name or a 3-letter code")
   async def nr_search(self, ctx: commands.Context, *, query: str):
@@ -670,11 +675,6 @@ class NationalRail(commands.Cog):
       return
     await self.config.user_agent.set(user_agent)
     await ctx.send(embed=_embed("✅ User-Agent updated", f"`{user_agent}`", discord.Color.green()), ephemeral=True)
-
-  @nrset.command(name="apistats")
-  async def nrset_apistats(self, ctx: commands.Context):
-    """National Rail API request stats since the cog loaded."""
-    await ctx.send(embed=self.api_stats_embed(), ephemeral=True)
 
   @nrset.command(name="clearcache")
   async def nrset_clearcache(self, ctx: commands.Context):

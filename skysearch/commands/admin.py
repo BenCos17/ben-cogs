@@ -814,13 +814,6 @@ class AdminCommands:
                         await ctx.send(embed=e)
                     except Exception:
                         continue
-        # National Rail API stats, when the NationalRail cog is loaded too.
-        nr = self.cog.bot.get_cog("NationalRail")
-        if nr is not None and hasattr(nr, "api_stats_embed"):
-            try:
-                await ctx.send(embed=nr.api_stats_embed())
-            except Exception:
-                pass
 
     async def apistats_reset(self, ctx):
         """Reset API request statistics."""
