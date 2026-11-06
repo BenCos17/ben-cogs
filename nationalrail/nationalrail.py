@@ -243,9 +243,64 @@ class ServiceSelect(discord.ui.Select):
     super().__init__(placeholder="Show calling points & coaches for a train…", options=options, min_values=1, max_values=1)
 
   async def callback(self, interaction: discord.Interaction):
-    svc = self.board_view.services[int(self.values[0])]
-    embed = self.board_view.cog.service_embed(self.board_view.board, svc)
-    await interaction.response.send_message(embed=embed, view=_rtt_view(self.board_view.board, svc), ephemeral=True)
+    bv = self.board_view
+    pager = TrainPager(bv.cog, bv.board, bv.services, start=int(self.values[0]) + 1)
+    await interaction.response.send_message(embed=pager.page(), view=pager, ephemeral=True)
+
+
+class TrainPager(discord.ui.View):
+  """Page 1 is the formations overview, then one detailed page per train."""
+
+  def __init__(self, cog: "NationalRail", board: dict, services: List[dict], start: int = 0):
+    super().__init__(timeout=600)
+    self.cog = cog
+    self.board = board
+    self.services = services
+    self.total = len(services) + 1
+    self.index = max(0, min(start, self.total - 1))
+    self.link: Optional[discord.ui.Button] = None
+    self._sync()
+
+  def page(self) -> discord.Embed:
+    if self.index == 0:
+      e = self.cog.formations_embed(self.board, self.services)
+    else:
+      e = self.cog.service_embed(self.board, self.services[self.index - 1])
+    e.set_footer(text=f"Page {self.index + 1} of {self.total} · {CREDIT}")
+    return e
+
+  def _sync(self):
+    self.first.disabled = self.index == 0
+    self.prev.disabled = self.index == 0
+    self.next.disabled = self.index >= self.total - 1
+    self.counter.label = f"{self.index + 1} / {self.total}"
+    if self.link is not None:
+      self.remove_item(self.link)
+      self.link = None
+    if self.index > 0:
+      self.link = discord.ui.Button(label="Realtime Trains", emoji="🔗", url=_rtt_url(self.board, self.services[self.index - 1]), row=1)
+      self.add_item(self.link)
+
+  async def _go(self, interaction: discord.Interaction, index: int):
+    self.index = max(0, min(index, self.total - 1))
+    self._sync()
+    await interaction.response.edit_message(embed=self.page(), view=self)
+
+  @discord.ui.button(label="Overview", emoji="🚃", style=discord.ButtonStyle.primary, row=0)
+  async def first(self, interaction: discord.Interaction, button: discord.ui.Button):
+    await self._go(interaction, 0)
+
+  @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary, row=0)
+  async def prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+    await self._go(interaction, self.index - 1)
+
+  @discord.ui.button(label="1 / 1", style=discord.ButtonStyle.secondary, disabled=True, row=0)
+  async def counter(self, interaction: discord.Interaction, button: discord.ui.Button):
+    pass
+
+  @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary, row=0)
+  async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+    await self._go(interaction, self.index + 1)
 
 
 class BoardView(discord.ui.View):
@@ -280,11 +335,12 @@ class BoardView(discord.ui.View):
       await interaction.followup.send(embed=_error(str(e)), ephemeral=True)
       return
     self._load(board)
-    await interaction.edit_original_response(embed=self.cog.board_embed(board, self.filter_crs, self.rows), view=self)
+    await interaction.edit_original_response(embeds=self.cog.board_embeds(board, self.filter_crs, self.rows), view=self)
 
-  @discord.ui.button(label="Formations", emoji="🚃", style=discord.ButtonStyle.secondary)
+  @discord.ui.button(label="Trains & formations", emoji="🚃", style=discord.ButtonStyle.primary)
   async def formations(self, interaction: discord.Interaction, button: discord.ui.Button):
-    await interaction.response.send_message(embed=self.cog.formations_embed(self.board, self.services), ephemeral=True)
+    pager = TrainPager(self.cog, self.board, self.services)
+    await interaction.response.send_message(embed=pager.page(), view=pager, ephemeral=True)
 
   async def on_timeout(self):
     for item in self.children:
@@ -606,7 +662,7 @@ class NationalRail(commands.Cog):
           est += f" +{late}"
         lines.append(f"{_sched(svc, arr):<5} {_fit(dest, 19):<19} {_fit(plat, 4):<4} {cars:<3} {est}")
       desc = "```\n" + "\n".join(lines) + "\n```"
-      desc += "\nCar = coaches. Use 🚃 **Formations** for coach details and how busy trains are."
+      desc += "\nCar = coaches. Use 🚃 **Trains & formations** or pick a train below for coach details, calling points and Realtime Trains links."
     else:
       desc = f"No {word.lower()} in the next two hours."
       if board.get("areServicesAvailable") is False:
@@ -614,26 +670,46 @@ class NationalRail(commands.Cog):
 
     embed = discord.Embed(title=_fit(title, 256), description=desc, color=NRE_RED, timestamp=discord.utils.utcnow())
     embed.set_author(name=f"Live {word.lower()} · National Rail")
-
-    problems = []
-    for svc in services:
-      label = f"**{_sched(svc, arr)} {'from' if arr else 'to'} {_far_end(svc, arr)}**"
-      if svc.get("isCancelled") and svc.get("cancelReason"):
-        problems.append(f"{label} cancelled: {_reason(svc['cancelReason'])}")
-      elif svc.get("delayReason"):
-        problems.append(f"{label} delayed: {_reason(svc['delayReason'])}")
-    if problems:
-      embed.add_field(name="Delays & cancellations", value=_fit("\n".join(problems[:5]), 1024), inline=False)
-
-    messages = [_strip_html(m.get("Value") or m.get("value") or "") for m in board.get("nrccMessages") or []]
-    messages = [m for m in messages if len(m) >= 3]
-    if messages:
-      embed.add_field(name="⚠️ Station messages", value=_fit("\n\n".join(messages[:3]), 1024), inline=False)
-
     generated = str(board.get("generatedAt") or "")
     stamp = generated[11:16] if len(generated) >= 16 else ""
     embed.set_footer(text=CREDIT + (f" · updated {stamp}" if stamp else ""))
     return embed
+
+  def board_embeds(self, board: dict, filter_crs: Optional[str], rows: int = NUM_ROWS) -> List[discord.Embed]:
+    """The board, then (only when there is something to say) delays & cancellations and station messages."""
+    arr = _is_arr(board)
+    services = _services(board)[:rows]
+    embeds = [self.board_embed(board, filter_crs, rows)]
+
+    cancelled, delayed = [], []
+    for svc in services:
+      label = f"**{_sched(svc, arr)} {'from' if arr else 'to'} {_far_end(svc, arr)}**"
+      if svc.get("isCancelled"):
+        why = _reason(svc.get("cancelReason") or "")
+        cancelled.append(f"❌ {label}" + (f"\n-# {why}" if why else ""))
+      elif svc.get("delayReason") or _delay(svc, arr) > 0 or str(svc.get("eta" if arr else "etd") or "").lower() == "delayed":
+        late = _delay(svc, arr)
+        when = f" · expected {_clock(svc.get('eta' if arr else 'etd'))} (+{late} min)" if late > 0 else " · delayed"
+        why = _reason(svc.get("delayReason") or "")
+        delayed.append(f"⏱️ {label}{when}" + (f"\n-# {why}" if why else ""))
+    if cancelled or delayed:
+      e = discord.Embed(title="⚠️ Delays & cancellations", color=discord.Color.orange())
+      if cancelled:
+        e.add_field(name=f"Cancelled ({len(cancelled)})", value=_fit("\n".join(cancelled), 1024), inline=False)
+      if delayed:
+        e.add_field(name=f"Delayed ({len(delayed)})", value=_fit("\n".join(delayed), 1024), inline=False)
+      on_time = len(services) - len(cancelled) - len(delayed)
+      e.set_footer(text=f"{on_time} of {len(services)} trains on time")
+      embeds.append(e)
+
+    messages = [_strip_html(m.get("Value") or m.get("value") or "") for m in board.get("nrccMessages") or []]
+    messages = [m for m in messages if len(m) >= 3]
+    if messages:
+      e = discord.Embed(title=f"📢 Station messages — {board.get('locationName', '')}", color=discord.Color.gold())
+      e.description = _fit("\n\n".join(f"• {m}" for m in messages[:5]), 4096)
+      e.set_footer(text=CREDIT)
+      embeds.append(e)
+    return embeds
 
   def service_embed(self, board: dict, svc: dict) -> discord.Embed:
     arr = _is_arr(board)
@@ -782,7 +858,7 @@ class NationalRail(commands.Cog):
         await ctx.send(embed=_error(str(e).replace("[p]", ctx.clean_prefix)))
         return
     view = BoardView(self, ctx.author.id, crs, filter_crs, board, rows)
-    view.message = await ctx.send(embed=self.board_embed(board, filter_crs, rows), view=view)
+    view.message = await ctx.send(embeds=self.board_embeds(board, filter_crs, rows), view=view)
 
   @nationalrail.command(name="departures", aliases=["board", "dep", "deps"])
   @app_commands.describe(
@@ -845,9 +921,11 @@ class NationalRail(commands.Cog):
       except NationalRailError as e:
         await ctx.send(embed=_error(str(e).replace("[p]", ctx.clean_prefix)))
         return
-    for svc in _services(board):
+    services = _services(board)
+    for i, svc in enumerate(services):
       if _sched(svc, False) == want:
-        await ctx.send(embed=self.service_embed(board, svc), view=_rtt_view(board, svc))
+        pager = TrainPager(self, board, services, start=i + 1)
+        await ctx.send(embed=pager.page(), view=pager)
         return
     await ctx.send(embed=_error(f"No train scheduled at **{want}** from {self.station_name(crs)} in the next two hours."))
 
