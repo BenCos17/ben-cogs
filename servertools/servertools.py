@@ -26,6 +26,7 @@ class Servertools(commands.Cog):
             "auto_reactions": [], 
             "spotify_autoclean": False,
             "invite_filter_enabled": False,
+            "invite_filter_excluded_channels": [],
             "min_members": 0,
             "invite_rules": [], # Format: {"text": "keyword", "action": "delete/warn/ban"}
             "invite_warn_message": None,  # Custom DM sent on warn (can use {guild} and {offending_server})
@@ -96,6 +97,7 @@ class Servertools(commands.Cog):
             spotify = await self.cog.config.guild(self.guild).spotify_autoclean()
             invites = await self.cog.config.guild(self.guild).invite_filter_enabled()
             rules = await self.cog.config.guild(self.guild).invite_rules()
+            excluded_channels = await self.cog.config.guild(self.guild).invite_filter_excluded_channels()
             min_members = await self.cog.config.guild(self.guild).min_members()
             reactions = await self.cog.config.guild(self.guild).auto_reactions()
             warn_msg = await self.cog.config.guild(self.guild).invite_warn_message()
@@ -103,6 +105,8 @@ class Servertools(commands.Cog):
             embed = discord.Embed(title=f"Settings for {self.guild.name}", color=0x00aaff)
             embed.add_field(name="Spotify Auto-clean", value="✅ ON" if spotify else "❌ OFF", inline=True)
             embed.add_field(name="Invite Filter", value="✅ ON" if invites else "❌ OFF", inline=True)
+            excluded_list = "\n".join(f"<#{channel_id}>" for channel_id in excluded_channels) if excluded_channels else "No excluded channels."
+            embed.add_field(name="Invite Filter Exclusions", value=excluded_list, inline=False)
             embed.add_field(name="Minimum Invite Members", value=str(min_members), inline=True)
             embed.add_field(name="Invite Warn DM", value=warn_msg if warn_msg else "<Default/Not set>", inline=False)
             rule_list = "\n".join([f"`{r['text']}` ➔ **{r['action']}**" for r in rules]) if rules else "No custom rules."
@@ -123,6 +127,7 @@ class Servertools(commands.Cog):
         spotify = await self.config.guild(ctx.guild).spotify_autoclean()
         invites = await self.config.guild(ctx.guild).invite_filter_enabled()
         rules = await self.config.guild(ctx.guild).invite_rules()
+        excluded_channels = await self.config.guild(ctx.guild).invite_filter_excluded_channels()
         min_members = await self.config.guild(ctx.guild).min_members()
         reactions = await self.config.guild(ctx.guild).auto_reactions()
         warn_msg = await self.config.guild(ctx.guild).invite_warn_message()
@@ -130,6 +135,8 @@ class Servertools(commands.Cog):
         embed = discord.Embed(title="🛠️ ServerTools Dashboard", color=await ctx.embed_color())
         embed.add_field(name="Spotify Clean", value="✅ ON" if spotify else "❌ OFF", inline=True)
         embed.add_field(name="Invite Filter", value="✅ ON" if invites else "❌ OFF", inline=True)
+        excluded_list = "\n".join(f"<#{channel_id}>" for channel_id in excluded_channels) if excluded_channels else "No excluded channels."
+        embed.add_field(name="Invite Filter Exclusions", value=excluded_list, inline=False)
         embed.add_field(name="Minimum Invite Members", value=str(min_members), inline=True)
 
         rule_list = "\n".join([f"`{r['text']}` ➔ **{r['action']}**" for r in rules]) if rules else "No custom rules."
@@ -153,6 +160,22 @@ class Servertools(commands.Cog):
         """Set minimum member count required for an invite link to stay."""
         await self.config.guild(ctx.guild).min_members.set(count)
         await ctx.send(f"Invites must now have at least **{count}** members to be allowed.")
+
+    @invitefilter.command(name="exclude")
+    async def exclude_invite_filter_channel(self, ctx, channel: discord.TextChannel):
+        """Exclude a channel from invite filtering."""
+        async with self.config.guild(ctx.guild).invite_filter_excluded_channels() as excluded_channels:
+            if channel.id not in excluded_channels:
+                excluded_channels.append(channel.id)
+        await ctx.send(f"Invite filtering is now disabled in {channel.mention}.")
+
+    @invitefilter.command(name="include")
+    async def include_invite_filter_channel(self, ctx, channel: discord.TextChannel):
+        """Enable invite filtering again in a previously excluded channel."""
+        async with self.config.guild(ctx.guild).invite_filter_excluded_channels() as excluded_channels:
+            if channel.id in excluded_channels:
+                excluded_channels.remove(channel.id)
+        await ctx.send(f"Invite filtering is now enabled in {channel.mention}.")
 
     @invitefilter.command(name="warnmsg")
     @commands.has_permissions(manage_guild=True)
@@ -347,7 +370,9 @@ class Servertools(commands.Cog):
         if message.author.bot or not message.guild: return
 
         # 1. Invite Filtering & Rules
-        if await self.config.guild(message.guild).invite_filter_enabled():
+        excluded_channels = await self.config.guild(message.guild).invite_filter_excluded_channels()
+        if (await self.config.guild(message.guild).invite_filter_enabled()
+            and message.channel.id not in excluded_channels):
             match = self.INVITE_RE.search(message.content)
             if match:
                 try:

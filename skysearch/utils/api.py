@@ -199,42 +199,33 @@ class APIManager:
 
     def _extract_endpoint(self, url: str) -> str:
         """Extract endpoint name from URL for tracking purposes."""
-        # Remove base URLs and query parameters
-        for base_url in [self.primary_api_url, self.fallback_api_url]:
-            if url.startswith(base_url):
-                url = url[len(base_url):]
-                break
-        
-        # Extract the main endpoint path
-        if url.startswith('/'):
-            url = url[1:]
-        
-        # Split by '/' and take the first part as endpoint
-        endpoint = url.split('/')[0] if url else 'unknown'
-        
-        # Handle special cases
-        if 'find_hex' in url:
-            return 'hex_lookup'
-        elif 'find_callsign' in url:
-            return 'callsign_lookup'
-        elif 'find_reg' in url:
-            return 'registration_lookup'
-        elif 'find_type' in url:
-            return 'type_lookup'
-        elif 'filter_squawk' in url:
-            return 'squawk_filter'
-        elif 'filter_mil' in url:
-            return 'military_filter'
-        elif 'filter_ladd' in url:
-            return 'ladd_filter'
-        elif 'filter_pia' in url:
-            return 'pia_filter'
-        elif 'stats' in url:
+        try:
+            parsed_url = URL(url)
+        except ValueError:
+            return 'unknown'
+
+        query_endpoints = (
+            ('find_hex', 'hex_lookup'),
+            ('find_callsign', 'callsign_lookup'),
+            ('find_reg', 'registration_lookup'),
+            ('find_type', 'type_lookup'),
+            ('filter_squawk', 'squawk_filter'),
+            ('filter_mil', 'military_filter'),
+            ('filter_ladd', 'ladd_filter'),
+            ('filter_pia', 'pia_filter'),
+        )
+
+        for parameter, endpoint_name in query_endpoints:
+            if parameter in parsed_url.query:
+                return endpoint_name
+
+        path = parsed_url.path.lstrip('/')
+        if path == 'stats':
             return 'stats'
-        elif 'v2/' in url:
+        if path.startswith('v2/'):
             return 'v2_endpoint'
-        else:
-            return endpoint or 'unknown'
+
+        return path.split('/', 1)[0] or 'unknown'
 
     def _get_url_parameter(self, url: str, parameter: str):
         """Get a parameter from either the query string or a path segment."""
@@ -302,15 +293,20 @@ class APIManager:
                             squawk = self._get_url_parameter(url, "filter_squawk")
                             if squawk:
                                 url = f"{self.fallback_api_url}/v2/squawk/{squawk}"
-                            elif "filter_mil" in url:
-                                url = f"{self.fallback_api_url}/v2/mil"
-                            elif "filter_ladd" in url:
-                                url = f"{self.fallback_api_url}/v2/ladd"
-                            elif "filter_pia" in url:
-                                url = f"{self.fallback_api_url}/v2/pia"
                             else:
-                                # Otherwise, just replace the base URL
-                                url = url.replace(self.primary_api_url, self.fallback_api_url)
+                                filter_endpoints = (
+                                    ("filter_mil", "mil"),
+                                    ("filter_ladd", "ladd"),
+                                    ("filter_pia", "pia"),
+                                )
+                                parsed_url = URL(url)
+                                for parameter, endpoint_name in filter_endpoints:
+                                    if parameter in parsed_url.query:
+                                        url = f"{self.fallback_api_url}/v2/{endpoint_name}"
+                                        break
+                                else:
+                                    # Otherwise, just replace the base URL
+                                    url = url.replace(self.primary_api_url, self.fallback_api_url)
         else:
             # If the URL is not absolute, prepend the primary API base URL
             if not url.startswith("https"):

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jarvisdiscordbot\n"
 "POT-Creation-Date: 2026-09-03 12:51+0100\n"
-"PO-Revision-Date: 2026-09-03 13:35\n"
+"PO-Revision-Date: 2026-11-04 22:45\n"
 "Last-Translator: \n"
 "Language-Team: Irish\n"
 "MIME-Version: 1.0\n"
@@ -224,10 +224,6 @@ msgstr "Cuir aerárthaí nó cineálacha aerárthaí leis chun monatóireacht a 
 msgid "Usage"
 msgstr "Úsáid"
 
-#: commands\aircraft.py:798
-msgid "`watchlist add <type> <value>`"
-msgstr "`watchlist add <type> <value>`"
-
 #: commands\aircraft.py:800 commands\aircraft.py:905
 msgid "Types"
 msgstr "Cineálacha"
@@ -251,18 +247,6 @@ msgstr "Cineálacha aerárthaí"
 #: commands\aircraft.py:810
 msgid "Examples"
 msgstr "Samplaí"
-
-#: commands\aircraft.py:811
-msgid "• `watchlist add icao A2F41D`\n"
-"• `watchlist add type military`\n"
-"• `watchlist add callsign UNITED123`\n"
-"• `watchlist add reg N814AK`\n"
-"• `watchlist add squawk 7700`"
-msgstr "• `cuir liosta faire icao A2F41D leis`\n"
-"• `cuir cineál míleata leis an liosta faire`\n"
-"• `cuir comhartha glaonna leis an liosta faire UNITED123`\n"
-"• `cuir clárú leis an liosta faire N814AK`\n"
-"• `cuir squawk 7700 leis an liosta faire`"
 
 #: commands\aircraft.py:824
 msgid "Invalid Type"

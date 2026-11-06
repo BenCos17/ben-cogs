@@ -1,4 +1,4 @@
-import discord
+﻿import discord
 from redbot.core import commands, Config
 import psutil, datetime, json, aiohttp
 from aiohttp import web
@@ -6,6 +6,7 @@ import asyncio
 import platform
 import os
 from pathlib import Path
+from collections import deque
 
 MARVEL_NAMES = [
     "IronMan", "Thor", "Hulk", "BlackWidow", "CaptainAmerica", "Loki",
@@ -13,6 +14,8 @@ MARVEL_NAMES = [
 ]
 
 COG_VERSION = "1.0.1"
+UPTIME_SAMPLE_INTERVAL = 60
+UPTIME_HISTORY_LIMIT = 1440
 
 class Clusters(commands.Cog):
     """Shows dynamic Marvel-themed cluster status with customizable names and uptime, plus a web endpoint."""
@@ -24,10 +27,22 @@ class Clusters(commands.Cog):
         self.shard_names = {}
         self.runner = None
         self.site = None
+        uptime_state = getattr(self.bot, "_clusters_uptime_state", None)
+        if uptime_state is None:
+            uptime_state = {
+                "history": deque(maxlen=UPTIME_HISTORY_LIMIT),
+                "cluster_started": {},
+            }
+            self.bot._clusters_uptime_state = uptime_state
+        self.uptime_history = uptime_state["history"]
+        self.cluster_uptime_started = uptime_state["cluster_started"]
+        self.uptime_task = self.bot.loop.create_task(self.collect_uptime())
 
         # Start aiohttp web server
         self.app = web.Application()
-        self.app.add_routes([web.get('/clusters', self.web_clusters)])
+        self.app.add_routes([
+            web.get('/clusters', self.web_clusters),
+        ])
         self.runner = web.AppRunner(self.app)
         self.bot.loop.create_task(self.start_webserver())
 
@@ -55,6 +70,10 @@ class Clusters(commands.Cog):
         raise RuntimeError("Failed to start the clusters webserver for an unknown reason.")
 
     async def shutdown_webserver(self):
+        if self.uptime_task is not None:
+            self.uptime_task.cancel()
+            self.uptime_task = None
+
         if self.site is not None:
             await self.site.stop()
             self.site = None
@@ -82,12 +101,60 @@ class Clusters(commands.Cog):
         weeks, remainder = divmod(total_seconds, 604800)
         days, remainder = divmod(remainder, 86400)
         hours, _ = divmod(remainder, 3600)
-        return f"{weeks} weeks and {days} days and {hours} hours ago"
+        return f"{weeks} weeks, {days} days, {hours} hours"
 
     def get_server_uptime(self):
         """Return server uptime as timedelta."""
         boot_timestamp = psutil.boot_time()
         return datetime.datetime.utcnow() - datetime.datetime.utcfromtimestamp(boot_timestamp)
+
+    def get_bot_uptime(self):
+        """Return bot uptime as a timedelta when Red provides it."""
+        bot_start_time = getattr(self.bot, "uptime", None)
+        if bot_start_time is None:
+            return None
+        if isinstance(bot_start_time, datetime.timedelta):
+            return bot_start_time
+        if isinstance(bot_start_time, datetime.datetime):
+            return datetime.datetime.utcnow() - bot_start_time
+        return None
+
+    def get_cluster_uptimes(self):
+        """Return the current uptime in seconds for each online cluster."""
+        now = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        total_shards = self.bot.shard_count or len(self.bot.shards) or 1
+        uptimes = {}
+
+        for shard_id in range(total_shards):
+            shard = self.bot.get_shard(shard_id)
+            is_online = shard is not None and not shard.is_closed()
+            shard_key = str(shard_id)
+
+            if not is_online:
+                self.cluster_uptime_started.pop(shard_key, None)
+                uptimes[shard_key] = None
+                continue
+
+            started_at = self.cluster_uptime_started.setdefault(shard_key, now)
+            uptimes[shard_key] = round(now - started_at, 1)
+
+        return uptimes
+
+    async def collect_uptime(self):
+        """Keep a bounded history for the uptime graph."""
+        try:
+            while True:
+                bot_uptime = self.get_bot_uptime()
+                cluster_uptimes = self.get_cluster_uptimes()
+                self.uptime_history.append({
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).timestamp(),
+                    "bot_uptime_seconds": round(bot_uptime.total_seconds(), 1) if bot_uptime else None,
+                    "server_uptime_seconds": round(self.get_server_uptime().total_seconds(), 1),
+                    "cluster_uptime_seconds": cluster_uptimes,
+                })
+                await asyncio.sleep(UPTIME_SAMPLE_INTERVAL)
+        except asyncio.CancelledError:
+            raise
 
     def get_system_snapshot(self):
         """Return a reusable snapshot of host and process stats."""
@@ -144,12 +211,11 @@ class Clusters(commands.Cog):
         """Shows the status of all clusters using an embed."""
         await self.initialize_shard_names()
 
-        bot_start_time = getattr(self.bot, "uptime", None)
-        if bot_start_time is None:
+        bot_uptime = self.get_bot_uptime()
+        if bot_uptime is None:
             bot_uptime_str = "Unknown"
         else:
-            td = datetime.datetime.utcnow() - bot_start_time if isinstance(bot_start_time, datetime.datetime) else bot_start_time
-            bot_uptime_str = self.format_timedelta(td)
+            bot_uptime_str = self.format_timedelta(bot_uptime)
 
         server_uptime = self.format_timedelta(self.get_server_uptime())
         system = self.get_system_snapshot()
@@ -238,20 +304,22 @@ class Clusters(commands.Cog):
         await ctx.send(f"Cluster {shard_id} has been renamed to **{new_name}**.")
 
 
-    async def web_clusters(self, request):
-        """Return cluster data as JSON for web endpoint."""
+    async def get_web_data(self):
+        """Build the shared payload used by the API and dashboard."""
         await self.initialize_shard_names()
 
         system = self.get_system_snapshot()
 
-        bot_start_time = getattr(self.bot, "uptime", None)
-        bot_uptime_str = self.format_timedelta(datetime.datetime.utcnow() - bot_start_time) if bot_start_time else "Unknown"
+        bot_uptime = self.get_bot_uptime()
+        bot_uptime_str = self.format_timedelta(bot_uptime) if bot_uptime else "Unknown"
         server_uptime_str = self.format_timedelta(self.get_server_uptime())
+        cluster_uptimes = self.get_cluster_uptimes()
 
         data = {
             "version": COG_VERSION,
             "bot_uptime": bot_uptime_str,
             "server_uptime": server_uptime_str,
+            "uptime_history": list(self.uptime_history),
             "system_stats": {
                 **system,
                 "cpu_total_percent": system["cpu_usage_percent"],
@@ -284,7 +352,35 @@ class Clusters(commands.Cog):
                 "servers": len(guilds),
                 "users": sum(g.member_count or 0 for g in guilds),
                 "latency_ms": latency,
+                "uptime_seconds": cluster_uptimes.get(str(shard_id)),
+                "uptime": (
+                    self.format_timedelta(datetime.timedelta(seconds=cluster_uptimes[str(shard_id)]))
+                    if cluster_uptimes.get(str(shard_id)) is not None else "Offline"
+                ),
                 "status": "Online" if is_online else "Offline"
             })
 
-        return web.json_response(data)
+        return data
+
+    async def web_clusters(self, request):
+        """Return cluster data as JSON for web endpoint."""
+        if "server_id" in request.query:
+            return await self.web_server(request)
+
+        return web.json_response(await self.get_web_data())
+
+    async def web_server(self, request):
+        """Return one server by ID without exposing the full server list."""
+        try:
+            server_id = int(request.query["server_id"])
+        except (TypeError, ValueError):
+            return web.json_response({"error": "server_id must be an integer"}, status=400)
+
+        guild = self.bot.get_guild(server_id)
+        if guild is None:
+            return web.json_response({"error": "Server not found"}, status=404)
+
+        return web.json_response({
+            "server_id": guild.id,
+            "shard_id": guild.shard_id,
+        })

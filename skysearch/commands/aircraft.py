@@ -792,7 +792,7 @@ class AircraftCommands:
                 description=_("Add aircraft or types to watch and get notified when they're active."),
                 color=0xfffffe
             )
-            embed.add_field(name=_("Usage"), value=_("`watchlist add <type> <value>`"), inline=False)
+            embed.add_field(name=_("Usage"), value="`watchlist add <type> <value>`", inline=False)
             embed.add_field(
                 name=_("Types"),
                 value=_("• `icao` - Aircraft by hex code (6 hex digits)\n• `type` - Watch aircraft category\n• `callsign` - Watch flight number\n• `reg` - Watch registration/tail number\n• `squawk` - Watch squawk code"),
@@ -805,7 +805,7 @@ class AircraftCommands:
             )
             embed.add_field(
                 name=_("Examples"),
-                value=_("• `watchlist add icao A2F41D`\n• `watchlist add type military`\n• `watchlist add callsign UNITED123`\n• `watchlist add reg N814AK`\n• `watchlist add squawk 7700`"),
+                value="• `watchlist add icao A2F41D`\n• `watchlist add type military`\n• `watchlist add callsign UNITED123`\n• `watchlist add reg N814AK`\n• `watchlist add squawk 7700`",
                 inline=False
             )
             await ctx.send(embed=embed)

@@ -21,8 +21,9 @@ Example usage:
     ```
 """
 
+import asyncio
 import xml.etree.ElementTree as ET
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Union
 import aiohttp
 
 
@@ -47,7 +48,7 @@ class XMLParser:
     """
     
     @staticmethod
-    def parse_xml_string(xml_string: str) -> Optional[ET.Element]:
+    def parse_xml_string(xml_string: Union[str, bytes]) -> Optional[ET.Element]:
         """
         Parse an XML string into an ElementTree Element.
         
@@ -59,7 +60,7 @@ class XMLParser:
         """
         try:
             return ET.fromstring(xml_string)
-        except ET.ParseError:
+        except (ET.ParseError, TypeError):
             return None
     
     @staticmethod
@@ -76,7 +77,7 @@ class XMLParser:
         """
         try:
             return root.findall(xpath)
-        except Exception:
+        except (AttributeError, SyntaxError, TypeError):
             return []
     
     @staticmethod
@@ -116,9 +117,7 @@ class XMLParser:
         """
         try:
             async with session.get(url, headers=headers) as response:
-                if response.status != 200:
-                    return None
-                xml_text = await response.text()
-                return XMLParser.parse_xml_string(xml_text)
-        except Exception:
+                response.raise_for_status()
+                return XMLParser.parse_xml_string(await response.read())
+        except (aiohttp.ClientError, asyncio.TimeoutError, ET.ParseError, TypeError):
             return None
