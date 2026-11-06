@@ -419,6 +419,19 @@ class NationalRail(commands.Cog):
   async def red_delete_data_for_user(self, **kwargs):
     return  # nothing stored per user
 
+  async def cog_check(self, ctx: commands.Context) -> bool:
+    """Every reply is an embed, so prefix commands need Embed Links (and Send Messages) in the channel.
+
+    Slash commands reply through the interaction, which doesn't need channel permissions.
+    Raising BotMissingPermissions makes Red tell the user what's missing instead of a 403 traceback.
+    """
+    if ctx.interaction is None and ctx.guild is not None:
+      perms = ctx.channel.permissions_for(ctx.me)
+      missing = [name for name, ok in (("send_messages", perms.send_messages), ("embed_links", perms.embed_links)) if not ok]
+      if missing:
+        raise commands.BotMissingPermissions(missing)
+    return True
+
   # ---- API
 
   async def _api_settings(self, arr: bool = False) -> Tuple[str, str]:
