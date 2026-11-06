@@ -71,6 +71,16 @@ def _fit(text: str, width: int) -> str:
   return text if len(text) <= width else text[: width - 1] + "…"
 
 
+def _embed(title: str, description: str = "", color: discord.Color = NRE_RED) -> discord.Embed:
+  e = discord.Embed(title=_fit(title, 256), description=_fit(description, 4096), color=color)
+  e.set_footer(text="Powered by National Rail Enquiries")
+  return e
+
+
+def _error(description: str) -> discord.Embed:
+  return _embed("❌ Something went wrong", description, discord.Color.dark_red())
+
+
 def _services(board: dict) -> List[dict]:
   out = []
   for key in ("trainServices", "busServices", "ferryServices"):
@@ -119,13 +129,13 @@ class BoardView(discord.ui.View):
   @discord.ui.button(label="Refresh", emoji="🔄", style=discord.ButtonStyle.secondary)
   async def refresh(self, interaction: discord.Interaction, button: discord.ui.Button):
     if interaction.user.id != self.author_id:
-      await interaction.response.send_message("Only the person who asked for this board can refresh it.", ephemeral=True)
+      await interaction.response.send_message(embed=_error("Only the person who asked for this board can refresh it."), ephemeral=True)
       return
     await interaction.response.defer()
     try:
       board = await self.cog.fetch_board(self.crs, self.filter_crs)
     except NationalRailError as e:
-      await interaction.followup.send(f"❌ {e}", ephemeral=True)
+      await interaction.followup.send(embed=_error(str(e)), ephemeral=True)
       return
     self._load(board)
     await interaction.edit_original_response(embed=self.cog.board_embed(board, self.filter_crs), view=self)
@@ -158,16 +168,16 @@ class StationPicker(discord.ui.View):
 
   async def _picked(self, interaction: discord.Interaction):
     if interaction.user.id != self.author_id:
-      await interaction.response.send_message("This menu isn't for you.", ephemeral=True)
+      await interaction.response.send_message(embed=_error("This menu isn't for you."), ephemeral=True)
       return
     self.choice = self.select.values[0]
-    await interaction.response.edit_message(content=f"✅ **{self.choice}** selected, loading…", embed=None, view=None)
+    await interaction.response.edit_message(embed=_embed("✅ Station selected", f"Loading **{self.choice}**…"), view=None)
     self.stop()
 
   async def on_timeout(self):
     if self.message:
       try:
-        await self.message.edit(content="⌛ Station selection timed out.", embed=None, view=None)
+        await self.message.edit(embed=_embed("⌛ Timed out", "No station was picked.", discord.Color.greyple()), view=None)
       except discord.HTTPException:
         pass
 
@@ -300,15 +310,11 @@ class NationalRail(commands.Cog):
     if not matches:
       if CRS_RE.match(query):
         return query.upper()  # unknown to our list; let National Rail decide
-      await ctx.send(f"❌ No station found matching **{query}**. Try `{ctx.clean_prefix}nr search {query}`.")
+      await ctx.send(embed=_error(f"No station found matching **{query}**.\nTry `/nationalrail search` to look it up."))
       return None
     if len(matches) == 1:
       return matches[0]["crs"]
-    embed = discord.Embed(
-        title=f"Several stations match '{_fit(query, 60)}'",
-        description="Pick the one you meant:",
-        color=discord.Color.orange(),
-    )
+    embed = _embed(f"🔎 Several stations match '{_fit(query, 60)}'", "Pick the one you meant from the menu below.", discord.Color.orange())
     view = StationPicker(ctx.author.id, matches)
     view.message = await ctx.send(embed=embed, view=view)
     await view.wait()
@@ -346,7 +352,8 @@ class NationalRail(commands.Cog):
       if board.get("areServicesAvailable") is False:
         desc = "Live departures aren't available for this station right now."
 
-    embed = discord.Embed(title=_fit(title, 256), description=desc, color=NRE_RED)
+    embed = discord.Embed(title=_fit(title, 256), description=desc, color=NRE_RED, timestamp=discord.utils.utcnow())
+    embed.set_author(name="Live departures · National Rail")
 
     problems = []
     for svc in services:
@@ -439,7 +446,7 @@ class NationalRail(commands.Cog):
       try:
         board = await self.fetch_board(crs, filter_crs)
       except NationalRailError as e:
-        await ctx.send(f"❌ {e}".replace("[p]", ctx.clean_prefix))
+        await ctx.send(embed=_error(str(e).replace("[p]", ctx.clean_prefix)))
         return
     view = BoardView(self, ctx.author.id, crs, filter_crs, board)
     view.message = await ctx.send(embed=self.board_embed(board, filter_crs), view=view)
@@ -467,43 +474,51 @@ class NationalRail(commands.Cog):
     """Find a station's 3-letter code (CRS)."""
     matches = self.search_stations(query)
     if not matches:
-      await ctx.send(f"❌ No stations found matching **{query}**.")
+      await ctx.send(embed=_error(f"No stations found matching **{query}**."))
       return
     lines = [f"`{s['crs']}` {s['name']}" for s in matches[:20]]
     if len(matches) > 20:
       lines.append(f"…and {len(matches) - 20} more")
-    embed = discord.Embed(title=_fit(f"🔍 Stations matching '{query}'", 256), description="\n".join(lines), color=NRE_RED)
+    embed = _embed(f"🔍 Stations matching '{query}'", "\n".join(lines))
+    embed.set_footer(text=f"{len(matches)} match(es) · use the code with /nationalrail departures")
     await ctx.send(embed=embed)
 
   # ---- owner settings
 
-  @commands.group(name="nrset", invoke_without_command=True)
+  @commands.hybrid_group(name="nrset", invoke_without_command=True, fallback="status")
   @commands.is_owner()
   async def nrset(self, ctx: commands.Context):
-    """Set up the National Rail cog."""
+    """Set up the National Rail cog and show its status."""
     key, base = await self._api_settings()
     p = ctx.clean_prefix
-    await ctx.send(
-        "**National Rail setup**\n"
-        "1. Sign up at <https://raildata.org.uk> and subscribe to the **Live Departure Board** product "
-        "(Darwin LDBWS, `GetDepBoardWithDetails`).\n"
-        f"2. Run `{p}set api {TOKEN_SERVICE} ldbws_key,<your consumer key>`\n"
-        f"3. Optional, if your product URL differs: `{p}set api {TOKEN_SERVICE} ldbws_url,<product URL>`\n\n"
-        f"Key set: **{'yes' if key else 'no'}**\nURL: `{base}`"
+    embed = _embed("⚙️ National Rail setup", "Live departures come from the Rail Data Marketplace **Live Departure Board** product (Darwin LDBWS).")
+    embed.add_field(
+        name="Steps",
+        value=(
+            "1. Sign up at <https://raildata.org.uk> and subscribe to **Live Departure Board**.\n"
+            f"2. `{p}set api {TOKEN_SERVICE} ldbws_key,<consumer key>`\n"
+            f"3. Optional: `{p}set api {TOKEN_SERVICE} ldbws_url,<product URL>`"
+        ),
+        inline=False,
     )
+    embed.add_field(name="Key set", value="✅ Yes" if key else "❌ No", inline=True)
+    embed.add_field(name="Cached boards", value=str(len(self._cache)), inline=True)
+    embed.add_field(name="URL", value=f"`{base}`", inline=False)
+    await ctx.send(embed=embed, ephemeral=True)
 
   @nrset.command(name="useragent")
+  @app_commands.describe(user_agent="New User-Agent (leave empty to see the current one)")
   async def nrset_useragent(self, ctx: commands.Context, *, user_agent: Optional[str] = None):
     """View or set the User-Agent sent to National Rail."""
     if not user_agent:
-      await ctx.send(f"Current User-Agent: `{await self.config.user_agent()}`")
+      await ctx.send(embed=_embed("🔍 User-Agent", f"`{await self.config.user_agent()}`"), ephemeral=True)
       return
     await self.config.user_agent.set(user_agent)
-    await ctx.send(f"✅ User-Agent set to `{user_agent}`")
+    await ctx.send(embed=_embed("✅ User-Agent updated", f"`{user_agent}`", discord.Color.green()), ephemeral=True)
 
   @nrset.command(name="clearcache")
   async def nrset_clearcache(self, ctx: commands.Context):
     """Clear cached departure boards."""
     n = len(self._cache)
     self._cache.clear()
-    await ctx.send(f"🧹 Cleared {n} cached board(s).")
+    await ctx.send(embed=_embed("🧹 Cache cleared", f"Removed {n} cached board(s).", discord.Color.green()), ephemeral=True)
