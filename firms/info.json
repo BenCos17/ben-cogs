@@ -1,0 +1,18 @@
+{
+    "author": [
+        "BenCos17"
+    ],
+    "name": "Firms",
+    "short": "A cog that allows you to get information about firms.",
+    "description": ".",
+    "install_msg": "Thanks for installing Firms!",
+    "end_user_data_statement": "This cog does not persistently store data about users.",
+    "tags": [
+        "firms"
+    ],
+    "requirements": [
+        "pandas"
+    ],
+    "min_bot_version": "3.5.0",
+    "hidden": false
+}
