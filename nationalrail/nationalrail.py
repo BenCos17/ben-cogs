@@ -662,14 +662,29 @@ class NationalRail(commands.Cog):
     arr = _is_arr(board)
     lines = []
     for svc in services:
-      summary = _formation_summary(svc) or "No coach info from National Rail"
-      lines.append(f"**{_sched(svc, arr)} {'from ' if arr else ''}{_far_end(svc, arr)}** — {summary}")
+      summary = _formation_summary(svc) or "no coach info"
+      est = _est(svc, arr)
+      late = _delay(svc, arr)
+      if late > 0 and not svc.get("isCancelled"):
+        est += f" (+{late})"
+      extra = [f"Plat {svc.get('platform') or '-'}", est, str(svc.get("operator") or "")]
+      lines.append(
+          f"**{_sched(svc, arr)} {'from ' if arr else ''}{_far_end(svc, arr)}** — {summary}\n"
+          f"-# {' · '.join(x for x in extra if x)}"
+      )
     e = discord.Embed(
         title=_fit(f"🚃 Train formations — {board.get('locationName', '')}", 256),
         description=_fit("\n".join(lines) or "No trains on this board.", 4096),
         color=NRE_RED,
     )
-    e.add_field(name="Busy key", value="🟢 quiet (under 40%) · 🟡 busy (40–69%) · 🔴 very busy (70%+)", inline=False)
+    if any(_avg_load(svc) is not None for svc in services):
+      e.add_field(name="Busy key", value="🟢 quiet (under 40%) · 🟡 busy (40–69%) · 🔴 very busy (70%+)", inline=False)
+    elif services:
+      e.add_field(
+          name="How busy?",
+          value="The train companies at this station only share coach counts, not how full each coach is.",
+          inline=False,
+      )
     e.set_footer(text=CREDIT)
     return e
 
