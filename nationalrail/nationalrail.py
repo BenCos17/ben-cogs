@@ -12,6 +12,7 @@ One call returns the whole board including calling points, so there are no per-t
 import asyncio
 import html
 import json
+import urllib.parse
 import re
 import datetime
 import time
@@ -38,6 +39,7 @@ CACHE_TTL = 60  # seconds per station + filter, same as the portal
 ERROR_TTL = 15
 MAX_PER_MINUTE = 30
 NUM_ROWS = 10
+USER_COOLDOWN = 30  # seconds between National Rail lookups per person
 TIME_WINDOW_MINS = 120
 NRE_RED = discord.Color.from_rgb(0xE2, 0x1E, 0x26)
 CRS_RE = re.compile(r"^[A-Za-z]{3}$")
@@ -328,6 +330,10 @@ class BoardView(discord.ui.View):
     if interaction.user.id != self.author_id:
       await interaction.response.send_message(embed=_error("Only the person who asked for this board can refresh it."), ephemeral=True)
       return
+    wait = self.cog.refresh_wait(interaction.user.id)
+    if wait:
+      await interaction.response.send_message(embed=_error(f"Please wait **{wait}s** before refreshing again."), ephemeral=True)
+      return
     await interaction.response.defer()
     try:
       board = await self.cog.fetch_board(self.crs, self.filter_crs, _is_arr(self.board))
@@ -395,6 +401,7 @@ class NationalRail(commands.Cog):
     self._cache: Dict[Tuple[str, str, str], Tuple[float, object]] = {}
     self._inflight: Dict[Tuple[str, str, str], asyncio.Task] = {}
     self._recent_calls: List[float] = []
+    self._refreshes: Dict[int, float] = {}
     # API stats since the cog loaded: plain counters plus 24 hourly buckets, so memory stays tiny.
     self._api = {
         "total": 0, "ok": 0, "failed": 0, "rate_limited": 0, "auth_failed": 0, "cache_hits": 0,
@@ -499,6 +506,17 @@ class NationalRail(commands.Cog):
     except (ValueError, TypeError):
       raise NationalRailError("National Rail sent a reply that isn't JSON.")
 
+  def refresh_wait(self, user_id: int) -> int:
+    """Seconds left on this person's refresh cooldown (0 = go ahead, and starts a new one)."""
+    now = time.monotonic()
+    last = self._refreshes.get(user_id, 0.0)
+    if now - last < USER_COOLDOWN:
+      return int(USER_COOLDOWN - (now - last)) + 1
+    self._refreshes[user_id] = now
+    if len(self._refreshes) > 500:
+      self._refreshes = {u: t for u, t in self._refreshes.items() if now - t < USER_COOLDOWN}
+    return 0
+
   def _note_api(self, op: str, status: int, secs: float):
     a = self._api
     a["total"] += 1
@@ -582,6 +600,52 @@ class NationalRail(commands.Cog):
       e.add_field(name="⚠️ Error Details", value=f"**Auth Failed:** {s['auth_failed_requests']:,}", inline=True)
     e.set_footer(text=CREDIT + " · counts reset when the cog reloads")
     return e
+
+  def api_stats_charts(self) -> List[discord.Embed]:
+    """QuickChart graphs for the API stats, in the same style as SkySearch's apistats."""
+    s = self.get_api_stats()
+    charts: List[Tuple[str, dict, int]] = []
+    ok, failed = s["successful_requests"], s["failed_requests"]
+    if ok + failed:
+      charts.append(("Success vs Failure", {
+          "type": "pie",
+          "data": {"labels": ["Successful", "Failed"], "datasets": [{"data": [ok, failed], "backgroundColor": ["#2ecc71", "#e74c3c"]}]},
+          "options": {"plugins": {"legend": {"position": "bottom"}}},
+      }, 600))
+    calls, hits = s["total_requests"], s["cache_hits"]
+    if calls + hits:
+      charts.append(("API calls vs Cache hits", {
+          "type": "doughnut",
+          "data": {"labels": ["Sent to National Rail", "Served from cache"], "datasets": [{"data": [calls, hits], "backgroundColor": ["#e21e26", "#3498db"]}]},
+          "options": {"plugins": {"legend": {"position": "bottom"}}},
+      }, 600))
+    if s["endpoint_usage"]:
+      items = sorted(s["endpoint_usage"].items(), key=lambda kv: -kv[1])
+      charts.append(("Requests by endpoint", {
+          "type": "bar",
+          "data": {"labels": [k for k, _ in items], "datasets": [{"label": "Requests", "data": [v for _, v in items], "backgroundColor": "#f1c40f"}]},
+          "options": {"indexAxis": "y", "plugins": {"legend": {"display": False}}, "scales": {"x": {"beginAtZero": True}}},
+      }, 800))
+    hours = self._api["hours"]
+    if hours:
+      now_h = int(time.time() // 3600)
+      span = range(now_h - 23, now_h + 1)
+      labels = [datetime.datetime.fromtimestamp(h * 3600, LONDON).strftime("%H:00") for h in span]
+      charts.append(("Requests per hour (last 24h, UK time)", {
+          "type": "bar",
+          "data": {"labels": labels, "datasets": [{"label": "Requests", "data": [hours.get(h, 0) for h in span], "backgroundColor": "#e21e26"}]},
+          "options": {"plugins": {"legend": {"display": False}}, "scales": {"y": {"beginAtZero": True, "ticks": {"precision": 0}}}},
+      }, 900))
+    embeds = []
+    for title, cfg, width in charts:
+      url = (
+          "https://quickchart.io/chart?width=" + str(width) + "&height=300&format=png&backgroundColor=transparent&devicePixelRatio=2&c="
+          + urllib.parse.quote(json.dumps(cfg, separators=(",", ":")))
+      )
+      e = discord.Embed(title=title, color=NRE_RED)
+      e.set_image(url=url)
+      embeds.append(e)
+    return embeds
 
   async def fetch_board(self, crs: str, filter_crs: Optional[str] = None, arr: bool = False) -> dict:
     """One board, cached for a minute per board type + station + filter."""
@@ -874,6 +938,7 @@ class NationalRail(commands.Cog):
     view.message = await ctx.send(embeds=self.board_embeds(board, filter_crs, rows), view=view)
 
   @nationalrail.command(name="departures", aliases=["board", "dep", "deps"])
+  @commands.cooldown(1, USER_COOLDOWN, commands.BucketType.user)
   @app_commands.describe(
       station="Station name or 3-letter code, e.g. Cardiff Central or CDF",
       rows="How many trains to show, 1-10 (default 10)",
@@ -895,6 +960,7 @@ class NationalRail(commands.Cog):
     await self._send_board(ctx, station, calling_at, rows=rows)
 
   @nationalrail.command(name="arrivals", aliases=["arr", "arrs"])
+  @commands.cooldown(1, USER_COOLDOWN, commands.BucketType.user)
   @app_commands.describe(
       station="Station name or 3-letter code, e.g. Cardiff Central or CDF",
       rows="How many trains to show, 1-10 (default 10)",
@@ -915,6 +981,7 @@ class NationalRail(commands.Cog):
     await self._send_board(ctx, station, coming_from, arr=True, rows=rows)
 
   @nationalrail.command(name="service", aliases=["train"])
+  @commands.cooldown(1, USER_COOLDOWN, commands.BucketType.user)
   @app_commands.describe(station="Station the train departs from", time="Scheduled departure time, e.g. 14:05")
   @app_commands.autocomplete(station=_station_autocomplete)
   async def nr_service(self, ctx: commands.Context, station: str, time: str):
@@ -945,7 +1012,7 @@ class NationalRail(commands.Cog):
   @nationalrail.command(name="apistats")
   async def nr_apistats(self, ctx: commands.Context):
     """National Rail API request stats: requests, success rate, cache hits and response times."""
-    await ctx.send(embed=self.api_stats_embed())
+    await ctx.send(embeds=[self.api_stats_embed()] + self.api_stats_charts()[:9])
 
   @nationalrail.command(name="search", aliases=["lookup", "crs"])
   @app_commands.describe(query="Part of a station name or a 3-letter code")
