@@ -1,0 +1,20 @@
+{
+    "author": [
+        "bencos18 (492089091320446976)"
+    ],
+    "name": "NationalRail",
+    "short": "Live National Rail (Great Britain) departure boards.",
+    "description": "Live National Rail Enquiries departure boards (Darwin LDBWS via the Rail Data Marketplace) with calling points, delays and station messages.",
+    "install_msg": "Thanks for installing NationalRail!\nYou need a free Rail Data Marketplace key for the Live Departure Board product. Run `[p]nrset` for setup steps.",
+    "requirements": [],
+    "min_bot_version": "3.5.0",
+    "tags": [
+        "rail",
+        "train",
+        "national rail",
+        "uk",
+        "departures"
+    ],
+    "end_user_data_statement": "This cog does not store any end user data.",
+    "type": "COG"
+}
