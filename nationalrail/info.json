@@ -4,7 +4,7 @@
     ],
     "name": "NationalRail",
     "short": "Live National Rail (Great Britain) departure boards.",
-    "description": "Live National Rail Enquiries departure boards (Darwin LDBWS via the Rail Data Marketplace) with calling points, delays and station messages.",
+    "description": "Live National Rail Enquiries departure boards (Darwin LDBWS via the Rail Data Marketplace) with coach counts, coach-by-coach loading, calling points, delays and station messages. Data access by Kieranl29 Productions.",
     "install_msg": "Thanks for installing NationalRail!\nYou need a free Rail Data Marketplace key for the Live Departure Board product. Run `[p]nrset` for setup steps.",
     "requirements": [],
     "min_bot_version": "3.5.0",
