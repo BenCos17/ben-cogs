@@ -33,6 +33,7 @@ NUM_ROWS = 10
 TIME_WINDOW_MINS = 120
 NRE_RED = discord.Color.from_rgb(0xE2, 0x1E, 0x26)
 CRS_RE = re.compile(r"^[A-Za-z]{3}$")
+CREDIT = "Powered by National Rail Enquiries · Data access by Kieranl29 Productions"
 
 
 class NationalRailError(Exception):
@@ -75,7 +76,7 @@ def _fit(text: str, width: int) -> str:
 
 def _embed(title: str, description: str = "", color: discord.Color = NRE_RED) -> discord.Embed:
   e = discord.Embed(title=_fit(title, 256), description=_fit(description, 4096), color=color)
-  e.set_footer(text="Powered by National Rail Enquiries")
+  e.set_footer(text=CREDIT)
   return e
 
 
@@ -102,6 +103,64 @@ def _far_end(svc: dict, arr: bool) -> str:
   return _places(svc.get("currentDestinations") or svc.get("destination")) or "?"
 
 
+def _coach_list(svc: dict) -> List[dict]:
+  return list(((svc.get("formation") or {}).get("coaches")) or [])
+
+
+def _length(svc: dict) -> int:
+  try:
+    n = int(svc.get("length") or 0)
+  except (TypeError, ValueError):
+    n = 0
+  return n or len(_coach_list(svc))
+
+
+def _avg_load(svc: dict) -> Optional[int]:
+  loads = [c.get("loading") for c in _coach_list(svc) if c.get("loadingSpecified") and isinstance(c.get("loading"), (int, float))]
+  return round(sum(loads) / len(loads)) if loads else None
+
+
+def _load_icon(pct: Optional[int]) -> str:
+  if pct is None:
+    return ""
+  return "🟢" if pct < 40 else "🟡" if pct < 70 else "🔴"
+
+
+def _load_bar(pct: int, width: int = 10) -> str:
+  filled = max(0, min(width, round(pct * width / 100)))
+  return "█" * filled + "░" * (width - filled)
+
+
+def _delay(svc: dict, arr: bool) -> int:
+  """Minutes late (negative = early), 0 when there's no estimated time."""
+  sched, est = _clock(_sched(svc, arr)), _clock(svc.get("eta" if arr else "etd"))
+  if not sched or not est:
+    return 0
+  mins = lambda t: int(t[:2]) * 60 + int(t[3:])
+  d = (mins(est) - mins(sched)) % 1440
+  return d - 1440 if d > 720 else d
+
+
+def _first_class(svc: dict) -> str:
+  nums = [str(c.get("number") or "?") for c in _coach_list(svc) if str(c.get("coachClass") or "").lower().startswith("first")]
+  return ", ".join(nums)
+
+
+def _formation_summary(svc: dict) -> str:
+  """'8 coaches · 🟡 55% full · 1st: 1, 2' (only the parts National Rail gives)."""
+  parts = []
+  n = _length(svc)
+  if n:
+    parts.append(f"{n} coach" + ("" if n == 1 else "es"))
+  load = _avg_load(svc)
+  if load is not None:
+    parts.append(f"{_load_icon(load)} {load}% full")
+  first = _first_class(svc)
+  if first:
+    parts.append(f"1st: {first}")
+  return " · ".join(parts)
+
+
 def _services(board: dict) -> List[dict]:
   out = []
   for key in ("trainServices", "busServices", "ferryServices"):
@@ -120,9 +179,10 @@ class ServiceSelect(discord.ui.Select):
       dest = _far_end(svc, arr)
       etd = _est(svc, arr)
       label = _fit(f"{_sched(svc, arr)} {'from ' if arr else ''}{dest}", 100)
-      desc = _fit(f"{etd} · Plat {svc.get('platform') or '-'} · {svc.get('operator') or ''}", 100)
+      bits = [etd, f"Plat {svc.get('platform') or '-'}", _formation_summary(svc), str(svc.get("operator") or "")]
+      desc = _fit(" · ".join(b for b in bits if b), 100)
       options.append(discord.SelectOption(label=label, value=str(i), description=desc))
-    super().__init__(placeholder="Show calling points for a service…", options=options, min_values=1, max_values=1)
+    super().__init__(placeholder="Show calling points & coaches for a train…", options=options, min_values=1, max_values=1)
 
   async def callback(self, interaction: discord.Interaction):
     svc = self.board_view.services[int(self.values[0])]
@@ -131,8 +191,9 @@ class ServiceSelect(discord.ui.Select):
 
 
 class BoardView(discord.ui.View):
-  def __init__(self, cog: "NationalRail", author_id: int, crs: str, filter_crs: Optional[str], board: dict):
+  def __init__(self, cog: "NationalRail", author_id: int, crs: str, filter_crs: Optional[str], board: dict, rows: int = NUM_ROWS):
     super().__init__(timeout=300)
+    self.rows = rows
     self.cog = cog
     self.author_id = author_id
     self.crs = crs
@@ -142,7 +203,7 @@ class BoardView(discord.ui.View):
 
   def _load(self, board: dict):
     self.board = board
-    self.services = _services(board)[:NUM_ROWS]
+    self.services = _services(board)[: self.rows]
     for item in list(self.children):
       if isinstance(item, ServiceSelect):
         self.remove_item(item)
@@ -161,7 +222,11 @@ class BoardView(discord.ui.View):
       await interaction.followup.send(embed=_error(str(e)), ephemeral=True)
       return
     self._load(board)
-    await interaction.edit_original_response(embed=self.cog.board_embed(board, self.filter_crs), view=self)
+    await interaction.edit_original_response(embed=self.cog.board_embed(board, self.filter_crs, self.rows), view=self)
+
+  @discord.ui.button(label="Formations", emoji="🚃", style=discord.ButtonStyle.secondary)
+  async def formations(self, interaction: discord.Interaction, button: discord.ui.Button):
+    await interaction.response.send_message(embed=self.cog.formations_embed(self.board, self.services), ephemeral=True)
 
   async def on_timeout(self):
     for item in self.children:
@@ -388,7 +453,7 @@ class NationalRail(commands.Cog):
       )
     if s["auth_failed_requests"]:
       e.add_field(name="⚠️ Error Details", value=f"**Auth Failed:** {s['auth_failed_requests']:,}", inline=True)
-    e.set_footer(text="Powered by National Rail Enquiries · counts reset when the cog reloads")
+    e.set_footer(text=CREDIT + " · counts reset when the cog reloads")
     return e
 
   async def fetch_board(self, crs: str, filter_crs: Optional[str] = None, arr: bool = False) -> dict:
@@ -455,7 +520,7 @@ class NationalRail(commands.Cog):
 
   # ---- embeds
 
-  def board_embed(self, board: dict, filter_crs: Optional[str]) -> discord.Embed:
+  def board_embed(self, board: dict, filter_crs: Optional[str], rows: int = NUM_ROWS) -> discord.Embed:
     name = board.get("locationName") or board.get("crs") or "?"
     crs = board.get("crs") or ""
     arr = _is_arr(board)
@@ -464,10 +529,10 @@ class NationalRail(commands.Cog):
     if filter_crs:
       via = board.get('filterLocationName') or self.station_name(filter_crs)
       title += f" from {via}" if arr else f" calling at {via}"
-    services = _services(board)[:NUM_ROWS]
+    services = _services(board)[:rows]
 
     if services:
-      rows = [f"{'Time':<5} {'From' if arr else 'Destination':<22} {'Plat':<4} Expected"]
+      lines = [f"{'Time':<5} {'From' if arr else 'Destination':<19} {'Plat':<4} {'Car':<3} Expected"]
       for svc in services:
         dest = _far_end(svc, arr)
         kind = str(svc.get("serviceType") or "train").lower()
@@ -476,8 +541,14 @@ class NationalRail(commands.Cog):
         elif kind == "ferry":
           dest = "⛴" + dest
         plat = str(svc.get("platform") or ("BUS" if kind == "bus" else "-"))
-        rows.append(f"{_sched(svc, arr):<5} {_fit(dest, 22):<22} {_fit(plat, 4):<4} {_est(svc, arr)}")
-      desc = "```\n" + "\n".join(rows) + "\n```"
+        cars = str(_length(svc) or "-")
+        est = _est(svc, arr)
+        late = _delay(svc, arr)
+        if late > 0 and not svc.get("isCancelled"):
+          est += f" +{late}"
+        lines.append(f"{_sched(svc, arr):<5} {_fit(dest, 19):<19} {_fit(plat, 4):<4} {cars:<3} {est}")
+      desc = "```\n" + "\n".join(lines) + "\n```"
+      desc += "\nCar = coaches. Use 🚃 **Formations** for coach details and how busy trains are."
     else:
       desc = f"No {word.lower()} in the next two hours."
       if board.get("areServicesAvailable") is False:
@@ -503,7 +574,7 @@ class NationalRail(commands.Cog):
 
     generated = str(board.get("generatedAt") or "")
     stamp = generated[11:16] if len(generated) >= 16 else ""
-    embed.set_footer(text="Powered by National Rail Enquiries" + (f" · updated {stamp}" if stamp else ""))
+    embed.set_footer(text=CREDIT + (f" · updated {stamp}" if stamp else ""))
     return embed
 
   def service_embed(self, board: dict, svc: dict) -> discord.Embed:
@@ -518,13 +589,47 @@ class NationalRail(commands.Cog):
         title=_fit(title, 256),
         color=discord.Color.dark_grey() if cancelled else NRE_RED,
     )
+    late = _delay(svc, arr)
+    if late > 0 and not cancelled:
+      etd += f" ({late} min late)"
+    elif late < 0:
+      etd += f" ({-late} min early)"
     embed.add_field(name="Expected", value=etd or "-", inline=True)
     embed.add_field(name="Platform", value=str(svc.get("platform") or "-"), inline=True)
     embed.add_field(name="Operator", value=str(svc.get("operator") or "-"), inline=True)
-    coaches = svc.get("length") or len(((svc.get("formation") or {}).get("coaches")) or [])
+    coaches = _length(svc)
     if coaches:
-      embed.add_field(name="Coaches", value=str(coaches), inline=True)
+      notes = []
+      if svc.get("detachFront"):
+        notes.append("front coaches detach")
+      if svc.get("isReverseFormation"):
+        notes.append("reverse formation")
+      embed.add_field(name="Coaches", value=str(coaches) + (f" ({', '.join(notes)})" if notes else ""), inline=True)
     embed.add_field(name="Going to" if arr else "From", value=dest if arr else origin, inline=True)
+    coach_lines = []
+    for c in _coach_list(svc):
+      cls = "1st" if str(c.get("coachClass") or "").lower().startswith("first") else "Std"
+      line = f"{str(c.get('number') or '?'):>2} {cls:<3}"
+      if c.get("loadingSpecified") and isinstance(c.get("loading"), (int, float)):
+        pct = int(c["loading"])
+        line += f" {_load_bar(pct)} {pct:>3}%"
+      toilet = c.get("toilet")
+      if isinstance(toilet, dict) and toilet.get("Value") and toilet.get("Value") != "None":
+        line += " 🚻"
+      coach_lines.append(line)
+    if coach_lines:
+      avg = _avg_load(svc)
+      head = f"Coaches & loading — {_load_icon(avg)} {avg}% full on average" if avg is not None else "Coaches"
+      embed.add_field(name=head, value=_fit("```\n" + "\n".join(coach_lines) + "\n```", 1024), inline=False)
+    flags = []
+    if svc.get("futureCancellation"):
+      flags.append("⚠️ Cancelled further along its route")
+    if svc.get("futureDelay"):
+      flags.append("⏱️ Expected to be delayed further along its route")
+    if svc.get("isCircularRoute"):
+      flags.append("🔁 Circular route")
+    if flags:
+      embed.add_field(name="Notes", value="\n".join(flags), inline=False)
     reason = svc.get("cancelReason") if cancelled else svc.get("delayReason")
     if reason:
       embed.add_field(name="Reason", value=_fit(_reason(reason), 1024), inline=False)
@@ -550,8 +655,23 @@ class NationalRail(commands.Cog):
           keep.append(line)
         text = "```\n" + "\n".join(keep) + "\n```"
       embed.add_field(name="Called at" if arr else "Calling at", value=text, inline=False)
-    embed.set_footer(text="Powered by National Rail Enquiries")
+    embed.set_footer(text=CREDIT)
     return embed
+
+  def formations_embed(self, board: dict, services: List[dict]) -> discord.Embed:
+    arr = _is_arr(board)
+    lines = []
+    for svc in services:
+      summary = _formation_summary(svc) or "No coach info from National Rail"
+      lines.append(f"**{_sched(svc, arr)} {'from ' if arr else ''}{_far_end(svc, arr)}** — {summary}")
+    e = discord.Embed(
+        title=_fit(f"🚃 Train formations — {board.get('locationName', '')}", 256),
+        description=_fit("\n".join(lines) or "No trains on this board.", 4096),
+        color=NRE_RED,
+    )
+    e.add_field(name="Busy key", value="🟢 quiet (under 40%) · 🟡 busy (40–69%) · 🔴 very busy (70%+)", inline=False)
+    e.set_footer(text=CREDIT)
+    return e
 
   # ---- autocomplete
 
@@ -567,7 +687,8 @@ class NationalRail(commands.Cog):
     if ctx.invoked_subcommand is None:
       await ctx.send_help()
 
-  async def _send_board(self, ctx: commands.Context, station: str, calling_at: Optional[str], arr: bool = False):
+  async def _send_board(self, ctx: commands.Context, station: str, calling_at: Optional[str], arr: bool = False, rows: Optional[int] = None):
+    rows = rows or NUM_ROWS
     crs = await self.resolve_station(ctx, station)
     if not crs:
       return
@@ -582,16 +703,19 @@ class NationalRail(commands.Cog):
       except NationalRailError as e:
         await ctx.send(embed=_error(str(e).replace("[p]", ctx.clean_prefix)))
         return
-    view = BoardView(self, ctx.author.id, crs, filter_crs, board)
-    view.message = await ctx.send(embed=self.board_embed(board, filter_crs), view=view)
+    view = BoardView(self, ctx.author.id, crs, filter_crs, board, rows)
+    view.message = await ctx.send(embed=self.board_embed(board, filter_crs, rows), view=view)
 
   @nationalrail.command(name="departures", aliases=["board", "dep", "deps"])
   @app_commands.describe(
       station="Station name or 3-letter code, e.g. Cardiff Central or CDF",
+      rows="How many trains to show, 1-10 (default 10)",
       calling_at="Only show trains calling at this station (optional)",
   )
   @app_commands.autocomplete(station=_station_autocomplete, calling_at=_station_autocomplete)
-  async def nr_departures(self, ctx: commands.Context, station: str, *, calling_at: Optional[str] = None):
+  async def nr_departures(
+      self, ctx: commands.Context, station: str, rows: Optional[commands.Range[int, 1, 10]] = None, *, calling_at: Optional[str] = None
+  ):
     """Show the live departure board for a station.
 
     Use quotes or the 3-letter code for station names with spaces in prefix commands.
@@ -599,16 +723,20 @@ class NationalRail(commands.Cog):
     Examples:
     - `[p]nr departures PAD`
     - `[p]nr departures "Cardiff Central" Bristol Temple Meads`
+    - `[p]nr departures PAD 5` (only the next 5 trains)
     """
-    await self._send_board(ctx, station, calling_at)
+    await self._send_board(ctx, station, calling_at, rows=rows)
 
   @nationalrail.command(name="arrivals", aliases=["arr", "arrs"])
   @app_commands.describe(
       station="Station name or 3-letter code, e.g. Cardiff Central or CDF",
+      rows="How many trains to show, 1-10 (default 10)",
       coming_from="Only show trains that called at this station first (optional)",
   )
   @app_commands.autocomplete(station=_station_autocomplete, coming_from=_station_autocomplete)
-  async def nr_arrivals(self, ctx: commands.Context, station: str, *, coming_from: Optional[str] = None):
+  async def nr_arrivals(
+      self, ctx: commands.Context, station: str, rows: Optional[commands.Range[int, 1, 10]] = None, *, coming_from: Optional[str] = None
+  ):
     """Show the live arrivals board for a station.
 
     Needs the Live Arrival and Departure Boards product key (see `[p]nrset`).
@@ -617,7 +745,33 @@ class NationalRail(commands.Cog):
     - `[p]nr arrivals PAD`
     - `[p]nr arrivals "Cardiff Central" Swansea`
     """
-    await self._send_board(ctx, station, coming_from, arr=True)
+    await self._send_board(ctx, station, coming_from, arr=True, rows=rows)
+
+  @nationalrail.command(name="service", aliases=["train"])
+  @app_commands.describe(station="Station the train departs from", time="Scheduled departure time, e.g. 14:05")
+  @app_commands.autocomplete(station=_station_autocomplete)
+  async def nr_service(self, ctx: commands.Context, station: str, time: str):
+    """Full details for one train: calling points, coaches and how busy each coach is.
+
+    Example: `[p]nr service PAD 14:05`
+    """
+    want = time.strip().replace(".", ":")
+    if re.match(r"^\d{3,4}$", want):
+      want = want.zfill(4)[:2] + ":" + want.zfill(4)[2:]
+    crs = await self.resolve_station(ctx, station)
+    if not crs:
+      return
+    async with ctx.typing():
+      try:
+        board = await self.fetch_board(crs)
+      except NationalRailError as e:
+        await ctx.send(embed=_error(str(e).replace("[p]", ctx.clean_prefix)))
+        return
+    for svc in _services(board):
+      if _sched(svc, False) == want:
+        await ctx.send(embed=self.service_embed(board, svc))
+        return
+    await ctx.send(embed=_error(f"No train scheduled at **{want}** from {self.station_name(crs)} in the next two hours."))
 
   @nationalrail.command(name="apistats")
   async def nr_apistats(self, ctx: commands.Context):
