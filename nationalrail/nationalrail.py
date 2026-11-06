@@ -23,6 +23,8 @@ from redbot.core.data_manager import bundled_data_path
 
 API_VERSION = "20220120"
 DEFAULT_LDBWS_URL = "https://api1.raildata.org.uk/1010-live-departure-board-dep1_2/LDBWS"
+# Arrivals are a separate Rail Data Marketplace product ("Live Arrival and Departure Boards").
+DEFAULT_ARR_URL = "https://api1.raildata.org.uk/1010-live-arrival-and-departure-boards-arr-and-dep1_1/LDBWS"
 TOKEN_SERVICE = "nationalrail"
 CACHE_TTL = 60  # seconds per station + filter, same as the portal
 ERROR_TTL = 15
@@ -81,22 +83,43 @@ def _error(description: str) -> discord.Embed:
   return _embed("❌ Something went wrong", description, discord.Color.dark_red())
 
 
+def _is_arr(board: dict) -> bool:
+  return board.get("_kind") == "arr"
+
+
+def _sched(svc: dict, arr: bool) -> str:
+  return str(svc.get("sta" if arr else "std") or "")
+
+
+def _est(svc: dict, arr: bool) -> str:
+  return "Cancelled" if svc.get("isCancelled") else str(svc.get("eta" if arr else "etd") or "")
+
+
+def _far_end(svc: dict, arr: bool) -> str:
+  """Where an arrival came from, or where a departure is going."""
+  if arr:
+    return _places(svc.get("currentOrigins") or svc.get("origin")) or "?"
+  return _places(svc.get("currentDestinations") or svc.get("destination")) or "?"
+
+
 def _services(board: dict) -> List[dict]:
   out = []
   for key in ("trainServices", "busServices", "ferryServices"):
     out.extend(board.get(key) or [])
-  # Keep the order the board gives, but make sure everything has a departure time.
-  return [s for s in out if _clock(s.get("std"))]
+  # Keep the order the board gives, but make sure everything has a scheduled time.
+  arr = _is_arr(board)
+  return [s for s in out if _clock(_sched(s, arr))]
 
 
 class ServiceSelect(discord.ui.Select):
   def __init__(self, board_view: "BoardView"):
     self.board_view = board_view
     options = []
+    arr = _is_arr(board_view.board)
     for i, svc in enumerate(board_view.services[:25]):
-      dest = _places(svc.get("currentDestinations") or svc.get("destination")) or "Unknown"
-      etd = str(svc.get("etd") or "")
-      label = _fit(f"{svc.get('std')} {dest}", 100)
+      dest = _far_end(svc, arr)
+      etd = _est(svc, arr)
+      label = _fit(f"{_sched(svc, arr)} {'from ' if arr else ''}{dest}", 100)
       desc = _fit(f"{etd} · Plat {svc.get('platform') or '-'} · {svc.get('operator') or ''}", 100)
       options.append(discord.SelectOption(label=label, value=str(i), description=desc))
     super().__init__(placeholder="Show calling points for a service…", options=options, min_values=1, max_values=1)
@@ -133,7 +156,7 @@ class BoardView(discord.ui.View):
       return
     await interaction.response.defer()
     try:
-      board = await self.cog.fetch_board(self.crs, self.filter_crs)
+      board = await self.cog.fetch_board(self.crs, self.filter_crs, _is_arr(self.board))
     except NationalRailError as e:
       await interaction.followup.send(embed=_error(str(e)), ephemeral=True)
       return
@@ -190,8 +213,8 @@ class NationalRail(commands.Cog):
     self.config = Config.get_conf(self, identifier=492089091320446977, force_registration=True)
     self.config.register_global(user_agent="Red-DiscordBot (NationalRail Cog)")
     self.session: Optional[aiohttp.ClientSession] = None
-    self._cache: Dict[Tuple[str, str], Tuple[float, object]] = {}
-    self._inflight: Dict[Tuple[str, str], asyncio.Task] = {}
+    self._cache: Dict[Tuple[str, str, str], Tuple[float, object]] = {}
+    self._inflight: Dict[Tuple[str, str, str], asyncio.Task] = {}
     self._recent_calls: List[float] = []
     self.stations: List[dict] = []
     self._by_crs: Dict[str, dict] = {}
@@ -214,10 +237,15 @@ class NationalRail(commands.Cog):
 
   # ---- API
 
-  async def _api_settings(self) -> Tuple[str, str]:
+  async def _api_settings(self, arr: bool = False) -> Tuple[str, str]:
     tokens = await self.bot.get_shared_api_tokens(TOKEN_SERVICE)
-    key = (tokens.get("ldbws_key") or "").strip()
-    base = (tokens.get("ldbws_url") or DEFAULT_LDBWS_URL).strip()
+    if arr:
+      # Arrivals use their own product; fall back to the departures key if no separate one is set.
+      key = (tokens.get("arr_key") or tokens.get("ldbws_key") or "").strip()
+      base = (tokens.get("arr_url") or DEFAULT_ARR_URL).strip()
+    else:
+      key = (tokens.get("ldbws_key") or "").strip()
+      base = (tokens.get("ldbws_url") or DEFAULT_LDBWS_URL).strip()
     # Accept the product root (…/LDBWS) or a full operation URL pasted from the docs.
     base = re.sub(r"/api/.*$", "", base, flags=re.I).rstrip("/")
     return key, base
@@ -227,8 +255,8 @@ class NationalRail(commands.Cog):
     self._recent_calls = [t for t in self._recent_calls if t >= cutoff]
     return len(self._recent_calls) < MAX_PER_MINUTE
 
-  async def _fetch_uncached(self, crs: str, filter_crs: Optional[str]) -> dict:
-    key, base = await self._api_settings()
+  async def _fetch_uncached(self, crs: str, filter_crs: Optional[str], arr: bool = False) -> dict:
+    key, base = await self._api_settings(arr)
     if not key or not base.lower().startswith("https://"):
       raise NationalRailError(
           "National Rail isn't set up yet. The bot owner needs to run "
@@ -241,8 +269,9 @@ class NationalRail(commands.Cog):
     params = {"numRows": str(NUM_ROWS), "timeWindow": str(TIME_WINDOW_MINS)}
     if filter_crs:
       params["filterCrs"] = filter_crs
-      params["filterType"] = "to"
-    url = f"{base}/api/{API_VERSION}/GetDepBoardWithDetails/{crs}"
+      params["filterType"] = "from" if arr else "to"
+    op = "GetArrBoardWithDetails" if arr else "GetDepBoardWithDetails"
+    url = f"{base}/api/{API_VERSION}/{op}/{crs}"
     headers = {"x-apikey": key, "Accept": "application/json", "User-Agent": await self.config.user_agent()}
     try:
       async with self.session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
@@ -253,19 +282,26 @@ class NationalRail(commands.Cog):
     if status == 429:
       raise NationalRailError("National Rail rate limit reached, try again in a minute.")
     if status in (401, 403):
+      if arr:
+        raise NationalRailError(
+            f"National Rail refused the arrivals key (HTTP {status}). Arrivals need the **Live Arrival and "
+            f"Departure Boards** product: `[p]set api {TOKEN_SERVICE} arr_key,<key>` (see `[p]nrset`)."
+        )
       raise NationalRailError(f"National Rail refused the API key (HTTP {status}). Check the LDBWS key.")
     if status in (400, 404, 500) and "invalid crs" in text.lower():
       raise NationalRailError(f"National Rail doesn't know the station **{crs}**.")
     if status >= 400:
       raise NationalRailError(f"National Rail returned HTTP {status}.")
     try:
-      return json.loads(text)
-    except ValueError:
+      board = json.loads(text)
+      board["_kind"] = "arr" if arr else "dep"
+      return board
+    except (ValueError, TypeError):
       raise NationalRailError("National Rail sent a reply that isn't JSON.")
 
-  async def fetch_board(self, crs: str, filter_crs: Optional[str] = None) -> dict:
-    """One departure board, cached for a minute per station + "calling at" filter."""
-    cache_key = (crs, filter_crs or "")
+  async def fetch_board(self, crs: str, filter_crs: Optional[str] = None, arr: bool = False) -> dict:
+    """One board, cached for a minute per board type + station + filter."""
+    cache_key = ("arr" if arr else "dep", crs, filter_crs or "")
     hit = self._cache.get(cache_key)
     if hit and hit[0] > time.monotonic():
       if isinstance(hit[1], NationalRailError):
@@ -273,7 +309,7 @@ class NationalRail(commands.Cog):
       return hit[1]
     task = self._inflight.get(cache_key)
     if task is None:
-      task = asyncio.ensure_future(self._fetch_uncached(crs, filter_crs))
+      task = asyncio.ensure_future(self._fetch_uncached(crs, filter_crs, arr))
       self._inflight[cache_key] = task
       try:
         result = await asyncio.shield(task)
@@ -329,39 +365,41 @@ class NationalRail(commands.Cog):
   def board_embed(self, board: dict, filter_crs: Optional[str]) -> discord.Embed:
     name = board.get("locationName") or board.get("crs") or "?"
     crs = board.get("crs") or ""
-    title = f"🚉 {name} ({crs}) — Departures"
+    arr = _is_arr(board)
+    word = "Arrivals" if arr else "Departures"
+    title = f"{'🛬' if arr else '🚉'} {name} ({crs}) — {word}"
     if filter_crs:
-      title += f" calling at {board.get('filterLocationName') or self.station_name(filter_crs)}"
+      via = board.get('filterLocationName') or self.station_name(filter_crs)
+      title += f" from {via}" if arr else f" calling at {via}"
     services = _services(board)[:NUM_ROWS]
 
     if services:
-      rows = [f"{'Time':<5} {'Destination':<22} {'Plat':<4} Expected"]
+      rows = [f"{'Time':<5} {'From' if arr else 'Destination':<22} {'Plat':<4} Expected"]
       for svc in services:
-        dest = _places(svc.get("currentDestinations") or svc.get("destination")) or "?"
+        dest = _far_end(svc, arr)
         kind = str(svc.get("serviceType") or "train").lower()
         if kind == "bus":
           dest = "🚌" + dest
         elif kind == "ferry":
           dest = "⛴" + dest
         plat = str(svc.get("platform") or ("BUS" if kind == "bus" else "-"))
-        etd = "Cancelled" if svc.get("isCancelled") else str(svc.get("etd") or "")
-        rows.append(f"{svc.get('std'):<5} {_fit(dest, 22):<22} {_fit(plat, 4):<4} {etd}")
+        rows.append(f"{_sched(svc, arr):<5} {_fit(dest, 22):<22} {_fit(plat, 4):<4} {_est(svc, arr)}")
       desc = "```\n" + "\n".join(rows) + "\n```"
     else:
-      desc = "No departures in the next two hours."
+      desc = f"No {word.lower()} in the next two hours."
       if board.get("areServicesAvailable") is False:
-        desc = "Live departures aren't available for this station right now."
+        desc = f"Live {word.lower()} aren't available for this station right now."
 
     embed = discord.Embed(title=_fit(title, 256), description=desc, color=NRE_RED, timestamp=discord.utils.utcnow())
-    embed.set_author(name="Live departures · National Rail")
+    embed.set_author(name=f"Live {word.lower()} · National Rail")
 
     problems = []
     for svc in services:
-      dest = _places(svc.get("currentDestinations") or svc.get("destination"))
+      label = f"**{_sched(svc, arr)} {'from' if arr else 'to'} {_far_end(svc, arr)}**"
       if svc.get("isCancelled") and svc.get("cancelReason"):
-        problems.append(f"**{svc.get('std')} to {dest}** cancelled: {_reason(svc['cancelReason'])}")
+        problems.append(f"{label} cancelled: {_reason(svc['cancelReason'])}")
       elif svc.get("delayReason"):
-        problems.append(f"**{svc.get('std')} to {dest}** delayed: {_reason(svc['delayReason'])}")
+        problems.append(f"{label} delayed: {_reason(svc['delayReason'])}")
     if problems:
       embed.add_field(name="Delays & cancellations", value=_fit("\n".join(problems[:5]), 1024), inline=False)
 
@@ -376,12 +414,15 @@ class NationalRail(commands.Cog):
     return embed
 
   def service_embed(self, board: dict, svc: dict) -> discord.Embed:
-    dest = _places(svc.get("currentDestinations") or svc.get("destination")) or "?"
-    origin = _places(svc.get("currentOrigins") or svc.get("origin")) or "?"
+    arr = _is_arr(board)
+    dest = _far_end(svc, False)
+    origin = _far_end(svc, True)
     cancelled = bool(svc.get("isCancelled"))
-    etd = "Cancelled" if cancelled else str(svc.get("etd") or "")
+    etd = _est(svc, arr)
+    here = board.get("locationName", "")
+    title = f"{_sched(svc, arr)} {origin} → {here}" if arr else f"{_sched(svc, arr)} {here} → {dest}"
     embed = discord.Embed(
-        title=_fit(f"{svc.get('std')} {board.get('locationName', '')} → {dest}", 256),
+        title=_fit(title, 256),
         color=discord.Color.dark_grey() if cancelled else NRE_RED,
     )
     embed.add_field(name="Expected", value=etd or "-", inline=True)
@@ -390,18 +431,18 @@ class NationalRail(commands.Cog):
     coaches = svc.get("length") or len(((svc.get("formation") or {}).get("coaches")) or [])
     if coaches:
       embed.add_field(name="Coaches", value=str(coaches), inline=True)
-    embed.add_field(name="From", value=origin, inline=True)
+    embed.add_field(name="Going to" if arr else "From", value=dest if arr else origin, inline=True)
     reason = svc.get("cancelReason") if cancelled else svc.get("delayReason")
     if reason:
       embed.add_field(name="Reason", value=_fit(_reason(reason), 1024), inline=False)
 
-    lists = svc.get("subsequentCallingPoints") or []
+    lists = svc.get("previousCallingPoints" if arr else "subsequentCallingPoints") or []
     points = (lists[0].get("callingPoint") if lists else None) or []
     lines = []
     for cp in points:
       name = cp.get("locationName") or "?"
       st = _clock(cp.get("st")) or "--:--"
-      et = str(cp.get("et") or cp.get("at") or "")
+      et = str(cp.get("at") or cp.get("et") or "")
       if cp.get("isCancelled"):
         et = "Cancelled"
       lines.append(f"{st}  {_fit(name, 26):<26} {et}")
@@ -415,7 +456,7 @@ class NationalRail(commands.Cog):
             break
           keep.append(line)
         text = "```\n" + "\n".join(keep) + "\n```"
-      embed.add_field(name="Calling at", value=text, inline=False)
+      embed.add_field(name="Called at" if arr else "Calling at", value=text, inline=False)
     embed.set_footer(text="Powered by National Rail Enquiries")
     return embed
 
@@ -433,7 +474,7 @@ class NationalRail(commands.Cog):
     if ctx.invoked_subcommand is None:
       await ctx.send_help()
 
-  async def _send_board(self, ctx: commands.Context, station: str, calling_at: Optional[str]):
+  async def _send_board(self, ctx: commands.Context, station: str, calling_at: Optional[str], arr: bool = False):
     crs = await self.resolve_station(ctx, station)
     if not crs:
       return
@@ -444,7 +485,7 @@ class NationalRail(commands.Cog):
         return
     async with ctx.typing():
       try:
-        board = await self.fetch_board(crs, filter_crs)
+        board = await self.fetch_board(crs, filter_crs, arr)
       except NationalRailError as e:
         await ctx.send(embed=_error(str(e).replace("[p]", ctx.clean_prefix)))
         return
@@ -467,6 +508,23 @@ class NationalRail(commands.Cog):
     - `[p]nr departures "Cardiff Central" Bristol Temple Meads`
     """
     await self._send_board(ctx, station, calling_at)
+
+  @nationalrail.command(name="arrivals", aliases=["arr", "arrs"])
+  @app_commands.describe(
+      station="Station name or 3-letter code, e.g. Cardiff Central or CDF",
+      coming_from="Only show trains that called at this station first (optional)",
+  )
+  @app_commands.autocomplete(station=_station_autocomplete, coming_from=_station_autocomplete)
+  async def nr_arrivals(self, ctx: commands.Context, station: str, *, coming_from: Optional[str] = None):
+    """Show the live arrivals board for a station.
+
+    Needs the Live Arrival and Departure Boards product key (see `[p]nrset`).
+
+    Examples:
+    - `[p]nr arrivals PAD`
+    - `[p]nr arrivals "Cardiff Central" Swansea`
+    """
+    await self._send_board(ctx, station, coming_from, arr=True)
 
   @nationalrail.command(name="search", aliases=["lookup", "crs"])
   @app_commands.describe(query="Part of a station name or a 3-letter code")
@@ -497,11 +555,15 @@ class NationalRail(commands.Cog):
         value=(
             "1. Sign up at <https://raildata.org.uk> and subscribe to **Live Departure Board**.\n"
             f"2. `{p}set api {TOKEN_SERVICE} ldbws_key,<consumer key>`\n"
-            f"3. Optional: `{p}set api {TOKEN_SERVICE} ldbws_url,<product URL>`"
+            f"3. Optional: `{p}set api {TOKEN_SERVICE} ldbws_url,<product URL>`\n"
+            "4. For arrivals, subscribe to **Live Arrival and Departure Boards**, then "
+            f"`{p}set api {TOKEN_SERVICE} arr_key,<consumer key>` (optional `arr_url,<product URL>`)"
         ),
         inline=False,
     )
-    embed.add_field(name="Key set", value="✅ Yes" if key else "❌ No", inline=True)
+    tokens = await self.bot.get_shared_api_tokens(TOKEN_SERVICE)
+    embed.add_field(name="Departures key", value="✅ Yes" if key else "❌ No", inline=True)
+    embed.add_field(name="Arrivals key", value="✅ Own key" if tokens.get("arr_key") else ("↩️ Uses departures key" if key else "❌ No"), inline=True)
     embed.add_field(name="Cached boards", value=str(len(self._cache)), inline=True)
     embed.add_field(name="URL", value=f"`{base}`", inline=False)
     await ctx.send(embed=embed, ephemeral=True)
