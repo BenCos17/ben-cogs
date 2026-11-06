@@ -56,15 +56,17 @@ jobs:
         with:
           artifact_name: ${{ env.BUILD_ARTIFACT_NAME }}  # same artifact name used for build
 
-      # Configure Red-DiscordBot with instance name "tinkerer"
-      # todo: add input for skipping --dry-run
+      # Configure Red-DiscordBot with instance name "tinkerer".
+      # The reusable setup action also runs a dry-run that fails during Red's
+      # shutdown on the current dependency versions, while the RPC action
+      # starts Red separately and only needs this configuration.
       - name: Configure Red-DiscordBot
-        uses: nntin/d-flows/actions/setup-red-discordbot@v1
-        with:
-          token: ${{ secrets.DISCORD_BOT_TOKEN }}
-          optional_args: "--no-cogs"  # Example optional argument to run without loading any cogs
-        # --dry-run fails due to bug in Red-DiscordBot https://github.com/Cog-Creators/Red-DiscordBot/issues/6572
-        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_dir="$HOME/redbot-app"
+          mkdir -p "$HOME/.config/Red-DiscordBot" "$app_dir/cogs"
+          printf '%s\n' "{\"tinkerer\":{\"DATA_PATH\":\"$app_dir\",\"COG_PATH_APPEND\":\"cogs\",\"CORE_PATH_APPEND\":\"core\",\"STORAGE_TYPE\":\"JSON\",\"STORAGE_DETAILS\":{}}}" > "$HOME/.config/Red-DiscordBot/config.json"
 
       # Actual magic: test that cogs can be loaded/unloaded via RPC
       - name: Test cogs via RPC
