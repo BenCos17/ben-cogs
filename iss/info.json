@@ -5,7 +5,7 @@
     ],
     "description": "A cog to track the International Space Station's telemetry data and provide information about its current location, speed, altitude, and other relevant data.",
     "requirements": [
-        "lightstreamer-client"
+        "lightstreamer-client-lib"
     ],
     "tags": [
         "issdata",
