@@ -39,7 +39,7 @@ CACHE_TTL = 60  # seconds per station + filter, same as the portal
 ERROR_TTL = 15
 MAX_PER_MINUTE = 30
 NUM_ROWS = 10
-USER_COOLDOWN = 30  # seconds between National Rail lookups per person
+USER_COOLDOWN = 30  # seconds before the same person can look up / refresh the same station again
 TIME_WINDOW_MINS = 120
 NRE_RED = discord.Color.from_rgb(0xE2, 0x1E, 0x26)
 CRS_RE = re.compile(r"^[A-Za-z]{3}$")
@@ -330,9 +330,9 @@ class BoardView(discord.ui.View):
     if interaction.user.id != self.author_id:
       await interaction.response.send_message(embed=_error("Only the person who asked for this board can refresh it."), ephemeral=True)
       return
-    wait = self.cog.refresh_wait(interaction.user.id)
+    wait = self.cog.station_wait(interaction.user.id, self.crs)
     if wait:
-      await interaction.response.send_message(embed=_error(f"Please wait **{wait}s** before refreshing again."), ephemeral=True)
+      await interaction.response.send_message(embed=_error(f"Please wait **{wait}s** before refreshing this station again."), ephemeral=True)
       return
     await interaction.response.defer()
     try:
@@ -401,7 +401,7 @@ class NationalRail(commands.Cog):
     self._cache: Dict[Tuple[str, str, str], Tuple[float, object]] = {}
     self._inflight: Dict[Tuple[str, str, str], asyncio.Task] = {}
     self._recent_calls: List[float] = []
-    self._refreshes: Dict[int, float] = {}
+    self._station_calls: Dict[Tuple[int, str], float] = {}
     # API stats since the cog loaded: plain counters plus 24 hourly buckets, so memory stays tiny.
     self._api = {
         "total": 0, "ok": 0, "failed": 0, "rate_limited": 0, "auth_failed": 0, "cache_hits": 0,
@@ -506,15 +506,16 @@ class NationalRail(commands.Cog):
     except (ValueError, TypeError):
       raise NationalRailError("National Rail sent a reply that isn't JSON.")
 
-  def refresh_wait(self, user_id: int) -> int:
-    """Seconds left on this person's refresh cooldown (0 = go ahead, and starts a new one)."""
+  def station_wait(self, user_id: int, crs: str) -> int:
+    """Seconds this person must wait before looking up / refreshing this station again (0 = go ahead, and starts a new 30s)."""
     now = time.monotonic()
-    last = self._refreshes.get(user_id, 0.0)
+    key = (user_id, crs.upper())
+    last = self._station_calls.get(key, 0.0)
     if now - last < USER_COOLDOWN:
       return int(USER_COOLDOWN - (now - last)) + 1
-    self._refreshes[user_id] = now
-    if len(self._refreshes) > 500:
-      self._refreshes = {u: t for u, t in self._refreshes.items() if now - t < USER_COOLDOWN}
+    self._station_calls[key] = now
+    if len(self._station_calls) > 1000:
+      self._station_calls = {k: t for k, t in self._station_calls.items() if now - t < USER_COOLDOWN}
     return 0
 
   def _note_api(self, op: str, status: int, secs: float):
@@ -923,6 +924,10 @@ class NationalRail(commands.Cog):
     crs = await self.resolve_station(ctx, station)
     if not crs:
       return
+    wait = self.station_wait(ctx.author.id, crs)
+    if wait:
+      await ctx.send(embed=_error(f"You looked up **{self.station_name(crs)}** a moment ago. Try again in **{wait}s**."), ephemeral=True)
+      return
     filter_crs = None
     if calling_at:
       filter_crs = await self.resolve_station(ctx, calling_at)
@@ -938,7 +943,6 @@ class NationalRail(commands.Cog):
     view.message = await ctx.send(embeds=self.board_embeds(board, filter_crs, rows), view=view)
 
   @nationalrail.command(name="departures", aliases=["board", "dep", "deps"])
-  @commands.cooldown(1, USER_COOLDOWN, commands.BucketType.user)
   @app_commands.describe(
       station="Station name or 3-letter code, e.g. Cardiff Central or CDF",
       rows="How many trains to show, 1-10 (default 10)",
@@ -960,7 +964,6 @@ class NationalRail(commands.Cog):
     await self._send_board(ctx, station, calling_at, rows=rows)
 
   @nationalrail.command(name="arrivals", aliases=["arr", "arrs"])
-  @commands.cooldown(1, USER_COOLDOWN, commands.BucketType.user)
   @app_commands.describe(
       station="Station name or 3-letter code, e.g. Cardiff Central or CDF",
       rows="How many trains to show, 1-10 (default 10)",
@@ -981,7 +984,6 @@ class NationalRail(commands.Cog):
     await self._send_board(ctx, station, coming_from, arr=True, rows=rows)
 
   @nationalrail.command(name="service", aliases=["train"])
-  @commands.cooldown(1, USER_COOLDOWN, commands.BucketType.user)
   @app_commands.describe(station="Station the train departs from", time="Scheduled departure time, e.g. 14:05")
   @app_commands.autocomplete(station=_station_autocomplete)
   async def nr_service(self, ctx: commands.Context, station: str, time: str):
@@ -994,6 +996,10 @@ class NationalRail(commands.Cog):
       want = want.zfill(4)[:2] + ":" + want.zfill(4)[2:]
     crs = await self.resolve_station(ctx, station)
     if not crs:
+      return
+    wait = self.station_wait(ctx.author.id, crs)
+    if wait:
+      await ctx.send(embed=_error(f"You looked up **{self.station_name(crs)}** a moment ago. Try again in **{wait}s**."), ephemeral=True)
       return
     async with ctx.typing():
       try:

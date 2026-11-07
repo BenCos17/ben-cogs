@@ -1,0 +1,17 @@
+{
+    "name": "Firms",
+    "author": [
+        "bencos18"
+    ],
+    "description": "A cog for fetching and displaying information about firms.",
+    "install_msg": "Thank you for installing the Firms cog. Please ensure you have the required dependencies installed.",
+    "short": "firms information and data",
+    "requirements": [
+        "pandas"
+    ],
+    "tags": [
+        "firms"
+    ],
+    "min_bot_version": "3.4.0",
+    "end_user_data_statement": "This cog does not store any end user data."
+}

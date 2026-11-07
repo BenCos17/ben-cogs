@@ -14,7 +14,6 @@ permissions:
 
 env:
   BUILD_ARTIFACT_NAME: "my-build-artifact"
-  COG_PATHS: "ampremover,bell,bible,currency,dank,emojilink,enumbers,example,facebookdownloader,imgen,invoice,loan,scp,seasons,servertools,skysearch,spamatron,talknotifier,xkcd"  # comma-separated list of cog folder names
   RPC_PORT: "6133"
 
 jobs:
@@ -33,9 +32,23 @@ jobs:
   test-cogs:
     runs-on: ubuntu-latest
     needs: install
+    outputs:
+      cog_paths: ${{ steps.discover-cogs.outputs.cog_paths }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Discover cogs
+        id: discover-cogs
+        shell: bash
+        run: |
+          cog_paths=$(find . -mindepth 2 -maxdepth 2 -type f -name __init__.py -printf '%h\n' | sed 's#^\./##' | sort | paste -sd, -)
+          if [[ -z "$cog_paths" ]]; then
+            echo "No cogs found" >&2
+            exit 1
+          fi
+          echo "Discovered cogs: $cog_paths"
+          echo "cog_paths=$cog_paths" >> "$GITHUB_OUTPUT"
 
       # Skip artifact_name if installing from PyPI directly
       - name: Install Red-DiscordBot
@@ -43,22 +56,28 @@ jobs:
         with:
           artifact_name: ${{ env.BUILD_ARTIFACT_NAME }}  # same artifact name used for build
 
-      # Configure Red-DiscordBot with instance name "tinkerer"
-      # todo: add input for skipping --dry-run
+      - name: Enable Red task compatibility shim
+        shell: bash
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/.github/workflows/redbot_compat${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
+
+      # Configure Red-DiscordBot with instance name "tinkerer".
+      # The reusable setup action also runs a dry-run that fails during Red's
+      # shutdown on the current dependency versions, while the RPC action
+      # starts Red separately and only needs this configuration.
       - name: Configure Red-DiscordBot
-        uses: nntin/d-flows/actions/setup-red-discordbot@v1
-        with:
-          token: ${{ secrets.DISCORD_BOT_TOKEN }}
-          optional_args: "--no-cogs"  # Example optional argument to run without loading any cogs
-        # --dry-run fails due to bug in Red-DiscordBot https://github.com/Cog-Creators/Red-DiscordBot/issues/6572
-        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_dir="$HOME/redbot-app"
+          mkdir -p "$HOME/.config/Red-DiscordBot" "$app_dir/cogs"
+          printf '%s\n' "{\"tinkerer\":{\"DATA_PATH\":\"$app_dir\",\"COG_PATH_APPEND\":\"cogs\",\"CORE_PATH_APPEND\":\"core\",\"STORAGE_TYPE\":\"JSON\",\"STORAGE_DETAILS\":{}}}" > "$HOME/.config/Red-DiscordBot/config.json"
 
       # Actual magic: test that cogs can be loaded/unloaded via RPC
       - name: Test cogs via RPC
         uses: nntin/d-flows/actions/test-red-discordbot@v1
         with:
           token: ${{ secrets.DISCORD_BOT_TOKEN }}
-          cog_paths: ${{ env.COG_PATHS }}
+          cog_paths: ${{ steps.discover-cogs.outputs.cog_paths }}
           rpc_port: ${{ env.RPC_PORT }}
 
   ##################################################################
@@ -98,7 +117,7 @@ jobs:
           FIELDS=$(jq -n \
             --arg build_status "$BUILD_EMOJI $BUILD_STATUS" \
             --arg test_status "$TEST_EMOJI $TEST_STATUS" \
-            --arg cogs "${{ env.COG_PATHS }}" \
+            --arg cogs "${{ needs['test-cogs'].outputs.cog_paths }}" \
             --arg artifact "${{ env.BUILD_ARTIFACT_NAME }}" \
             --arg actor "${{ github.actor }}" \
             --arg pr_number "${{ github.event.pull_request.number }}" \
@@ -142,7 +161,7 @@ jobs:
 
             **Artifact**: `${{ env.BUILD_ARTIFACT_NAME }}`
 
-            **Cogs Tested**: `${{ env.COG_PATHS }}`
+            **Cogs Tested**: `${{ needs['test-cogs'].outputs.cog_paths }}`
 
             **Overall Result**: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '✅ All checks passed' || '⚠️ Some checks failed or were skipped' }}
           overwrite: false
@@ -153,7 +172,7 @@ jobs:
   notify-cog-validation:
     name: Notify Validation Results
     runs-on: ubuntu-latest
-    needs: [build-validation-fields, display-validation-summary]
+    needs: [test-cogs, build-validation-fields, display-validation-summary]
     if: always()
 
     steps:
@@ -164,6 +183,6 @@ jobs:
           message_type: 'embed'
           title: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '✅ Cog Validation Completed Successfully' || '⚠️ Cog Validation Completed with Issues' }}
           description: >-
-            ${{ needs.build-validation-fields.outputs.validation_result == 'success' && format('All cogs ({0}) passed build and RPC validation.', env.COG_PATHS) || format('One or more stages failed for cogs: {0}. Review the workflow logs.', env.COG_PATHS) }}
+            ${{ needs.build-validation-fields.outputs.validation_result == 'success' && format('All cogs ({0}) passed build and RPC validation.', needs['test-cogs'].outputs.cog_paths) || format('One or more stages failed for cogs: {0}. Review the workflow logs.', needs['test-cogs'].outputs.cog_paths) }}
           color: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '3066993' || '16776960' }}
           fields: ${{ needs.build-validation-fields.outputs.discord_fields }}
